@@ -35,7 +35,7 @@ type Teleport interface {
 	// *主动推送信息，不写nodeuid默认随机发送给一个节点
 	Request(body interface{}, operation string, nodeuid ...string)
 
-	// 设置本节点唯一标识符，默认为本节点IP
+	// 设置本节点唯一标识符，默认为本节点ip:port
 	SetUID(string) Teleport
 	// 设置包头字符串，默认为henrylee2cn
 	SetPackHeader(string) Teleport
@@ -45,7 +45,7 @@ type Teleport interface {
 	SetConnWChan(int) Teleport
 	// 设置每个连接对象的接收缓冲区大小
 	SetConnBuffer(int) Teleport
-	// 设置连接超长(心跳频率)
+	// 设置连接超时(心跳频率)
 	SetTimeout(time.Duration) Teleport
 
 	// 返回运行模式
