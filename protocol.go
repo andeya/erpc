@@ -8,7 +8,9 @@ import (
 
 const (
 	// 支持数据最大长度为 2 << 61
-	DataLengthOfLenth = 8
+	// DataLengthOfLenth = 8
+	// 支持数据最大长度为 2 << 30
+	DataLengthOfLenth = 4
 )
 
 type Protocol struct {
@@ -66,11 +68,30 @@ func (self *Protocol) Unpack(buffer []byte) (readerSlice [][]byte, bufferOver []
 }
 
 //整形转换成字节
+// func IntToBytes(n int) []byte {
+// 	x := int64(n)
+
+// 	bytesBuffer := bytes.NewBuffer([]byte{})
+// 	binary.Write(bytesBuffer, binary.BigEndian, x)
+// 	return bytesBuffer.Bytes()
+// }
+
+// //字节转换成整形
+// func BytesToInt(b []byte) int {
+// 	bytesBuffer := bytes.NewBuffer(b)
+
+// 	var x int64
+// 	binary.Read(bytesBuffer, binary.BigEndian, &x)
+
+// 	return int(x)
+// }
+
+//整形转换成字节
 func IntToBytes(n int) []byte {
-	x := int64(n)
+	x := int32(n)
 
 	bytesBuffer := bytes.NewBuffer([]byte{})
-	binary.Write(bytesBuffer, binary.BigEndian, x)
+	binary.Write(bytesBuffer, binary.LittleEndian, x)
 	return bytesBuffer.Bytes()
 }
 
@@ -78,8 +99,8 @@ func IntToBytes(n int) []byte {
 func BytesToInt(b []byte) int {
 	bytesBuffer := bytes.NewBuffer(b)
 
-	var x int64
-	binary.Read(bytesBuffer, binary.BigEndian, &x)
+	var x int32
+	binary.Read(bytesBuffer, binary.LittleEndian, &x)
 
 	return int(x)
 }

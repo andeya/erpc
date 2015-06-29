@@ -1,5 +1,5 @@
 // Teleport是一款适用于分布式系统的高并发API框架，它采用socket长连接、全双工通信，实现S/C对等工作，内部数据传输格式为JSON。
-// Version 0.2
+// Version 0.3
 package teleport
 
 import (
@@ -20,20 +20,20 @@ const (
 // API中定义操作时必须保留的字段
 const (
 	// 身份登记
-	IDENTITY = "+|+"
+	IDENTITY = "+identity+"
 	// 心跳操作符
-	HEARTBEAT = "-|-"
+	HEARTBEAT = "+heartbeat+"
 )
 
 type Teleport interface {
-	// *必须指定应用程序的API
-	SetAPI(api API) Teleport
 	// *以服务器模式运行
 	Server(port string)
 	// *以客户端模式运行
 	Client(serverAddr string, port string)
 	// *主动推送信息，不写nodeuid默认随机发送给一个节点
 	Request(body interface{}, operation string, nodeuid ...string)
+	// 指定自定义的应用程序API
+	SetAPI(api API) Teleport
 
 	// 设置本节点唯一标识符，默认为本节点ip:port
 	SetUID(string) Teleport
@@ -101,20 +101,12 @@ func New() Teleport {
 // 指定应用程序API
 func (self *TP) SetAPI(api API) Teleport {
 	self.api = api
-	// 添加保留规则——身份识别
-	self.api[IDENTITY] = func(receive *NetData) *NetData {
-		return receive
-	}
-	// 添加保留规则——忽略心跳请求
-	self.api[HEARTBEAT] = func(receive *NetData) *NetData { return nil }
 	return self
 }
 
 // 启动服务器模式
 func (self *TP) Server(port string) {
-	if !self.startCheck() {
-		return
-	}
+	self.reserveAPI()
 	self.mode = SERVER
 	self.port = port
 	if self.timeout == 0 {
@@ -127,9 +119,7 @@ func (self *TP) Server(port string) {
 
 // 启动客户端模式
 func (self *TP) Client(serverAddr string, port string) {
-	if !self.startCheck() {
-		return
-	}
+	self.reserveAPI()
 	self.mode = CLIENT
 	self.port = port
 	self.serverAddr = serverAddr
@@ -281,26 +271,6 @@ func (self *TP) cGoConn(conn net.Conn) {
 	go self.cWriter(connect)
 }
 
-// 绑定节点与连接，默认key为节点ip
-func (self *TP) setNodesMap(conn *Connect) {
-	if self.uid == "" {
-		self.uid = conn.LocalAddr().String()
-	}
-	self.Send(NewNetData2(conn, IDENTITY, self.uid))
-	if !self.read(conn) {
-		return
-	}
-	data := <-conn.WriteChan
-	// log.Println("收到信息：", data)
-	if nodeuid := data.Body.(string); data.Operation == IDENTITY && nodeuid != "" {
-		self.nodesMap[nodeuid] = conn.RemoteAddr().String()
-	} else {
-		// nodeuid = strings.Split(conn.RemoteAddr().String(), ":")[0]
-		nodeuid = conn.RemoteAddr().String()
-		self.nodesMap[nodeuid] = nodeuid
-	}
-}
-
 // 服务器读数据
 func (self *TP) sReader(conn *Connect) {
 	// 退出时关闭连接，删除连接池中的连接
@@ -404,6 +374,26 @@ func (self *TP) getConnByUID(nodeuid string) *Connect {
 	return self.getConnByAddr(addr)
 }
 
+// 绑定节点与连接，默认key为节点ip
+func (self *TP) setNodesMap(conn *Connect) {
+	if self.uid == "" {
+		self.uid = conn.LocalAddr().String()
+	}
+	self.Send(NewNetData2(conn, IDENTITY, self.uid))
+	if !self.read(conn) {
+		return
+	}
+	data := <-conn.WriteChan
+	// log.Println("收到身份信息：", data)
+	if nodeuid := data.Body.(string); data.Operation == IDENTITY && nodeuid != "" {
+		self.nodesMap[nodeuid] = conn.RemoteAddr().String()
+	} else {
+		// nodeuid = strings.Split(conn.RemoteAddr().String(), ":")[0]
+		nodeuid = conn.RemoteAddr().String()
+		self.nodesMap[nodeuid] = nodeuid
+	}
+}
+
 // 关闭连接，退出协程
 func (self *TP) closeConn(connkey string) {
 	self.connPool[connkey].Close()
@@ -442,6 +432,10 @@ func (self *TP) Save(conn *Connect) {
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
 
 	for _, data := range dataSlice {
+		// js := map[string]interface{}{}
+		// json.Unmarshal(data, &js)
+		// log.Printf("接收信息为：%v", js)
+
 		d := new(NetData)
 		if err := json.Unmarshal(data, d); err == nil {
 			// 修复缺失请求方地址的请求
@@ -494,13 +488,14 @@ func (self *TP) apiHandle() {
 	}
 }
 
-// 检测是否具备启动条件
-func (self *TP) startCheck() bool {
-	if self.api == nil {
-		log.Println("无法运行：请先指定本节点应用的API！")
-		return false
+// 强制设定系统保留的API
+func (self *TP) reserveAPI() {
+	// 添加保留规则——身份识别
+	self.api[IDENTITY] = func(receive *NetData) *NetData {
+		return receive
 	}
-	return true
+	// 添加保留规则——忽略心跳请求
+	self.api[HEARTBEAT] = func(receive *NetData) *NetData { return nil }
 }
 
 // ***********************************************常用函数*************************************************** \\
