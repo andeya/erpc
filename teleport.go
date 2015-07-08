@@ -1,5 +1,5 @@
 // Teleport是一款适用于分布式系统的高并发API框架，它采用socket长连接、全双工通信，实现S/C对等工作，内部数据传输格式为JSON。
-// Version 0.3
+// Version 0.3.1
 package teleport
 
 import (
@@ -477,10 +477,24 @@ func (self *TP) apiHandle() {
 				if resp.Operation == "" {
 					resp.Operation = operation
 				}
-				// 标记发送端与接收端地址
-				resp.From = from
-				resp.To = to
-				conn.WriteChan <- resp
+
+				// 若未设置发送端与接收端地址，则标记为默认
+				if resp.From == "" {
+					resp.From = from
+				}
+
+				if resp.To == "" {
+					resp.To = to
+					// 按照发送地址To，进行发送
+					conn.WriteChan <- resp
+				} else if newConn := self.getConnByUID(resp.To); newConn != nil {
+					// 按照发送地址To，进行发送
+					newConn.WriteChan <- resp
+				} else {
+					// 发送地址To不存在，返回
+					return
+				}
+
 			} else {
 				log.Printf("非法操作请求：%v ，来源：%v", req.Operation, req.From)
 			}
