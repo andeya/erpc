@@ -5,6 +5,15 @@ import (
 // "net"
 )
 
+const (
+	// 返回成功
+	SUCCESS = iota
+	// 返回失败
+	FAILURE
+	// 返回非法请求
+	LLLEGAL
+)
+
 // 定义数据传输结构
 type NetData struct {
 	// 消息体
@@ -13,10 +22,12 @@ type NetData struct {
 	Operation string
 	// 唯一标识符
 	UID string
-	// 发信方代号
+	// 发信方ip:port
 	From string
-	// 收信方代号
+	// 收信方ip:port
 	To string
+	// 返回状态
+	Status int
 }
 
 func NewNetData1(from string, to string, operation string, body interface{}) *NetData {

@@ -81,6 +81,7 @@ type TP struct {
 	api API
 }
 
+// 每个API方法需判断stutas状态，并做相应处理
 type API map[string]func(*NetData) *NetData
 
 // 创建接口实例，0为默认设置
@@ -135,6 +136,7 @@ func (self *TP) Client(serverAddr string, port string) {
 // *主动推送信息，直到有连接出现开始发送，不写nodeuid默认随机发送给一个节点
 func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 	var conn *Connect
+	var to string
 	if len(nodeuid) == 0 {
 		for {
 			if len(self.nodesMap) > 0 {
@@ -142,19 +144,24 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 			}
 			time.Sleep(5e8)
 		}
-		// 随机发给一个节点
-		for _, conn = range self.connPool {
+		// 一个随机节点的信息
+		for uid, connKey := range self.nodesMap {
+			to = connKey
+			nodeuid = append(nodeuid, uid)
 			goto aLabel
 		}
 	} else {
-		// 发给指定节点
-		conn = self.getConnByUID(nodeuid[0])
+		// 获取指定节点的地址
+		to = self.nodesMap[nodeuid[0]]
 	}
 aLabel:
-	if conn == nil {
-		return
+	// 等待并取得连接实例
+	conn = self.getConnByUID(nodeuid[0])
+	for conn == nil {
+		conn = self.getConnByUID(nodeuid[0])
+		time.Sleep(5e8)
 	}
-	conn.WriteChan <- NewNetData2(conn, operation, body)
+	conn.WriteChan <- NewNetData1(conn.LocalAddr().String(), to, operation, body)
 	// log.Println("添加一条请求：", conn.RemoteAddr().String(), operation, body)
 }
 
@@ -374,7 +381,7 @@ func (self *TP) getConnByUID(nodeuid string) *Connect {
 	return self.getConnByAddr(addr)
 }
 
-// 绑定节点与连接，默认key为节点ip
+// 连接初始化，绑定节点与连接，默认key为节点ip
 func (self *TP) setNodesMap(conn *Connect) {
 	if self.uid == "" {
 		self.uid = conn.LocalAddr().String()
@@ -455,52 +462,70 @@ func (self *TP) apiHandle() {
 		req := <-self.apiReadChan
 		go func(req *NetData) {
 			var conn *Connect
-			// 尝试3次获取连接实例
-			for i := 0; i < 3; i++ {
-				conn = self.getConnByAddr(req.From)
-				if conn != nil {
-					break
+
+			operation, from, to := req.Operation, req.To, req.From
+			fn, ok := self.api[operation]
+
+			// 非法请求返回错误
+			if !ok {
+				if oldConn := self.getConnByAddr(req.From); oldConn != nil {
+					respErr := ReturnError(req, LLLEGAL, "您请求的API方法（"+req.Operation+"）不存在！")
+					oldConn.WriteChan <- respErr
 				}
-				time.Sleep(2e9)
-			}
-			if conn == nil {
+				log.Printf("非法操作请求：%v ，来源：%v", req.Operation, req.From)
 				return
 			}
-			operation := req.Operation
-			if fn, ok := self.api[operation]; ok {
-				from, to := req.To, req.From
-				resp := fn(req)
-				if resp == nil {
-					return //continue
-				}
-				// 默认指定与req相同的操作符
-				if resp.Operation == "" {
-					resp.Operation = operation
-				}
 
-				// 若未设置发送端与接收端地址，则标记为默认
-				if resp.From == "" {
-					resp.From = from
-				}
-
-				if resp.To == "" {
-					resp.To = to
-					// 按照发送地址To，进行发送
-					conn.WriteChan <- resp
-				} else if newConn := self.getConnByUID(resp.To); newConn != nil {
-					// 按照发送地址To，进行发送
-					newConn.WriteChan <- resp
-				} else {
-					// 发送地址To不存在，返回
-					return
-				}
-
-			} else {
-				log.Printf("非法操作请求：%v ，来源：%v", req.Operation, req.From)
+			resp := fn(req)
+			if resp == nil {
+				return //continue
 			}
+
+			if resp.To == "" {
+				resp.To = to
+			}
+
+			// 若指定节点连接不存在，则向原请求端返回错误
+			if conn = self.getConnByAddr(resp.To); conn == nil {
+				if oldConn := self.getConnByAddr(req.From); oldConn != nil {
+					respErr := ReturnError(req, FAILURE, "")
+					oldConn.WriteChan <- respErr
+				}
+				return
+			}
+
+			// 默认指定与req相同的操作符
+			if resp.Operation == "" {
+				resp.Operation = operation
+			}
+
+			resp.From = from
+
+			conn.WriteChan <- resp
+
 		}(req)
 	}
 }
+
+// 每隔一秒检查一次是否存在对端连接实例
+// 计时90秒
+// func (self *TP) waitReturn(addrStr string) (conn *Connect, ok bool) {
+// 	tick := time.Tick(1e9)
+// 	timeOut := time.After(9e10)
+// 	for {
+// 		conn = self.getConnByAddr(addrStr)
+// 		if conn != nil {
+// 			return conn, true
+// 		}
+// 		select {
+// 		case <-tick:
+// 		case <-timeOut:
+// 			if conn == nil {
+// 				return
+// 			}
+// 		}
+// 	}
+// }
 
 // 强制设定系统保留的API
 func (self *TP) reserveAPI() {
@@ -518,11 +543,21 @@ func (self *TP) reserveAPI() {
 func ReturnData(body interface{}, operation ...string) *NetData {
 	if len(operation) == 0 {
 		return &NetData{
-			Body: body,
+			Status: SUCCESS,
+			Body:   body,
 		}
 	}
 	return &NetData{
+		Status:    SUCCESS,
 		Operation: operation[0],
 		Body:      body,
 	}
+}
+
+// 返回错误，receive必须为直接接受到的*NetData
+func ReturnError(receive *NetData, status int, msg string) *NetData {
+	receive.Status = status
+	receive.Body = msg
+	receive.From, receive.To = receive.To, receive.From
+	return receive
 }
