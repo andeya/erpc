@@ -13,9 +13,14 @@ func main() {
 			log.Printf("默认：%v", receive.Body)
 			return nil
 		},
+		"非法请求测试": func(receive *teleport.NetData) *teleport.NetData {
+			log.Printf("默认：%v", receive.Body)
+			return nil
+		},
 	})
 	tp.Client("127.0.0.1", ":20125")
 	tp.Request("我是客户端，我来报个到", "报到")
+	tp.Request("我是客户端，我来报个到", "非法请求测试")
 	select {}
 }
 
