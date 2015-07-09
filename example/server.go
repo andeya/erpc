@@ -29,7 +29,7 @@ func main() {
 	tp.SetAPI(teleport.API{
 		"报到": func(receive *teleport.NetData) *teleport.NetData {
 			log.Printf("报到：%v", receive.Body)
-			return teleport.ReturnData("我是服务器，我已经收到你的来信")
+			return teleport.ReturnData("服务器：C客户端已经报到！", "报到", "C2")
 		},
 	})
 

@@ -7,11 +7,11 @@ import (
 
 const (
 	// 返回成功
-	SUCCESS = iota
+	SUCCESS = 0
 	// 返回失败
-	FAILURE
+	FAILURE = -1
 	// 返回非法请求
-	LLLEGAL
+	LLLEGAL = -2
 )
 
 // 定义数据传输结构
