@@ -22,23 +22,20 @@ type NetData struct {
 	Operation string
 	// 唯一标识符
 	UID string
-	// 发信方ip:port
+	// 发信节点uid
 	From string
-	// 收信方ip:port
+	// 收信节点uid
 	To string
 	// 返回状态
 	Status int
 }
 
-func NewNetData1(from string, to string, operation string, body interface{}) *NetData {
+func NewNetData(from, to, operation string, body interface{}) *NetData {
 	return &NetData{
-		Body:      body,
-		Operation: operation,
 		From:      from,
 		To:        to,
+		Body:      body,
+		Operation: operation,
+		Status:    SUCCESS,
 	}
-}
-
-func NewNetData2(conn *Connect, operation string, body interface{}) *NetData {
-	return NewNetData1(conn.LocalAddr().String(), conn.RemoteAddr().String(), operation, body)
 }

@@ -50,7 +50,7 @@ type Teleport interface {
 
 	// 返回运行模式
 	GetMode() int
-	// 返回当前连接节点数
+	// 返回当前有效连接节点数
 	CountNodes() int
 }
 
@@ -63,10 +63,8 @@ type TP struct {
 	port string
 	// 服务器地址（不含端口号），格式如"127.0.0.1"
 	serverAddr string
-	// 长连接池，key为host:port形式
+	// 长连接池，刚一连接时key为host:port形式，随后通过身份验证替换为UID
 	connPool map[string]*Connect
-	// 动态绑定节点功能与conn，key节点UID，value为节点地址host:port
-	nodesMap map[string]string
 	// 连接时长，心跳时长的依据
 	timeout time.Duration
 	// 粘包处理
@@ -88,7 +86,6 @@ type API map[string]func(*NetData) *NetData
 func New() Teleport {
 	return &TP{
 		connPool:      make(map[string]*Connect),
-		nodesMap:      make(map[string]string),
 		api:           API{},
 		Protocol:      NewProtocol("henrylee2cn"),
 		apiReadChan:   make(chan *NetData, 4096),
@@ -136,32 +133,29 @@ func (self *TP) Client(serverAddr string, port string) {
 // *主动推送信息，直到有连接出现开始发送，不写nodeuid默认随机发送给一个节点
 func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 	var conn *Connect
-	var to string
+	var uid string
 	if len(nodeuid) == 0 {
 		for {
-			if len(self.nodesMap) > 0 {
+			if self.CountNodes() > 0 {
 				break
 			}
 			time.Sleep(5e8)
 		}
 		// 一个随机节点的信息
-		for uid, connKey := range self.nodesMap {
-			to = connKey
-			nodeuid = append(nodeuid, uid)
-			goto aLabel
+		for uid, conn = range self.connPool {
+			if conn.IsReady() {
+				nodeuid = append(nodeuid, uid)
+				break
+			}
 		}
-	} else {
-		// 获取指定节点的地址
-		to = self.nodesMap[nodeuid[0]]
 	}
-aLabel:
 	// 等待并取得连接实例
-	conn = self.getConnByUID(nodeuid[0])
-	for conn == nil {
-		conn = self.getConnByUID(nodeuid[0])
+	conn = self.getConn(nodeuid[0])
+	for conn == nil || !conn.IsReady() {
+		conn = self.getConn(nodeuid[0])
 		time.Sleep(5e8)
 	}
-	conn.WriteChan <- NewNetData1(conn.LocalAddr().String(), to, operation, body)
+	conn.WriteChan <- NewNetData(self.uid, nodeuid[0], operation, body)
 	// log.Println("添加一条请求：", conn.RemoteAddr().String(), operation, body)
 }
 
@@ -206,9 +200,15 @@ func (self *TP) GetMode() int {
 	return self.mode
 }
 
-// 返回当前连接节点数
+// 返回当前有效连接节点数
 func (self *TP) CountNodes() int {
-	return len(self.nodesMap)
+	count := 0
+	for _, conn := range self.connPool {
+		if conn.IsReady() {
+			count++
+		}
+	}
+	return count
 }
 
 // ***********************************************功能实现*************************************************** \\
@@ -261,15 +261,15 @@ func (self *TP) sGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
 	self.connPool[remoteAddr] = connect
 	// 登记节点UID
-	nodeuid, nodeAddr := self.setNodesMap(connect)
-	if nodeuid == "" || nodeAddr == "" {
+	nodeuid := self.logConn(connect)
+	if nodeuid == "" {
 		return
 	}
-	log.Printf(" *     —— 客户端 %v (%v) 连接成功 ——", nodeuid, nodeAddr)
+	log.Printf(" *     —— 客户端 %v (%v) 连接成功 ——", nodeuid, remoteAddr)
 
 	// 开启读写双工协程
-	go self.sReader(connect)
-	go self.sWriter(connect)
+	go self.sReader(nodeuid)
+	go self.sWriter(nodeuid)
 }
 
 // 为每个长连接开启读写两个协程
@@ -277,23 +277,59 @@ func (self *TP) cGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
 	self.connPool[remoteAddr] = connect
 	// 绑定节点UID与conn
-	nodeuid, nodeAddr := self.setNodesMap(connect)
-	if nodeuid == "" || nodeAddr == "" {
+	nodeuid := self.logConn(connect)
+	if nodeuid == "" {
 		return
 	}
-	log.Printf(" *     —— 成功连接到服务器：%v (%v)——", nodeuid, nodeAddr)
+	log.Printf(" *     —— 成功连接到服务器：%v (%v)——", nodeuid, remoteAddr)
 	// 开启读写双工协程
-	go self.cReader(connect)
-	go self.cWriter(connect)
+	go self.cReader(nodeuid)
+	go self.cWriter(nodeuid)
+}
+
+// 连接初始化，绑定节点与连接，默认key为节点ip
+func (self *TP) logConn(conn *Connect) (nodeuid string) {
+	if self.uid == "" {
+		self.uid = conn.LocalAddr().String()
+	}
+
+	self.Send(NewNetData(conn.LocalAddr().String(), conn.RemoteAddr().String(), IDENTITY, self.uid))
+
+	if !self.read(conn) {
+		return
+	}
+
+	data := <-conn.WriteChan
+
+	// log.Println("收到身份信息：", data)
+
+	addr := conn.RemoteAddr().String()
+	nodeuid = data.Body.(string)
+
+	if data.Operation == IDENTITY && nodeuid == "" {
+		// 或者key为 strings.Split(conn.RemoteAddr().String(), ":")[0]
+		nodeuid = addr
+	} else {
+		delete(self.connPool, addr)
+		self.connPool[nodeuid] = conn
+	}
+
+	defer func() {
+		// 标记连接已经正式生效可用
+		conn.UID = addr
+	}()
+
+	return
 }
 
 // 服务器读数据
-func (self *TP) sReader(conn *Connect) {
+func (self *TP) sReader(nodeuid string) {
 	// 退出时关闭连接，删除连接池中的连接
-	connkey := conn.RemoteAddr().String()
 	defer func() {
-		self.closeConn(connkey)
+		self.closeConn(nodeuid)
 	}()
+
+	var conn = self.getConn(nodeuid)
 
 	for {
 		// 设置连接超时
@@ -306,12 +342,13 @@ func (self *TP) sReader(conn *Connect) {
 }
 
 // 客户端读数据
-func (self *TP) cReader(conn *Connect) {
+func (self *TP) cReader(nodeuid string) {
 	// 退出时关闭连接，删除连接池中的连接
-	connkey := conn.RemoteAddr().String()
 	defer func() {
-		self.closeConn(connkey)
+		self.closeConn(nodeuid)
 	}()
+
+	var conn = self.getConn(nodeuid)
 
 	for {
 		if !self.read(conn) {
@@ -334,12 +371,14 @@ func (self *TP) read(conn *Connect) bool {
 }
 
 // 服务器发送数据
-func (self *TP) sWriter(conn *Connect) {
+func (self *TP) sWriter(nodeuid string) {
 	// 退出时关闭连接，删除连接池中的连接
-	connkey := conn.RemoteAddr().String()
 	defer func() {
-		self.closeConn(connkey)
+		self.closeConn(nodeuid)
 	}()
+
+	var conn = self.getConn(nodeuid)
+
 	for {
 		data := <-conn.WriteChan
 		self.Send(data)
@@ -347,13 +386,14 @@ func (self *TP) sWriter(conn *Connect) {
 }
 
 // 客户端发送数据
-func (self *TP) cWriter(conn *Connect) {
+func (self *TP) cWriter(nodeuid string) {
 	// 退出时关闭连接，删除连接池中的连接
-	connkey := conn.RemoteAddr().String()
 	defer func() {
-		self.closeConn(connkey)
+		self.closeConn(nodeuid)
 	}()
-	i := 0
+
+	var conn = self.getConn(nodeuid)
+
 	for {
 		timing := time.After(self.timeout)
 		data := new(NetData)
@@ -361,78 +401,54 @@ func (self *TP) cWriter(conn *Connect) {
 		case data = <-conn.WriteChan:
 		case <-timing:
 			// 保持心跳
-			data = NewNetData2(conn, HEARTBEAT, i)
+			data = NewNetData(self.uid, nodeuid, HEARTBEAT, "")
 		}
 		self.Send(data)
 	}
 }
 
-// 根据地址获取连接对象
-func (self *TP) getConnByAddr(connKey string) *Connect {
-	conn, ok := self.connPool[connKey]
+// 根据uid获取连接对象
+func (self *TP) getConn(nodeuid string) *Connect {
+	conn, ok := self.connPool[nodeuid]
 	if !ok {
-		// log.Printf("已与节点 %v 失去连接，无法完成发送请求！", connKey)
+		// log.Printf("与节点 %v 失去连接，无法完成发送请求！", nodeuid)
 		return nil
 	}
 	return conn
 }
 
-// 根据节点UID获取连接对象
-func (self *TP) getConnByUID(nodeuid string) *Connect {
-	addr, ok := "", false
-	for {
-		addr, ok = self.nodesMap[nodeuid]
-		if ok {
-			break
-		}
-		time.Sleep(5e7)
+// 根据uid获取连接对象地址
+func (self *TP) getConnAddr(nodeuid string) string {
+	conn := self.getConn(nodeuid)
+	if conn == nil {
+		// log.Printf("已与节点 %v 失去连接，无法完成发送请求！", nodeuid)
+		return ""
 	}
-	return self.getConnByAddr(addr)
-}
-
-// 连接初始化，绑定节点与连接，默认key为节点ip
-func (self *TP) setNodesMap(conn *Connect) (nodeuid, nodeAddr string) {
-	if self.uid == "" {
-		self.uid = conn.LocalAddr().String()
-	}
-	self.Send(NewNetData2(conn, IDENTITY, self.uid))
-	if !self.read(conn) {
-		return
-	}
-	data := <-conn.WriteChan
-	// log.Println("收到身份信息：", data)
-	nodeAddr = conn.RemoteAddr().String()
-	nodeuid = data.Body.(string)
-	if data.Operation == IDENTITY && nodeuid == "" {
-		// 或者key为 strings.Split(conn.RemoteAddr().String(), ":")[0]
-		nodeuid = nodeAddr
-	}
-	self.nodesMap[nodeuid] = nodeAddr
-	return
+	return conn.RemoteAddr().String()
 }
 
 // 关闭连接，退出协程
-func (self *TP) closeConn(connkey string) {
-	self.connPool[connkey].Close()
-	delete(self.connPool, connkey)
-	for k, v := range self.nodesMap {
-		if v == connkey {
-			delete(self.nodesMap, k)
-			log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", k, v)
-			break
-		}
-	}
+func (self *TP) closeConn(nodeuid string) {
+	conn := self.connPool[nodeuid]
+	log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", nodeuid, conn.RemoteAddr().String())
+	conn.Close()
+	delete(self.connPool, nodeuid)
 }
 
 // 通信数据编码与发送
 func (self *TP) Send(data *NetData) {
+	if data.From == "" {
+		data.From = self.uid
+	}
+
 	d, err := json.Marshal(*data)
 	if err != nil {
 		log.Println("编码出错了", err)
 		return
 	}
-	conn := self.getConnByAddr(data.To)
+	conn := self.getConn(data.To)
 	if conn == nil {
+		// log.Println("发送信息失败：", data)
 		return
 	}
 	// 封包
@@ -457,7 +473,7 @@ func (self *TP) Save(conn *Connect) {
 		if err := json.Unmarshal(data, d); err == nil {
 			// 修复缺失请求方地址的请求
 			if d.From == "" {
-				d.From = conn.RemoteAddr().String()
+				d.From = conn.UID
 			}
 			// 添加到读取缓存
 			self.apiReadChan <- d
@@ -479,12 +495,7 @@ func (self *TP) apiHandle() {
 			// 非法请求返回错误
 			if !ok {
 				self.autoErrorHandle(req, LLLEGAL, "您请求的API方法（"+req.Operation+"）不存在！", to)
-
-				for k, v := range self.nodesMap {
-					if v == to {
-						log.Printf("非法请求：%v ，来自：%v (%v)", req.Operation, k, v)
-					}
-				}
+				log.Printf("非法请求：%v ，来自：%v (%v)", req.Operation, to, self.getConnAddr(to))
 				return
 			}
 
@@ -495,13 +506,10 @@ func (self *TP) apiHandle() {
 
 			if resp.To == "" {
 				resp.To = to
-			} else if v, ok := self.nodesMap[resp.To]; ok {
-				// 试探resp.To是否为nodeuid，并自动转换为连接地址
-				resp.To = v
 			}
 
 			// 若指定节点连接不存在，则向原请求端返回错误
-			if conn = self.getConnByAddr(resp.To); conn == nil {
+			if conn = self.getConn(resp.To); conn == nil {
 				self.autoErrorHandle(req, FAILURE, "", to)
 				return
 			}
@@ -520,7 +528,7 @@ func (self *TP) apiHandle() {
 }
 
 func (self *TP) autoErrorHandle(data *NetData, status int, msg string, reqFrom string) bool {
-	oldConn := self.getConnByAddr(reqFrom)
+	oldConn := self.getConn(reqFrom)
 	if oldConn == nil {
 		return false
 	}
@@ -536,7 +544,7 @@ func (self *TP) autoErrorHandle(data *NetData, status int, msg string, reqFrom s
 // 	tick := time.Tick(1e9)
 // 	timeOut := time.After(9e10)
 // 	for {
-// 		conn = self.getConnByAddr(addrStr)
+// 		conn = self.getConn(addrStr)
 // 		if conn != nil {
 // 			return conn, true
 // 		}

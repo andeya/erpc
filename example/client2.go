@@ -10,7 +10,9 @@ import (
 func main() {
 	tp := teleport.New().SetUID("C2").SetAPI(teleport.API{
 		"报到": func(receive *teleport.NetData) *teleport.NetData {
-			log.Printf("%v", receive.Body)
+			if receive.Status == teleport.SUCCESS {
+				log.Printf("%v", receive.Body)
+			}
 			return nil
 		},
 	})

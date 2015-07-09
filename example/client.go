@@ -8,9 +8,14 @@ import (
 
 // 有标识符UID的demo，保证了客户端链接唯一性
 func main() {
-	tp := teleport.New().SetUID("C").SetAPI(teleport.API{
+	tp := teleport.New().SetAPI(teleport.API{
 		"报到": func(receive *teleport.NetData) *teleport.NetData {
-			log.Printf("默认：%v", receive.Body)
+			if receive.Status == teleport.SUCCESS {
+				log.Printf("%v", receive.Body)
+			}
+			if receive.Status == teleport.FAILURE {
+				log.Printf("%v", "请求处理失败！")
+			}
 			return nil
 		},
 		"非法请求测试": func(receive *teleport.NetData) *teleport.NetData {

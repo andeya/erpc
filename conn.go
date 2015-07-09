@@ -7,7 +7,7 @@ import (
 
 // 长连接
 type Connect struct {
-	// 唯一标识符
+	// 唯一标识符，Teleport确定为有效连接后才可赋值
 	UID string
 	// 专用写入数据缓存通道
 	WriteChan chan *NetData
@@ -19,16 +19,24 @@ type Connect struct {
 	net.Conn
 }
 
-// 创建Connect实例，uid默认为conn的RemoteAddr
+// 创建Connect实例
 func NewConnect(conn net.Conn, bufferLen int, wChanCap int) (k string, v *Connect) {
 	k = conn.RemoteAddr().String()
 
 	v = &Connect{
-		UID:       k,
+		UID:       "",
 		WriteChan: make(chan *NetData, wChanCap),
 		Buffer:    make([]byte, bufferLen),
 		TmpBuffer: make([]byte, 0),
 		Conn:      conn,
 	}
 	return k, v
+}
+
+// 以UID判断连接是否完成准备好
+func (self *Connect) IsReady() bool {
+	if self.UID == "" {
+		return false
+	}
+	return true
 }

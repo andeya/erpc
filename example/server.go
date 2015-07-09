@@ -25,7 +25,7 @@ import (
 
 // 无标识符UID的demo
 func main() {
-	tp := teleport.New()
+	tp := teleport.New().SetUID("S")
 	tp.SetAPI(teleport.API{
 		"报到": func(receive *teleport.NetData) *teleport.NetData {
 			log.Printf("报到：%v", receive.Body)
