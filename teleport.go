@@ -1,12 +1,10 @@
-// Teleport是一款适用于分布式系统的高并发API框架，它采用socket长连接、全双工通信，实现S/C对等工作，内部数据传输格式为JSON。
-// Version 0.3.2
+// Teleport是一款适用于分布式系统的高并发API框架，它采用socket全双工通信，实现S/C对等工作，支持长、短两种连接模式，支持断开后自动连接与手动断开连接，内部数据传输格式为JSON。
+// Version 0.4.0
 package teleport
 
 import (
 	"encoding/json"
 	"log"
-	"net"
-	// "strings"
 	"time"
 )
 
@@ -29,13 +27,15 @@ type Teleport interface {
 	// *以服务器模式运行
 	Server(port string)
 	// *以客户端模式运行
-	Client(serverAddr string, port string)
+	Client(serverAddr string, port string, isShort ...bool)
 	// *主动推送信息，不写nodeuid默认随机发送给一个节点
 	Request(body interface{}, operation string, nodeuid ...string)
 	// 指定自定义的应用程序API
 	SetAPI(api API) Teleport
+	// 断开连接，参数为空则断开所有连接
+	Close(nodeuid ...string)
 
-	// 设置本节点唯一标识符，默认为本节点ip:port
+	// 设置客户端唯一标识符，默认为本节点ip:port，对服务器模式无效，服务器模式的UID强制为“Server”
 	SetUID(string) Teleport
 	// 设置包头字符串，默认为henrylee2cn
 	SetPackHeader(string) Teleport
@@ -63,6 +63,8 @@ type TP struct {
 	port string
 	// 服务器地址（不含端口号），格式如"127.0.0.1"
 	serverAddr string
+	// 客户端模式下，控制是否为短链接
+	canClose bool
 	// 长连接池，刚一连接时key为host:port形式，随后通过身份验证替换为UID
 	connPool map[string]*Connect
 	// 连接时长，心跳时长的依据
@@ -107,6 +109,7 @@ func (self *TP) Server(port string) {
 	self.reserveAPI()
 	self.mode = SERVER
 	self.port = port
+	self.uid = "Server"
 	if self.timeout == 0 {
 		// 默认连接超时为5秒
 		self.timeout = 5e9
@@ -116,15 +119,17 @@ func (self *TP) Server(port string) {
 }
 
 // 启动客户端模式
-func (self *TP) Client(serverAddr string, port string) {
+func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
+	if len(isShort) > 0 && isShort[0] {
+		self.canClose = true
+	} else if self.timeout == 0 {
+		// 默认心跳频率为3秒1次
+		self.timeout = 3e9
+	}
 	self.reserveAPI()
 	self.mode = CLIENT
 	self.port = port
 	self.serverAddr = serverAddr
-	if self.timeout == 0 {
-		// 默认心跳频率为3秒1次
-		self.timeout = 3e9
-	}
 
 	go self.apiHandle()
 	go self.client()
@@ -159,8 +164,28 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 	// log.Println("添加一条请求：", conn.RemoteAddr().String(), operation, body)
 }
 
-// 设置本节点唯一标识符，默认为本节点IP
+// 断开连接，参数为空则断开所有连接
+func (self *TP) Close(nodeuid ...string) {
+	self.canClose = true
+	if len(nodeuid) == 0 {
+		for uid, conn := range self.connPool {
+			// log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", uid, conn.UID)
+			conn.Close()
+			delete(self.connPool, uid)
+		}
+		return
+	}
+	for _, uid := range nodeuid {
+		self.connPool[uid].Close()
+		delete(self.connPool, uid)
+	}
+}
+
+// 设置客户端唯一标识符，默认为本节点ip:port，对服务器模式无效，服务器模式的UID强制为“Server”
 func (self *TP) SetUID(nodeuid string) Teleport {
+	if self.mode == SERVER {
+		return self
+	}
 	self.uid = nodeuid
 	return self
 }
@@ -211,151 +236,7 @@ func (self *TP) CountNodes() int {
 	return count
 }
 
-// ***********************************************功能实现*************************************************** \\
-
-// 以服务器模式启动
-func (self *TP) server() {
-	listener, err := net.Listen("tcp", self.port)
-	if err != nil {
-		log.Printf("监听端口出错: %s", err.Error())
-	}
-
-	log.Println(" *     —— 已开启服务器监听 ——")
-	for {
-		// 等待下一个连接,如果没有连接,listener.Accept会阻塞
-		conn, err := listener.Accept()
-		if err != nil {
-			continue
-		}
-		// log.Printf(" *     —— 客户端 %v 连接成功 ——", conn.RemoteAddr().String())
-
-		// 开启该连接处理协程(读写两条协程)
-		self.sGoConn(conn)
-	}
-}
-
-// 以客户端模式启动
-func (self *TP) client() {
-	log.Println(" *     —— 正在连接服务器……")
-
-RetryLabel:
-	conn, err := net.Dial("tcp", self.serverAddr+self.port)
-	if err != nil {
-		time.Sleep(1e9)
-		goto RetryLabel
-	}
-	// log.Printf(" *     —— 成功连接到服务器：%v ——", conn.RemoteAddr().String())
-
-	// 开启该连接处理协程(读写两条协程)
-	self.cGoConn(conn)
-
-	// 当与服务器失连后，自动重新连接
-	for len(self.connPool) != 0 {
-		time.Sleep(1e9)
-	}
-	goto RetryLabel
-}
-
-// 为每个长连接开启读写两个协程
-func (self *TP) sGoConn(conn net.Conn) {
-	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
-	self.connPool[remoteAddr] = connect
-	// 登记节点UID
-	nodeuid := self.logConn(connect)
-	if nodeuid == "" {
-		return
-	}
-	log.Printf(" *     —— 客户端 %v (%v) 连接成功 ——", nodeuid, remoteAddr)
-
-	// 开启读写双工协程
-	go self.sReader(nodeuid)
-	go self.sWriter(nodeuid)
-}
-
-// 为每个长连接开启读写两个协程
-func (self *TP) cGoConn(conn net.Conn) {
-	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
-	self.connPool[remoteAddr] = connect
-	// 绑定节点UID与conn
-	nodeuid := self.logConn(connect)
-	if nodeuid == "" {
-		return
-	}
-	log.Printf(" *     —— 成功连接到服务器：%v (%v)——", nodeuid, remoteAddr)
-	// 开启读写双工协程
-	go self.cReader(nodeuid)
-	go self.cWriter(nodeuid)
-}
-
-// 连接初始化，绑定节点与连接，默认key为节点ip
-func (self *TP) logConn(conn *Connect) (nodeuid string) {
-	if self.uid == "" {
-		self.uid = conn.LocalAddr().String()
-	}
-
-	self.Send(NewNetData(conn.LocalAddr().String(), conn.RemoteAddr().String(), IDENTITY, self.uid))
-
-	if !self.read(conn) {
-		return
-	}
-
-	data := <-conn.WriteChan
-
-	// log.Println("收到身份信息：", data)
-
-	addr := conn.RemoteAddr().String()
-	nodeuid = data.Body.(string)
-
-	if data.Operation == IDENTITY && nodeuid == "" {
-		// 或者key为 strings.Split(conn.RemoteAddr().String(), ":")[0]
-		nodeuid = addr
-	} else {
-		delete(self.connPool, addr)
-		self.connPool[nodeuid] = conn
-	}
-
-	defer func() {
-		// 标记连接已经正式生效可用
-		conn.UID = addr
-	}()
-
-	return
-}
-
-// 服务器读数据
-func (self *TP) sReader(nodeuid string) {
-	// 退出时关闭连接，删除连接池中的连接
-	defer func() {
-		self.closeConn(nodeuid)
-	}()
-
-	var conn = self.getConn(nodeuid)
-
-	for {
-		// 设置连接超时
-		conn.SetReadDeadline(time.Now().Add(self.timeout))
-		// 等待读取数据
-		if !self.read(conn) {
-			break
-		}
-	}
-}
-
-// 客户端读数据
-func (self *TP) cReader(nodeuid string) {
-	// 退出时关闭连接，删除连接池中的连接
-	defer func() {
-		self.closeConn(nodeuid)
-	}()
-
-	var conn = self.getConn(nodeuid)
-
-	for {
-		if !self.read(conn) {
-			break
-		}
-	}
-}
+// ***********************************************公用方法*************************************************** \\
 
 func (self *TP) read(conn *Connect) bool {
 	read_len, err := conn.Read(conn.Buffer)
@@ -366,55 +247,13 @@ func (self *TP) read(conn *Connect) bool {
 		return false // connection already closed by client
 	}
 	conn.TmpBuffer = append(conn.TmpBuffer, conn.Buffer[:read_len]...)
-	self.Save(conn)
+	self.save(conn)
 	return true
-}
-
-// 服务器发送数据
-func (self *TP) sWriter(nodeuid string) {
-	// 退出时关闭连接，删除连接池中的连接
-	defer func() {
-		self.closeConn(nodeuid)
-	}()
-
-	var conn = self.getConn(nodeuid)
-
-	for {
-		data := <-conn.WriteChan
-		self.Send(data)
-	}
-}
-
-// 客户端发送数据
-func (self *TP) cWriter(nodeuid string) {
-	// 退出时关闭连接，删除连接池中的连接
-	defer func() {
-		self.closeConn(nodeuid)
-	}()
-
-	var conn = self.getConn(nodeuid)
-
-	for {
-		timing := time.After(self.timeout)
-		data := new(NetData)
-		select {
-		case data = <-conn.WriteChan:
-		case <-timing:
-			// 保持心跳
-			data = NewNetData(self.uid, nodeuid, HEARTBEAT, "")
-		}
-		self.Send(data)
-	}
 }
 
 // 根据uid获取连接对象
 func (self *TP) getConn(nodeuid string) *Connect {
-	conn, ok := self.connPool[nodeuid]
-	if !ok {
-		// log.Printf("与节点 %v 失去连接，无法完成发送请求！", nodeuid)
-		return nil
-	}
-	return conn
+	return self.connPool[nodeuid]
 }
 
 // 根据uid获取连接对象地址
@@ -430,13 +269,16 @@ func (self *TP) getConnAddr(nodeuid string) string {
 // 关闭连接，退出协程
 func (self *TP) closeConn(nodeuid string) {
 	conn := self.connPool[nodeuid]
+	if conn == nil {
+		return
+	}
 	log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", nodeuid, conn.RemoteAddr().String())
 	conn.Close()
 	delete(self.connPool, nodeuid)
 }
 
 // 通信数据编码与发送
-func (self *TP) Send(data *NetData) {
+func (self *TP) send(data *NetData) {
 	if data.From == "" {
 		data.From = self.uid
 	}
@@ -459,7 +301,7 @@ func (self *TP) Send(data *NetData) {
 }
 
 // 解码收到的数据并存入缓存
-func (self *TP) Save(conn *Connect) {
+func (self *TP) save(conn *Connect) {
 	// 解包
 	dataSlice := make([][]byte, 10)
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
@@ -501,6 +343,9 @@ func (self *TP) apiHandle() {
 
 			resp := fn(req)
 			if resp == nil {
+				if conn = self.getConn(to); conn != nil && self.getConn(to).IsShort {
+					self.closeConn(to)
+				}
 				return //continue
 			}
 
@@ -519,7 +364,9 @@ func (self *TP) apiHandle() {
 				resp.Operation = operation
 			}
 
-			resp.From = from
+			if resp.From == "" {
+				resp.From = from
+			}
 
 			conn.WriteChan <- resp
 
@@ -533,6 +380,7 @@ func (self *TP) autoErrorHandle(data *NetData, status int, msg string, reqFrom s
 		return false
 	}
 	respErr := ReturnError(data, status, msg)
+	respErr.From = self.uid
 	respErr.To = reqFrom
 	oldConn.WriteChan <- respErr
 	return true
@@ -571,18 +419,22 @@ func (self *TP) reserveAPI() {
 
 // ***********************************************常用函数*************************************************** \\
 // API中生成返回结果的方法
-// operationAndNodeuid[0]参数为空时，系统将指定与对端相同的操作符
-// operationAndNodeuid[1]参数为空时，系统将指定与对端为接收者
-func ReturnData(body interface{}, operationAndNodeuid ...string) *NetData {
+// OpAndToAndFrom[0]参数为空时，系统将指定与对端相同的操作符
+// OpAndToAndFrom[1]参数为空时，系统将指定与对端为接收者
+// OpAndToAndFrom[2]参数为空时，系统将指定自身为发送者
+func ReturnData(body interface{}, OpAndToAndFrom ...string) *NetData {
 	data := &NetData{
 		Status: SUCCESS,
 		Body:   body,
 	}
-	if len(operationAndNodeuid) > 0 {
-		data.Operation = operationAndNodeuid[0]
+	if len(OpAndToAndFrom) > 0 {
+		data.Operation = OpAndToAndFrom[0]
 	}
-	if len(operationAndNodeuid) > 1 {
-		data.To = operationAndNodeuid[1]
+	if len(OpAndToAndFrom) > 1 {
+		data.To = OpAndToAndFrom[1]
+	}
+	if len(OpAndToAndFrom) > 2 {
+		data.From = OpAndToAndFrom[2]
 	}
 	return data
 }

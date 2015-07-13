@@ -25,15 +25,20 @@ import (
 
 // 无标识符UID的demo
 func main() {
-	tp := teleport.New().SetUID("S")
+	tp := teleport.New()
 	tp.SetAPI(teleport.API{
 		"报到": func(receive *teleport.NetData) *teleport.NetData {
 			log.Printf("报到：%v", receive.Body)
-			return teleport.ReturnData("服务器：C客户端已经报到！", "报到", "C2")
+			return teleport.ReturnData("服务器："+receive.From+"客户端已经报到！", "报到", "C3")
 		},
-	})
 
-	tp.Server(":20125")
+		// 短链接不可以直接转发请求
+		"短链接报到": func(receive *teleport.NetData) *teleport.NetData {
+			log.Printf("报到：%v", receive.Body)
+			tp.Request("服务器："+receive.From+"客户端已经报到！", "报到", "C3")
+			return nil
+		},
+	}).Server(":20125")
 	select {}
 }
 

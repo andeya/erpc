@@ -17,6 +17,9 @@ type Connect struct {
 	TmpBuffer []byte
 	// 标准包conn接口实例，继承该接口所有方法
 	net.Conn
+
+	// 是否为短链接模式
+	IsShort bool
 }
 
 // 创建Connect实例

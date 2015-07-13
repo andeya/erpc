@@ -2,15 +2,21 @@ package main
 
 import (
 	"github.com/henrylee2cn/teleport"
-	// "log"
+	"log"
 	// "time"
 )
 
 // 有标识符UID的demo，保证了客户端链接唯一性
 func main() {
-	tp := teleport.New().SetUID("C2")
-	tp.Client("127.0.0.1", ":20125", true)
-	tp.Request("我是短链接客户端，我来报个到", "短链接报到")
+	tp := teleport.New().SetUID("C3").SetAPI(teleport.API{
+		"报到": func(receive *teleport.NetData) *teleport.NetData {
+			if receive.Status == teleport.SUCCESS {
+				log.Printf("%v", receive.Body)
+			}
+			return nil
+		},
+	})
+	tp.Client("127.0.0.1", ":20125")
 	select {}
 }
 
