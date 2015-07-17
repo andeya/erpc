@@ -30,7 +30,7 @@ func (self *TP) server() {
 	}
 }
 
-// 为每个长连接开启读写两个协程
+// 为每个连接开启读写两个协程
 func (self *TP) sGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
 	// 或者key为 strings.Split(conn.RemoteAddr().String(), ":")[0]

@@ -25,7 +25,7 @@ RetryLabel:
 
 	// 当与服务器失连后，自动重新连接
 	if !self.canClose {
-		for conn != nil {
+		for self.CountNodes() > 0 {
 			time.Sleep(1e9)
 		}
 		if !self.canClose {
@@ -34,7 +34,7 @@ RetryLabel:
 	}
 }
 
-// 为每个长连接开启读写两个协程
+// 为每个连接开启读写两个协程
 func (self *TP) cGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
 	self.connPool["Server"] = connect
