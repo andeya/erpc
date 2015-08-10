@@ -11,7 +11,8 @@ import (
 
 // 以服务器模式启动
 func (self *TP) server() {
-	listener, err := net.Listen("tcp", self.port)
+	var err error
+	self.listener, err = net.Listen("tcp", self.port)
 	if err != nil {
 		log.Printf("监听端口出错: %s", err.Error())
 	}
@@ -19,7 +20,7 @@ func (self *TP) server() {
 	log.Println(" *     —— 已开启服务器监听 ——")
 	for {
 		// 等待下一个连接,如果没有连接,listener.Accept会阻塞
-		conn, err := listener.Accept()
+		conn, err := self.listener.Accept()
 		if err != nil {
 			continue
 		}

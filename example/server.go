@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/henrylee2cn/teleport"
 	"log"
+	"time"
 )
 
 // 有标识符UID的demo
@@ -39,6 +40,8 @@ func main() {
 			return nil
 		},
 	}).Server(":20125")
+	time.Sleep(10e9)
+	tp.Close()
 	select {}
 }
 

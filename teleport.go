@@ -1,10 +1,11 @@
 // Teleport是一款适用于分布式系统的高并发API框架，它采用socket全双工通信，实现S/C对等工作，支持长、短两种连接模式，支持断开后自动连接与手动断开连接，内部数据传输格式为JSON。
-// Version 0.4.0
+// Version 0.4.1
 package teleport
 
 import (
 	"encoding/json"
 	"log"
+	"net"
 	"time"
 )
 
@@ -32,7 +33,7 @@ type Teleport interface {
 	Request(body interface{}, operation string, nodeuid ...string)
 	// 指定自定义的应用程序API
 	SetAPI(api API) Teleport
-	// 断开连接，参数为空则断开所有连接
+	// 断开连接，参数为空则断开所有连接，服务器模式下还将停止监听
 	Close(nodeuid ...string)
 
 	// 设置客户端唯一标识符，默认为本节点ip:port，对服务器模式无效，服务器模式的UID强制为“Server”
@@ -63,6 +64,8 @@ type TP struct {
 	port string
 	// 服务器地址（不含端口号），格式如"127.0.0.1"
 	serverAddr string
+	// 服务器模式下，缓存监听对象
+	listener net.Listener
 	// 客户端模式下，控制是否为短链接
 	canClose bool
 	// 长连接池，刚一连接时key为host:port形式，随后通过身份验证替换为UID
@@ -164,12 +167,16 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 	// log.Println("添加一条请求：", conn.RemoteAddr().String(), operation, body)
 }
 
-// 断开连接，参数为空则断开所有连接
+// 断开连接，参数为空则断开所有连接，服务器模式下停止监听
 func (self *TP) Close(nodeuid ...string) {
+	if self.listener != nil {
+		self.listener.Close()
+		log.Printf(" *     —— 服务器已终止监听 %v！ ——", self.port)
+	}
 	self.canClose = true
 	if len(nodeuid) == 0 {
 		for uid, conn := range self.connPool {
-			// log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", uid, conn.UID)
+			log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", uid, conn.UID)
 			conn.Close()
 			delete(self.connPool, uid)
 		}
