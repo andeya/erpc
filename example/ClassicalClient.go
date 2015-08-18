@@ -54,7 +54,7 @@ func newManage() *Manage {
 		Teleport: teleport.New(),
 		result:   make(chan [2]interface{}, 1),
 	}
-	uid := M_WEB + fmt.Sprint(time.Now().Unix())
+	uid := M_WEB + ":" + fmt.Sprint(time.Now().Unix())
 	m.SetAPI(newManageApi(m)).SetUID(uid).Client(MANANGE_SOCKET_IP, MANANGE_SOCKET_PORT)
 	return m
 }
