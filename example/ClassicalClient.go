@@ -139,7 +139,7 @@ type result struct {
 
 func (self *result) Process(receive *teleport.NetData) *teleport.NetData {
 	if receive.Status != teleport.SUCCESS {
-		log.Printf("error: %v，%v", receive.Body)
+		log.Printf("error: %v，%v", receive.Body, receive.Status)
 		self.result <- [2]interface{}{receive.Body, false}
 	}
 	self.result <- [2]interface{}{receive.Body, true}
