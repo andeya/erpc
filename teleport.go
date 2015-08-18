@@ -85,7 +85,12 @@ type TP struct {
 }
 
 // 每个API方法需判断stutas状态，并做相应处理
-type API map[string]func(*NetData) *NetData
+type API map[string]Handle
+
+// 请求处理接口
+type Handle interface {
+	Process(*NetData) *NetData
+}
 
 // 创建接口实例，0为默认设置
 func New() Teleport {
@@ -339,7 +344,7 @@ func (self *TP) apiHandle() {
 			var conn *Connect
 
 			operation, from, to := req.Operation, req.To, req.From
-			fn, ok := self.api[operation]
+			handle, ok := self.api[operation]
 
 			// 非法请求返回错误
 			if !ok {
@@ -348,7 +353,7 @@ func (self *TP) apiHandle() {
 				return
 			}
 
-			resp := fn(req)
+			resp := handle.Process(req)
 			if resp == nil {
 				if conn = self.getConn(to); conn != nil && self.getConn(to).IsShort {
 					self.closeConn(to)
@@ -393,35 +398,27 @@ func (self *TP) autoErrorHandle(data *NetData, status int, msg string, reqFrom s
 	return true
 }
 
-// 每隔一秒检查一次是否存在对端连接实例
-// 计时90秒
-// func (self *TP) waitReturn(addrStr string) (conn *Connect, ok bool) {
-// 	tick := time.Tick(1e9)
-// 	timeOut := time.After(9e10)
-// 	for {
-// 		conn = self.getConn(addrStr)
-// 		if conn != nil {
-// 			return conn, true
-// 		}
-// 		select {
-// 		case <-tick:
-// 		case <-timeOut:
-// 			if conn == nil {
-// 				return
-// 			}
-// 		}
-// 	}
-// }
-
 // 强制设定系统保留的API
 func (self *TP) reserveAPI() {
 	// 添加保留规则——身份识别
-	self.api[IDENTITY] = func(receive *NetData) *NetData {
-		receive.From, receive.To = receive.To, receive.From
-		return receive
-	}
+	self.api[IDENTITY] = identi
 	// 添加保留规则——忽略心跳请求
-	self.api[HEARTBEAT] = func(receive *NetData) *NetData { return nil }
+	self.api[HEARTBEAT] = beat
+}
+
+var identi, beat = new(identity), new(heartbeat)
+
+type identity struct{}
+
+func (*identity) Process(receive *NetData) *NetData {
+	receive.From, receive.To = receive.To, receive.From
+	return receive
+}
+
+type heartbeat struct{}
+
+func (*heartbeat) Process(receive *NetData) *NetData {
+	return nil
 }
 
 // ***********************************************常用函数*************************************************** \\

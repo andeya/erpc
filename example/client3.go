@@ -9,15 +9,19 @@ import (
 // 有标识符UID的demo，保证了客户端链接唯一性
 func main() {
 	tp := teleport.New().SetUID("C3").SetAPI(teleport.API{
-		"报到": func(receive *teleport.NetData) *teleport.NetData {
-			if receive.Status == teleport.SUCCESS {
-				log.Printf("%v", receive.Body)
-			}
-			return nil
-		},
+		"报到": new(报到),
 	})
 	tp.Client("127.0.0.1", ":20125")
 	select {}
+}
+
+type 报到 struct{}
+
+func (*报到) Process(receive *teleport.NetData) *teleport.NetData {
+	if receive.Status == teleport.SUCCESS {
+		log.Printf("%v", receive.Body)
+	}
+	return nil
 }
 
 // 有标识符UID的demo，保证了客户端链接唯一性
