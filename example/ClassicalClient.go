@@ -8,31 +8,18 @@ import (
 	"time"
 )
 
-// 获取一个管理中心连接
-func GetManage() *Manage {
-	return hubConns.getOne()
-}
-
-// 释放管理中心连接
-func FreeManage(m ...*Manage) {
-	hubConns.free(m...)
-}
-
-// 关闭并删除指定连接
-func RemoveManage(m ...*Manage) {
-	hubConns.remove(m...)
+// 请求并返回数据
+func Request(body interface{}, operation string, nodeuid ...string) (interface{}, bool) {
+	m := hubConns.getOne()
+	m.Teleport.Request(body, operation, nodeuid...)
+	r := <-m.result
+	hubConns.free(m)
+	return r[0], r[1].(bool)
 }
 
 // 重置连接池
 func ResetManage() {
 	hubConns.reset()
-}
-
-// 请求并返回数据
-func (self *Manage) Request(body interface{}, operation string, nodeuid ...string) (interface{}, bool) {
-	self.Teleport.Request(body, operation, nodeuid...)
-	r := <-self.result
-	return r[0], r[1].(bool)
 }
 
 type Manage struct {
