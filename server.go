@@ -12,23 +12,28 @@ import (
 // 以服务器模式启动
 func (self *TP) server() {
 	var err error
+retry:
 	self.listener, err = net.Listen("tcp", self.port)
 	if err != nil {
-		log.Printf("监听端口出错: %s", err.Error())
+		// log.Printf("监听端口出错: %s", err.Error())
+		time.Sleep(1e9)
+		goto retry
 	}
 
 	log.Println(" *     —— 已开启服务器监听 ——")
-	for {
+
+	for self.listener != nil {
 		// 等待下一个连接,如果没有连接,listener.Accept会阻塞
 		conn, err := self.listener.Accept()
 		if err != nil {
-			continue
+			return
 		}
 		// log.Printf(" *     —— 客户端 %v 连接成功 ——", conn.RemoteAddr().String())
 
 		// 开启该连接处理协程(读写两条协程)
 		self.sGoConn(conn)
 	}
+
 }
 
 // 为每个连接开启读写两个协程
@@ -70,7 +75,7 @@ func (self *TP) sInitConn(conn *Connect) (nodeuid string) {
 
 		if flag {
 			if d.Operation != IDENTITY {
-				conn.IsShort = true
+				conn.Short = true
 			}
 			// log.Println("收到身份信息：", data)
 			if addr == d.From {
@@ -100,36 +105,35 @@ func (self *TP) sInitConn(conn *Connect) (nodeuid string) {
 func (self *TP) sReader(nodeuid string) {
 	// 退出时关闭连接，删除连接池中的连接
 	defer func() {
-		self.closeConn(nodeuid)
+		self.closeConn(nodeuid, false)
 	}()
 
 	var conn = self.getConn(nodeuid)
 
-	for {
+	for conn != nil {
 		// 设置连接超时
-		if !conn.IsShort {
+		if !conn.Short {
 			conn.SetReadDeadline(time.Now().Add(self.timeout))
 		}
 		// 等待读取数据
 		if !self.read(conn) {
-			break
+			return
 		}
 	}
 }
 
 // 服务器发送数据
 func (self *TP) sWriter(nodeuid string) {
-	// 退出时关闭连接，删除连接池中的连接
 	defer func() {
-		self.closeConn(nodeuid)
+		self.closeConn(nodeuid, false)
 	}()
 
 	var conn = self.getConn(nodeuid)
 
-	for {
+	for conn != nil {
 		data := <-conn.WriteChan
 		self.send(data)
-		if conn.IsShort {
+		if conn.Short {
 			return
 		}
 	}

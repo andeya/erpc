@@ -23,12 +23,13 @@ RetryLabel:
 	// 开启该连接处理协程(读写两条协程)
 	self.cGoConn(conn)
 
-	// 当与服务器失连后，自动重新连接
-	if !self.canClose {
+	// 与服务器意外断开后自动重拨
+	if !self.short {
 		for self.CountNodes() > 0 {
 			time.Sleep(1e9)
 		}
-		if !self.canClose {
+		// 判断是否为意外断开
+		if _, ok := self.connPool["Server"]; ok {
 			goto RetryLabel
 		}
 	}
@@ -43,7 +44,7 @@ func (self *TP) cGoConn(conn net.Conn) {
 		self.uid = conn.LocalAddr().String()
 	}
 
-	if !self.canClose {
+	if !self.short {
 		self.send(NewNetData(self.uid, "Server", IDENTITY, ""))
 	}
 
@@ -60,7 +61,7 @@ func (self *TP) cGoConn(conn net.Conn) {
 func (self *TP) cReader(nodeuid string) {
 	// 退出时关闭连接，删除连接池中的连接
 	defer func() {
-		self.closeConn(nodeuid)
+		self.closeConn(nodeuid, true)
 	}()
 
 	var conn = self.getConn(nodeuid)
@@ -76,13 +77,13 @@ func (self *TP) cReader(nodeuid string) {
 func (self *TP) cWriter(nodeuid string) {
 	// 退出时关闭连接，删除连接池中的连接
 	defer func() {
-		self.closeConn(nodeuid)
+		self.closeConn(nodeuid, true)
 	}()
 
 	var conn = self.getConn(nodeuid)
 
-	for {
-		if self.canClose {
+	for conn != nil {
+		if self.short {
 			self.send(<-conn.WriteChan)
 			continue
 		}

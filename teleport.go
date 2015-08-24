@@ -1,5 +1,5 @@
 // Teleport是一款适用于分布式系统的高并发API框架，它采用socket全双工通信，实现S/C对等工作，支持长、短两种连接模式，支持断开后自动连接与手动断开连接，内部数据传输格式为JSON。
-// Version 0.4.2
+// Version 0.4.3
 package teleport
 
 import (
@@ -67,7 +67,7 @@ type TP struct {
 	// 服务器模式下，缓存监听对象
 	listener net.Listener
 	// 客户端模式下，控制是否为短链接
-	canClose bool
+	short bool
 	// 长连接池，刚一连接时key为host:port形式，随后通过身份验证替换为UID
 	connPool map[string]*Connect
 	// 连接时长，心跳时长的依据
@@ -129,7 +129,7 @@ func (self *TP) Server(port string) {
 // 启动客户端模式
 func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
 	if len(isShort) > 0 && isShort[0] {
-		self.canClose = true
+		self.short = true
 	} else if self.timeout == 0 {
 		// 默认心跳频率为3秒1次
 		self.timeout = 3e9
@@ -178,18 +178,19 @@ func (self *TP) Close(nodeuid ...string) {
 		self.listener.Close()
 		log.Printf(" *     —— 服务器已终止监听 %v！ ——", self.port)
 	}
-	self.canClose = true
 	if len(nodeuid) == 0 {
+		// 断开全部连接
 		for uid, conn := range self.connPool {
 			log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", uid, conn.UID)
-			conn.Close()
 			delete(self.connPool, uid)
+			conn.Close()
 		}
 		return
 	}
 	for _, uid := range nodeuid {
-		self.connPool[uid].Close()
+		conn := self.connPool[uid]
 		delete(self.connPool, uid)
+		conn.Close()
 	}
 }
 
@@ -241,7 +242,7 @@ func (self *TP) GetMode() int {
 func (self *TP) CountNodes() int {
 	count := 0
 	for _, conn := range self.connPool {
-		if conn.IsReady() {
+		if conn != nil && conn.IsReady() {
 			count++
 		}
 	}
@@ -279,14 +280,26 @@ func (self *TP) getConnAddr(nodeuid string) string {
 }
 
 // 关闭连接，退出协程
-func (self *TP) closeConn(nodeuid string) {
-	conn := self.connPool[nodeuid]
+func (self *TP) closeConn(nodeuid string, reconnect bool) {
+	conn, ok := self.connPool[nodeuid]
+	if !ok {
+		return
+	}
+
+	// 是否允许自动重连
+	if reconnect {
+		self.connPool[nodeuid] = nil
+	} else {
+		delete(self.connPool, nodeuid)
+	}
+
 	if conn == nil {
 		return
 	}
-	log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", nodeuid, conn.RemoteAddr().String())
+
 	conn.Close()
-	delete(self.connPool, nodeuid)
+
+	log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", nodeuid, conn.RemoteAddr().String())
 }
 
 // 通信数据编码与发送
@@ -355,8 +368,8 @@ func (self *TP) apiHandle() {
 
 			resp := handle.Process(req)
 			if resp == nil {
-				if conn = self.getConn(to); conn != nil && self.getConn(to).IsShort {
-					self.closeConn(to)
+				if conn = self.getConn(to); conn != nil && self.getConn(to).Short {
+					self.closeConn(to, false)
 				}
 				return //continue
 			}

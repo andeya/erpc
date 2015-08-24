@@ -34,7 +34,7 @@ func main() {
 		// 短链接不可以直接转发请求
 		"短链接报到": new(短链接报到),
 	}).Server(":20125")
-	time.Sleep(10e9)
+	time.Sleep(30e9)
 	tp.Close()
 	select {}
 }
