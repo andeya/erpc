@@ -6,6 +6,42 @@ import (
 	"time"
 )
 
+// 客户端专有成员
+type tpClient struct {
+	// 客户端模式下，控制是否为短链接
+	short bool
+	// 强制终止客户端
+	mustClose bool
+}
+
+// 启动客户端模式
+func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
+	if len(isShort) > 0 && isShort[0] {
+		self.tpClient.short = true
+	} else if self.timeout == 0 {
+		// 默认心跳频率为3秒1次
+		self.timeout = 3e9
+	}
+	self.reserveAPI()
+	self.mode = CLIENT
+	self.port = port
+	self.serverAddr = serverAddr
+
+	self.tpClient.mustClose = false
+
+	go self.apiHandle()
+	go self.client()
+}
+
+// 设置客户端唯一标识符，默认为本节点ip:port，对服务器模式无效，服务器模式的UID强制为“Server”
+func (self *TP) SetUID(nodeuid string) Teleport {
+	if self.mode == SERVER {
+		return self
+	}
+	self.uid = nodeuid
+	return self
+}
+
 // ***********************************************功能实现*************************************************** \\
 
 // 以客户端模式启动
@@ -15,6 +51,10 @@ func (self *TP) client() {
 RetryLabel:
 	conn, err := net.Dial("tcp", self.serverAddr+self.port)
 	if err != nil {
+		if self.tpClient.mustClose {
+			self.tpClient.mustClose = false
+			return
+		}
 		time.Sleep(1e9)
 		goto RetryLabel
 	}

@@ -7,6 +7,26 @@ import (
 	"time"
 )
 
+// 服务器专有成员
+type tpServer struct {
+	// 服务器模式下，缓存监听对象
+	listener net.Listener
+}
+
+// 启动服务器模式
+func (self *TP) Server(port string) {
+	self.reserveAPI()
+	self.mode = SERVER
+	self.port = port
+	self.uid = "Server"
+	if self.timeout == 0 {
+		// 默认连接超时为5秒
+		self.timeout = 5e9
+	}
+	go self.apiHandle()
+	go self.server()
+}
+
 // ***********************************************功能实现*************************************************** \\
 
 // 以服务器模式启动

@@ -1,11 +1,9 @@
 // Teleport是一款适用于分布式系统的高并发API框架，它采用socket全双工通信，实现S/C对等工作，支持长、短两种连接模式，支持断开后自动连接与手动断开连接，内部数据传输格式为JSON。
-// Version 0.4.3
 package teleport
 
 import (
 	"encoding/json"
 	"log"
-	"net"
 	"time"
 )
 
@@ -13,7 +11,6 @@ import (
 const (
 	SERVER = iota + 1
 	CLIENT
-	// BOTH
 )
 
 // API中定义操作时必须保留的字段
@@ -64,10 +61,6 @@ type TP struct {
 	port string
 	// 服务器地址（不含端口号），格式如"127.0.0.1"
 	serverAddr string
-	// 服务器模式下，缓存监听对象
-	listener net.Listener
-	// 客户端模式下，控制是否为短链接
-	short bool
 	// 长连接池，刚一连接时key为host:port形式，随后通过身份验证替换为UID
 	connPool map[string]*Connect
 	// 连接时长，心跳时长的依据
@@ -82,6 +75,10 @@ type TP struct {
 	connBufferLen int
 	// 应用程序API
 	api API
+	// 服务器模式专有成员
+	*tpServer
+	// 客户端模式专有成员
+	*tpClient
 }
 
 // 每个API方法需判断stutas状态，并做相应处理
@@ -101,6 +98,8 @@ func New() Teleport {
 		apiReadChan:   make(chan *NetData, 4096),
 		connWChanCap:  2048,
 		connBufferLen: 1024,
+		tpServer:      new(tpServer),
+		tpClient:      new(tpClient),
 	}
 }
 
@@ -110,37 +109,6 @@ func New() Teleport {
 func (self *TP) SetAPI(api API) Teleport {
 	self.api = api
 	return self
-}
-
-// 启动服务器模式
-func (self *TP) Server(port string) {
-	self.reserveAPI()
-	self.mode = SERVER
-	self.port = port
-	self.uid = "Server"
-	if self.timeout == 0 {
-		// 默认连接超时为5秒
-		self.timeout = 5e9
-	}
-	go self.apiHandle()
-	go self.server()
-}
-
-// 启动客户端模式
-func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
-	if len(isShort) > 0 && isShort[0] {
-		self.short = true
-	} else if self.timeout == 0 {
-		// 默认心跳频率为3秒1次
-		self.timeout = 3e9
-	}
-	self.reserveAPI()
-	self.mode = CLIENT
-	self.port = port
-	self.serverAddr = serverAddr
-
-	go self.apiHandle()
-	go self.client()
 }
 
 // *主动推送信息，直到有连接出现开始发送，不写nodeuid默认随机发送给一个节点
@@ -174,10 +142,14 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 
 // 断开连接，参数为空则断开所有连接，服务器模式下停止监听
 func (self *TP) Close(nodeuid ...string) {
-	if self.listener != nil {
-		self.listener.Close()
+	if self.mode == CLIENT {
+		self.tpClient.mustClose = true
+
+	} else if self.mode == SERVER && self.tpServer.listener != nil {
+		self.tpServer.listener.Close()
 		log.Printf(" *     —— 服务器已终止监听 %v！ ——", self.port)
 	}
+
 	if len(nodeuid) == 0 {
 		// 断开全部连接
 		for uid, conn := range self.connPool {
@@ -187,20 +159,12 @@ func (self *TP) Close(nodeuid ...string) {
 		}
 		return
 	}
+
 	for _, uid := range nodeuid {
 		conn := self.connPool[uid]
 		delete(self.connPool, uid)
 		conn.Close()
 	}
-}
-
-// 设置客户端唯一标识符，默认为本节点ip:port，对服务器模式无效，服务器模式的UID强制为“Server”
-func (self *TP) SetUID(nodeuid string) Teleport {
-	if self.mode == SERVER {
-		return self
-	}
-	self.uid = nodeuid
-	return self
 }
 
 // 设置包头字符串，默认为henrylee2cn
@@ -432,38 +396,4 @@ type heartbeat struct{}
 
 func (*heartbeat) Process(receive *NetData) *NetData {
 	return nil
-}
-
-// ***********************************************常用函数*************************************************** \\
-// API中生成返回结果的方法
-// OpAndToAndFrom[0]参数为空时，系统将指定与对端相同的操作符
-// OpAndToAndFrom[1]参数为空时，系统将指定与对端为接收者
-// OpAndToAndFrom[2]参数为空时，系统将指定自身为发送者
-func ReturnData(body interface{}, OpAndToAndFrom ...string) *NetData {
-	data := &NetData{
-		Status: SUCCESS,
-		Body:   body,
-	}
-	if len(OpAndToAndFrom) > 0 {
-		data.Operation = OpAndToAndFrom[0]
-	}
-	if len(OpAndToAndFrom) > 1 {
-		data.To = OpAndToAndFrom[1]
-	}
-	if len(OpAndToAndFrom) > 2 {
-		data.From = OpAndToAndFrom[2]
-	}
-	return data
-}
-
-// 返回错误，receive建议为直接接收到的*NetData
-func ReturnError(receive *NetData, status int, msg string, nodeuid ...string) *NetData {
-	receive.Status = status
-	receive.Body = msg
-	if len(nodeuid) > 0 {
-		receive.To = nodeuid[0]
-	} else {
-		receive.To = ""
-	}
-	return receive
 }
