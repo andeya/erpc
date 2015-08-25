@@ -89,7 +89,7 @@ type Handle interface {
 	Process(*NetData) *NetData
 }
 
-// 创建接口实例，0为默认设置
+// 创建接口实例
 func New() Teleport {
 	return &TP{
 		connPool:      make(map[string]*Connect),

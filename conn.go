@@ -1,11 +1,10 @@
-// Connect长连接结构体。
 package teleport
 
 import (
 	"net"
 )
 
-// 长连接
+// 封装连接
 type Connect struct {
 	// 唯一标识符，Teleport确定为有效连接后才可赋值
 	UID string

@@ -1,4 +1,3 @@
-//socket长连接， JSON 数据传输包。
 package teleport
 
 import (

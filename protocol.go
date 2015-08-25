@@ -1,4 +1,3 @@
-//通讯协议处理，主要处理封包和解包的过程
 package teleport
 
 import (
@@ -13,6 +12,7 @@ const (
 	DataLengthOfLenth = 4
 )
 
+//通讯协议处理，主要处理封包和解包的过程
 type Protocol struct {
 	// 包头
 	header string
