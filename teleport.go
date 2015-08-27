@@ -23,12 +23,14 @@ const (
 	DEFAULT_PACK_HEADER = "henrylee2cn"
 	// SERVER默认UID
 	DEFAULT_SERVER_UID = "server"
+	// 默认端口
+	DEFAULT_PORT = ":8080"
 )
 
 type Teleport interface {
-	// *以服务器模式运行
-	Server(port string)
-	// *以客户端模式运行
+	// *以服务器模式运行，端口默认为常量DEFAULT_PORT
+	Server(port ...string)
+	// *以客户端模式运行，port为空时默认等于常量DEFAULT_PORT
 	Client(serverAddr string, port string, isShort ...bool)
 	// *主动推送信息，不写nodeuid默认随机发送给一个节点
 	Request(body interface{}, operation string, nodeuid ...string)
@@ -170,20 +172,18 @@ func (self *TP) Close(nodeuid ...string) {
 	if len(nodeuid) == 0 {
 		// 断开全部连接
 		for uid, conn := range self.connPool {
-			addr := conn.Addr()
 			delete(self.connPool, uid)
 			conn.Close()
-			self.closeMsg(uid, addr)
+			self.closeMsg(uid, conn.Addr(), conn.Short)
 		}
 		return
 	}
 
 	for _, uid := range nodeuid {
 		conn := self.connPool[uid]
-		addr := conn.Addr()
 		delete(self.connPool, uid)
 		conn.Close()
-		self.closeMsg(uid, addr)
+		self.closeMsg(uid, conn.Addr(), conn.Short)
 	}
 }
 
@@ -280,13 +280,15 @@ func (self *TP) closeConn(nodeuid string, reconnect bool) {
 	if conn == nil {
 		return
 	}
-	addr := conn.RemoteAddr().String()
 	conn.Close()
-	self.closeMsg(nodeuid, addr)
+	self.closeMsg(nodeuid, conn.Addr(), conn.Short)
 }
 
 // 关闭连接时log信息
-func (self *TP) closeMsg(uid, addr string) {
+func (self *TP) closeMsg(uid, addr string, short bool) {
+	if short {
+		return
+	}
 	switch self.mode {
 	case SERVER:
 		log.Printf(" *     —— 与客户端 %v (%v) 断开连接！——", uid, addr)

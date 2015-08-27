@@ -30,7 +30,14 @@ func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
 	}
 	self.reserveAPI()
 	self.mode = CLIENT
-	self.port = port
+
+	// 设置端口
+	if port != "" {
+		self.port = port
+	} else {
+		self.port = DEFAULT_PORT
+	}
+
 	self.serverAddr = serverAddr
 
 	self.tpClient.mustClose = false
@@ -43,7 +50,9 @@ func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
 
 // 以客户端模式启动
 func (self *TP) client() {
-	log.Println(" *     —— 正在连接服务器……")
+	if !self.short {
+		log.Println(" *     —— 正在连接服务器……")
+	}
 
 RetryLabel:
 	conn, err := net.Dial("tcp", self.serverAddr+self.port)
@@ -75,6 +84,7 @@ RetryLabel:
 // 为连接开启读写两个协程
 func (self *TP) cGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
+
 	// 添加连接到节点池
 	self.connPool[self.tpClient.serverUID] = connect
 
@@ -85,12 +95,14 @@ func (self *TP) cGoConn(conn net.Conn) {
 
 	if !self.short {
 		self.send(NewNetData(self.uid, self.tpClient.serverUID, IDENTITY, ""))
+		log.Printf(" *     —— 成功连接到服务器：%v ——", remoteAddr)
+	} else {
+		connect.Short = true
 	}
 
 	// 标记连接已经正式生效可用
 	self.connPool[self.tpClient.serverUID].Usable = true
 
-	log.Printf(" *     —— 成功连接到服务器：%v ——", remoteAddr)
 	// 开启读写双工协程
 	go self.cReader(self.tpClient.serverUID)
 	go self.cWriter(self.tpClient.serverUID)

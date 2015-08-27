@@ -20,7 +20,7 @@ type Connect struct {
 	TmpBuffer []byte
 }
 
-// 创建Connect实例
+// 创建Connect实例，默认为长连接（Short=false）
 func NewConnect(conn net.Conn, bufferLen int, wChanCap int) (k string, v *Connect) {
 	k = conn.RemoteAddr().String()
 

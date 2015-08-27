@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/henrylee2cn/teleport"
 	"log"
-	"time"
+	// "time"
 )
 
 // 有标识符UID的demo
@@ -34,8 +34,8 @@ func main() {
 		// 短链接不可以直接转发请求
 		"短链接报到": new(短链接报到),
 	}).Server(":20125")
-	time.Sleep(30e9)
-	tp.Close()
+	// time.Sleep(30e9)
+	// tp.Close()
 	select {}
 }
 
@@ -63,6 +63,6 @@ func (*短链接报到) Process(receive *teleport.NetData) *teleport.NetData {
 // 		},
 // 	})
 
-// 	tp.Server(":20125")
+// 	tp.Server("")
 // 	select {}
 // }
