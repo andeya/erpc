@@ -10,7 +10,7 @@ import (
 var tp = teleport.New()
 
 func main() {
-	tp.SetAPI(teleport.API{
+	tp.SetUID("fad", "abc").SetAPI(teleport.API{
 		"报到":     new(报到),
 		"非法请求测试": new(非法请求测试),
 	})

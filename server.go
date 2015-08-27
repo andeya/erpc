@@ -62,11 +62,10 @@ retry:
 // 为每个连接开启读写两个协程
 func (self *TP) sGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
-	// 或者key为 strings.Split(conn.RemoteAddr().String(), ":")[0]
-	self.connPool[remoteAddr] = connect
-	// 初始化节点UID
-	nodeuid := self.sInitConn(connect)
-	if nodeuid == "" {
+	// 初始化节点
+	nodeuid, ok := self.sInitConn(connect)
+	if !ok {
+		conn.Close()
 		return
 	}
 	log.Printf(" *     —— 客户端 %v (%v) 连接成功 ——", nodeuid, remoteAddr)
@@ -77,51 +76,47 @@ func (self *TP) sGoConn(conn net.Conn) {
 }
 
 // 连接初始化，绑定节点与连接，默认key为节点ip
-func (self *TP) sInitConn(conn *Connect) (nodeuid string) {
+func (self *TP) sInitConn(conn *Connect) (nodeuid string, usable bool) {
 	read_len, err := conn.Read(conn.Buffer)
 	if err != nil || read_len == 0 {
-		return ""
+		return
 	}
-
-	addr := conn.RemoteAddr().String()
-
-	conn.TmpBuffer = append(conn.TmpBuffer, conn.Buffer[:read_len]...)
 	// 解包
+	conn.TmpBuffer = append(conn.TmpBuffer, conn.Buffer[:read_len]...)
 	dataSlice := make([][]byte, 10)
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
-	flag := true
 
-	for _, data := range dataSlice {
-
+	for i, data := range dataSlice {
 		d := new(NetData)
 		json.Unmarshal(data, d)
+		// 修复缺失请求方地址的请求
+		if d.From == "" {
+			d.From = conn.RemoteAddr().String() // 或可为：strings.Split(conn.RemoteAddr().String(), ":")[0]
+		}
 
-		if flag {
+		if i == 0 {
+			// log.Println("收到第一条信息：", data)
+
+			// 检查连接权限
+			if !self.checkRights(d, conn.RemoteAddr().String()) {
+				return
+			}
+
+			nodeuid = d.From
+
+			// 判断是否为短链接
 			if d.Operation != IDENTITY {
 				conn.Short = true
 			}
-			// log.Println("收到身份信息：", data)
-			if addr == d.From {
-				// 或者key为 strings.Split(conn.RemoteAddr().String(), ":")[0]
-				nodeuid = addr
-			} else {
-				nodeuid = d.From
-				delete(self.connPool, addr)
-				self.connPool[nodeuid] = conn
-			}
-			flag = false
+			// 添加连接到节点池
+			self.connPool[nodeuid] = conn
+			// 标记连接已经正式生效可用
+			conn.Usable = true
 		}
-
 		// 添加到读取缓存
 		self.apiReadChan <- d
 	}
-
-	defer func() {
-		// 标记连接已经正式生效可用
-		conn.UID = addr
-	}()
-
-	return
+	return nodeuid, true
 }
 
 // 服务器读数据

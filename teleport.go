@@ -38,7 +38,7 @@ type Teleport interface {
 	Close(nodeuid ...string)
 
 	// 设置唯一标识符，mine为本节点UID(默认ip:port)
-	// server为服务器UID(默认为常量DEFAULT_SERVER_UID，仅客户端模式下此参数有用)
+	// server为服务器UID(默认为常量DEFAULT_SERVER_UID，此参数仅客户端模式下有用)
 	// 可不调用该方法，此时UID均为默认
 	SetUID(mine string, server ...string) Teleport
 	// 设置包头字符串，默认为henrylee2cn
@@ -112,10 +112,10 @@ func New() Teleport {
 // ***********************************************实现接口*************************************************** \\
 
 // 设置唯一标识符，mine为本节点UID(默认ip:port)
-// server为服务器UID(默认为常量DEFAULT_SERVER_UID，仅客户端模式下此参数有用)
+// server为服务器UID(默认为常量DEFAULT_SERVER_UID，此参数仅客户端模式下有用)
 // 可不调用该方法，此时UID均为默认
 func (self *TP) SetUID(mine string, server ...string) Teleport {
-	if self.mode == CLIENT && len(server) > 0 {
+	if len(server) > 0 {
 		self.tpClient.serverUID = server[0]
 	}
 	self.uid = mine
@@ -141,7 +141,7 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 		}
 		// 一个随机节点的信息
 		for uid, conn = range self.connPool {
-			if conn.IsReady() {
+			if conn.Usable {
 				nodeuid = append(nodeuid, uid)
 				break
 			}
@@ -149,7 +149,7 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 	}
 	// 等待并取得连接实例
 	conn = self.getConn(nodeuid[0])
-	for conn == nil || !conn.IsReady() {
+	for conn == nil || !conn.Usable {
 		conn = self.getConn(nodeuid[0])
 		time.Sleep(5e8)
 	}
@@ -170,17 +170,20 @@ func (self *TP) Close(nodeuid ...string) {
 	if len(nodeuid) == 0 {
 		// 断开全部连接
 		for uid, conn := range self.connPool {
-			log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", uid, conn.UID)
+			addr := conn.Addr()
 			delete(self.connPool, uid)
 			conn.Close()
+			self.closeMsg(uid, addr)
 		}
 		return
 	}
 
 	for _, uid := range nodeuid {
 		conn := self.connPool[uid]
+		addr := conn.Addr()
 		delete(self.connPool, uid)
 		conn.Close()
+		self.closeMsg(uid, addr)
 	}
 }
 
@@ -223,7 +226,7 @@ func (self *TP) GetMode() int {
 func (self *TP) CountNodes() int {
 	count := 0
 	for _, conn := range self.connPool {
-		if conn != nil && conn.IsReady() {
+		if conn != nil && conn.Usable {
 			count++
 		}
 	}
@@ -277,10 +280,19 @@ func (self *TP) closeConn(nodeuid string, reconnect bool) {
 	if conn == nil {
 		return
 	}
-
+	addr := conn.RemoteAddr().String()
 	conn.Close()
+	self.closeMsg(nodeuid, addr)
+}
 
-	log.Printf(" *     —— 与节点 %v (%v) 断开连接！——", nodeuid, conn.RemoteAddr().String())
+// 关闭连接时log信息
+func (self *TP) closeMsg(uid, addr string) {
+	switch self.mode {
+	case SERVER:
+		log.Printf(" *     —— 与客户端 %v (%v) 断开连接！——", uid, addr)
+	case CLIENT:
+		log.Printf(" *     —— 与服务器 %v 断开连接！——", addr)
+	}
 }
 
 // 通信数据编码与发送
@@ -324,7 +336,7 @@ func (self *TP) save(conn *Connect) {
 		if err := json.Unmarshal(data, d); err == nil {
 			// 修复缺失请求方地址的请求
 			if d.From == "" {
-				d.From = conn.UID
+				d.From = conn.Addr()
 			}
 			// 添加到读取缓存
 			self.apiReadChan <- d
@@ -392,6 +404,15 @@ func (self *TP) autoErrorHandle(data *NetData, status int, msg string, reqFrom s
 	respErr.From = self.uid
 	respErr.To = reqFrom
 	oldConn.WriteChan <- respErr
+	return true
+}
+
+// 连接权限验证
+func (self *TP) checkRights(data *NetData, addr string) bool {
+	if data.To != self.uid {
+		log.Printf("陌生连接(%v)提供的服务器标识符错误，请求被拒绝！", addr)
+		return false
+	}
 	return true
 }
 

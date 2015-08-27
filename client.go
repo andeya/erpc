@@ -72,12 +72,14 @@ RetryLabel:
 	}
 }
 
-// 为每个连接开启读写两个协程
+// 为连接开启读写两个协程
 func (self *TP) cGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
+	// 添加连接到节点池
 	self.connPool[self.tpClient.serverUID] = connect
-	// 绑定节点UID与conn
+
 	if self.uid == "" {
+		// 设置默认UID
 		self.uid = conn.LocalAddr().String()
 	}
 
@@ -86,9 +88,9 @@ func (self *TP) cGoConn(conn net.Conn) {
 	}
 
 	// 标记连接已经正式生效可用
-	self.connPool[self.tpClient.serverUID].UID = remoteAddr
+	self.connPool[self.tpClient.serverUID].Usable = true
 
-	log.Printf(" *     —— 成功连接到服务器：%v (%v)——", self.tpClient.serverUID, remoteAddr)
+	log.Printf(" *     —— 成功连接到服务器：%v ——", remoteAddr)
 	// 开启读写双工协程
 	go self.cReader(self.tpClient.serverUID)
 	go self.cWriter(self.tpClient.serverUID)

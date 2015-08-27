@@ -28,7 +28,7 @@ import (
 var tp = teleport.New()
 
 func main() {
-	tp.SetAPI(teleport.API{
+	tp.SetUID("abc").SetAPI(teleport.API{
 		"报到": new(报到),
 
 		// 短链接不可以直接转发请求
