@@ -19,6 +19,10 @@ const (
 	IDENTITY = "+identity+"
 	// 心跳操作符
 	HEARTBEAT = "+heartbeat+"
+	// 默认包头
+	DEFAULT_PACK_HEADER = "henrylee2cn"
+	// SERVER默认UID
+	DEFAULT_SERVER_UID = "server"
 )
 
 type Teleport interface {
@@ -33,8 +37,10 @@ type Teleport interface {
 	// 断开连接，参数为空则断开所有连接，服务器模式下还将停止监听
 	Close(nodeuid ...string)
 
-	// 设置客户端唯一标识符，默认为本节点ip:port，对服务器模式无效，服务器模式的UID强制为“Server”
-	SetUID(string) Teleport
+	// 设置唯一标识符，mine为本节点UID(默认ip:port)
+	// server为服务器UID(默认为常量DEFAULT_SERVER_UID，仅客户端模式下此参数有用)
+	// 可不调用该方法，此时UID均为默认
+	SetUID(mine string, server ...string) Teleport
 	// 设置包头字符串，默认为henrylee2cn
 	SetPackHeader(string) Teleport
 	// 设置指定API处理的数据的接收缓存通道长度
@@ -94,7 +100,7 @@ func New() Teleport {
 	return &TP{
 		connPool:      make(map[string]*Connect),
 		api:           API{},
-		Protocol:      NewProtocol("henrylee2cn"),
+		Protocol:      NewProtocol(DEFAULT_PACK_HEADER),
 		apiReadChan:   make(chan *NetData, 4096),
 		connWChanCap:  2048,
 		connBufferLen: 1024,
@@ -104,6 +110,17 @@ func New() Teleport {
 }
 
 // ***********************************************实现接口*************************************************** \\
+
+// 设置唯一标识符，mine为本节点UID(默认ip:port)
+// server为服务器UID(默认为常量DEFAULT_SERVER_UID，仅客户端模式下此参数有用)
+// 可不调用该方法，此时UID均为默认
+func (self *TP) SetUID(mine string, server ...string) Teleport {
+	if self.mode == CLIENT && len(server) > 0 {
+		self.tpClient.serverUID = server[0]
+	}
+	self.uid = mine
+	return self
+}
 
 // 指定应用程序API
 func (self *TP) SetAPI(api API) Teleport {
@@ -291,11 +308,14 @@ func (self *TP) send(data *NetData) {
 
 // 解码收到的数据并存入缓存
 func (self *TP) save(conn *Connect) {
+	// 断点测试
+	// log.Println(conn.TmpBuffer)
 	// 解包
 	dataSlice := make([][]byte, 10)
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
 
 	for _, data := range dataSlice {
+		// 断点测试
 		// js := map[string]interface{}{}
 		// json.Unmarshal(data, &js)
 		// log.Printf("接收信息为：%v", js)

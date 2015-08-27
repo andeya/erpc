@@ -18,7 +18,10 @@ func (self *TP) Server(port string) {
 	self.reserveAPI()
 	self.mode = SERVER
 	self.port = port
-	self.uid = "Server"
+	// 服务器UID默认为常量DEFAULT_SERVER_UID
+	if self.uid == "" {
+		self.uid = DEFAULT_SERVER_UID
+	}
 	if self.timeout == 0 {
 		// 默认连接超时为5秒
 		self.timeout = 5e9

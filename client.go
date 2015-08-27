@@ -12,6 +12,8 @@ type tpClient struct {
 	short bool
 	// 强制终止客户端
 	mustClose bool
+	// 服务器UID
+	serverUID string
 }
 
 // 启动客户端模式
@@ -22,6 +24,10 @@ func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
 		// 默认心跳频率为3秒1次
 		self.timeout = 3e9
 	}
+	// 服务器UID默认为常量DEFAULT_SERVER_UID
+	if self.tpClient.serverUID == "" {
+		self.tpClient.serverUID = DEFAULT_SERVER_UID
+	}
 	self.reserveAPI()
 	self.mode = CLIENT
 	self.port = port
@@ -31,15 +37,6 @@ func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
 
 	go self.apiHandle()
 	go self.client()
-}
-
-// 设置客户端唯一标识符，默认为本节点ip:port，对服务器模式无效，服务器模式的UID强制为“Server”
-func (self *TP) SetUID(nodeuid string) Teleport {
-	if self.mode == SERVER {
-		return self
-	}
-	self.uid = nodeuid
-	return self
 }
 
 // ***********************************************功能实现*************************************************** \\
@@ -69,7 +66,7 @@ RetryLabel:
 			time.Sleep(1e9)
 		}
 		// 判断是否为意外断开
-		if _, ok := self.connPool["Server"]; ok {
+		if _, ok := self.connPool[self.tpClient.serverUID]; ok {
 			goto RetryLabel
 		}
 	}
@@ -78,23 +75,23 @@ RetryLabel:
 // 为每个连接开启读写两个协程
 func (self *TP) cGoConn(conn net.Conn) {
 	remoteAddr, connect := NewConnect(conn, self.connBufferLen, self.connWChanCap)
-	self.connPool["Server"] = connect
+	self.connPool[self.tpClient.serverUID] = connect
 	// 绑定节点UID与conn
 	if self.uid == "" {
 		self.uid = conn.LocalAddr().String()
 	}
 
 	if !self.short {
-		self.send(NewNetData(self.uid, "Server", IDENTITY, ""))
+		self.send(NewNetData(self.uid, self.tpClient.serverUID, IDENTITY, ""))
 	}
 
 	// 标记连接已经正式生效可用
-	self.connPool["Server"].UID = remoteAddr
+	self.connPool[self.tpClient.serverUID].UID = remoteAddr
 
-	log.Printf(" *     —— 成功连接到服务器：%v (%v)——", "Server", remoteAddr)
+	log.Printf(" *     —— 成功连接到服务器：%v (%v)——", self.tpClient.serverUID, remoteAddr)
 	// 开启读写双工协程
-	go self.cReader("Server")
-	go self.cWriter("Server")
+	go self.cReader(self.tpClient.serverUID)
+	go self.cWriter(self.tpClient.serverUID)
 }
 
 // 客户端读数据
