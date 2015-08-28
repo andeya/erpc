@@ -25,6 +25,12 @@ const (
 	DEFAULT_SERVER_UID = "server"
 	// 默认端口
 	DEFAULT_PORT = ":8080"
+	// 服务器默认心跳间隔时长
+	DEFAULT_TIMEOUT_S = 20e9
+	// 客户端默认心跳间隔时长
+	DEFAULT_TIMEOUT_C = 15e9
+	// 等待连接的轮询时长
+	LOOP_TIMEOUT = 1e9
 )
 
 type Teleport interface {
@@ -71,7 +77,7 @@ type TP struct {
 	serverAddr string
 	// 长连接池，刚一连接时key为host:port形式，随后通过身份验证替换为UID
 	connPool map[string]*Connect
-	// 连接时长，心跳时长的依据
+	// 连接时长，心跳时长的依据，默认为常量DEFAULT_TIMEOUT
 	timeout time.Duration
 	// 粘包处理
 	*Protocol
@@ -139,7 +145,7 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 			if self.CountNodes() > 0 {
 				break
 			}
-			time.Sleep(5e8)
+			time.Sleep(LOOP_TIMEOUT)
 		}
 		// 一个随机节点的信息
 		for uid, conn = range self.connPool {
@@ -153,7 +159,7 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 	conn = self.getConn(nodeuid[0])
 	for conn == nil || !conn.Usable {
 		conn = self.getConn(nodeuid[0])
-		time.Sleep(5e8)
+		time.Sleep(LOOP_TIMEOUT)
 	}
 	conn.WriteChan <- NewNetData(self.uid, nodeuid[0], operation, body)
 	// log.Println("添加一条请求：", conn.RemoteAddr().String(), operation, body)
@@ -260,7 +266,7 @@ func (self *TP) getConnAddr(nodeuid string) string {
 		// log.Printf("已与节点 %v 失去连接，无法完成发送请求！", nodeuid)
 		return ""
 	}
-	return conn.RemoteAddr().String()
+	return conn.Addr()
 }
 
 // 关闭连接，退出协程
@@ -359,8 +365,14 @@ func (self *TP) apiHandle() {
 
 			// 非法请求返回错误
 			if !ok {
-				self.autoErrorHandle(req, LLLEGAL, "您请求的API方法（"+req.Operation+"）不存在！", to)
-				log.Printf("非法请求：%v ，来自：%v (%v)", req.Operation, to, self.getConnAddr(to))
+				// log.Printf("%+v", req)
+				if self.mode == SERVER {
+					self.autoErrorHandle(req, LLLEGAL, "服务器 ("+self.getConn(to).LocalAddr().String()+") 不存在API接口: "+req.Operation+"！", to)
+					log.Printf("客户端 %v (%v) 正在请求不存在的API接口: %v！", to, self.getConnAddr(to), req.Operation)
+				} else {
+					self.autoErrorHandle(req, LLLEGAL, "客户端 "+from+" ("+self.getConn(to).LocalAddr().String()+") 不存在API接口: "+req.Operation+"！", to)
+					log.Printf("服务器 (%v) 正在请求不存在的API接口: %v！", self.getConnAddr(to), req.Operation)
+				}
 				return
 			}
 
@@ -432,7 +444,7 @@ type identity struct{}
 
 func (*identity) Process(receive *NetData) *NetData {
 	receive.From, receive.To = receive.To, receive.From
-	return receive
+	return nil
 }
 
 type heartbeat struct{}

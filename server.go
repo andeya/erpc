@@ -28,8 +28,8 @@ func (self *TP) Server(port ...string) {
 		self.uid = DEFAULT_SERVER_UID
 	}
 	if self.timeout == 0 {
-		// 默认连接超时为5秒
-		self.timeout = 5e9
+		// 默认心跳间隔时长
+		self.timeout = DEFAULT_TIMEOUT_S
 	}
 	go self.apiHandle()
 	go self.server()
@@ -44,7 +44,7 @@ retry:
 	self.listener, err = net.Listen("tcp", self.port)
 	if err != nil {
 		// log.Printf("监听端口出错: %s", err.Error())
-		time.Sleep(1e9)
+		time.Sleep(LOOP_TIMEOUT)
 		goto retry
 	}
 

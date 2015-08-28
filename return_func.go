@@ -26,6 +26,7 @@ func ReturnData(body interface{}, OpAndToAndFrom ...string) *NetData {
 func ReturnError(receive *NetData, status int, msg string, nodeuid ...string) *NetData {
 	receive.Status = status
 	receive.Body = msg
+	receive.From = ""
 	if len(nodeuid) > 0 {
 		receive.To = nodeuid[0]
 	} else {

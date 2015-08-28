@@ -21,8 +21,8 @@ func (self *TP) Client(serverAddr string, port string, isShort ...bool) {
 	if len(isShort) > 0 && isShort[0] {
 		self.tpClient.short = true
 	} else if self.timeout == 0 {
-		// 默认心跳频率为3秒1次
-		self.timeout = 3e9
+		// 默认心跳间隔时长
+		self.timeout = DEFAULT_TIMEOUT_C
 	}
 	// 服务器UID默认为常量DEFAULT_SERVER_UID
 	if self.tpClient.serverUID == "" {
@@ -61,7 +61,7 @@ RetryLabel:
 			self.tpClient.mustClose = false
 			return
 		}
-		time.Sleep(1e9)
+		time.Sleep(LOOP_TIMEOUT)
 		goto RetryLabel
 	}
 	// log.Printf(" *     —— 成功连接到服务器：%v ——", conn.RemoteAddr().String())
@@ -72,7 +72,7 @@ RetryLabel:
 	// 与服务器意外断开后自动重拨
 	if !self.short {
 		for self.CountNodes() > 0 {
-			time.Sleep(1e9)
+			time.Sleep(LOOP_TIMEOUT)
 		}
 		// 判断是否为意外断开
 		if _, ok := self.connPool[self.tpClient.serverUID]; ok {
