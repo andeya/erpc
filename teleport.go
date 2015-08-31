@@ -3,6 +3,7 @@ package teleport
 
 import (
 	"encoding/json"
+	"github.com/henrylee2cn/teleport/debug"
 	"log"
 	"time"
 )
@@ -311,45 +312,43 @@ func (self *TP) send(data *NetData) {
 
 	d, err := json.Marshal(*data)
 	if err != nil {
-		log.Println("编码出错了", err)
+		debug.Println("Debug: 发送数据-编码出错", err)
 		return
 	}
 	conn := self.getConn(data.To)
 	if conn == nil {
-		// log.Println("发送信息失败：", data)
+		debug.Println("Debug: 发送数据-连接已断开：", data)
 		return
 	}
 	// 封包
 	end := self.Packet(d)
 	// 发送
 	conn.Write(end)
-	// log.Println("成功发送一条信息：", data)
+	debug.Println("Debug: 发送数据-成功：", data)
 }
 
 // 解码收到的数据并存入缓存
 func (self *TP) save(conn *Connect) {
-	// 断点测试
-	// log.Println(conn.TmpBuffer)
+	debug.Printf("Debug: 收到数据-Byte: %v", conn.TmpBuffer)
 	// 解包
 	dataSlice := make([][]byte, 10)
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
 
 	for _, data := range dataSlice {
-		// 断点测试
-		// js := map[string]interface{}{}
-		// json.Unmarshal(data, &js)
-		// log.Printf("接收信息为：%v", js)
+		debug.Printf("Debug: 收到数据-解码前: %+v", string(data))
 
 		d := new(NetData)
-		if err := json.Unmarshal(data, d); err == nil {
+		err := json.Unmarshal(data, d)
+		if err == nil {
 			// 修复缺失请求方地址的请求
 			if d.From == "" {
 				d.From = conn.Addr()
 			}
 			// 添加到读取缓存
 			self.apiReadChan <- d
-			// log.Printf("接收信息为：%v", d)
+			debug.Printf("Debug: 收到数据-NetData: %+v", d)
 		}
+		debug.Printf("Debug: 收到数据-解码错误: %v", err)
 	}
 }
 

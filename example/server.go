@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/debug"
 	"log"
 	// "time"
 )
@@ -28,6 +29,8 @@ import (
 var tp = teleport.New()
 
 func main() {
+	// 开启Teleport错误日志调试
+	debug.Debug = true
 	tp.SetUID("abc").SetAPI(teleport.API{
 		"报到": new(报到),
 

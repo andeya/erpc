@@ -2,6 +2,7 @@ package teleport
 
 import (
 	"encoding/json"
+	"github.com/henrylee2cn/teleport/debug"
 	"log"
 	"net"
 	"time"
@@ -43,7 +44,7 @@ func (self *TP) server() {
 retry:
 	self.listener, err = net.Listen("tcp", self.port)
 	if err != nil {
-		// log.Printf("监听端口出错: %s", err.Error())
+		debug.Printf("Debug: 监听端口出错: %v", err)
 		time.Sleep(LOOP_TIMEOUT)
 		goto retry
 	}
@@ -56,12 +57,11 @@ retry:
 		if err != nil {
 			return
 		}
-		// log.Printf(" *     —— 客户端 %v 连接成功 ——", conn.RemoteAddr().String())
+		debug.Printf("Debug: 客户端 %v 已连接，但尚未验证身份！", conn.RemoteAddr().String())
 
 		// 开启该连接处理协程(读写两条协程)
 		self.sGoConn(conn)
 	}
-
 }
 
 // 为每个连接开启读写两个协程
@@ -91,7 +91,7 @@ func (self *TP) sInitConn(conn *Connect, remoteAddr string) (nodeuid string, usa
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
 
 	for i, data := range dataSlice {
-		// log.Println("收到原始信息：", string(data))
+		debug.Println("Debug: 收到数据-第1批-解码前：", string(data))
 
 		d := new(NetData)
 		json.Unmarshal(data, d)
@@ -101,7 +101,7 @@ func (self *TP) sInitConn(conn *Connect, remoteAddr string) (nodeuid string, usa
 		}
 
 		if i == 0 {
-			// log.Println("收到第一条信息：", d)
+			debug.Println("Debug: 收到数据-第1条-NetData：", d)
 
 			// 检查连接权限
 			if !self.checkRights(d, remoteAddr) {

@@ -2,12 +2,15 @@ package main
 
 import (
 	"github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/debug"
 	"log"
 	// "time"
 )
 
 // 有标识符UID的demo，保证了客户端链接唯一性
 func main() {
+	// 开启Teleport错误日志调试
+	debug.Debug = true
 	tp := teleport.New().SetUID("", "abc").SetAPI(teleport.API{
 		"报到": new(报到),
 	})
