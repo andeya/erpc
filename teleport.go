@@ -347,8 +347,9 @@ func (self *TP) save(conn *Connect) {
 			// 添加到读取缓存
 			self.apiReadChan <- d
 			debug.Printf("Debug: 收到数据-NetData: %+v", d)
+		} else {
+			debug.Printf("Debug: 收到数据-解码错误: %v", err)
 		}
-		debug.Printf("Debug: 收到数据-解码错误: %v", err)
 	}
 }
 
