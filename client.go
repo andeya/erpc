@@ -65,7 +65,7 @@ RetryLabel:
 		time.Sleep(LOOP_TIMEOUT)
 		goto RetryLabel
 	}
-	debug.Printf("Debug: 成功连接服务器：%v", conn.RemoteAddr().String())
+	debug.Printf("Debug: 成功连接服务器: %v", conn.RemoteAddr().String())
 
 	// 开启该连接处理协程(读写两条协程)
 	self.cGoConn(conn)

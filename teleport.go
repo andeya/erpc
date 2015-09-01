@@ -317,14 +317,14 @@ func (self *TP) send(data *NetData) {
 	}
 	conn := self.getConn(data.To)
 	if conn == nil {
-		debug.Println("Debug: 发送数据-连接已断开：", data)
+		debug.Printf("Debug: 发送数据-连接已断开: %+v", data)
 		return
 	}
 	// 封包
 	end := self.Packet(d)
 	// 发送
 	conn.Write(end)
-	debug.Println("Debug: 发送数据-成功：", data)
+	debug.Printf("Debug: 发送数据-成功: %+v", data)
 }
 
 // 解码收到的数据并存入缓存
@@ -335,7 +335,7 @@ func (self *TP) save(conn *Connect) {
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
 
 	for _, data := range dataSlice {
-		debug.Printf("Debug: 收到数据-解码前: %+v", string(data))
+		debug.Printf("Debug: 收到数据-解码前: %v", string(data))
 
 		d := new(NetData)
 		err := json.Unmarshal(data, d)

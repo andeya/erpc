@@ -91,7 +91,7 @@ func (self *TP) sInitConn(conn *Connect, remoteAddr string) (nodeuid string, usa
 	dataSlice, conn.TmpBuffer = self.Unpack(conn.TmpBuffer)
 
 	for i, data := range dataSlice {
-		debug.Println("Debug: 收到数据-第1批-解码前：", string(data))
+		debug.Println("Debug: 收到数据-第1批-解码前: ", string(data))
 
 		d := new(NetData)
 		json.Unmarshal(data, d)
@@ -101,7 +101,7 @@ func (self *TP) sInitConn(conn *Connect, remoteAddr string) (nodeuid string, usa
 		}
 
 		if i == 0 {
-			debug.Println("Debug: 收到数据-第1条-NetData：", d)
+			debug.Printf("Debug: 收到数据-第1条-NetData: %+v", d)
 
 			// 检查连接权限
 			if !self.checkRights(d, remoteAddr) {
