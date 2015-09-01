@@ -29,12 +29,13 @@ type NetData struct {
 	Flag string
 }
 
-func NewNetData(from, to, operation string, body interface{}) *NetData {
+func NewNetData(from, to, operation string, flag string, body interface{}) *NetData {
 	return &NetData{
 		From:      from,
 		To:        to,
 		Body:      body,
 		Operation: operation,
 		Status:    SUCCESS,
+		Flag:      flag,
 	}
 }

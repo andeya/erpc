@@ -95,7 +95,7 @@ func (self *TP) cGoConn(conn net.Conn) {
 	}
 
 	if !self.short {
-		self.send(NewNetData(self.uid, self.tpClient.serverUID, IDENTITY, ""))
+		self.send(NewNetData(self.uid, self.tpClient.serverUID, IDENTITY, "", nil))
 		log.Printf(" *     —— 成功连接到服务器：%v ——", remoteAddr)
 	} else {
 		connect.Short = true
@@ -146,7 +146,7 @@ func (self *TP) cWriter(nodeuid string) {
 		case data = <-conn.WriteChan:
 		case <-timing:
 			// 保持心跳
-			data = NewNetData(self.uid, nodeuid, HEARTBEAT, "")
+			data = NewNetData(self.uid, nodeuid, HEARTBEAT, "", nil)
 		}
 
 		self.send(data)

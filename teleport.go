@@ -40,7 +40,7 @@ type Teleport interface {
 	// *以客户端模式运行，port为空时默认等于常量DEFAULT_PORT
 	Client(serverAddr string, port string, isShort ...bool)
 	// *主动推送信息，不写nodeuid默认随机发送给一个节点
-	Request(body interface{}, operation string, nodeuid ...string)
+	Request(body interface{}, operation string, flag string, nodeuid ...string)
 	// 指定自定义的应用程序API
 	SetAPI(api API) Teleport
 	// 断开连接，参数为空则断开所有连接，服务器模式下还将停止监听
@@ -138,7 +138,7 @@ func (self *TP) SetAPI(api API) Teleport {
 }
 
 // *主动推送信息，直到有连接出现开始发送，不写nodeuid默认随机发送给一个节点
-func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
+func (self *TP) Request(body interface{}, operation string, flag string, nodeuid ...string) {
 	var conn *Connect
 	var uid string
 	if len(nodeuid) == 0 {
@@ -162,7 +162,7 @@ func (self *TP) Request(body interface{}, operation string, nodeuid ...string) {
 		conn = self.getConn(nodeuid[0])
 		time.Sleep(LOOP_TIMEOUT)
 	}
-	conn.WriteChan <- NewNetData(self.uid, nodeuid[0], operation, body)
+	conn.WriteChan <- NewNetData(self.uid, nodeuid[0], operation, flag, body)
 	// log.Println("添加一条请求：", conn.RemoteAddr().String(), operation, body)
 }
 

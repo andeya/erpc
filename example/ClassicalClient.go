@@ -9,9 +9,9 @@ import (
 )
 
 // 仅请求一次并返回数据
-func RequestOnce(body interface{}, operation string, nodeuid ...string) (interface{}, bool) {
+func RequestOnce(body interface{}, operation string, flag string, nodeuid ...string) (interface{}, bool) {
 	m := hubConns.getOne()
-	m.Teleport.Request(body, operation, nodeuid...)
+	m.Teleport.Request(body, operation, flag, nodeuid...)
 	r := <-m.result
 	hubConns.free(m)
 	return r[0], r[1].(bool)
@@ -23,8 +23,8 @@ func GetManage() *Manage {
 }
 
 // 请求并返回数据，须配合 GetManage()与FreeManage(）一起使用
-func (self *Manage) Request(body interface{}, operation string, nodeuid ...string) (interface{}, bool) {
-	self.Teleport.Request(body, operation, nodeuid...)
+func (self *Manage) Request(body interface{}, operation string, flag string, nodeuid ...string) (interface{}, bool) {
+	self.Teleport.Request(body, operation, flag, nodeuid...)
 	r := <-self.result
 	return r[0], r[1].(bool)
 }
