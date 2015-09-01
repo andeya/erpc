@@ -360,7 +360,7 @@ func (self *TP) apiHandle() {
 		go func(req *NetData) {
 			var conn *Connect
 
-			operation, from, to := req.Operation, req.To, req.From
+			operation, from, to, flag := req.Operation, req.To, req.From, req.Flag
 			handle, ok := self.api[operation]
 
 			// 非法请求返回错误
@@ -401,6 +401,10 @@ func (self *TP) apiHandle() {
 
 			if resp.From == "" {
 				resp.From = from
+			}
+
+			if resp.Flag == "" {
+				resp.Flag = flag
 			}
 
 			conn.WriteChan <- resp

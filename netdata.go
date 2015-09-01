@@ -19,14 +19,14 @@ type NetData struct {
 	Body interface{}
 	// 操作代号
 	Operation string
-	// 唯一标识符
-	UID string
 	// 发信节点uid
 	From string
 	// 收信节点uid
 	To string
 	// 返回状态
 	Status int
+	// 标识符
+	Flag string
 }
 
 func NewNetData(from, to, operation string, body interface{}) *NetData {
