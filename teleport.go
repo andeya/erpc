@@ -447,7 +447,6 @@ var identi, beat = new(identity), new(heartbeat)
 type identity struct{}
 
 func (*identity) Process(receive *NetData) *NetData {
-	receive.From, receive.To = receive.To, receive.From
 	return nil
 }
 
