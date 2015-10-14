@@ -96,7 +96,7 @@ type TP struct {
 	*tpClient
 }
 
-// 每个API方法需判断stutas状态，并做相应处理
+// 每个API方法需判断status状态，并做相应处理
 type API map[string]Handle
 
 // 请求处理接口
