@@ -5,4 +5,4 @@ Teleport是一款适用于分布式系统的高并发API框架，它采用socket
 * 版本： Version 0.4.7 (Aug 31, 2015)
 
 #### 框架模型
-![image](https://github.com/henrylee2cn/teleport/blob/master/doc/Teleport API Model Diagram.png)
+![image](https://github.com/henrylee2cn/teleport/raw/master/doc/Teleport API Model Diagram.png)
