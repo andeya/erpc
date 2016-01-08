@@ -5,3 +5,7 @@ Teleport是一款适用于分布式系统的高并发API框架，它采用socket
 
 #### 框架模型
 ![image](https://github.com/henrylee2cn/teleport/raw/master/doc/Teleport API Model Diagram.png)
+
+
+#### 技术交流群
+Go Teleport 42730308    [![Go Teleport](http://pub.idqqimg.com/wpa/images/group.png)](http://jq.qq.com/?_wv=1027&k=cFMJ6S)
