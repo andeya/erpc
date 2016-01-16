@@ -8,4 +8,4 @@ Teleport是一款适用于分布式系统的高并发API框架，它采用socket
 
 
 #### 技术交流群
-Go 网络编程 42730308    [![Go 网络编程](http://pub.idqqimg.com/wpa/images/group.png)](http://jq.qq.com/?_wv=1027&k=Y0bksD)
+Go-Web 编程 42730308    [![Go-Web 编程](http://pub.idqqimg.com/wpa/images/group.png)](http://jq.qq.com/?_wv=1027&k=Y0bksD)
