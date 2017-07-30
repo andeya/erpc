@@ -40,6 +40,7 @@ func MakeEncoder(name string, w io.Writer) (Encoder, error) {
 type (
 	Decoder interface {
 		Decode(v interface{}) (n int, err error)
+		Buffered() io.Reader
 	}
 	DecodeMaker func(io.Reader) Decoder
 )

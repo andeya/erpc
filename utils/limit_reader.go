@@ -15,7 +15,7 @@ type Reader interface {
 // LimitReader returns a Reader that reads from r
 // but stops with EOF after n bytes.
 // The underlying implementation is a *LimitedReader.
-func LimitReader(r Reader, n int64) Reader { return &LimitedReader{r, n} }
+func LimitReader(r Reader, n int64) *LimitedReader { return &LimitedReader{r, n} }
 
 // A LimitedBufioReader reads from bufio.Reader but limits the amount of
 // data returned to just N bytes. Each call to Read
@@ -24,6 +24,10 @@ func LimitReader(r Reader, n int64) Reader { return &LimitedReader{r, n} }
 type LimitedReader struct {
 	R Reader // underlying reader
 	N int64  // max bytes remaining
+}
+
+func (l *LimitedReader) ResetLimit(n int64) {
+	l.N = n
 }
 
 func (l *LimitedReader) Read(p []byte) (n int, err error) {

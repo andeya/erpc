@@ -1,79 +1,87 @@
 package packet
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
-	"io"
 	"net"
+	"testing"
+	"time"
 )
 
-func init() {
-	conn, _ := net.Dial("tcp", "127.0.0.1:8000")
-	bufconn := bufio.NewWriter(conn)
-	zip := gzip.NewWriter(bufconn)
-	EncodePacket(zip, []byte("hello"))
-}
+func TestConn(t *testing.T) {
+	// server
+	go func() {
+		lis, err := net.Listen("tcp", "0.0.0.0:8000")
+		if err != nil {
+			t.Fatalf("[SVR] listen err: %v", err)
+		}
+		for {
+			conn, err := lis.Accept()
+			if err != nil {
+				t.Fatalf("[SVR] accept err: %v", err)
+			}
+			c := WrapConn(conn)
 
-func EncodePacket(w io.Writer, body []byte) error {
-	// len(Magic) + len(Checksum) == 8
-	totalsize := uint32(len(RPC_MAGIC) + len(body) + 4)
-	// write total size
-	binary.Write(w, binary.BigEndian, totalsize)
+			// read request
+			header, n, err := c.ReadHeader()
+			if err != nil {
+				t.Fatalf("[SVR] read request header err: %v", err)
+			}
+			t.Logf("[SVR] read request header len: %d, header", n, header)
 
-	sum := adler32.New()
-	ww := io.MultiWriter(sum, w)
-	// write magic bytes
-	binary.Write(ww, binary.BigEndian, RPC_MAGIC)
+			var body interface{}
+			n, err = c.ReadBody(&body)
+			if err != nil {
+				t.Fatalf("[SVR] read request body err: %v", err)
+			}
+			t.Logf("[SVR] read request body len: %d, body: %v", n, body)
 
-	// write body
-	ww.Write(body)
+			// write response
+			header.Err = "test error"
+			now := time.Now()
+			n, err = c.Write(header, now)
+			if err != nil {
+				t.Fatalf("[SVR] write response err: %v", err)
+			}
+			t.Logf("[SVR] write response len: %d, body: %v", n, now)
+		}
+	}()
 
-	// calculate checksum
-	checksum := sum.Sum32()
+	time.Sleep(time.Second * 3)
 
-	// write checksum
-	return binary.Write(w, binary.BigEndian, checksum)
-}
+	// client
+	{
+		conn, err := net.Dial("tcp", "127.0.0.1:8000")
+		if err != nil {
+			t.Fatalf("[CLI] dial err: %v", err)
+		}
+		c := WrapConn(conn)
 
-func DecodePacket(r io.Reader) ([]byte, error) {
-	var totalsize uint32
-	err := binary.Read(r, binary.BigEndian, &totalsize)
-	if err != nil {
-		return nil, errors.Annotate(err, "read total size")
+		// write request
+		header := &Header{
+			ID:    "1",
+			URI:   "/a/b",
+			Codec: "json",
+			Gzip:  0,
+		}
+		// body := map[string]string{"a": "A"}
+		reqBody := "aA"
+		n, err := c.Write(header, reqBody)
+		if err != nil {
+			t.Fatalf("[CLI] write request err: %v", err)
+		}
+		t.Logf("[CLI] write request len: %d, body: %v", n, reqBody)
+
+		// read response
+		header, n, err = c.ReadHeader()
+		if err != nil {
+			t.Fatalf("[CLI] read response header err: %v", err)
+		}
+		t.Logf("[CLI] read response header len: %d, header: %v", n, header)
+
+		var respBody interface{}
+		n, err = c.ReadBody(&respBody)
+		if err != nil {
+			t.Fatalf("[CLI] read response body err: %v", err)
+		}
+		t.Logf("[CLI] read response body len: %d, body: %v", n, respBody)
 	}
-
-	// at least len(magic) + len(checksum)
-	if totalsize < 8 {
-		return nil, errors.Errorf("bad packet. header:%d", totalsize)
-	}
-
-	sum := adler32.New()
-	rr := io.TeeReader(r, sum)
-
-	var magic [4]byte
-	err = binary.Read(rr, binary.BigEndian, &magic)
-	if err != nil {
-		return nil, errors.Annotate(err, "read magic")
-	}
-	if magic != RPC_MAGIC {
-		return nil, errors.Errorf("bad rpc magic:%v", magic)
-	}
-
-	body := make([]byte, totalsize-8)
-	_, err = io.ReadFull(rr, body)
-	if err != nil {
-		return nil, errors.Annotate(err, "read body")
-	}
-
-	var checksum uint32
-	err = binary.Read(r, binary.BigEndian, &checksum)
-	if err != nil {
-		return nil, errors.Annotate(err, "read checksum")
-	}
-
-	if checksum != sum.Sum32() {
-		return nil, errors.Errorf("checkSum error, %d(calc) %d(remote)", sum.Sum32(), checksum)
-	}
-	return body, nil
 }

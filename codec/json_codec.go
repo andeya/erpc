@@ -70,3 +70,9 @@ func (j *JsonDecoder) Decode(v interface{}) (int, error) {
 	j.counter.Reset()
 	return n, err
 }
+
+// Buffered returns a reader of the data remaining in the Decoder's
+// buffer. The reader is valid until the next call to Decode.
+func (j *JsonDecoder) Buffered() io.Reader {
+	return j.Decoder.Buffered()
+}

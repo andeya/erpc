@@ -6,5 +6,8 @@ type Header struct {
 	Codec string `json:"codec,omitempty"`
 	Gzip  int8   `json:"gzip,omitempty"` // gzip compression level(range [-2,9])
 	Err   string `json:"err,omitempty"`  // only for response
-	Len   uint32 `json:"len"`
 }
+
+var (
+	Magic = [5]byte{'h', 'e', 'n', 'r', 'y'}
+)
