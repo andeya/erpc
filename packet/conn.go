@@ -80,12 +80,12 @@ type (
 
 type conn struct {
 	net.Conn
-	bufWriter *bufio.Writer
-	bufReader utils.Reader
+	bufWriter   *bufio.Writer
+	bufReader   *bufio.Reader
+	limitReader *utils.LimitedReader
 
 	headerEncoder codec.Encoder
 	headerDecoder codec.Decoder
-	limitReader   *utils.LimitedReader
 	readedHeader  Header
 
 	cacheWriter *bytes.Buffer
@@ -110,9 +110,9 @@ func WrapConn(c net.Conn) Conn {
 		Conn:          c,
 		bufWriter:     bufWriter,
 		bufReader:     bufReader,
+		limitReader:   limitReader,
 		headerEncoder: codec.NewJsonEncoder(cacheWriter),
 		headerDecoder: codec.NewJsonDecoder(limitReader),
-		limitReader:   limitReader,
 		cacheWriter:   cacheWriter,
 		encodeMap:     encodeMap,
 		decodeMap:     decodeMap,
