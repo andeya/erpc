@@ -83,17 +83,12 @@ type conn struct {
 	headerDecoder codec.Decoder
 	readedHeader  Header
 
-	// bodyWriter io.Writer
-	// bodyReader io.Reader
-
 	bodyCacheWriter *bytes.Buffer
 	encodeMap       map[string]codec.Encoder
 	decodeMap       map[string]codec.Decoder
-	encoderMutex    sync.Mutex
-	decoderMutex    sync.Mutex
 
-	gzipWriter *utils.GzipWriter
-	gzipReader *gzip.Reader
+	gzipWriterMap map[int]*gzip.Writer
+	gzipReader    *gzip.Reader
 
 	writeMutex sync.Mutex // exclusive writer lock
 }
@@ -114,7 +109,7 @@ func WrapConn(c net.Conn) Conn {
 		bodyCacheWriter: bodyCacheWriter,
 		encodeMap:       encodeMap,
 		decodeMap:       decodeMap,
-		gzipWriter:      utils.NewGzipWriter(nil),
+		gzipWriterMap:   make(map[int]*gzip.Writer),
 		gzipReader:      new(gzip.Reader),
 	}
 }
@@ -151,6 +146,7 @@ func (c *conn) Write(header *Header, body interface{}) (int, error) {
 // ReadHeader reads header from the connection.
 // ReadHeader can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
+// Note: must use only one goroutine call.
 func (c *conn) ReadHeader(header *Header) (int, error) {
 	n, err := c.headerDecoder.Decode(header)
 	c.readedHeader = *header
@@ -160,6 +156,7 @@ func (c *conn) ReadHeader(header *Header) (int, error) {
 // ReadBody reads body from the connection.
 // ReadBody can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
+// Note: must use only one goroutine call, and it must be called after calling the ReadHeader().
 func (c *conn) ReadBody(body interface{}) (n int, err error) {
 	bodyReader := utils.LimitReader(c.bufReader, int64(c.readedHeader.Len))
 	name := c.readedHeader.Codec
@@ -212,16 +209,25 @@ func (c *conn) encodeBody(header *Header, body interface{}) (err error) {
 		if err != nil {
 			return
 		}
-		if header.Gzip != gzip.NoCompression {
-			c.gzipWriter.ResetLevel(int(c.readedHeader.Gzip))
-			c.gzipWriter.Reset(c.bodyCacheWriter)
+		level := int(header.Gzip)
+		if level != gzip.NoCompression {
+			gzipWriter, ok := c.gzipWriterMap[level]
+			if !ok {
+				gzipWriter, err = gzip.NewWriterLevel(c.bodyCacheWriter, level)
+				if err != nil {
+					return
+				}
+				c.gzipWriterMap[level] = gzipWriter
+			} else {
+				gzipWriter.Reset(c.bodyCacheWriter)
+			}
 			defer func() {
-				err2 := c.gzipWriter.Close()
+				err2 := gzipWriter.Close()
 				if err == nil {
 					err = err2
 				}
 			}()
-			encoder = encMaker(c.gzipWriter)
+			encoder = encMaker(gzipWriter)
 
 		} else {
 			encoder = encMaker(c.bodyCacheWriter)
