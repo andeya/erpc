@@ -7,7 +7,7 @@ import (
 
 type (
 	Encoder interface {
-		Encode(v interface{}) (n int, err error)
+		Encode(v interface{}) error
 	}
 	EncodeMaker func(io.Writer) Encoder
 )
@@ -39,8 +39,8 @@ func MakeEncoder(name string, w io.Writer) (Encoder, error) {
 
 type (
 	Decoder interface {
-		Decode(v interface{}) (n int, err error)
-		Buffered() io.Reader
+		Decode(v interface{}) error
+		// Buffered() io.Reader
 	}
 	DecodeMaker func(io.Reader) Decoder
 )
