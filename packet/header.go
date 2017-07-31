@@ -8,6 +8,6 @@ type Header struct {
 	Err   string `json:"err,omitempty"`  // only for response
 }
 
-var (
-	Magic = [5]byte{'h', 'e', 'n', 'r', 'y'}
-)
+// var (
+// 	Magic = [5]byte{'h', 'e', 'n', 'r', 'y'}
+// )
