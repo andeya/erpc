@@ -83,10 +83,10 @@ func (p *pluginContainer) GetAll() []Plugin {
 
 // client plugin interfaces.
 type (
-	// ClientPluginContainer defines all methods to manage client plugins.
-	ClientPluginContainer interface {
+	// CliPluginContainer defines all methods to manage client plugins.
+	CliPluginContainer interface {
 		PluginContainer
-		doPostConnected(ClientCodecConn) error
+		doPostConnected(CliCodecConn) error
 		doPreWriteRequest(*common.Request, interface{}) error
 		doPostWriteRequest(*common.Request, interface{}) error
 		doPreReadResponseHeader(*common.Response) error
@@ -96,7 +96,7 @@ type (
 	}
 	PostConnectedPlugin interface {
 		Plugin
-		PostConnected(ClientCodecConn) error
+		PostConnected(CliCodecConn) error
 	}
 	PreWriteRequestPlugin interface {
 		Plugin
@@ -124,8 +124,13 @@ type (
 	}
 )
 
+// NewCliPluginContainer creates a new client plugin container.
+func NewCliPluginContainer() CliPluginContainer {
+	return new(pluginContainer)
+}
+
 // doPostConnected handles connected.
-func (p *pluginContainer) doPostConnected(codecConn ClientCodecConn) error {
+func (p *pluginContainer) doPostConnected(codecConn CliCodecConn) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PostConnectedPlugin); ok {
 			if err := plugin.PostConnected(codecConn); err != nil {
@@ -211,11 +216,11 @@ func (p *pluginContainer) doPostReadResponseBody(body interface{}) error {
 
 // server plugin interfaces.
 type (
-	// ServerPluginContainer defines all methods to manage server plugins.
-	ServerPluginContainer interface {
+	// SvrPluginContainer defines all methods to manage server plugins.
+	SvrPluginContainer interface {
 		PluginContainer
 		doRegister(nodePath string, rcvr interface{}, metadata ...string) error
-		doPostConnAccept(ServerCodecConn) error
+		doPostConnAccept(SvrCodecConn) error
 		doPreReadRequestHeader(*Context) error
 		doPostReadRequestHeader(*Context) error
 		doPreReadRequestBody(ctx *Context, body interface{}) error
@@ -232,7 +237,7 @@ type (
 	// and this conn has been closed.
 	PostConnAcceptPlugin interface {
 		Plugin
-		PostConnAccept(ServerCodecConn) error
+		PostConnAccept(SvrCodecConn) error
 	}
 	PreReadRequestHeaderPlugin interface {
 		Plugin
@@ -260,6 +265,11 @@ type (
 	}
 )
 
+// NewSvrPluginContainer creates a new server plugin container.
+func NewSvrPluginContainer() SvrPluginContainer {
+	return new(pluginContainer)
+}
+
 func (p *pluginContainer) doRegister(nodePath string, rcvr interface{}, metadata ...string) error {
 	var errs []error
 	for _, _plugin := range p.plugins {
@@ -273,7 +283,7 @@ func (p *pluginContainer) doRegister(nodePath string, rcvr interface{}, metadata
 	return errors.Merge(errs...)
 }
 
-func (p *pluginContainer) doPostConnAccept(conn ServerCodecConn) error {
+func (p *pluginContainer) doPostConnAccept(conn SvrCodecConn) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PostConnAcceptPlugin); ok {
 			if err := plugin.PostConnAccept(conn); err != nil {
