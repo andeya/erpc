@@ -50,7 +50,7 @@ func (p *pluginContainer) Remove(pluginName string) error {
 		return errors.New("plugin with an empty name cannot be removed")
 	}
 	indexToRemove := -1
-	for _, _plugin := range p.plugins {
+	for i, plugin := range p.plugins {
 		if plugin.Name() == pluginName {
 			indexToRemove = i
 			break
