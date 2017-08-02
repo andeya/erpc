@@ -9,10 +9,10 @@ import (
 )
 
 type GzipEncoder struct {
-	encMap   map[int]codec.Encoder
-	gzMap    map[int]*gzip.Writer
-	w        io.Writer
-	encMaker codec.EncodeMaker
+	gzipWriterMap map[int]*gzip.Writer
+	w             io.Writer
+	encMap        map[int]codec.Encoder
+	encMaker      codec.EncodeMaker
 }
 
 func (c *conn) getGzipEncoder(codecName string) (*GzipEncoder, error) {
@@ -27,10 +27,10 @@ func (c *conn) getGzipEncoder(codecName string) (*GzipEncoder, error) {
 	w := c.cacheWriter
 	enc := encMaker(w)
 	g = &GzipEncoder{
-		encMap:   map[int]codec.Encoder{gzip.NoCompression: enc},
-		gzMap:    make(map[int]*gzip.Writer),
-		w:        w,
-		encMaker: encMaker,
+		gzipWriterMap: c.gzipWriterMap,
+		w:             w,
+		encMap:        map[int]codec.Encoder{gzip.NoCompression: enc},
+		encMaker:      encMaker,
 	}
 	c.gzipEncodeMap[codecName] = g
 	return g, nil
@@ -44,7 +44,7 @@ func (g *GzipEncoder) Encode(gzipLevel int, v interface{}) error {
 	var gz *gzip.Writer
 	var err error
 	if ok {
-		gz = g.gzMap[gzipLevel]
+		gz = g.gzipWriterMap[gzipLevel]
 		gz.Reset(g.w)
 
 	} else {
@@ -52,7 +52,7 @@ func (g *GzipEncoder) Encode(gzipLevel int, v interface{}) error {
 		if err != nil {
 			return err
 		}
-		g.gzMap[gzipLevel] = gz
+		g.gzipWriterMap[gzipLevel] = gz
 		enc = g.encMaker(gz)
 		g.encMap[gzipLevel] = enc
 	}
@@ -64,11 +64,11 @@ func (g *GzipEncoder) Encode(gzipLevel int, v interface{}) error {
 }
 
 type GzipDecoder struct {
-	dec      codec.Decoder
-	gzDec    codec.Decoder
-	gz       *gzip.Reader
-	r        utils.Reader
-	decMaker codec.DecodeMaker
+	gzipReader *gzip.Reader
+	r          utils.Reader
+	dec        codec.Decoder
+	gzDec      codec.Decoder
+	decMaker   codec.DecodeMaker
 }
 
 func (c *conn) getGzipDecoder(codecName string) (*GzipDecoder, error) {
@@ -82,13 +82,13 @@ func (c *conn) getGzipDecoder(codecName string) (*GzipDecoder, error) {
 	}
 	r := c.limitReader
 	dec := decMaker(r)
-	gz := c.gzipReader
+	gzipReader := c.gzipReader
 	g = &GzipDecoder{
-		dec:      dec,
-		gzDec:    decMaker(gz),
-		gz:       gz,
-		r:        r,
-		decMaker: decMaker,
+		dec:        dec,
+		gzDec:      decMaker(gzipReader),
+		gzipReader: gzipReader,
+		r:          r,
+		decMaker:   decMaker,
 	}
 	c.gzipDecodeMap[codecName] = g
 	return g, nil
@@ -99,7 +99,7 @@ func (g *GzipDecoder) Decode(gzipLevel int, v interface{}) error {
 		return g.dec.Decode(v)
 	}
 	var err error
-	if err = g.gz.Reset(g.r); err != nil {
+	if err = g.gzipReader.Reset(g.r); err != nil {
 		return err
 	}
 	return g.gzDec.Decode(v)

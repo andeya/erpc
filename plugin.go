@@ -129,7 +129,6 @@ func NewCliPluginContainer() CliPluginContainer {
 	return new(pluginContainer)
 }
 
-// doPostConnected handles connected.
 func (p *pluginContainer) doPostConnected(codecConn CliCodecConn) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PostConnectedPlugin); ok {
@@ -142,7 +141,6 @@ func (p *pluginContainer) doPostConnected(codecConn CliCodecConn) error {
 	return nil
 }
 
-// doPreWriteRequest invokes doPreWriteRequest plugin.
 func (p *pluginContainer) doPreWriteRequest(r *common.Request, body interface{}) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PreWriteRequestPlugin); ok {
@@ -154,7 +152,6 @@ func (p *pluginContainer) doPreWriteRequest(r *common.Request, body interface{})
 	return nil
 }
 
-// doPostWriteRequest invokes doPostWriteRequest plugin.
 func (p *pluginContainer) doPostWriteRequest(r *common.Request, body interface{}) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PostWriteRequestPlugin); ok {
@@ -166,7 +163,6 @@ func (p *pluginContainer) doPostWriteRequest(r *common.Request, body interface{}
 	return nil
 }
 
-// doPreReadResponseHeader invokes doPreReadResponseHeader plugin.
 func (p *pluginContainer) doPreReadResponseHeader(r *common.Response) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PreReadResponseHeaderPlugin); ok {
@@ -178,7 +174,6 @@ func (p *pluginContainer) doPreReadResponseHeader(r *common.Response) error {
 	return nil
 }
 
-// doPostReadResponseHeader invokes doPostReadResponseHeader plugin.
 func (p *pluginContainer) doPostReadResponseHeader(r *common.Response) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PostReadResponseHeaderPlugin); ok {
@@ -190,7 +185,6 @@ func (p *pluginContainer) doPostReadResponseHeader(r *common.Response) error {
 	return nil
 }
 
-// doPreReadResponseBody invokes doPreReadResponseBody plugin.
 func (p *pluginContainer) doPreReadResponseBody(body interface{}) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PreReadResponseBodyPlugin); ok {
@@ -202,7 +196,6 @@ func (p *pluginContainer) doPreReadResponseBody(body interface{}) error {
 	return nil
 }
 
-// doPostReadResponseBody invokes doPostReadResponseBody plugin.
 func (p *pluginContainer) doPostReadResponseBody(body interface{}) error {
 	for _, _plugin := range p.plugins {
 		if plugin, ok := _plugin.(PostReadResponseBodyPlugin); ok {

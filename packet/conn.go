@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henrylee2cn/goutil/errors"
+
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/utils"
 )
@@ -90,9 +92,10 @@ type conn struct {
 	readedHeader  Header
 
 	cacheWriter   *bytes.Buffer
+	gzipWriterMap map[int]*gzip.Writer
+	gzipReader    *gzip.Reader
 	gzipEncodeMap map[string]*GzipEncoder // codecName:GzipEncoder
 	gzipDecodeMap map[string]*GzipDecoder // codecName:GzipEncoder
-	gzipReader    *gzip.Reader
 
 	writeMutex sync.Mutex // exclusive writer lock
 }
@@ -100,6 +103,7 @@ type conn struct {
 // WrapConn wrap a net.Conn as a Conn
 func WrapConn(c net.Conn) Conn {
 	obj := connPool.Get().(*conn)
+	obj.Conn = c
 	obj.bufReader.Reset(c)
 	obj.bufWriter.Reset(c)
 	return obj
@@ -125,9 +129,10 @@ func newConn(c net.Conn) *conn {
 		headerEncoder: codec.NewJsonEncoder(cacheWriter),
 		headerDecoder: codec.NewJsonDecoder(limitReader),
 		cacheWriter:   cacheWriter,
+		gzipWriterMap: make(map[int]*gzip.Writer),
+		gzipReader:    new(gzip.Reader),
 		gzipEncodeMap: make(map[string]*GzipEncoder),
 		gzipDecodeMap: make(map[string]*GzipDecoder),
-		gzipReader:    new(gzip.Reader),
 	}
 }
 
@@ -306,9 +311,15 @@ func (c *conn) ReadBody(body interface{}) (int64, error) {
 // Close closes the connection.
 // Any blocked Read or Write operations will be unblocked and return errors.
 func (c *conn) Close() error {
-	err := c.Conn.Close()
+	var errs []error
+	errs = append(errs, c.Conn.Close())
+	c.Conn = nil
 	c.bufReader.Reset(nil)
 	c.bufWriter.Reset(nil)
+	errs = append(errs, c.gzipReader.Close())
+	for _, gz := range c.gzipWriterMap {
+		errs = append(errs, gz.Close())
+	}
 	connPool.Put(c)
-	return err
+	return errors.Merge(errs...)
 }

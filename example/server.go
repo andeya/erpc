@@ -22,6 +22,7 @@ func main() {
 		}
 		log.Printf("accept %s", conn.RemoteAddr().String())
 		go func(c packet.Conn) {
+			defer c.Close()
 			for {
 				// read request
 				header, n, err := c.ReadHeader()

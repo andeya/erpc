@@ -14,7 +14,7 @@ func main() {
 		log.Fatalf("[CLI] dial err: %v", err)
 	}
 	c := packet.WrapConn(conn)
-
+	defer c.Close()
 	for i := 0; i < 10; i++ {
 		// write request
 		header := &packet.Header{
