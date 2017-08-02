@@ -25,7 +25,7 @@ func main() {
 		}
 		reqBody := map[string]string{"a": "A"}
 		// reqBody := "aA"
-		n, err := c.Write(header, reqBody)
+		n, err := c.WriteHeaderBody(header, reqBody)
 		if err != nil {
 			log.Fatalf("[CLI] write request err: %v", err)
 		}

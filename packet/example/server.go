@@ -43,7 +43,7 @@ func main() {
 				// write response
 				header.Err = "test error"
 				now := time.Now()
-				n, err = c.Write(header, now)
+				n, err = c.WriteHeaderBody(header, now)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 					return

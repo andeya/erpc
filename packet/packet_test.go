@@ -19,7 +19,7 @@ func TestConn(t *testing.T) {
 				t.Fatalf("[SVR] accept err: %v", err)
 			}
 			c := WrapConn(conn)
-
+			t.Logf("[SVR] c.LocalAddr(): %s, c.RemoteAddr(): %s", c.LocalAddr(), c.RemoteAddr())
 			// read request
 			header, n, err := c.ReadHeader()
 			if err != nil {
@@ -37,7 +37,7 @@ func TestConn(t *testing.T) {
 			// write response
 			header.Err = "test error"
 			now := time.Now()
-			n, err = c.Write(header, now)
+			n, err = c.WriteHeaderBody(header, now)
 			if err != nil {
 				t.Fatalf("[SVR] write response err: %v", err)
 			}
@@ -54,6 +54,7 @@ func TestConn(t *testing.T) {
 			t.Fatalf("[CLI] dial err: %v", err)
 		}
 		c := WrapConn(conn)
+		t.Logf("[CLI] c.LocalAddr(): %s, c.RemoteAddr(): %s", c.LocalAddr(), c.RemoteAddr())
 
 		// write request
 		header := &Header{
@@ -64,7 +65,7 @@ func TestConn(t *testing.T) {
 		}
 		// body := map[string]string{"a": "A"}
 		reqBody := "aA"
-		n, err := c.Write(header, reqBody)
+		n, err := c.WriteHeaderBody(header, reqBody)
 		if err != nil {
 			t.Fatalf("[CLI] write request err: %v", err)
 		}

@@ -57,11 +57,11 @@ type (
 		// A zero value for t means Write will not time out.
 		SetWriteDeadline(t time.Time) error
 
-		// Write writes header and body to the connection.
-		// Write can be made to time out and return an Error with Timeout() == true
+		// WriteHeaderBody writes header and body to the connection.
+		// WriteHeaderBody can be made to time out and return an Error with Timeout() == true
 		// after a fixed time limit; see SetDeadline and SetWriteDeadline.
 		// Note: must be safe for concurrent use by multiple goroutines.
-		Write(header *Header, body interface{}) (int64, error)
+		WriteHeaderBody(header *Header, body interface{}) (int64, error)
 
 		// ReadHeader reads header from the connection.
 		// ReadHeader can be made to time out and return an Error with Timeout() == true
@@ -136,11 +136,11 @@ func newConn(c net.Conn) *conn {
 	}
 }
 
-// Write writes header and body to the connection.
-// Write can be made to time out and return an Error with Timeout() == true
+// WriteHeaderBody writes header and body to the connection.
+// WriteHeaderBody can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (c *conn) Write(header *Header, body interface{}) (int64, error) {
+func (c *conn) WriteHeaderBody(header *Header, body interface{}) (int64, error) {
 	c.writeMutex.Lock()
 	defer c.writeMutex.Unlock()
 	c.bufWriter.ResetCount()
