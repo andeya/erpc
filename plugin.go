@@ -5,21 +5,6 @@ import (
 )
 
 type (
-	// PluginContainer plugin container that defines base methods to manage plugins.
-	PluginContainer interface {
-		Add(plugins ...Plugin) error
-		Remove(pluginName string) error
-		GetByName(pluginName string) Plugin
-		GetAll() []Plugin
-		PreConnectPlugin
-		PostConnectPlugin
-		PreWritePacketPlugin
-		PostWritePacketPlugin
-		PreReadHeaderPlugin
-		PostReadHeaderPlugin
-		PreReadBodyPlugin
-		PostReadBodyPlugin
-	}
 	//Plugin represents a plugin.
 	Plugin interface {
 		Name() string
@@ -47,6 +32,22 @@ type (
 	}
 	PostReadBodyPlugin interface {
 		PostReadBody(Context, interface{}) error
+	}
+	// PluginContainer plugin container that defines base methods to manage plugins.
+	PluginContainer interface {
+		Add(plugins ...Plugin) error
+		Remove(pluginName string) error
+		GetByName(pluginName string) Plugin
+		GetAll() []Plugin
+
+		PreConnectPlugin
+		PostConnectPlugin
+		PreWritePacketPlugin
+		PostWritePacketPlugin
+		PreReadHeaderPlugin
+		PostReadHeaderPlugin
+		PreReadBodyPlugin
+		PostReadBodyPlugin
 	}
 )
 
