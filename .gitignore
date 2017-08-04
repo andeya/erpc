@@ -27,5 +27,5 @@ _testmain.go
 *.sublime-project
 *.sublime-workspace
 
-packet/example/client
-packet/example/server
+example/client
+example/server
