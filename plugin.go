@@ -11,51 +11,48 @@ type (
 		Remove(pluginName string) error
 		GetByName(pluginName string) Plugin
 		GetAll() []Plugin
-		doPostConnect(Conn) error
-		doPreReadHeader(Context) error
-		doPostReadHeader(Context) error
-		doPreReadBody(Context, interface{}) error
-		doPostReadBody(Context, interface{}) error
-		doPreWritePacket(Context, interface{}) error
-		doPostWritePacket(Context, interface{}) error
+		PreConnectPlugin
+		PostConnectPlugin
+		PreWritePacketPlugin
+		PostWritePacketPlugin
+		PreReadHeaderPlugin
+		PostReadHeaderPlugin
+		PreReadBodyPlugin
+		PostReadBodyPlugin
 	}
 	//Plugin represents a plugin.
 	Plugin interface {
 		Name() string
 	}
 	PreConnectPlugin interface {
-		Plugin
-		PreConnect(nodePath string, rcvr interface{}, metadata ...string) error
+		PreConnect(string, interface{}) error
 	}
 	PostConnectPlugin interface {
-		Plugin
 		PostConnect(Conn) error
 	}
 	PreWritePacketPlugin interface {
-		Plugin
 		PreWritePacket(Context, interface{}) error
 	}
 	PostWritePacketPlugin interface {
-		Plugin
 		PostWritePacket(Context, interface{}) error
 	}
 	PreReadHeaderPlugin interface {
-		Plugin
 		PreReadHeader(Context) error
 	}
 	PostReadHeaderPlugin interface {
-		Plugin
 		PostReadHeader(Context) error
 	}
 	PreReadBodyPlugin interface {
-		Plugin
-		PreReadBody(interface{}) error
+		PreReadBody(Context, interface{}) error
 	}
 	PostReadBodyPlugin interface {
-		Plugin
-		PostReadBody(interface{}) error
+		PostReadBody(Context, interface{}) error
 	}
 )
+
+func NewPluginContainer() PluginContainer {
+	return new(pluginContainer)
+}
 
 type pluginContainer struct {
 	plugins []Plugin
@@ -96,7 +93,7 @@ func (p *pluginContainer) Remove(pluginName string) error {
 		}
 	}
 	if indexToRemove == -1 {
-		return errors.New("cannot remove a plugin which doesn't exists")
+		return errors.New("cannot remove a plugin which esn't exists")
 	}
 	p.plugins = append(p.plugins[:indexToRemove], p.plugins[indexToRemove+1:]...)
 	return nil
@@ -120,11 +117,11 @@ func (p *pluginContainer) GetAll() []Plugin {
 	return p.plugins
 }
 
-func (p *pluginContainer) doPreConnect(nodePath string, rcvr interface{}, metadata ...string) error {
+func (p *pluginContainer) PreConnect(nodePath string, rcvr interface{}) error {
 	var errs []error
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PreConnectPlugin); ok {
-			err := plugin.PreConnect(nodePath, rcvr, metadata...)
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreConnectPlugin); ok {
+			err := _plugin.PreConnect(nodePath, rcvr)
 			if err != nil {
 				errs = append(errs, errors.Errorf("PreConnectPlugin(%s): %s", plugin.Name(), err.Error()))
 			}
@@ -133,10 +130,10 @@ func (p *pluginContainer) doPreConnect(nodePath string, rcvr interface{}, metada
 	return errors.Merge(errs...)
 }
 
-func (p *pluginContainer) doPostConnect(conn Conn) error {
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PostConnectPlugin); ok {
-			if err := plugin.PostConnect(conn); err != nil {
+func (p *pluginContainer) PostConnect(conn Conn) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostConnectPlugin); ok {
+			if err := _plugin.PostConnect(conn); err != nil {
 				conn.Close()
 				return errors.Errorf("PostConnectPlugin(%s): %s", plugin.Name(), err.Error())
 			}
@@ -145,10 +142,10 @@ func (p *pluginContainer) doPostConnect(conn Conn) error {
 	return nil
 }
 
-func (p *pluginContainer) doPreWritePacket(r Context, body interface{}) error {
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PreWritePacketPlugin); ok {
-			if err := plugin.PreWritePacket(r, body); err != nil {
+func (p *pluginContainer) PreWritePacket(ctx Context, body interface{}) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreWritePacketPlugin); ok {
+			if err := _plugin.PreWritePacket(ctx, body); err != nil {
 				return errors.Errorf("PreWritePacketPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -156,10 +153,10 @@ func (p *pluginContainer) doPreWritePacket(r Context, body interface{}) error {
 	return nil
 }
 
-func (p *pluginContainer) doPostWritePacket(r Context, body interface{}) error {
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PostWritePacketPlugin); ok {
-			if err := plugin.PostWritePacket(r, body); err != nil {
+func (p *pluginContainer) PostWritePacket(ctx Context, body interface{}) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostWritePacketPlugin); ok {
+			if err := _plugin.PostWritePacket(ctx, body); err != nil {
 				return errors.Errorf("PostWritePacketPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -167,10 +164,10 @@ func (p *pluginContainer) doPostWritePacket(r Context, body interface{}) error {
 	return nil
 }
 
-func (p *pluginContainer) doPreReadHeader(r Context) error {
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PreReadHeaderPlugin); ok {
-			if err := plugin.PreReadHeader(r); err != nil {
+func (p *pluginContainer) PreReadHeader(ctx Context) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
+			if err := _plugin.PreReadHeader(ctx); err != nil {
 				return errors.Errorf("PreReadHeaderPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -178,10 +175,10 @@ func (p *pluginContainer) doPreReadHeader(r Context) error {
 	return nil
 }
 
-func (p *pluginContainer) doPostReadHeader(r Context) error {
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PostReadHeaderPlugin); ok {
-			if err := plugin.PostReadHeader(r); err != nil {
+func (p *pluginContainer) PostReadHeader(ctx Context) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostReadHeaderPlugin); ok {
+			if err := _plugin.PostReadHeader(ctx); err != nil {
 				return errors.Errorf("PostReadHeaderPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -189,10 +186,10 @@ func (p *pluginContainer) doPostReadHeader(r Context) error {
 	return nil
 }
 
-func (p *pluginContainer) doPreReadBody(body interface{}) error {
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PreReadBodyPlugin); ok {
-			if err := plugin.PreReadBody(body); err != nil {
+func (p *pluginContainer) PreReadBody(ctx Context, body interface{}) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreReadBodyPlugin); ok {
+			if err := _plugin.PreReadBody(ctx, body); err != nil {
 				return errors.Errorf("PreReadBodyPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -200,10 +197,10 @@ func (p *pluginContainer) doPreReadBody(body interface{}) error {
 	return nil
 }
 
-func (p *pluginContainer) doPostReadBody(body interface{}) error {
-	for _, _plugin := range p.plugins {
-		if plugin, ok := _plugin.(PostReadBodyPlugin); ok {
-			if err := plugin.PostReadBody(body); err != nil {
+func (p *pluginContainer) PostReadBody(ctx Context, body interface{}) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostReadBodyPlugin); ok {
+			if err := _plugin.PostReadBody(ctx, body); err != nil {
 				return errors.Errorf("PostReadBodyPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
