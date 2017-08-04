@@ -1,4 +1,4 @@
-package packet
+package teleport
 
 type Header struct {
 	ID    string `json:"id"`

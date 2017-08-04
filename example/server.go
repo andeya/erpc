@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/henrylee2cn/teleport/packet"
+	"github.com/henrylee2cn/teleport"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 			log.Fatalf("[SVR] accept err: %v", err)
 		}
 		log.Printf("accept %s", conn.RemoteAddr().String())
-		go func(c packet.Conn) {
+		go func(c teleport.Conn) {
 			defer c.Close()
 			for {
 				// read request
@@ -50,6 +50,6 @@ func main() {
 				}
 				log.Printf("[SVR] write response len: %d, body: %#v", n, now)
 			}
-		}(packet.WrapConn(conn))
+		}(teleport.WrapConn(conn))
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/henrylee2cn/teleport/packet"
+	"github.com/henrylee2cn/teleport"
 )
 
 func main() {
@@ -13,11 +13,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("[CLI] dial err: %v", err)
 	}
-	c := packet.WrapConn(conn)
+	c := teleport.WrapConn(conn)
 	defer c.Close()
 	for i := 0; i < 10; i++ {
 		// write request
-		header := &packet.Header{
+		header := &teleport.Header{
 			ID:    "1",
 			URI:   "/a/b",
 			Codec: "json",

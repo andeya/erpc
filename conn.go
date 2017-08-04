@@ -1,4 +1,4 @@
-package packet
+package teleport
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
 
 	"github.com/henrylee2cn/teleport/codec"
@@ -57,11 +58,11 @@ type (
 		// A zero value for t means Write will not time out.
 		SetWriteDeadline(t time.Time) error
 
-		// WriteHeaderBody writes header and body to the connection.
-		// WriteHeaderBody can be made to time out and return an Error with Timeout() == true
+		// WritePacket writes header and body to the connection.
+		// WritePacket can be made to time out and return an Error with Timeout() == true
 		// after a fixed time limit; see SetDeadline and SetWriteDeadline.
 		// Note: must be safe for concurrent use by multiple goroutines.
-		WriteHeaderBody(header *Header, body interface{}) (int64, error)
+		WritePacket(header *Header, body interface{}) (int64, error)
 
 		// ReadHeader reads header from the connection.
 		// ReadHeader can be made to time out and return an Error with Timeout() == true
@@ -75,11 +76,26 @@ type (
 		// Note: must use only one goroutine call, and it must be called after calling the ReadHeader().
 		ReadBody(body interface{}) (int64, error)
 
+		// Read reads data from the connection.
+		// Read can be made to time out and return an Error with Timeout() == true
+		// after a fixed time limit; see SetDeadline and SetReadDeadline.
+		Read(b []byte) (n int, err error)
+
+		// Write writes data to the connection.
+		// Write can be made to time out and return an Error with Timeout() == true
+		// after a fixed time limit; see SetDeadline and SetWriteDeadline.
+		Write(b []byte) (n int, err error)
+
 		// Close closes the connection.
 		// Any blocked Read or Write operations will be unblocked and return errors.
 		Close() error
+
+		// CtxData returns conn context temporary kv data.
+		CtxData() goutil.Map
 	}
 )
+
+var _ net.Conn = Conn(nil)
 
 type conn struct {
 	net.Conn
@@ -96,8 +112,8 @@ type conn struct {
 	gzipReader    *gzip.Reader
 	gzipEncodeMap map[string]*GzipEncoder // codecName:GzipEncoder
 	gzipDecodeMap map[string]*GzipDecoder // codecName:GzipEncoder
-
-	writeMutex sync.Mutex // exclusive writer lock
+	ctxData       goutil.Map
+	writeMutex    sync.Mutex // exclusive writer lock
 }
 
 // WrapConn wrap a net.Conn as a Conn
@@ -136,11 +152,11 @@ func newConn(c net.Conn) *conn {
 	}
 }
 
-// WriteHeaderBody writes header and body to the connection.
-// WriteHeaderBody can be made to time out and return an Error with Timeout() == true
+// WritePacket writes header and body to the connection.
+// WritePacket can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (c *conn) WriteHeaderBody(header *Header, body interface{}) (int64, error) {
+func (c *conn) WritePacket(header *Header, body interface{}) (int64, error) {
 	c.writeMutex.Lock()
 	defer c.writeMutex.Unlock()
 	c.bufWriter.ResetCount()
@@ -320,6 +336,15 @@ func (c *conn) Close() error {
 	for _, gz := range c.gzipWriterMap {
 		errs = append(errs, gz.Close())
 	}
+	c.ctxData = nil
 	connPool.Put(c)
 	return errors.Merge(errs...)
+}
+
+// CtxData returns conn context temporary kv data.
+func (c *conn) CtxData() goutil.Map {
+	if c.ctxData == nil {
+		c.ctxData = goutil.NormalMap()
+	}
+	return c.ctxData
 }
