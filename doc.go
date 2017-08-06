@@ -1,4 +1,4 @@
-// Copyright 2016 HenryLee. All Rights Reserved.
+// Copyright 2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,27 +11,4 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package utils
-
-// Counter count size
-type Counter struct {
-	count int
-}
-
-// Write count size of writed.
-func (c *Counter) Write(b []byte) (int, error) {
-	cnt := len(b)
-	c.count += cnt
-	return cnt, nil
-}
-
-// Count returns count.
-func (c *Counter) Count() int {
-	return c.count
-}
-
-// Reset clear count.
-func (c *Counter) Reset() {
-	c.count = 0
-}
+package teleport
