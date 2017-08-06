@@ -37,7 +37,7 @@ func TestConn(t *testing.T) {
 			// write response
 			header.Err = "test error"
 			now := time.Now()
-			n, err = c.WriteHeaderBody(header, now)
+			n, err = c.WritePacket(header, now)
 			if err != nil {
 				t.Fatalf("[SVR] write response err: %v", err)
 			}
@@ -58,14 +58,14 @@ func TestConn(t *testing.T) {
 
 		// write request
 		header := &Header{
-			ID:    "1",
-			URI:   "/a/b",
+			Id:    "1",
+			Uri:   "/a/b",
 			Codec: "json",
 			Gzip:  2,
 		}
 		// body := map[string]string{"a": "A"}
 		reqBody := "aA"
-		n, err := c.WriteHeaderBody(header, reqBody)
+		n, err := c.WritePacket(header, reqBody)
 		if err != nil {
 			t.Fatalf("[CLI] write request err: %v", err)
 		}

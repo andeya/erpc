@@ -1,0 +1,9 @@
+syntax = "proto3";
+package teleport;
+message header {
+	string	id		= 1;
+	string	uri 	= 2;
+	string	codec	= 3;
+	int32	gzip	= 4;
+	string	err		= 5;
+}

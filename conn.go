@@ -90,8 +90,10 @@ type (
 		// Any blocked Read or Write operations will be unblocked and return errors.
 		Close() error
 
-		// CtxData returns conn context temporary kv data.
-		CtxData() goutil.Map
+		// Public returns temporary public data of Conn.
+		Public() goutil.Map
+		// PublicLen returns the length of public data of Conn.
+		PublicLen() int
 	}
 )
 
@@ -112,7 +114,7 @@ type conn struct {
 	gzipReader    *gzip.Reader
 	gzipEncodeMap map[string]*GzipEncoder // codecName:GzipEncoder
 	gzipDecodeMap map[string]*GzipDecoder // codecName:GzipEncoder
-	ctxData       goutil.Map
+	ctxPublic     goutil.Map
 	writeMutex    sync.Mutex // exclusive writer lock
 }
 
@@ -336,15 +338,27 @@ func (c *conn) Close() error {
 	for _, gz := range c.gzipWriterMap {
 		errs = append(errs, gz.Close())
 	}
-	c.ctxData = nil
+	c.ctxPublic = nil
 	connPool.Put(c)
 	return errors.Merge(errs...)
 }
 
-// CtxData returns conn context temporary kv data.
-func (c *conn) CtxData() goutil.Map {
-	if c.ctxData == nil {
-		c.ctxData = goutil.NormalMap()
+// Public returns temporary public data of Conn.
+func (c *conn) Public() goutil.Map {
+	if c.ctxPublic == nil {
+		c.ctxPublic = goutil.NormalMap()
 	}
-	return c.ctxData
+	return c.ctxPublic
 }
+
+// PublicLen returns the length of public data of Conn.
+func (c *conn) PublicLen() int {
+	if c.ctxPublic == nil {
+		return 0
+	}
+	return c.ctxPublic.Len()
+}
+
+// var (
+// 	Magic = [5]byte{'h', 'e', 'n', 'r', 'y'}
+// )

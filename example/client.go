@@ -18,14 +18,14 @@ func main() {
 	for i := 0; i < 10; i++ {
 		// write request
 		header := &teleport.Header{
-			ID:    "1",
-			URI:   "/a/b",
+			Id:    "1",
+			Uri:   "/a/b",
 			Codec: "json",
 			Gzip:  5,
 		}
 		reqBody := map[string]string{"a": "A"}
 		// reqBody := "aA"
-		n, err := c.WriteHeaderBody(header, reqBody)
+		n, err := c.WritePacket(header, reqBody)
 		if err != nil {
 			log.Fatalf("[CLI] write request err: %v", err)
 		}
