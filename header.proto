@@ -2,8 +2,9 @@ syntax = "proto3";
 package teleport;
 message header {
 	string	id		= 1;
-	string	uri 	= 2;
-	string	codec	= 3;
-	int32	gzip	= 4;
-	string	err		= 5;
+	int32	type 	= 2;
+	string	uri 	= 3;
+	string	codec	= 4;
+	int32	gzip	= 5;
+	string	err		= 6;
 }

@@ -100,6 +100,9 @@ type (
 		// after a fixed time limit; see SetDeadline and SetWriteDeadline.
 		Write(b []byte) (n int, err error)
 
+		// Reset reset net.Conn
+		// Reset(net.Conn)
+
 		// Close closes the connection.
 		// Any blocked Read or Write operations will be unblocked and return errors.
 		Close() error
@@ -135,9 +138,7 @@ type conn struct {
 // WrapConn wrap a net.Conn as a Conn
 func WrapConn(c net.Conn) Conn {
 	obj := connPool.Get().(*conn)
-	obj.Conn = c
-	obj.bufReader.Reset(c)
-	obj.bufWriter.Reset(c)
+	obj.Reset(c)
 	return obj
 }
 
@@ -340,6 +341,16 @@ func (c *conn) ReadBody(body interface{}) (int64, error) {
 	}
 }
 
+// Reset reset net.Conn
+func (c *conn) Reset(netConn net.Conn) {
+	if c.Conn != nil {
+		c.Conn.Close()
+	}
+	c.Conn = netConn
+	c.bufReader.Reset(netConn)
+	c.bufWriter.Reset(netConn)
+}
+
 // Close closes the connection.
 // Any blocked Read or Write operations will be unblocked and return errors.
 func (c *conn) Close() error {
@@ -376,3 +387,11 @@ func (c *conn) PublicLen() int {
 // var (
 // 	Magic = [5]byte{'h', 'e', 'n', 'r', 'y'}
 // )
+
+// Header types
+const (
+	TypeRequest   int32 = 0
+	TypeResponse  int32 = 1
+	TypeAuth      int32 = 2
+	TypeHeartbeat int32 = 3
+)
