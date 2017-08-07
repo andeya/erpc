@@ -10,6 +10,7 @@
 
 	It has these top-level messages:
 		Header
+		Status
 */
 package teleport
 
@@ -31,12 +32,12 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Header struct {
-	Id    string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type  int32  `protobuf:"varint,2,opt,name=type,proto3" json:"type,omitempty"`
-	Uri   string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
-	Codec string `protobuf:"bytes,4,opt,name=codec,proto3" json:"codec,omitempty"`
-	Gzip  int32  `protobuf:"varint,5,opt,name=gzip,proto3" json:"gzip,omitempty"`
-	Err   string `protobuf:"bytes,6,opt,name=err,proto3" json:"err,omitempty"`
+	Id     string  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type   int32   `protobuf:"varint,2,opt,name=type,proto3" json:"type,omitempty"`
+	Uri    string  `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
+	Codec  string  `protobuf:"bytes,4,opt,name=codec,proto3" json:"codec,omitempty"`
+	Gzip   int32   `protobuf:"varint,5,opt,name=gzip,proto3" json:"gzip,omitempty"`
+	Status *Status `protobuf:"bytes,6,opt,name=status" json:"status,omitempty"`
 }
 
 func (m *Header) Reset()                    { *m = Header{} }
@@ -79,15 +80,48 @@ func (m *Header) GetGzip() int32 {
 	return 0
 }
 
-func (m *Header) GetErr() string {
+func (m *Header) GetStatus() *Status {
 	if m != nil {
-		return m.Err
+		return m.Status
+	}
+	return nil
+}
+
+type Status struct {
+	Code    int32  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Reason  string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	Message string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+}
+
+func (m *Status) Reset()                    { *m = Status{} }
+func (m *Status) String() string            { return proto.CompactTextString(m) }
+func (*Status) ProtoMessage()               {}
+func (*Status) Descriptor() ([]byte, []int) { return fileDescriptorHeader, []int{1} }
+
+func (m *Status) GetCode() int32 {
+	if m != nil {
+		return m.Code
+	}
+	return 0
+}
+
+func (m *Status) GetReason() string {
+	if m != nil {
+		return m.Reason
+	}
+	return ""
+}
+
+func (m *Status) GetMessage() string {
+	if m != nil {
+		return m.Message
 	}
 	return ""
 }
 
 func init() {
 	proto.RegisterType((*Header)(nil), "teleport.header")
+	proto.RegisterType((*Status)(nil), "teleport.status")
 }
 func (m *Header) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
@@ -132,11 +166,50 @@ func (m *Header) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintHeader(dAtA, i, uint64(m.Gzip))
 	}
-	if len(m.Err) > 0 {
+	if m.Status != nil {
 		dAtA[i] = 0x32
 		i++
-		i = encodeVarintHeader(dAtA, i, uint64(len(m.Err)))
-		i += copy(dAtA[i:], m.Err)
+		i = encodeVarintHeader(dAtA, i, uint64(m.Status.Size()))
+		n1, err := m.Status.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n1
+	}
+	return i, nil
+}
+
+func (m *Status) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Status) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Code != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintHeader(dAtA, i, uint64(m.Code))
+	}
+	if len(m.Reason) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintHeader(dAtA, i, uint64(len(m.Reason)))
+		i += copy(dAtA[i:], m.Reason)
+	}
+	if len(m.Message) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintHeader(dAtA, i, uint64(len(m.Message)))
+		i += copy(dAtA[i:], m.Message)
 	}
 	return i, nil
 }
@@ -189,7 +262,24 @@ func (m *Header) Size() (n int) {
 	if m.Gzip != 0 {
 		n += 1 + sovHeader(uint64(m.Gzip))
 	}
-	l = len(m.Err)
+	if m.Status != nil {
+		l = m.Status.Size()
+		n += 1 + l + sovHeader(uint64(l))
+	}
+	return n
+}
+
+func (m *Status) Size() (n int) {
+	var l int
+	_ = l
+	if m.Code != 0 {
+		n += 1 + sovHeader(uint64(m.Code))
+	}
+	l = len(m.Reason)
+	if l > 0 {
+		n += 1 + l + sovHeader(uint64(l))
+	}
+	l = len(m.Message)
 	if l > 0 {
 		n += 1 + l + sovHeader(uint64(l))
 	}
@@ -365,7 +455,109 @@ func (m *Header) Unmarshal(dAtA []byte) error {
 			}
 		case 6:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Err", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHeader
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthHeader
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Status == nil {
+				m.Status = &Status{}
+			}
+			if err := m.Status.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipHeader(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthHeader
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Status) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowHeader
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: status: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: status: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			}
+			m.Code = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHeader
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Code |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reason", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -390,7 +582,36 @@ func (m *Header) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Err = string(dAtA[iNdEx:postIndex])
+			m.Reason = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHeader
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthHeader
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Message = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -521,16 +742,19 @@ var (
 func init() { proto.RegisterFile("header.proto", fileDescriptorHeader) }
 
 var fileDescriptorHeader = []byte{
-	// 162 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xc9, 0x48, 0x4d, 0x4c,
-	0x49, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x28, 0x49, 0xcd, 0x49, 0x2d, 0xc8,
-	0x2f, 0x2a, 0x51, 0xaa, 0xe2, 0x62, 0x83, 0xc8, 0x08, 0xf1, 0x71, 0x31, 0x65, 0xa6, 0x48, 0x30,
-	0x2a, 0x30, 0x6a, 0x70, 0x06, 0x31, 0x65, 0xa6, 0x08, 0x09, 0x71, 0xb1, 0x94, 0x54, 0x16, 0xa4,
-	0x4a, 0x30, 0x29, 0x30, 0x6a, 0xb0, 0x06, 0x81, 0xd9, 0x42, 0x02, 0x5c, 0xcc, 0xa5, 0x45, 0x99,
-	0x12, 0xcc, 0x60, 0x45, 0x20, 0xa6, 0x90, 0x08, 0x17, 0x6b, 0x72, 0x7e, 0x4a, 0x6a, 0xb2, 0x04,
-	0x0b, 0x58, 0x0c, 0xc2, 0x01, 0xe9, 0x4d, 0xaf, 0xca, 0x2c, 0x90, 0x60, 0x85, 0xe8, 0x05, 0xb1,
-	0x41, 0x7a, 0x53, 0x8b, 0x8a, 0x24, 0xd8, 0x20, 0x7a, 0x53, 0x8b, 0x8a, 0x9c, 0x04, 0x4e, 0x3c,
-	0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x09, 0x8f, 0xe5, 0x18, 0x92,
-	0xd8, 0xc0, 0xce, 0x33, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x85, 0x2f, 0x82, 0x6f, 0xae, 0x00,
-	0x00, 0x00,
+	// 221 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x34, 0x90, 0x3d, 0x4e, 0xc4, 0x30,
+	0x10, 0x46, 0x99, 0xec, 0xc6, 0xb0, 0x03, 0x42, 0xd1, 0x08, 0x21, 0x57, 0x51, 0xb4, 0x55, 0xaa,
+	0x14, 0x70, 0x03, 0x0e, 0x40, 0xe1, 0x1b, 0x98, 0xf5, 0x68, 0xb1, 0x04, 0xd8, 0xb2, 0xbd, 0x05,
+	0x9c, 0x02, 0x71, 0x2a, 0x4a, 0x8e, 0x80, 0xc2, 0x45, 0x90, 0xed, 0xa4, 0x7b, 0xdf, 0xfc, 0xe9,
+	0x69, 0xf0, 0xea, 0x99, 0xb5, 0xe1, 0x30, 0xf9, 0xe0, 0x92, 0xa3, 0x8b, 0xc4, 0x2f, 0xec, 0x5d,
+	0x48, 0xfb, 0x2f, 0x40, 0x51, 0x5b, 0x74, 0x8d, 0x8d, 0x35, 0x12, 0x06, 0x18, 0x77, 0xaa, 0xb1,
+	0x86, 0x08, 0xb7, 0xe9, 0xdd, 0xb3, 0x6c, 0x06, 0x18, 0x5b, 0x55, 0x98, 0x3a, 0xdc, 0x9c, 0x82,
+	0x95, 0x9b, 0x32, 0x94, 0x91, 0x6e, 0xb0, 0x3d, 0x38, 0xc3, 0x07, 0xb9, 0x2d, 0xb5, 0x1a, 0xf2,
+	0xee, 0xf1, 0xc3, 0x7a, 0xd9, 0xd6, 0xdd, 0xcc, 0x34, 0xa2, 0x88, 0x49, 0xa7, 0x53, 0x94, 0x62,
+	0x80, 0xf1, 0xf2, 0xae, 0x9b, 0x56, 0x8b, 0xa9, 0xd6, 0xd5, 0xd2, 0xdf, 0x3f, 0xae, 0x93, 0xf9,
+	0x4e, 0x3e, 0x58, 0xac, 0x5a, 0x55, 0x98, 0x6e, 0x51, 0x04, 0xd6, 0xd1, 0xbd, 0x15, 0xb3, 0x9d,
+	0x5a, 0x12, 0x49, 0x3c, 0x7f, 0xe5, 0x18, 0xf5, 0x91, 0x17, 0xbf, 0x35, 0x3e, 0x74, 0xdf, 0x73,
+	0x0f, 0x3f, 0x73, 0x0f, 0xbf, 0x73, 0x0f, 0x9f, 0x7f, 0xfd, 0xd9, 0x93, 0x28, 0x7f, 0xb8, 0xff,
+	0x0f, 0x00, 0x00, 0xff, 0xff, 0xa2, 0xd4, 0x97, 0x74, 0x17, 0x01, 0x00, 0x00,
 }

@@ -15,6 +15,7 @@
 package teleport
 
 import (
+	"net/url"
 	"reflect"
 	"sync"
 
@@ -26,9 +27,10 @@ import (
 // For example:
 //  type Home Controller
 type Controller struct {
-	Uri   string
-	Codec string
-	goutil.Map
+	Uri      *url.URL
+	Query    url.Values
+	Public   goutil.Map
+	SetCodec string
 }
 
 type Control struct {

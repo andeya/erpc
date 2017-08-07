@@ -1,8 +1,7 @@
 package teleport
 
 import (
-	"testing"
-	"text/html"
+// "testing"
 )
 
 // Demo controller

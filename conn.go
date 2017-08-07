@@ -395,3 +395,8 @@ const (
 	TypeAuth      int32 = 2
 	TypeHeartbeat int32 = 3
 )
+
+// Header stauts codes
+const (
+	StatusSuccess int32 = 0
+)

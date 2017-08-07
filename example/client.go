@@ -36,7 +36,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("[CLI] read response header err: %v", err)
 		}
-		log.Printf("[CLI] read response header len: %d, header: %#v", n, header)
+		log.Printf("[CLI] read response header len: %d, header: %#v, status: %#v", n, header, header.GetStatus())
 
 		var respBody interface{}
 		n, err = c.ReadBody(&respBody)

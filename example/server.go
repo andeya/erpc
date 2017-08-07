@@ -30,7 +30,7 @@ func main() {
 					log.Printf("[SVR] read request header err: %v", err)
 					return
 				}
-				log.Printf("[SVR] read request header len: %d, header: %#v", n, header)
+				log.Printf("[SVR] read request header len: %d, header: %#v, status: %v", n, header, header.GetStatus())
 
 				var body interface{}
 				n, err = c.ReadBody(&body)
@@ -41,7 +41,7 @@ func main() {
 				log.Printf("[SVR] read request body len: %d, body: %#v", n, body)
 
 				// write response
-				header.Err = "test error"
+				header.Status = &teleport.Status{Code: 1, Reason: "test error"}
 				now := time.Now()
 				n, err = c.WritePacket(header, now)
 				if err != nil {

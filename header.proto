@@ -6,5 +6,11 @@ message header {
 	string	uri 	= 3;
 	string	codec	= 4;
 	int32	gzip	= 5;
-	string	err		= 6;
+	status	status	= 6;
+}
+
+message status {
+	int32	code 	= 1;
+	string	reason 	= 2;
+	string	message	= 3;
 }
