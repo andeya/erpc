@@ -15,7 +15,7 @@
 package teleport
 
 import (
-	"net/url"
+	"encoding/json"
 	"reflect"
 	"sync"
 
@@ -23,25 +23,15 @@ import (
 	"github.com/henrylee2cn/goutil/errors"
 )
 
-// Controller the type alias of customized controller.
-// For example:
-//  type Home Controller
-type Controller struct {
-	Uri      *url.URL
-	Query    url.Values
-	Public   goutil.Map
-	SetCodec string
-}
-
-type Control struct {
+type control struct {
 	name    string
 	typ     reflect.Type  // type of the receiver
 	val     reflect.Value // receiver of methods for the service
-	handles map[string]*Handle
+	handles map[string]*handle
 	PluginContainer
 }
 
-type Handle struct {
+type handle struct {
 	index        int // index of method
 	method       reflect.Method
 	ArgType      reflect.Type
@@ -52,20 +42,16 @@ type Handle struct {
 	PluginContainer
 }
 
-func NewControl(ctrlStruct interface{}, pluginContainer PluginContainer) *Control {
+func newControl(ctrlStruct interface{}, pluginContainer PluginContainer) *control {
 	if pluginContainer == nil {
 		pluginContainer = NewPluginContainer()
 	}
-	c := &Control{}
+	c := &control{}
 	return c
 }
 
-// Precompute the reflect type for error. Can't use error directly
-// because Typeof takes an empty interface value. This is annoying.
-var typeOfError = reflect.TypeOf((*error)(nil)).Elem()
-
-func (c *Control) makeHandles() error {
-	c.handles = make(map[string]*Handle)
+func (c *control) makehandles() error {
+	c.handles = make(map[string]*handle)
 	for m := 0; m < c.typ.NumMethod(); m++ {
 		method := c.typ.Method(m)
 		mtype := method.Type
@@ -76,28 +62,72 @@ func (c *Control) makeHandles() error {
 		}
 		// Method needs two ins: receiver, *args.
 		if mtype.NumIn() != 2 {
-			return errors.Errorf("Handler: %s.%s needs one in argument, but have %d", c.typ.String(), mname, mtype.NumIn())
+			return errors.Errorf("handler: %s.%s needs one in argument, but have %d", c.typ.String(), mname, mtype.NumIn())
 		}
 		// First arg need not be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			return errors.Errorf("Handler: %s.%s args type not exported: %s", c.typ.String(), mname, argType)
+			return errors.Errorf("handler: %s.%s args type not exported: %s", c.typ.String(), mname, argType)
 		}
 		// Method needs two outs: reply error.
 		if mtype.NumOut() != 2 {
-			return errors.Errorf("Handler: %s.%s needs two out arguments, but have %d", c.typ.String(), mname, mtype.NumOut())
+			return errors.Errorf("handler: %s.%s needs two out arguments, but have %d", c.typ.String(), mname, mtype.NumOut())
 		}
 		// First arg must be a pointer.
 		replyType := mtype.Out(0)
 		// Reply type must be exported.
 		if !goutil.IsExportedOrBuiltinType(replyType) {
-			return errors.Errorf("Handler: %s.%s first reply type not exported: %s", c.typ.String(), mname, replyType)
+			return errors.Errorf("handler: %s.%s first reply type not exported: %s", c.typ.String(), mname, replyType)
 		}
 		// The return type of the method must be error.
 		if returnType := mtype.Out(1); returnType != typeOfError {
-			return errors.Errorf("Handler: %s.%s second reply type %s not error", c.typ.String(), mname, returnType)
+			return errors.Errorf("handler: %s.%s second reply type %s not *Error", c.typ.String(), mname, returnType)
 		}
-		c.handles[mname] = &Handle{method: method, ArgType: argType, ReplyType: replyType}
+		c.handles[mname] = &handle{method: method, ArgType: argType, ReplyType: replyType}
 	}
 	return nil
+}
+
+// Precompute the reflect type for error. Can't use error directly
+// because Typeof takes an empty interface value. This is annoying.
+var typeOfError = reflect.TypeOf((*Error)(nil)).Elem()
+
+// Error error for handler.
+type Error interface {
+	// return error code
+	Code() uint16
+	// return error text
+	Text() string
+	// return json string, implement error interface
+	Error() string
+}
+
+// NewError creates a new Error interface.
+func NewError(code uint16, text string) Error {
+	return &err{
+		code: code,
+		text: text,
+	}
+}
+
+type err struct {
+	code uint16
+	text string
+	json string
+}
+
+func (e *err) Code() uint16 {
+	return e.code
+}
+
+func (e *err) Text() string {
+	return e.text
+}
+
+func (e *err) Error() string {
+	if len(e.json) == 0 {
+		b, _ := json.Marshal(e)
+		e.json = goutil.BytesToString(b)
+	}
+	return e.json
 }

@@ -5,10 +5,12 @@ import (
 )
 
 // Demo controller
-type Demo Controller
+type Demo struct {
+	SvrContext
+}
 
-func (d *Demo) Home(token string) (string, error) {
-	return "home response:" + token, nil
+func (d *Demo) Home(args string) (reply string, err error) {
+	return "home response:" + args, nil
 }
 
 // Route a controller

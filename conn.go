@@ -398,5 +398,6 @@ const (
 
 // Header stauts codes
 const (
-	StatusSuccess int32 = 0
+	StatusSuccess     int32 = -1
+	StatusUnknowError int32 = 0
 )
