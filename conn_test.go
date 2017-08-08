@@ -39,7 +39,7 @@ func TestConn(t *testing.T) {
 			if err != nil {
 				t.Fatalf("[SVR] read request header err: %v", err)
 			}
-			t.Logf("[SVR] read request header len: %d, header: %#v, status: %v", n, header, header.GetStatus())
+			t.Logf("[SVR] read request header len: %d, header: %#v", n, header)
 
 			var body interface{}
 			n, err = c.ReadBody(&body)
@@ -49,7 +49,8 @@ func TestConn(t *testing.T) {
 			t.Logf("[SVR] read request body len: %d, body: %#v", n, body)
 
 			// write response
-			header.Status = &Status{Code: 1, Reason: "test error"}
+			header.StatusCode = 1
+			header.Status = "test error"
 			now := time.Now()
 			n, err = c.WritePacket(header, now)
 			if err != nil {
@@ -90,7 +91,7 @@ func TestConn(t *testing.T) {
 		if err != nil {
 			t.Fatalf("[CLI] read response header err: %v", err)
 		}
-		t.Logf("[CLI] read response header len: %d, header: %#v, status: %#v", n, header, header.GetStatus())
+		t.Logf("[CLI] read response header len: %d, header: %#v", n, header)
 
 		var respBody interface{}
 		n, err = c.ReadBody(&respBody)
