@@ -20,25 +20,25 @@ func main() {
 		if err != nil {
 			log.Fatalf("[SVR] accept err: %v", err)
 		}
-		log.Printf("accept %s", conn.RemoteAddr().String())
 		go func(c teleport.Conn) {
+			log.Printf("accept %s", c.Id())
 			defer c.Close()
 			for {
 				// read request
-				header, n, err := c.ReadHeader()
+				var (
+					header *teleport.Header
+					body   interface{}
+				)
+				n, err := c.ReadPacket(func(h *teleport.Header) interface{} {
+					header = h
+					return &body
+				})
 				if err != nil {
-					log.Printf("[SVR] read request header err: %v", err)
+					log.Printf("[SVR] read request err: %v", err)
 					return
+				} else {
+					log.Printf("[SVR] read request len: %d, header:%#v, body: %#v", n, header, body)
 				}
-				log.Printf("[SVR] read request header len: %d, header: %#v, status: %v", n, header)
-
-				var body interface{}
-				n, err = c.ReadBody(&body)
-				if err != nil {
-					log.Printf("[SVR] read request body err: %v", err)
-					return
-				}
-				log.Printf("[SVR] read request body len: %d, body: %#v", n, body)
 
 				// write response
 				header.StatusCode = 1
@@ -47,9 +47,8 @@ func main() {
 				n, err = c.WritePacket(header, now)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
-					return
 				}
-				log.Printf("[SVR] write response len: %d, body: %#v", n, now)
+				log.Printf("[SVR] write response len: %d, header: %#v, body: %#v", n, header, now)
 			}
 		}(teleport.WrapConn(conn))
 	}

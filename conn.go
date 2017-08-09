@@ -103,6 +103,8 @@ type (
 		Public() goutil.Map
 		// PublicLen returns the length of public data of Conn.
 		PublicLen() int
+		// Id returns the conn id.
+		Id() string
 	}
 )
 
@@ -110,6 +112,7 @@ var _ net.Conn = Conn(nil)
 
 type conn struct {
 	net.Conn
+	id          string
 	bufWriter   *utils.BufioWriter
 	bufReader   *utils.BufioReader
 	limitReader *utils.LimitedReader
@@ -129,26 +132,25 @@ type conn struct {
 }
 
 // WrapConn wrap a net.Conn as a Conn
-func WrapConn(c net.Conn) Conn {
+func WrapConn(c net.Conn, id ...string) Conn {
 	obj := connPool.Get().(*conn)
-	obj.Reset(c)
+	obj.Reset(c, id...)
 	return obj
 }
 
 var connPool = sync.Pool{
 	New: func() interface{} {
-		return newConn(nil)
+		return newConn()
 	},
 }
 
 // newConn new a net.Conn as a Conn
-func newConn(c net.Conn) *conn {
-	bufWriter := utils.NewBufioWriter(c)
-	bufReader := utils.NewBufioReader(c)
+func newConn() *conn {
+	bufWriter := utils.NewBufioWriter(nil)
+	bufReader := utils.NewBufioReader(nil)
 	cacheWriter := bytes.NewBuffer(nil)
 	limitReader := utils.LimitReader(bufReader, 0)
 	return &conn{
-		Conn:          c,
 		bufWriter:     bufWriter,
 		bufReader:     bufReader,
 		limitReader:   limitReader,
@@ -354,10 +356,17 @@ func (c *conn) readBody(body interface{}) (int64, error) {
 }
 
 // Reset reset net.Conn
-func (c *conn) Reset(netConn net.Conn) {
+func (c *conn) Reset(netConn net.Conn, id ...string) {
 	if c.Conn != nil {
 		c.Conn.Close()
 	}
+	var _id string
+	if len(id) == 0 && newConn != nil {
+		_id = netConn.RemoteAddr().String()
+	} else {
+		_id = id[0]
+	}
+	c.id = _id
 	c.Conn = netConn
 	c.bufReader.Reset(netConn)
 	c.bufWriter.Reset(netConn)
@@ -394,6 +403,11 @@ func (c *conn) PublicLen() int {
 		return 0
 	}
 	return c.ctxPublic.Len()
+}
+
+// Id returns the conn id.
+func (c *conn) Id() string {
+	return c.id
 }
 
 // var (

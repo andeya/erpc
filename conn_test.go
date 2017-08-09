@@ -94,9 +94,9 @@ func TestConn(t *testing.T) {
 			return &body
 		})
 		if err != nil {
-			t.Fatalf("[SVR] read request err: %v", err)
+			t.Fatalf("[CLI] read request err: %v", err)
 		} else {
-			t.Logf("[SVR] read request len: %d, header:%#v, body: %#v", n, header, body)
+			t.Logf("[CLI] read request len: %d, header:%#v, body: %#v", n, header, body)
 		}
 	}
 }

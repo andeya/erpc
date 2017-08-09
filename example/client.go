@@ -23,26 +23,24 @@ func main() {
 			Codec: "json",
 			Gzip:  5,
 		}
-		reqBody := map[string]string{"a": "A"}
-		// reqBody := "aA"
-		n, err := c.WritePacket(header, reqBody)
+		// body := map[string]string{"a": "A"}
+		var body interface{} = "aA"
+		n, err := c.WritePacket(header, body)
 		if err != nil {
-			log.Fatalf("[CLI] write request err: %v", err)
+			log.Printf("[CLI] write request err: %v", err)
+			continue
 		}
-		log.Printf("[CLI] write request len: %d, body: %#v", n, reqBody)
+		log.Printf("[CLI] write request len: %d, header: %#v body: %#v", n, header, body)
 
 		// read response
-		header, n, err = c.ReadHeader()
+		n, err = c.ReadPacket(func(h *teleport.Header) interface{} {
+			header = h
+			return &body
+		})
 		if err != nil {
-			log.Fatalf("[CLI] read response header err: %v", err)
+			log.Printf("[CLI] read request err: %v", err)
+		} else {
+			log.Printf("[CLI] read request len: %d, header:%#v, body: %#v", n, header, body)
 		}
-		log.Printf("[CLI] read response header len: %d, header: %#v", n, header)
-
-		var respBody interface{}
-		n, err = c.ReadBody(&respBody)
-		if err != nil {
-			log.Fatalf("[CLI] read response body err: %v", err)
-		}
-		log.Printf("[CLI] read response body len: %d, body: %#v", n, respBody)
 	}
 }
