@@ -80,7 +80,7 @@ type (
 
 		// ReadPacket reads header and body from the connection.
 		// Note: must be safe for concurrent use by multiple goroutines.
-		ReadPacket(lookupBody func(*Header) interface{}) (int64, error)
+		ReadPacket(bodyMapping func(*Header) interface{}) (int64, error)
 
 		// Read reads data from the connection.
 		// Read can be made to time out and return an Error with Timeout() == true
@@ -252,7 +252,7 @@ func (c *conn) writeCacheBody(codecName string, gzipLevel int, body interface{})
 
 // ReadPacket reads header and body from the connection.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (c *conn) ReadPacket(lookupBody func(*Header) interface{}) (int64, error) {
+func (c *conn) ReadPacket(bodyMapping func(*Header) interface{}) (int64, error) {
 	c.readMutex.Lock()
 	defer c.readMutex.Unlock()
 	var (
@@ -263,7 +263,7 @@ func (c *conn) ReadPacket(lookupBody func(*Header) interface{}) (int64, error) {
 	)
 	h, hl, hErr = c.readHeader()
 	if hErr == nil {
-		b = lookupBody(h)
+		b = bodyMapping(h)
 	}
 	bl, bErr = c.readBody(b)
 	return hl + bl, errors.Merge(hErr, bErr)

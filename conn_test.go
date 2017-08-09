@@ -35,18 +35,20 @@ func TestConn(t *testing.T) {
 			c := WrapConn(conn)
 			t.Logf("[SVR] c.LocalAddr(): %s, c.RemoteAddr(): %s", c.LocalAddr(), c.RemoteAddr())
 			// read request
-			header, n, err := c.ReadHeader()
-			if err != nil {
-				t.Fatalf("[SVR] read request header err: %v", err)
-			}
-			t.Logf("[SVR] read request header len: %d, header: %#v", n, header)
 
-			var body interface{}
-			n, err = c.ReadBody(&body)
+			var (
+				header *Header
+				body   interface{}
+			)
+			n, err := c.ReadPacket(func(h *Header) interface{} {
+				header = h
+				return &body
+			})
 			if err != nil {
-				t.Fatalf("[SVR] read request body err: %v", err)
+				t.Fatalf("[SVR] read request err: %v", err)
+			} else {
+				t.Logf("[SVR] read request len: %d, header:%#v, body: %#v", n, header, body)
 			}
-			t.Logf("[SVR] read request body len: %d, body: %#v", n, body)
 
 			// write response
 			header.StatusCode = 1
@@ -56,7 +58,7 @@ func TestConn(t *testing.T) {
 			if err != nil {
 				t.Fatalf("[SVR] write response err: %v", err)
 			}
-			t.Logf("[SVR] write response len: %d, body: %#v", n, now)
+			t.Logf("[SVR] write response len: %d, header: %#v, body: %#v", n, header, now)
 		}
 	}()
 
@@ -72,32 +74,29 @@ func TestConn(t *testing.T) {
 		t.Logf("[CLI] c.LocalAddr(): %s, c.RemoteAddr(): %s", c.LocalAddr(), c.RemoteAddr())
 
 		// write request
-		header := &Header{
+		var header = &Header{
 			Id:    "1",
 			Uri:   "/a/b",
 			Codec: "json",
 			Gzip:  2,
 		}
 		// body := map[string]string{"a": "A"}
-		reqBody := "aA"
-		n, err := c.WritePacket(header, reqBody)
+		var body interface{} = "aA"
+		n, err := c.WritePacket(header, body)
 		if err != nil {
 			t.Fatalf("[CLI] write request err: %v", err)
 		}
-		t.Logf("[CLI] write request len: %d, body: %#v", n, reqBody)
+		t.Logf("[CLI] write request len: %d, header: %#v body: %#v", n, header, body)
 
 		// read response
-		header, n, err = c.ReadHeader()
+		n, err = c.ReadPacket(func(h *Header) interface{} {
+			header = h
+			return &body
+		})
 		if err != nil {
-			t.Fatalf("[CLI] read response header err: %v", err)
+			t.Fatalf("[SVR] read request err: %v", err)
+		} else {
+			t.Logf("[SVR] read request len: %d, header:%#v, body: %#v", n, header, body)
 		}
-		t.Logf("[CLI] read response header len: %d, header: %#v", n, header)
-
-		var respBody interface{}
-		n, err = c.ReadBody(&respBody)
-		if err != nil {
-			t.Fatalf("[CLI] read response body err: %v", err)
-		}
-		t.Logf("[CLI] read response body len: %d, body: %#v", n, respBody)
 	}
 }
