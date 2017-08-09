@@ -78,17 +78,9 @@ type (
 		// Note: must be safe for concurrent use by multiple goroutines.
 		WritePacket(header *Header, body interface{}) (int64, error)
 
-		// ReadHeader reads header from the connection.
-		// ReadHeader can be made to time out and return an Error with Timeout() == true
-		// after a fixed time limit; see SetDeadline and SetReadDeadline.
-		// Note: must use only one goroutine call.
-		ReadHeader() (*Header, int64, error)
-
-		// ReadBody reads body from the connection.
-		// ReadBody can be made to time out and return an Error with Timeout() == true
-		// after a fixed time limit; see SetDeadline and SetReadDeadline.
-		// Note: must use only one goroutine call, and it must be called after calling the ReadHeader().
-		ReadBody(body interface{}) (int64, error)
+		// ReadPacket reads header and body from the connection.
+		// Note: must be safe for concurrent use by multiple goroutines.
+		ReadPacket(lookupBody func(*Header) interface{}) (int64, error)
 
 		// Read reads data from the connection.
 		// Read can be made to time out and return an Error with Timeout() == true
@@ -133,6 +125,7 @@ type conn struct {
 	gzipDecodeMap map[string]*GzipDecoder // codecName:GzipEncoder
 	ctxPublic     goutil.Map
 	writeMutex    sync.Mutex // exclusive writer lock
+	readMutex     sync.Mutex // exclusive read lock
 }
 
 // WrapConn wrap a net.Conn as a Conn
@@ -257,11 +250,30 @@ func (c *conn) writeCacheBody(codecName string, gzipLevel int, body interface{})
 	return ge.Encode(gzipLevel, body)
 }
 
-// ReadHeader reads header from the connection.
-// ReadHeader can be made to time out and return an Error with Timeout() == true
+// ReadPacket reads header and body from the connection.
+// Note: must be safe for concurrent use by multiple goroutines.
+func (c *conn) ReadPacket(lookupBody func(*Header) interface{}) (int64, error) {
+	c.readMutex.Lock()
+	defer c.readMutex.Unlock()
+	var (
+		hErr, bErr error
+		hl, bl     int64
+		h          *Header
+		b          interface{}
+	)
+	h, hl, hErr = c.readHeader()
+	if hErr == nil {
+		b = lookupBody(h)
+	}
+	bl, bErr = c.readBody(b)
+	return hl + bl, errors.Merge(hErr, bErr)
+}
+
+// readHeader reads header from the connection.
+// readHeader can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call.
-func (c *conn) ReadHeader() (*Header, int64, error) {
+func (c *conn) readHeader() (*Header, int64, error) {
 	c.bufReader.ResetCount()
 	// var magic [len(Magic)]byte
 	// err := binary.Read(c.bufReader, binary.BigEndian, &magic)
@@ -292,11 +304,11 @@ func (c *conn) ReadHeader() (*Header, int64, error) {
 // DefaultCodec default codec name.
 const DefaultCodec = "json"
 
-// ReadBody reads body from the connection.
-// ReadBody can be made to time out and return an Error with Timeout() == true
+// readBody reads body from the connection.
+// readBody can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
-// Note: must use only one goroutine call, and it must be called after calling the ReadHeader().
-func (c *conn) ReadBody(body interface{}) (int64, error) {
+// Note: must use only one goroutine call, and it must be called after calling the readHeader().
+func (c *conn) readBody(body interface{}) (int64, error) {
 	c.bufReader.ResetCount()
 	var bodySize uint32
 	err := binary.Read(c.bufReader, binary.BigEndian, &bodySize)
@@ -392,12 +404,13 @@ func (c *conn) PublicLen() int {
 const (
 	TypeRequest   int32 = 0
 	TypeResponse  int32 = 1
-	TypeAuth      int32 = 2
-	TypeHeartbeat int32 = 3
+	TypePush      int32 = 2
+	TypeAuth      int32 = 4
+	TypeHeartbeat int32 = 5
 )
 
 // Header stauts codes
 const (
-	StatusSuccess     int32 = -1
-	StatusUnknowError int32 = 0
+	StatusSuccess   int32 = -1
+	StatusUndefined int32 = 0
 )
