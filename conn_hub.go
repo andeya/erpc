@@ -73,10 +73,10 @@ func (c *connHub) Random() (string, Conn, bool) {
 	return id.(string), conn.(Conn), true
 }
 
-// InexactLen returns the length of the conn hub.
+// Len returns the length of the conn hub.
 // Note: the count implemented using sync.Map may be inaccurate.
-func (c *connHub) InexactLen() int {
-	return c.conns.InexactLen()
+func (c *connHub) Len() int {
+	return c.conns.Len()
 }
 
 // Delete deletes the Conn for a id.

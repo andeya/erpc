@@ -402,7 +402,7 @@ func (c *conn) PublicLen() int {
 	if c.ctxPublic == nil {
 		return 0
 	}
-	return c.ctxPublic.InexactLen()
+	return c.ctxPublic.Len()
 }
 
 // Id returns the conn id.
