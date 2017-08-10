@@ -75,7 +75,7 @@ func (c *context) Public() goutil.Map {
 
 // PublicLen returns the length of public data of Conn Context.
 func (c *context) PublicLen() int {
-	return c.ctxPublic.Len()
+	return c.ctxPublic.InexactLen()
 }
 
 func (c *context) Uri() string {

@@ -15,9 +15,6 @@
 package teleport
 
 import (
-	"math/rand"
-	"sync"
-
 	"github.com/henrylee2cn/goutil"
 )
 
@@ -26,7 +23,6 @@ type connHub struct {
 	// key: conn id (ip, name and so on)
 	// value: Conn
 	conns goutil.Map
-	rwmu  sync.RWMutex
 }
 
 var ConnHub = newConnHub()
@@ -71,35 +67,20 @@ func (c *connHub) Range(f func(string, Conn) bool) {
 // Random gets a Conn randomly.
 // If third returned arg is false, mean no Conn is exist.
 func (c *connHub) Random() (string, Conn, bool) {
-	var id string
-	var conn Conn
-	c.rwmu.RLock()
-	var length = c.conns.Len()
-	if length == 0 {
-		c.rwmu.RUnlock()
-		return id, nil, false
+	id, conn, exist := c.conns.Random()
+	if !exist {
+		return "", nil, false
 	}
-	var i = rand.Intn(length)
-	c.conns.Range(func(key, value interface{}) bool {
-		if i == 0 {
-			id, conn = key.(string), value.(Conn)
-			return false
-		}
-		i--
-		return true
-	})
-	c.rwmu.RUnlock()
-	return id, conn, conn != nil
+	return id.(string), conn.(Conn), true
 }
 
-// Len returns the length of the conn hub.
-func (c *connHub) Len() int {
-	return c.conns.Len()
+// InexactLen returns the length of the conn hub.
+// Note: the count implemented using sync.Map may be inaccurate.
+func (c *connHub) InexactLen() int {
+	return c.conns.InexactLen()
 }
 
 // Delete deletes the Conn for a id.
 func (c *connHub) Delete(id string) {
-	c.rwmu.Lock()
 	c.conns.Delete(id)
-	c.rwmu.Unlock()
 }
