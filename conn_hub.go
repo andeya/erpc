@@ -29,8 +29,7 @@ var ConnHub = newConnHub()
 
 func newConnHub() *connHub {
 	chub := &connHub{
-		// TODO: use sync.Map in go1.9
-		conns: goutil.NormalMap(102400),
+		conns: goutil.AtomicMap(),
 	}
 	return chub
 }

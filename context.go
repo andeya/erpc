@@ -57,7 +57,7 @@ var (
 func newCtx(conn Conn) *context {
 	ctx := &context{
 		Conn:      conn,
-		ctxPublic: goutil.NormalMap(),
+		ctxPublic: goutil.RwMap(),
 	}
 	if conn.PublicLen() > 0 {
 		conn.Public().Range(func(key, value interface{}) bool {

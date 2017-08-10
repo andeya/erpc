@@ -392,7 +392,7 @@ func (c *conn) Close() error {
 // Public returns temporary public data of Conn.
 func (c *conn) Public() goutil.Map {
 	if c.ctxPublic == nil {
-		c.ctxPublic = goutil.NormalMap()
+		c.ctxPublic = goutil.RwMap()
 	}
 	return c.ctxPublic
 }
