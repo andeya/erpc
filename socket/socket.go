@@ -1,3 +1,5 @@
+// socket package provides a concise, powerful and high-performance TCP socket.
+//
 // Copyright 2015-2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,8 +13,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package teleport
+package socket
 
 import (
 	"bytes"
@@ -32,11 +33,26 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
+// Header types
+const (
+	TypeRequest   int32 = 0
+	TypeResponse  int32 = 1
+	TypePush      int32 = 2
+	TypeAuth      int32 = 4
+	TypeHeartbeat int32 = 5
+)
+
+// Header stauts codes
+const (
+	StatusSuccess   int32 = -1
+	StatusUndefined int32 = 0
+)
+
 type (
-	// Conn is a generic stream-oriented network connection.
+	// Socket is a generic stream-oriented network connection.
 	//
-	// Multiple goroutines may invoke methods on a Conn simultaneously.
-	Conn interface {
+	// Multiple goroutines may invoke methods on a Socket simultaneously.
+	Socket interface {
 		// LocalAddr returns the local network address.
 		LocalAddr() net.Addr
 
@@ -95,62 +111,61 @@ type (
 		// Reset reset net.Conn
 		// Reset(net.Conn)
 
-		// Close closes the connection.
+		// Close closes the connection socket.
 		// Any blocked Read or Write operations will be unblocked and return errors.
 		Close() error
 
-		// Public returns temporary public data of Conn.
+		// Public returns temporary public data of Socket.
 		Public() goutil.Map
-		// PublicLen returns the length of public data of Conn.
+		// PublicLen returns the length of public data of Socket.
 		PublicLen() int
-		// Id returns the conn id.
+		// Id returns the socket id.
 		Id() string
+	}
+	socket struct {
+		net.Conn
+		id          string
+		bufWriter   *utils.BufioWriter
+		bufReader   *utils.BufioReader
+		limitReader *utils.LimitedReader
+
+		headerEncoder codec.Encoder
+		headerDecoder codec.Decoder
+		readedHeader  Header
+
+		cacheWriter   *bytes.Buffer
+		gzipWriterMap map[int]*gzip.Writer
+		gzipReader    *gzip.Reader
+		gzipEncodeMap map[string]*GzipEncoder // codecName:GzipEncoder
+		gzipDecodeMap map[string]*GzipDecoder // codecName:GzipEncoder
+		ctxPublic     goutil.Map
+		writeMutex    sync.Mutex // exclusive writer lock
+		readMutex     sync.Mutex // exclusive read lock
 	}
 )
 
-var _ net.Conn = Conn(nil)
+var _ net.Conn = Socket(nil)
 
-type conn struct {
-	net.Conn
-	id          string
-	bufWriter   *utils.BufioWriter
-	bufReader   *utils.BufioReader
-	limitReader *utils.LimitedReader
-
-	headerEncoder codec.Encoder
-	headerDecoder codec.Decoder
-	readedHeader  Header
-
-	cacheWriter   *bytes.Buffer
-	gzipWriterMap map[int]*gzip.Writer
-	gzipReader    *gzip.Reader
-	gzipEncodeMap map[string]*GzipEncoder // codecName:GzipEncoder
-	gzipDecodeMap map[string]*GzipDecoder // codecName:GzipEncoder
-	ctxPublic     goutil.Map
-	writeMutex    sync.Mutex // exclusive writer lock
-	readMutex     sync.Mutex // exclusive read lock
-}
-
-// WrapConn wrap a net.Conn as a Conn
-func WrapConn(c net.Conn, id ...string) Conn {
-	obj := connPool.Get().(*conn)
+// Wrap wrap a net.Conn as a Socket.
+func Wrap(c net.Conn, id ...string) Socket {
+	obj := socketPool.Get().(*socket)
 	obj.Reset(c, id...)
 	return obj
 }
 
-var connPool = sync.Pool{
+var socketPool = sync.Pool{
 	New: func() interface{} {
-		return newConn()
+		return newSocket()
 	},
 }
 
-// newConn new a net.Conn as a Conn
-func newConn() *conn {
+// newSocket new a net.Conn as a Socket.
+func newSocket() *socket {
 	bufWriter := utils.NewBufioWriter(nil)
 	bufReader := utils.NewBufioReader(nil)
 	cacheWriter := bytes.NewBuffer(nil)
 	limitReader := utils.LimitReader(bufReader, 0)
-	return &conn{
+	return &socket{
 		bufWriter:     bufWriter,
 		bufReader:     bufReader,
 		limitReader:   limitReader,
@@ -168,84 +183,76 @@ func newConn() *conn {
 // WritePacket can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (c *conn) WritePacket(header *Header, body interface{}) (int64, error) {
-	c.writeMutex.Lock()
-	defer c.writeMutex.Unlock()
-	c.bufWriter.ResetCount()
-
-	// // write magic
-	// err := binary.Write(c.bufWriter, binary.BigEndian, Magic)
-	// if err != nil {
-	// 	return 0, err
-	// }
-	// var n = len(Magic)
+func (s *socket) WritePacket(header *Header, body interface{}) (int64, error) {
+	s.writeMutex.Lock()
+	defer s.writeMutex.Unlock()
+	s.bufWriter.ResetCount()
 
 	// write header
-	err := c.writeHeader(header)
+	err := s.writeHeader(header)
 	if err != nil {
-		return c.bufWriter.Count(), err
+		return s.bufWriter.Count(), err
 	}
 
 	// write body
 	switch bo := body.(type) {
 	case nil:
-		err = binary.Write(c.bufWriter, binary.BigEndian, 0)
+		err = binary.Write(s.bufWriter, binary.BigEndian, 0)
 	case []byte:
-		err = c.writeBytesBody(bo)
+		err = s.writeBytesBody(bo)
 	case *[]byte:
-		err = c.writeBytesBody(*bo)
+		err = s.writeBytesBody(*bo)
 	default:
-		err = c.writeCacheBody(header.Codec, int(header.Gzip), body)
+		err = s.writeCacheBody(header.Codec, int(header.Gzip), body)
 		if err != nil {
-			return c.bufWriter.Count(), err
+			return s.bufWriter.Count(), err
 		}
-		// write body to conn buffer
-		bodySize := uint32(c.cacheWriter.Len())
-		// println("bodySize========", bodySize)
-		err = binary.Write(c.bufWriter, binary.BigEndian, bodySize)
+		// write body to socket buffer
+		bodySize := uint32(s.cacheWriter.Len())
+		err = binary.Write(s.bufWriter, binary.BigEndian, bodySize)
 		if err != nil {
-			return c.bufWriter.Count(), err
+			return s.bufWriter.Count(), err
 		}
-		_, err = c.cacheWriter.WriteTo(c.bufWriter)
+		_, err = s.cacheWriter.WriteTo(s.bufWriter)
 	}
 	if err != nil {
-		return c.bufWriter.Count(), err
+		return s.bufWriter.Count(), err
 	}
-	err = c.bufWriter.Flush()
-	return c.bufWriter.Count(), err
+	err = s.bufWriter.Flush()
+	return s.bufWriter.Count(), err
 }
 
-func (c *conn) writeHeader(header *Header) error {
-	c.cacheWriter.Reset()
-	err := c.headerEncoder.Encode(header)
+func (s *socket) writeHeader(header *Header) error {
+	s.cacheWriter.Reset()
+	err := s.headerEncoder.Encode(header)
 	if err != nil {
 		return err
 	}
-	headerSize := uint32(c.cacheWriter.Len())
-	err = binary.Write(c.bufWriter, binary.BigEndian, headerSize)
+	headerSize := uint32(s.cacheWriter.Len())
+	err = binary.Write(s.bufWriter, binary.BigEndian, headerSize)
 	if err != nil {
 		return err
 	}
-	_, err = c.cacheWriter.WriteTo(c.bufWriter)
+	_, err = s.cacheWriter.WriteTo(s.bufWriter)
 	return err
 }
 
-func (c *conn) writeBytesBody(body []byte) error {
+func (s *socket) writeBytesBody(body []byte) error {
 	bodySize := uint32(len(body))
-	err := binary.Write(c.bufWriter, binary.BigEndian, bodySize)
+	err := binary.Write(s.bufWriter, binary.BigEndian, bodySize)
 	if err != nil {
 		return err
 	}
-	_, err = c.bufWriter.Write(body)
+	_, err = s.bufWriter.Write(body)
 	return err
 }
 
-func (c *conn) writeCacheBody(codecName string, gzipLevel int, body interface{}) error {
-	c.cacheWriter.Reset()
+func (s *socket) writeCacheBody(codecName string, gzipLevel int, body interface{}) error {
+	s.cacheWriter.Reset()
 	if len(codecName) == 0 {
 		codecName = DefaultCodec
 	}
-	ge, err := c.getGzipEncoder(codecName)
+	ge, err := s.getGzipEncoder(codecName)
 	if err != nil {
 		return err
 	}
@@ -254,20 +261,20 @@ func (c *conn) writeCacheBody(codecName string, gzipLevel int, body interface{})
 
 // ReadPacket reads header and body from the connection.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (c *conn) ReadPacket(bodyMapping func(*Header) interface{}) (int64, error) {
-	c.readMutex.Lock()
-	defer c.readMutex.Unlock()
+func (s *socket) ReadPacket(bodyMapping func(*Header) interface{}) (int64, error) {
+	s.readMutex.Lock()
+	defer s.readMutex.Unlock()
 	var (
 		hErr, bErr error
 		hl, bl     int64
 		h          *Header
 		b          interface{}
 	)
-	h, hl, hErr = c.readHeader()
+	h, hl, hErr = s.readHeader()
 	if hErr == nil {
 		b = bodyMapping(h)
 	}
-	bl, bErr = c.readBody(b)
+	bl, bErr = s.readBody(b)
 	return hl + bl, errors.Merge(hErr, bErr)
 }
 
@@ -275,32 +282,22 @@ func (c *conn) ReadPacket(bodyMapping func(*Header) interface{}) (int64, error) 
 // readHeader can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call.
-func (c *conn) readHeader() (*Header, int64, error) {
-	c.bufReader.ResetCount()
-	// var magic [len(Magic)]byte
-	// err := binary.Read(c.bufReader, binary.BigEndian, &magic)
-	// if err != nil {
-	// 	return nil, 0, err
-	// }
-	// var n = len(magic)
-	// if magic != Magic {
-	// 	return nil, n, fmt.Errorf("bad magic:%v", magic)
-	// }
-
+func (s *socket) readHeader() (*Header, int64, error) {
+	s.bufReader.ResetCount()
 	var headerSize uint32
-	err := binary.Read(c.bufReader, binary.BigEndian, &headerSize)
+	err := binary.Read(s.bufReader, binary.BigEndian, &headerSize)
 	if err != nil {
-		return nil, c.bufReader.Count(), err
+		return nil, s.bufReader.Count(), err
 	}
 
 	header := new(Header)
-	c.limitReader.ResetLimit(int64(headerSize))
-	err = c.headerDecoder.Decode(header)
+	s.limitReader.ResetLimit(int64(headerSize))
+	err = s.headerDecoder.Decode(header)
 	if err != nil {
-		return nil, c.bufReader.Count(), err
+		return nil, s.bufReader.Count(), err
 	}
-	c.readedHeader = *header
-	return header, c.bufReader.Count(), err
+	s.readedHeader = *header
+	return header, s.bufReader.Count(), err
 }
 
 // DefaultCodec default codec name.
@@ -310,128 +307,108 @@ const DefaultCodec = "json"
 // readBody can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call, and it must be called after calling the readHeader().
-func (c *conn) readBody(body interface{}) (int64, error) {
-	c.bufReader.ResetCount()
+func (s *socket) readBody(body interface{}) (int64, error) {
+	s.bufReader.ResetCount()
 	var bodySize uint32
-	err := binary.Read(c.bufReader, binary.BigEndian, &bodySize)
+	err := binary.Read(s.bufReader, binary.BigEndian, &bodySize)
 	if err != nil {
-		return c.bufReader.Count(), err
+		return s.bufReader.Count(), err
 	}
 	if bodySize == 0 {
-		// println("bodySize == 0bodySize == 0bodySize == 0")
-		return c.bufReader.Count(), err
+		return s.bufReader.Count(), err
 	}
 
-	c.limitReader.ResetLimit(int64(bodySize))
+	s.limitReader.ResetLimit(int64(bodySize))
 
 	// read body
 	switch bo := body.(type) {
 	case nil:
-		_, err = io.Copy(ioutil.Discard, c.limitReader)
-		return c.bufReader.Count(), err
+		_, err = io.Copy(ioutil.Discard, s.limitReader)
+		return s.bufReader.Count(), err
 
 	case []byte:
-		_, err = c.limitReader.Read(bo)
+		_, err = s.limitReader.Read(bo)
 		if err != nil {
-			return c.bufReader.Count(), err
+			return s.bufReader.Count(), err
 		}
-		_, err = io.Copy(ioutil.Discard, c.limitReader)
-		return c.bufReader.Count(), err
+		_, err = io.Copy(ioutil.Discard, s.limitReader)
+		return s.bufReader.Count(), err
 
 	case *[]byte:
-		*bo, err = ioutil.ReadAll(c.limitReader)
-		return c.bufReader.Count(), err
+		*bo, err = ioutil.ReadAll(s.limitReader)
+		return s.bufReader.Count(), err
 
 	default:
-		codecName := c.readedHeader.Codec
+		codecName := s.readedHeader.Codec
 		if len(codecName) == 0 {
 			codecName = DefaultCodec
 		}
-		gd, err := c.getGzipDecoder(codecName)
+		gd, err := s.getGzipDecoder(codecName)
 		if err == nil {
-			err = gd.Decode(int(c.readedHeader.Gzip), body)
+			err = gd.Decode(int(s.readedHeader.Gzip), body)
 		}
-		return c.bufReader.Count(), err
+		return s.bufReader.Count(), err
 	}
 }
 
 // Reset reset net.Conn
-func (c *conn) Reset(netConn net.Conn, id ...string) {
-	if c.Conn != nil {
-		c.Conn.Close()
+func (s *socket) Reset(netConn net.Conn, id ...string) {
+	if s.Conn != nil {
+		s.Conn.Close()
 	}
 	var _id string
-	if len(id) == 0 && newConn != nil {
+	if len(id) == 0 && netConn != nil {
 		_id = netConn.RemoteAddr().String()
 	} else {
 		_id = id[0]
 	}
-	c.id = _id
-	c.Conn = netConn
-	c.bufReader.Reset(netConn)
-	c.bufWriter.Reset(netConn)
+	s.id = _id
+	s.Conn = netConn
+	s.bufReader.Reset(netConn)
+	s.bufWriter.Reset(netConn)
 }
 
-// Close closes the connection.
+// Close closes the connection socket.
 // Any blocked Read or Write operations will be unblocked and return errors.
-func (c *conn) Close() error {
+func (s *socket) Close() error {
 	var errs []error
-	errs = append(errs, c.Conn.Close())
-	c.Conn = nil
-	c.bufReader.Reset(nil)
-	c.bufWriter.Reset(nil)
-	c.closeGzipReader()
-	for _, gz := range c.gzipWriterMap {
+	errs = append(errs, s.Conn.Close())
+	s.Conn = nil
+	s.bufReader.Reset(nil)
+	s.bufWriter.Reset(nil)
+	s.closeGzipReader()
+	for _, gz := range s.gzipWriterMap {
 		errs = append(errs, gz.Close())
 	}
-	c.ctxPublic = nil
-	connPool.Put(c)
+	s.ctxPublic = nil
+	socketPool.Put(s)
 	return errors.Merge(errs...)
 }
 
-func (c *conn) closeGzipReader() {
+func (s *socket) closeGzipReader() {
 	defer func() {
 		recover()
 	}()
-	c.gzipReader.Close()
+	s.gzipReader.Close()
 }
 
-// Public returns temporary public data of Conn.
-func (c *conn) Public() goutil.Map {
-	if c.ctxPublic == nil {
-		c.ctxPublic = goutil.RwMap()
+// Public returns temporary public data of Socket.
+func (s *socket) Public() goutil.Map {
+	if s.ctxPublic == nil {
+		s.ctxPublic = goutil.RwMap()
 	}
-	return c.ctxPublic
+	return s.ctxPublic
 }
 
-// PublicLen returns the length of public data of Conn.
-func (c *conn) PublicLen() int {
-	if c.ctxPublic == nil {
+// PublicLen returns the length of public data of Socket.
+func (s *socket) PublicLen() int {
+	if s.ctxPublic == nil {
 		return 0
 	}
-	return c.ctxPublic.Len()
+	return s.ctxPublic.Len()
 }
 
-// Id returns the conn id.
-func (c *conn) Id() string {
-	return c.id
+// Id returns the socket id.
+func (s *socket) Id() string {
+	return s.id
 }
-
-// var (
-// 	Magic = [5]byte{'h', 'e', 'n', 'r', 'y'}
-// )
-
-// Header types
-const (
-	TypeRequest   int32 = 0
-	TypeResponse  int32 = 1
-	TypePush      int32 = 2
-	TypeAuth      int32 = 4
-	TypeHeartbeat int32 = 5
-)
-
-// Header stauts codes
-const (
-	StatusSuccess   int32 = -1
-	StatusUndefined int32 = 0
-)

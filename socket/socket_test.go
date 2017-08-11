@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package teleport
+package socket
 
 import (
 	"net"
@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-func TestConn(t *testing.T) {
+func TestSocket(t *testing.T) {
 	// server
 	go func() {
 		lis, err := net.Listen("tcp", "0.0.0.0:8000")
@@ -32,15 +32,15 @@ func TestConn(t *testing.T) {
 			if err != nil {
 				t.Fatalf("[SVR] accept err: %v", err)
 			}
-			c := WrapConn(conn)
-			t.Logf("[SVR] c.LocalAddr(): %s, c.RemoteAddr(): %s", c.LocalAddr(), c.RemoteAddr())
+			s := Wrap(conn)
+			t.Logf("[SVR] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
 			// read request
 			var (
 				header *Header
 				body   interface{}
 			)
-			n, err := c.ReadPacket(func(h *Header) interface{} {
+			n, err := s.ReadPacket(func(h *Header) interface{} {
 				header = h
 				return &body
 			})
@@ -54,7 +54,7 @@ func TestConn(t *testing.T) {
 			header.StatusCode = 1
 			header.Status = "test error"
 			now := time.Now()
-			n, err = c.WritePacket(header, now)
+			n, err = s.WritePacket(header, now)
 			if err != nil {
 				t.Fatalf("[SVR] write response err: %v", err)
 			}
@@ -66,12 +66,12 @@ func TestConn(t *testing.T) {
 
 	// client
 	{
-		conn, err := net.Dial("tcp", "127.0.0.1:8000")
+		socket, err := net.Dial("tcp", "127.0.0.1:8000")
 		if err != nil {
 			t.Fatalf("[CLI] dial err: %v", err)
 		}
-		c := WrapConn(conn)
-		t.Logf("[CLI] c.LocalAddr(): %s, c.RemoteAddr(): %s", c.LocalAddr(), c.RemoteAddr())
+		s := Wrap(socket)
+		t.Logf("[CLI] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
 		// write request
 		var header = &Header{
@@ -82,21 +82,21 @@ func TestConn(t *testing.T) {
 		}
 		// body := map[string]string{"a": "A"}
 		var body interface{} = "aA"
-		n, err := c.WritePacket(header, body)
+		n, err := s.WritePacket(header, body)
 		if err != nil {
 			t.Fatalf("[CLI] write request err: %v", err)
 		}
 		t.Logf("[CLI] write request len: %d, header: %#v body: %#v", n, header, body)
 
 		// read response
-		n, err = c.ReadPacket(func(h *Header) interface{} {
+		n, err = s.ReadPacket(func(h *Header) interface{} {
 			header = h
 			return &body
 		})
 		if err != nil {
-			t.Fatalf("[CLI] read request err: %v", err)
+			t.Fatalf("[CLI] read response err: %v", err)
 		} else {
-			t.Logf("[CLI] read request len: %d, header:%#v, body: %#v", n, header, body)
+			t.Logf("[CLI] read response len: %d, header:%#v, body: %#v", n, header, body)
 		}
 	}
 }

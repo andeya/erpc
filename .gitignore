@@ -29,3 +29,5 @@ _testmain.go
 
 example/client
 example/server
+socket/example/client
+socket/example/server

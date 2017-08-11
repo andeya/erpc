@@ -18,6 +18,8 @@ import (
 	"net/url"
 
 	"github.com/henrylee2cn/goutil"
+
+	"github.com/henrylee2cn/teleport/socket"
 )
 
 // SvrContext server controller context.
@@ -34,33 +36,33 @@ type SvrContext interface {
 	// RealIp() string
 }
 
-// ConnCtx a context interface of Conn for one request/response.
-type ConnCtx interface {
-	Conn
+// SocketCtx a context interface of Conn for one request/response.
+type SocketCtx interface {
+	socket.Socket
 }
 
 type context struct {
-	Conn
+	socket.Socket
 	ctxPublic  goutil.Map
-	reqHeader  *Header
+	reqHeader  *socket.Header
 	reqUri     *url.URL
 	reqQuery   url.Values
-	respHeader *Header
+	respHeader *socket.Header
 }
 
 var (
 	_ SvrContext = new(context)
-	_ ConnCtx    = new(context)
+	_ SocketCtx  = new(context)
 )
 
-// newCtx creates a context of Conn for one request/response.
-func newCtx(conn Conn) *context {
+// newCtx creates a context of socket.Socket for one request/response.
+func newCtx(s socket.Socket) *context {
 	ctx := &context{
-		Conn:      conn,
+		Socket:    s,
 		ctxPublic: goutil.RwMap(),
 	}
-	if conn.PublicLen() > 0 {
-		conn.Public().Range(func(key, value interface{}) bool {
+	if s.PublicLen() > 0 {
+		s.Public().Range(func(key, value interface{}) bool {
 			ctx.ctxPublic.Store(key, value)
 			return true
 		})
@@ -105,5 +107,5 @@ func (c *context) SetCodec(codec string) {
 }
 
 func (c *context) Ip() string {
-	return c.Conn.RemoteAddr().String()
+	return c.Socket.RemoteAddr().String()
 }

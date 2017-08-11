@@ -16,6 +16,8 @@ package teleport
 
 import (
 	"github.com/henrylee2cn/goutil/errors"
+
+	"github.com/henrylee2cn/teleport/socket"
 )
 
 // Interfaces about plugin.
@@ -27,25 +29,25 @@ type (
 		PreConnect(string, interface{}) error
 	}
 	PostConnectPlugin interface {
-		PostConnect(Conn) error
+		PostConnect(socket.Socket) error
 	}
 	PreWritePacketPlugin interface {
-		PreWritePacket(ConnCtx, interface{}) error
+		PreWritePacket(SocketCtx, interface{}) error
 	}
 	PostWritePacketPlugin interface {
-		PostWritePacket(ConnCtx, interface{}) error
+		PostWritePacket(SocketCtx, interface{}) error
 	}
 	PreReadHeaderPlugin interface {
-		PreReadHeader(ConnCtx) error
+		PreReadHeader(SocketCtx) error
 	}
 	PostReadHeaderPlugin interface {
-		PostReadHeader(ConnCtx) error
+		PostReadHeader(SocketCtx) error
 	}
 	PreReadBodyPlugin interface {
-		PreReadBody(ConnCtx, interface{}) error
+		PreReadBody(SocketCtx, interface{}) error
 	}
 	PostReadBodyPlugin interface {
-		PostReadBody(ConnCtx, interface{}) error
+		PostReadBody(SocketCtx, interface{}) error
 	}
 	// PluginContainer plugin container that defines base methods to manage plugins.
 	PluginContainer interface {
@@ -145,11 +147,11 @@ func (p *pluginContainer) PreConnect(nodePath string, rcvr interface{}) error {
 	return errors.Merge(errs...)
 }
 
-func (p *pluginContainer) PostConnect(conn Conn) error {
+func (p *pluginContainer) PostConnect(s socket.Socket) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostConnectPlugin); ok {
-			if err := _plugin.PostConnect(conn); err != nil {
-				conn.Close()
+			if err := _plugin.PostConnect(s); err != nil {
+				s.Close()
 				return errors.Errorf("PostConnectPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -157,7 +159,7 @@ func (p *pluginContainer) PostConnect(conn Conn) error {
 	return nil
 }
 
-func (p *pluginContainer) PreWritePacket(ctx ConnCtx, body interface{}) error {
+func (p *pluginContainer) PreWritePacket(ctx SocketCtx, body interface{}) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePacketPlugin); ok {
 			if err := _plugin.PreWritePacket(ctx, body); err != nil {
@@ -168,7 +170,7 @@ func (p *pluginContainer) PreWritePacket(ctx ConnCtx, body interface{}) error {
 	return nil
 }
 
-func (p *pluginContainer) PostWritePacket(ctx ConnCtx, body interface{}) error {
+func (p *pluginContainer) PostWritePacket(ctx SocketCtx, body interface{}) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePacketPlugin); ok {
 			if err := _plugin.PostWritePacket(ctx, body); err != nil {
@@ -179,7 +181,7 @@ func (p *pluginContainer) PostWritePacket(ctx ConnCtx, body interface{}) error {
 	return nil
 }
 
-func (p *pluginContainer) PreReadHeader(ctx ConnCtx) error {
+func (p *pluginContainer) PreReadHeader(ctx SocketCtx) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
 			if err := _plugin.PreReadHeader(ctx); err != nil {
@@ -190,7 +192,7 @@ func (p *pluginContainer) PreReadHeader(ctx ConnCtx) error {
 	return nil
 }
 
-func (p *pluginContainer) PostReadHeader(ctx ConnCtx) error {
+func (p *pluginContainer) PostReadHeader(ctx SocketCtx) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadHeaderPlugin); ok {
 			if err := _plugin.PostReadHeader(ctx); err != nil {
@@ -201,7 +203,7 @@ func (p *pluginContainer) PostReadHeader(ctx ConnCtx) error {
 	return nil
 }
 
-func (p *pluginContainer) PreReadBody(ctx ConnCtx, body interface{}) error {
+func (p *pluginContainer) PreReadBody(ctx SocketCtx, body interface{}) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadBodyPlugin); ok {
 			if err := _plugin.PreReadBody(ctx, body); err != nil {
@@ -212,7 +214,7 @@ func (p *pluginContainer) PreReadBody(ctx ConnCtx, body interface{}) error {
 	return nil
 }
 
-func (p *pluginContainer) PostReadBody(ctx ConnCtx, body interface{}) error {
+func (p *pluginContainer) PostReadBody(ctx SocketCtx, body interface{}) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadBodyPlugin); ok {
 			if err := _plugin.PostReadBody(ctx, body); err != nil {

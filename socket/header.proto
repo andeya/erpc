@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package teleport;
+package socket;
 
 message header {
 	string	id			= 1;

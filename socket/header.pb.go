@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-	Package teleport is a generated protocol buffer package.
+	Package socket is a generated protocol buffer package.
 
 	It is generated from these files:
 		header.proto
@@ -11,7 +11,8 @@
 	It has these top-level messages:
 		Header
 */
-package teleport
+
+package socket
 
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
@@ -95,7 +96,7 @@ func (m *Header) GetGzip() int32 {
 }
 
 func init() {
-	proto.RegisterType((*Header)(nil), "teleport.header")
+	proto.RegisterType((*Header)(nil), "socket.header")
 }
 func (m *Header) Marshal() (dAtA []byte, err error) {
 	size := m.Size()

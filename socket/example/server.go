@@ -5,11 +5,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
-	// server
 	lis, err := net.Listen("tcp", "0.0.0.0:8000")
 	if err != nil {
 		log.Fatalf("[SVR] listen err: %v", err)
@@ -20,17 +19,16 @@ func main() {
 		if err != nil {
 			log.Fatalf("[SVR] accept err: %v", err)
 		}
-		go func(c teleport.Conn) {
-			log.Printf("accept %s", c.Id())
-			defer c.Close()
+		go func(s socket.Socket) {
+			log.Printf("accept %s", s.Id())
+			defer s.Close()
 			for {
 				// read request
 				var (
-					header *teleport.Header
+					header *socket.Header
 					body   interface{}
 				)
-				c.SetReadDeadline(time.Now().Add(time.Second * 10))
-				n, err := c.ReadPacket(func(h *teleport.Header) interface{} {
+				n, err := s.ReadPacket(func(h *socket.Header) interface{} {
 					header = h
 					return &body
 				})
@@ -45,12 +43,12 @@ func main() {
 				header.StatusCode = 1
 				header.Status = "test error"
 				now := time.Now()
-				n, err = c.WritePacket(header, now)
+				n, err = s.WritePacket(header, now)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 				}
 				log.Printf("[SVR] write response len: %d, header: %#v, body: %#v", n, header, now)
 			}
-		}(teleport.WrapConn(conn))
+		}(socket.Wrap(conn))
 	}
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package teleport
+package socket
 
 import (
 	"compress/gzip"
@@ -29,8 +29,8 @@ type GzipEncoder struct {
 	encMaker      codec.EncodeMaker
 }
 
-func (c *conn) getGzipEncoder(codecName string) (*GzipEncoder, error) {
-	g, ok := c.gzipEncodeMap[codecName]
+func (s *socket) getGzipEncoder(codecName string) (*GzipEncoder, error) {
+	g, ok := s.gzipEncodeMap[codecName]
 	if ok {
 		return g, nil
 	}
@@ -38,15 +38,15 @@ func (c *conn) getGzipEncoder(codecName string) (*GzipEncoder, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := c.cacheWriter
+	w := s.cacheWriter
 	enc := encMaker(w)
 	g = &GzipEncoder{
-		gzipWriterMap: c.gzipWriterMap,
+		gzipWriterMap: s.gzipWriterMap,
 		w:             w,
 		encMap:        map[int]codec.Encoder{gzip.NoCompression: enc},
 		encMaker:      encMaker,
 	}
-	c.gzipEncodeMap[codecName] = g
+	s.gzipEncodeMap[codecName] = g
 	return g, nil
 }
 
@@ -85,8 +85,8 @@ type GzipDecoder struct {
 	decMaker   codec.DecodeMaker
 }
 
-func (c *conn) getGzipDecoder(codecName string) (*GzipDecoder, error) {
-	g, ok := c.gzipDecodeMap[codecName]
+func (s *socket) getGzipDecoder(codecName string) (*GzipDecoder, error) {
+	g, ok := s.gzipDecodeMap[codecName]
 	if ok {
 		return g, nil
 	}
@@ -94,9 +94,9 @@ func (c *conn) getGzipDecoder(codecName string) (*GzipDecoder, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := c.limitReader
+	r := s.limitReader
 	dec := decMaker(r)
-	gzipReader := c.gzipReader
+	gzipReader := s.gzipReader
 	g = &GzipDecoder{
 		dec:        dec,
 		gzDec:      decMaker(gzipReader),
@@ -104,7 +104,7 @@ func (c *conn) getGzipDecoder(codecName string) (*GzipDecoder, error) {
 		r:          r,
 		decMaker:   decMaker,
 	}
-	c.gzipDecodeMap[codecName] = g
+	s.gzipDecodeMap[codecName] = g
 	return g, nil
 }
 
