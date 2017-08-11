@@ -34,8 +34,8 @@ func TestConn(t *testing.T) {
 			}
 			c := WrapConn(conn)
 			t.Logf("[SVR] c.LocalAddr(): %s, c.RemoteAddr(): %s", c.LocalAddr(), c.RemoteAddr())
-			// read request
 
+			// read request
 			var (
 				header *Header
 				body   interface{}
@@ -62,7 +62,7 @@ func TestConn(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 2)
 
 	// client
 	{

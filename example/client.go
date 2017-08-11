@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"time"
 
 	"github.com/henrylee2cn/teleport"
 )
@@ -14,6 +15,7 @@ func main() {
 		log.Fatalf("[CLI] dial err: %v", err)
 	}
 	c := teleport.WrapConn(conn)
+	time.Sleep(time.Second * 2)
 	defer c.Close()
 	for i := 0; i < 10; i++ {
 		// write request

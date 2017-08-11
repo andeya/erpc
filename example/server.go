@@ -29,6 +29,7 @@ func main() {
 					header *teleport.Header
 					body   interface{}
 				)
+				c.SetReadDeadline(time.Now().Add(time.Second * 10))
 				n, err := c.ReadPacket(func(h *teleport.Header) interface{} {
 					header = h
 					return &body

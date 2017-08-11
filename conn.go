@@ -380,13 +380,20 @@ func (c *conn) Close() error {
 	c.Conn = nil
 	c.bufReader.Reset(nil)
 	c.bufWriter.Reset(nil)
-	errs = append(errs, c.gzipReader.Close())
+	c.closeGzipReader()
 	for _, gz := range c.gzipWriterMap {
 		errs = append(errs, gz.Close())
 	}
 	c.ctxPublic = nil
 	connPool.Put(c)
 	return errors.Merge(errs...)
+}
+
+func (c *conn) closeGzipReader() {
+	defer func() {
+		recover()
+	}()
+	c.gzipReader.Close()
 }
 
 // Public returns temporary public data of Conn.
