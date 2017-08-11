@@ -17,8 +17,13 @@ A concise, powerful and high-performance TCP connection socket.
 ## Packet
 
 ```
-{Header-Length}{Header}{Body-Length}{Body}
+HeaderLength | Header | BodyLength | Body
 ```
+
+**Notes:**
+
+- HeaderLength: uint32, 4 bytes, big endian
+- BodyLength: uint32, 4 bytes, big endian
 
 ## Header
 

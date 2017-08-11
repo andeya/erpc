@@ -32,20 +32,8 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// Header types
-const (
-	TypeRequest   int32 = 0
-	TypeResponse  int32 = 1
-	TypePush      int32 = 2
-	TypeAuth      int32 = 4
-	TypeHeartbeat int32 = 5
-)
-
-// Header stauts codes
-const (
-	StatusSuccess   int32 = -1
-	StatusUndefined int32 = 0
-)
+// DefaultCodec default codec name.
+const DefaultCodec = "json"
 
 type (
 	// Socket is a generic stream-oriented network connection.
@@ -196,7 +184,7 @@ func (s *socket) WritePacket(header *Header, body interface{}) (int64, error) {
 	// write body
 	switch bo := body.(type) {
 	case nil:
-		err = binary.Write(s.bufWriter, binary.BigEndian, 0)
+		err = binary.Write(s.bufWriter, binary.BigEndian, uint32(0))
 	case []byte:
 		err = s.writeBytesBody(bo)
 	case *[]byte:
@@ -298,9 +286,6 @@ func (s *socket) readHeader() (*Header, int64, error) {
 	s.readedHeader = *header
 	return header, s.bufReader.Count(), err
 }
-
-// DefaultCodec default codec name.
-const DefaultCodec = "json"
 
 // readBody reads body from the connection.
 // readBody can be made to time out and return an Error with Timeout() == true
