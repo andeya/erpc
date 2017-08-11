@@ -1,4 +1,4 @@
-// Copyright 2015-2017 HenryLee. All Rights Reserved.
+// Copyright 2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,14 @@ import (
 	"github.com/henrylee2cn/goutil"
 )
 
-// SocketHub connections hub
+// SocketHub sockets hub
 type SocketHub struct {
 	// key: socket id (ip, name and so on)
 	// value: Socket
 	sockets goutil.Map
 }
 
-// NewSocketHub creates a new connections hub.
+// NewSocketHub creates a new sockets hub.
 func NewSocketHub() *SocketHub {
 	chub := &SocketHub{
 		sockets: goutil.AtomicMap(),

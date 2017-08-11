@@ -1,6 +1,6 @@
 // socket package provides a concise, powerful and high-performance TCP socket.
 //
-// Copyright 2015-2017 HenryLee. All Rights Reserved.
+// Copyright 2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
