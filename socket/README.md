@@ -1,6 +1,45 @@
-# socket
+# Socket
 
 A concise, powerful and high-performance TCP connection socket.
+
+## Feature
+
+- The server and client are peer-to-peer interfaces
+- With I/O buffer
+- Packet contains both Header and Body
+- Supports custom encoding types, e.g JSON
+- Header and Body can use different coding types
+- Body supports gzip compression
+- Header contains the status code and its description text
+- Each socket is assigned an id
+- Provide a socket hub
+
+## Packet
+
+```
+{Header-Length}{Header}{Body-Length}{Body}
+```
+
+## Header
+
+```go
+type Header struct {
+	// Packet id
+	Id string
+	// Service type
+	Type int32
+	// Service URI
+	Uri string
+	// Body encoding type
+	Codec string
+	// Body gizp compression level
+	Gzip int32
+	// As reply, it indicates the service status code
+	StatusCode int32
+	// As reply, it indicates the service status text
+	Status string
+}
+```
 
 ## Demo
 

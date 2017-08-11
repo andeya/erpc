@@ -33,6 +33,7 @@ func TestSocket(t *testing.T) {
 				t.Fatalf("[SVR] accept err: %v", err)
 			}
 			s := Wrap(conn)
+			defer s.Close()
 			t.Logf("[SVR] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
 			// read request

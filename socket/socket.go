@@ -1,4 +1,4 @@
-// socket package provides a concise, powerful and high-performance TCP socket.
+// Socket package provides a concise, powerful and high-performance TCP socket.
 //
 // Copyright 2017 HenryLee. All Rights Reserved.
 //
@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
-	// "fmt"
 	"io"
 	"io/ioutil"
 	"net"
