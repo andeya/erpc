@@ -12,7 +12,7 @@ A concise, powerful and high-performance TCP connection socket.
 - Body supports gzip compression
 - Header contains the status code and its description text
 - Each socket is assigned an id
-- Provide a socket hub
+- Provides a socket hub
 
 ## Packet
 
