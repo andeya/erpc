@@ -48,6 +48,7 @@ type context struct {
 	reqUri     *url.URL
 	reqQuery   url.Values
 	respHeader *socket.Header
+	plugin     PluginContainer
 }
 
 var (

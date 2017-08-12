@@ -41,15 +41,15 @@ type Header struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Service type
 	Type int32 `protobuf:"varint,2,opt,name=type,proto3" json:"type,omitempty"`
-	// As reply, it indicates the service status code
-	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
-	// As reply, it indicates the service status text
-	Codec string `protobuf:"bytes,4,opt,name=codec,proto3" json:"codec,omitempty"`
 	// Service URI
-	Gzip int32 `protobuf:"varint,5,opt,name=gzip,proto3" json:"gzip,omitempty"`
+	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	// Body encoding type
-	StatusCode int32 `protobuf:"varint,6,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	Codec string `protobuf:"bytes,4,opt,name=codec,proto3" json:"codec,omitempty"`
 	// Body gizp compression level
+	Gzip int32 `protobuf:"varint,5,opt,name=gzip,proto3" json:"gzip,omitempty"`
+	// As reply, it indicates the service status code
+	StatusCode int32 `protobuf:"varint,6,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	// As reply, it indicates the service status text
 	Status string `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
 }
 
