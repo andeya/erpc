@@ -22,35 +22,35 @@ import (
 	"github.com/henrylee2cn/goutil"
 )
 
-var packetChain = new(struct {
+var packetStack = new(struct {
 	freePacket *Packet
 	mu         sync.Mutex
 })
 
-// GetPacket gets a Packet form pool.
+// GetPacket gets a *Packet form packet stack.
 // Note:
 //  getBodyFunc is only for writing packet;
 //  getBodyFunc should be nil when reading packet.
 func GetPacket(getBodyFunc func(*Header) interface{}) *Packet {
-	packetChain.mu.Lock()
-	p := packetChain.freePacket
+	packetStack.mu.Lock()
+	p := packetStack.freePacket
 	if p == nil {
 		p = newPacket(getBodyFunc)
 	} else {
-		packetChain.freePacket = p.next
+		packetStack.freePacket = p.next
 		p.reset(getBodyFunc)
 	}
-	packetChain.mu.Unlock()
+	packetStack.mu.Unlock()
 	return p
 }
 
-// PutPacket puts a Packet to pool.
+// PutPacket puts a *Packet to packet stack.
 func PutPacket(p *Packet) {
-	packetChain.mu.Lock()
+	packetStack.mu.Lock()
 	p.Body = nil
-	p.next = packetChain.freePacket
-	packetChain.freePacket = p
-	packetChain.mu.Unlock()
+	p.next = packetStack.freePacket
+	packetStack.freePacket = p
+	packetStack.mu.Unlock()
 }
 
 // Packet provides header and body's containers for receiving and sending packet.
