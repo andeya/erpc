@@ -16,10 +16,9 @@ package teleport
 
 import (
 	"net"
-
-	"github.com/henrylee2cn/teleport/socket"
 )
 
+// Peer peer which is server or client.
 type Peer struct {
 	id         string
 	plugin     PluginContainer
@@ -27,6 +26,7 @@ type Peer struct {
 	sessionHub *SessionHub
 }
 
+// NewPeer creates a new peer.
 func NewPeer(id string, router *Router, plugin PluginContainer) *Peer {
 	var p = &Peer{
 		id:         id,
@@ -37,11 +37,9 @@ func NewPeer(id string, router *Router, plugin PluginContainer) *Peer {
 	return p
 }
 
+// NewSession returns a session with connection.
 func (p *Peer) NewSession(conn net.Conn, id ...string) *Session {
-	var session = &Session{
-		peer:   p,
-		socket: socket.Wrap(conn, id...),
-	}
+	var session = NewSession(p, conn, id...)
 	p.sessionHub.Set(session.Id(), session)
 	return session
 }

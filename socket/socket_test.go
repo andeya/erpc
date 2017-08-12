@@ -37,29 +37,26 @@ func TestSocket(t *testing.T) {
 			t.Logf("[SVR] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
 			// read request
-			var (
-				header *Header
-				body   interface{}
-			)
-			n, err := s.ReadPacket(func(h *Header) interface{} {
-				header = h
-				return &body
+			var packet = GetPacket(func(_ *Header) interface{} {
+				return new(map[string]string)
 			})
+			err = s.ReadPacket(packet)
 			if err != nil {
 				t.Fatalf("[SVR] read request err: %v", err)
 			} else {
-				t.Logf("[SVR] read request len: %d, header:%#v, body: %#v", n, header, body)
+				t.Logf("[SVR] read request: %v", packet)
 			}
 
 			// write response
-			header.StatusCode = 1
-			header.Status = "test error"
-			now := time.Now()
-			n, err = s.WritePacket(header, now)
+			packet.Header.StatusCode = -1
+			packet.Header.Status = "ok"
+			packet.Body = time.Now()
+			err = s.WritePacket(packet)
 			if err != nil {
 				t.Fatalf("[SVR] write response err: %v", err)
 			}
-			t.Logf("[SVR] write response len: %d, header: %#v, body: %#v", n, header, now)
+			t.Logf("[SVR] write response: %v", packet)
+			PutPacket(packet)
 		}
 	}()
 
@@ -75,29 +72,29 @@ func TestSocket(t *testing.T) {
 		t.Logf("[CLI] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
 		// write request
-		var header = &Header{
-			Id:    "1",
-			Uri:   "/a/b",
-			Codec: "json",
-			Gzip:  2,
-		}
-		// body := map[string]string{"a": "A"}
-		var body interface{} = "aA"
-		n, err := s.WritePacket(header, body)
+		var packet = GetPacket(nil)
+		packet.Header.Id = "1"
+		packet.Header.Uri = "/a/b"
+		packet.Header.Codec = "json"
+		packet.Header.Gzip = 5
+		packet.Body = map[string]string{"a": "A"}
+		err = s.WritePacket(packet)
 		if err != nil {
 			t.Fatalf("[CLI] write request err: %v", err)
 		}
-		t.Logf("[CLI] write request len: %d, header: %#v body: %#v", n, header, body)
+		t.Logf("[CLI] write request: %v", packet)
+		PutPacket(packet)
 
 		// read response
-		n, err = s.ReadPacket(func(h *Header) interface{} {
-			header = h
-			return &body
+		packet = GetPacket(func(_ *Header) interface{} {
+			return new(string)
 		})
+		err = s.ReadPacket(packet)
 		if err != nil {
 			t.Fatalf("[CLI] read response err: %v", err)
 		} else {
-			t.Logf("[CLI] read response len: %d, header:%#v, body: %#v", n, header, body)
+			t.Logf("[CLI] read response: %v", packet)
 		}
+		PutPacket(packet)
 	}
 }

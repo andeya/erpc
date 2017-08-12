@@ -16,29 +16,30 @@ func main() {
 	defer s.Close()
 	for i := 0; i < 10; i++ {
 		// write request
-		header := &socket.Header{
-			Id:    "1",
-			Uri:   "/a/b",
-			Codec: "json",
-			Gzip:  5,
-		}
-		var body interface{} = "ABC"
-		n, err := s.WritePacket(header, body)
+		var packet = socket.GetPacket(nil)
+		packet.Header.Id = "1"
+		packet.Header.Uri = "/a/b"
+		packet.Header.Codec = "json"
+		packet.Header.Gzip = 5
+		packet.Body = map[string]string{"a": "A"}
+		err = s.WritePacket(packet)
 		if err != nil {
 			log.Printf("[CLI] write request err: %v", err)
 			continue
 		}
-		log.Printf("[CLI] write request len: %d, header: %#v body: %#v", n, header, body)
+		log.Printf("[CLI] write request: %v", packet)
+		socket.PutPacket(packet)
 
 		// read response
-		n, err = s.ReadPacket(func(h *socket.Header) interface{} {
-			header = h
-			return &body
+		packet = socket.GetPacket(func(_ *socket.Header) interface{} {
+			return new(string)
 		})
+		err = s.ReadPacket(packet)
 		if err != nil {
 			log.Printf("[CLI] read response err: %v", err)
 		} else {
-			log.Printf("[CLI] read response len: %d, header:%#v, body: %#v", n, header, body)
+			log.Printf("[CLI] read response: %v", packet)
 		}
+		socket.PutPacket(packet)
 	}
 }

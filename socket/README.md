@@ -77,30 +77,27 @@ func main() {
 			defer s.Close()
 			for {
 				// read request
-				var (
-					header *socket.Header
-					body   interface{}
-				)
-				n, err := s.ReadPacket(func(h *socket.Header) interface{} {
-					header = h
-					return &body
+				var packet = socket.GetPacket(func(_ *socket.Header) interface{} {
+					return new(map[string]string)
 				})
+				err = s.ReadPacket(packet)
 				if err != nil {
 					log.Printf("[SVR] read request err: %v", err)
 					return
 				} else {
-					log.Printf("[SVR] read request len: %d, header:%#v, body: %#v", n, header, body)
+					log.Printf("[SVR] read request: %v", packet)
 				}
 
 				// write response
-				header.StatusCode = 1
-				header.Status = "test error"
-				now := time.Now()
-				n, err = s.WritePacket(header, now)
+				packet.Header.StatusCode = -1
+				packet.Header.Status = "ok"
+				packet.Body = time.Now()
+				err = s.WritePacket(packet)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 				}
-				log.Printf("[SVR] write response len: %d, header: %#v, body: %#v", n, header, now)
+				log.Printf("[SVR] write response: %v", packet)
+				socket.PutPacket(packet)
 			}
 		}(socket.Wrap(conn))
 	}
@@ -128,30 +125,31 @@ func main() {
 	defer s.Close()
 	for i := 0; i < 10; i++ {
 		// write request
-		header := &socket.Header{
-			Id:    "1",
-			Uri:   "/a/b",
-			Codec: "json",
-			Gzip:  5,
-		}
-		var body interface{} = "ABC"
-		n, err := s.WritePacket(header, body)
+		var packet = socket.GetPacket(nil)
+		packet.Header.Id = "1"
+		packet.Header.Uri = "/a/b"
+		packet.Header.Codec = "json"
+		packet.Header.Gzip = 5
+		packet.Body = map[string]string{"a": "A"}
+		err = s.WritePacket(packet)
 		if err != nil {
 			log.Printf("[CLI] write request err: %v", err)
 			continue
 		}
-		log.Printf("[CLI] write request len: %d, header: %#v body: %#v", n, header, body)
+		log.Printf("[CLI] write request: %v", packet)
+		socket.PutPacket(packet)
 
 		// read response
-		n, err = s.ReadPacket(func(h *socket.Header) interface{} {
-			header = h
-			return &body
+		packet = socket.GetPacket(func(_ *socket.Header) interface{} {
+			return new(string)
 		})
+		err = s.ReadPacket(packet)
 		if err != nil {
 			log.Printf("[CLI] read response err: %v", err)
 		} else {
-			log.Printf("[CLI] read response len: %d, header:%#v, body: %#v", n, header, body)
+			log.Printf("[CLI] read response: %v", packet)
 		}
+		socket.PutPacket(packet)
 	}
 }
 ```

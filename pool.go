@@ -15,12 +15,33 @@
 package teleport
 
 import (
-	"github.com/henrylee2cn/teleport/socket"
+	"sync"
 )
 
-type Router struct {
+type Pool struct {
+	ctxPool  sync.Pool
+	sessPool sync.Pool
 }
 
-func (r *Router) lookup(header *socket.Header) (*Handler, bool) {
-	return nil, false
+func NewPool() *Pool {
+	return &Pool{
+		ctxPool: sync.Pool{
+			New: func() interface{} {
+				return new(context)
+			},
+		},
+		sessPool: sync.Pool{
+			New: func() interface{} {
+				return new(Session)
+			},
+		},
+	}
+}
+
+func (p *Pool) getContext() *context {
+
+}
+
+func (p *Pool) getSession() *Session {
+
 }

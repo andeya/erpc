@@ -23,35 +23,38 @@ import (
 	"github.com/henrylee2cn/goutil/errors"
 )
 
-type control struct {
-	name    string
-	typ     reflect.Type  // type of the receiver
-	val     reflect.Value // receiver of methods for the service
-	handles map[string]*handle
-	PluginContainer
-}
+type (
+	Controller struct {
+		name     string
+		typ      reflect.Type  // type of the receiver
+		val      reflect.Value // receiver of methods for the service
+		handlers map[string]*Handler
+		PluginContainer
+	}
 
-type handle struct {
-	index        int // index of method
-	method       reflect.Method
-	ArgType      reflect.Type
-	ReplyType    reflect.Type
-	defaultBytes []byte
-	numCalls     uint64
-	sync.Mutex   // protects counters
-	PluginContainer
-}
+	Handler struct {
+		structType   reflect.Type
+		method       reflect.Method
+		argType      reflect.Type
+		argTypeIsPtr bool
+		replyType    reflect.Type
+		defaultBytes []byte
+		numCalls     uint64
+		sync.Mutex   // protects counters
+		PluginContainer
+	}
+)
 
-func newControl(ctrlStruct interface{}, pluginContainer PluginContainer) *control {
+func newController(ctrlStruct interface{}, pluginContainer PluginContainer) *Controller {
 	if pluginContainer == nil {
 		pluginContainer = NewPluginContainer()
 	}
-	c := &control{}
+	c := &Controller{}
 	return c
 }
 
-func (c *control) makehandles() error {
-	c.handles = make(map[string]*handle)
+func (c *Controller) makeHandlers() error {
+	c.handlers = make(map[string]*Handler)
 	for m := 0; m < c.typ.NumMethod(); m++ {
 		method := c.typ.Method(m)
 		mtype := method.Type
@@ -62,37 +65,61 @@ func (c *control) makehandles() error {
 		}
 		// Method needs two ins: receiver, *args.
 		if mtype.NumIn() != 2 {
-			return errors.Errorf("handler: %s.%s needs one in argument, but have %d", c.typ.String(), mname, mtype.NumIn())
+			return errors.Errorf("Handler: %s.%s needs one in argument, but have %d", c.typ.String(), mname, mtype.NumIn())
 		}
-		// First arg need not be a pointer.
+		// Receiver need be a struct pointer.
+		structType := mtype.In(0)
+		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
+			return errors.Errorf("Handler: %s.%s receiver need be a struct pointer: %s", c.typ.String(), mname, structType)
+		}
+		// First arg need be exported or builtin.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			return errors.Errorf("handler: %s.%s args type not exported: %s", c.typ.String(), mname, argType)
+			return errors.Errorf("Handler: %s.%s args type not exported: %s", c.typ.String(), mname, argType)
 		}
 		// Method needs two outs: reply error.
 		if mtype.NumOut() != 2 {
-			return errors.Errorf("handler: %s.%s needs two out arguments, but have %d", c.typ.String(), mname, mtype.NumOut())
+			return errors.Errorf("Handler: %s.%s needs two out arguments, but have %d", c.typ.String(), mname, mtype.NumOut())
 		}
 		// First arg must be a pointer.
 		replyType := mtype.Out(0)
 		// Reply type must be exported.
 		if !goutil.IsExportedOrBuiltinType(replyType) {
-			return errors.Errorf("handler: %s.%s first reply type not exported: %s", c.typ.String(), mname, replyType)
+			return errors.Errorf("Handler: %s.%s first reply type not exported: %s", c.typ.String(), mname, replyType)
 		}
 		// The return type of the method must be error.
 		if returnType := mtype.Out(1); returnType != typeOfError {
-			return errors.Errorf("handler: %s.%s second reply type %s not *Error", c.typ.String(), mname, returnType)
+			return errors.Errorf("Handler: %s.%s second reply type %s not *Error", c.typ.String(), mname, returnType)
 		}
-		c.handles[mname] = &handle{method: method, ArgType: argType, ReplyType: replyType}
+		c.handlers[mname] = &Handler{
+			method:       method,
+			argType:      argType,
+			argTypeIsPtr: argType.Kind() == reflect.Ptr,
+			replyType:    replyType,
+		}
 	}
 	return nil
+}
+
+func (h *Handler) NewArg() (raw *reflect.Value, ptr interface{}) {
+	if h.argTypeIsPtr {
+		_ptr := reflect.New(h.argType.Elem())
+		ptr = _ptr.Interface()
+		raw = &_ptr
+	} else {
+		_ptr := reflect.New(h.argType)
+		ptr = _ptr.Interface()
+		_raw := _ptr.Elem()
+		raw = &_raw
+	}
+	return
 }
 
 // Precompute the reflect type for error. Can't use error directly
 // because Typeof takes an empty interface value. This is annoying.
 var typeOfError = reflect.TypeOf((*Error)(nil)).Elem()
 
-// Error error for handler.
+// Error error for Handler.
 type Error interface {
 	// return error code
 	Code() uint16

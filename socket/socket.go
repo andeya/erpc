@@ -32,8 +32,19 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// DefaultCodec default codec name.
-const DefaultCodec = "json"
+// default codec.
+var (
+	DefaultCodecName = "json"
+	DefaultCodec     codec.Codec
+)
+
+func init() {
+	var err error
+	DefaultCodec, err = codec.Get(DefaultCodecName)
+	if err != nil {
+		panic(err)
+	}
+}
 
 type (
 	// Socket is a generic stream-oriented network connection.
@@ -79,11 +90,11 @@ type (
 		// WritePacket can be made to time out and return an Error with Timeout() == true
 		// after a fixed time limit; see SetDeadline and SetWriteDeadline.
 		// Note: must be safe for concurrent use by multiple goroutines.
-		WritePacket(header *Header, body interface{}) (int64, error)
+		WritePacket(packet *Packet) error
 
 		// ReadPacket reads header and body from the connection.
 		// Note: must be safe for concurrent use by multiple goroutines.
-		ReadPacket(bodyMapping func(*Header) interface{}) (int64, error)
+		ReadPacket(packet *Packet) error
 
 		// Read reads data from the connection.
 		// Read can be made to time out and return an Error with Timeout() == true
@@ -118,7 +129,6 @@ type (
 
 		headerEncoder codec.Encoder
 		headerDecoder codec.Decoder
-		readedHeader  Header
 
 		cacheWriter   *bytes.Buffer
 		gzipWriterMap map[int]*gzip.Writer
@@ -152,12 +162,14 @@ func newSocket() *socket {
 	bufReader := utils.NewBufioReader(nil)
 	cacheWriter := bytes.NewBuffer(nil)
 	limitReader := utils.LimitReader(bufReader, 0)
+	headerEncoder, _ := codec.NewEncoder(DefaultCodecName, cacheWriter)
+	headerDecoder, _ := codec.NewDecoder(DefaultCodecName, limitReader)
 	return &socket{
 		bufWriter:     bufWriter,
 		bufReader:     bufReader,
 		limitReader:   limitReader,
-		headerEncoder: codec.NewJsonEncoder(cacheWriter),
-		headerDecoder: codec.NewJsonDecoder(limitReader),
+		headerEncoder: headerEncoder,
+		headerDecoder: headerDecoder,
 		cacheWriter:   cacheWriter,
 		gzipWriterMap: make(map[int]*gzip.Writer),
 		gzipReader:    new(gzip.Reader),
@@ -170,19 +182,24 @@ func newSocket() *socket {
 // WritePacket can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (s *socket) WritePacket(header *Header, body interface{}) (int64, error) {
+func (s *socket) WritePacket(packet *Packet) error {
 	s.writeMutex.Lock()
 	defer s.writeMutex.Unlock()
 	s.bufWriter.ResetCount()
 
 	// write header
-	err := s.writeHeader(header)
+	err := s.writeHeader(packet.Header)
+	packet.HeaderLength = s.bufWriter.Count()
+	packet.Length = packet.HeaderLength
 	if err != nil {
-		return s.bufWriter.Count(), err
+		return err
 	}
-
+	defer func() {
+		packet.BodyLength = s.bufWriter.Count() - packet.Length
+		packet.Length = s.bufWriter.Count()
+	}()
 	// write body
-	switch bo := body.(type) {
+	switch bo := packet.Body.(type) {
 	case nil:
 		err = binary.Write(s.bufWriter, binary.BigEndian, uint32(0))
 	case []byte:
@@ -190,23 +207,22 @@ func (s *socket) WritePacket(header *Header, body interface{}) (int64, error) {
 	case *[]byte:
 		err = s.writeBytesBody(*bo)
 	default:
-		err = s.writeCacheBody(header.Codec, int(header.Gzip), body)
+		err = s.writeCacheBody(packet.Header.Codec, int(packet.Header.Gzip), bo)
 		if err != nil {
-			return s.bufWriter.Count(), err
+			return err
 		}
 		// write body to socket buffer
 		bodySize := uint32(s.cacheWriter.Len())
 		err = binary.Write(s.bufWriter, binary.BigEndian, bodySize)
 		if err != nil {
-			return s.bufWriter.Count(), err
+			return err
 		}
 		_, err = s.cacheWriter.WriteTo(s.bufWriter)
 	}
 	if err != nil {
-		return s.bufWriter.Count(), err
+		return err
 	}
-	err = s.bufWriter.Flush()
-	return s.bufWriter.Count(), err
+	return s.bufWriter.Flush()
 }
 
 func (s *socket) writeHeader(header *Header) error {
@@ -237,7 +253,7 @@ func (s *socket) writeBytesBody(body []byte) error {
 func (s *socket) writeCacheBody(codecName string, gzipLevel int, body interface{}) error {
 	s.cacheWriter.Reset()
 	if len(codecName) == 0 {
-		codecName = DefaultCodec
+		codecName = DefaultCodecName
 	}
 	ge, err := s.getGzipEncoder(codecName)
 	if err != nil {
@@ -248,50 +264,47 @@ func (s *socket) writeCacheBody(codecName string, gzipLevel int, body interface{
 
 // ReadPacket reads header and body from the connection.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (s *socket) ReadPacket(bodyMapping func(*Header) interface{}) (int64, error) {
+func (s *socket) ReadPacket(packet *Packet) error {
 	s.readMutex.Lock()
 	defer s.readMutex.Unlock()
 	var (
 		hErr, bErr error
-		hl, bl     int64
-		h          *Header
 		b          interface{}
 	)
-	h, hl, hErr = s.readHeader()
+	packet.HeaderLength, hErr = s.readHeader(packet.Header)
 	if hErr == nil {
-		b = bodyMapping(h)
+		b = packet.loadBody()
 	}
-	bl, bErr = s.readBody(b)
-	return hl + bl, errors.Merge(hErr, bErr)
+	packet.BodyLength, bErr = s.readBody(packet.Header, b)
+	packet.Length = packet.HeaderLength + packet.BodyLength
+	return errors.Merge(hErr, bErr)
 }
 
 // readHeader reads header from the connection.
 // readHeader can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call.
-func (s *socket) readHeader() (*Header, int64, error) {
+func (s *socket) readHeader(header *Header) (int64, error) {
 	s.bufReader.ResetCount()
 	var headerSize uint32
 	err := binary.Read(s.bufReader, binary.BigEndian, &headerSize)
 	if err != nil {
-		return nil, s.bufReader.Count(), err
+		return s.bufReader.Count(), err
 	}
 
-	header := new(Header)
 	s.limitReader.ResetLimit(int64(headerSize))
 	err = s.headerDecoder.Decode(header)
 	if err != nil {
-		return nil, s.bufReader.Count(), err
+		return s.bufReader.Count(), err
 	}
-	s.readedHeader = *header
-	return header, s.bufReader.Count(), err
+	return s.bufReader.Count(), err
 }
 
 // readBody reads body from the connection.
 // readBody can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call, and it must be called after calling the readHeader().
-func (s *socket) readBody(body interface{}) (int64, error) {
+func (s *socket) readBody(header *Header, body interface{}) (int64, error) {
 	s.bufReader.ResetCount()
 	var bodySize uint32
 	err := binary.Read(s.bufReader, binary.BigEndian, &bodySize)
@@ -323,13 +336,13 @@ func (s *socket) readBody(body interface{}) (int64, error) {
 		return s.bufReader.Count(), err
 
 	default:
-		codecName := s.readedHeader.Codec
+		codecName := header.Codec
 		if len(codecName) == 0 {
-			codecName = DefaultCodec
+			codecName = DefaultCodecName
 		}
 		gd, err := s.getGzipDecoder(codecName)
 		if err == nil {
-			err = gd.Decode(int(s.readedHeader.Gzip), body)
+			err = gd.Decode(int(header.Gzip), body)
 		}
 		return s.bufReader.Count(), err
 	}

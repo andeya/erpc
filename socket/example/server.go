@@ -24,30 +24,27 @@ func main() {
 			defer s.Close()
 			for {
 				// read request
-				var (
-					header *socket.Header
-					body   interface{}
-				)
-				n, err := s.ReadPacket(func(h *socket.Header) interface{} {
-					header = h
-					return &body
+				var packet = socket.GetPacket(func(_ *socket.Header) interface{} {
+					return new(map[string]string)
 				})
+				err = s.ReadPacket(packet)
 				if err != nil {
 					log.Printf("[SVR] read request err: %v", err)
 					return
 				} else {
-					log.Printf("[SVR] read request len: %d, header:%#v, body: %#v", n, header, body)
+					log.Printf("[SVR] read request: %v", packet)
 				}
 
 				// write response
-				header.StatusCode = 1
-				header.Status = "test error"
-				now := time.Now()
-				n, err = s.WritePacket(header, now)
+				packet.Header.StatusCode = -1
+				packet.Header.Status = "ok"
+				packet.Body = time.Now()
+				err = s.WritePacket(packet)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 				}
-				log.Printf("[SVR] write response len: %d, header: %#v, body: %#v", n, header, now)
+				log.Printf("[SVR] write response: %v", packet)
+				socket.PutPacket(packet)
 			}
 		}(socket.Wrap(conn))
 	}

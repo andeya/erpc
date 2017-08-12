@@ -36,19 +36,20 @@ type SvrContext interface {
 	// RealIp() string
 }
 
-// SocketCtx a context interface of Conn for one request/response.
+// SocketCtx a context interface of Conn for one request/outputonse.
 type SocketCtx interface {
 	socket.Socket
 }
 
 type context struct {
 	socket.Socket
-	ctxPublic  goutil.Map
-	reqHeader  *socket.Header
-	reqUri     *url.URL
-	reqQuery   url.Values
-	respHeader *socket.Header
-	plugin     PluginContainer
+	plugin       PluginContainer
+	ctxPublic    goutil.Map
+	inputHeader  *socket.Header
+	inputBody    *reflect.Value
+	inputUri     *url.URL
+	inputQuery   url.Values
+	outputHeader *socket.Header
 }
 
 var (
@@ -56,7 +57,7 @@ var (
 	_ SocketCtx  = new(context)
 )
 
-// newCtx creates a context of socket.Socket for one request/response.
+// newCtx creates a context of socket.Socket for one request/outputonse.
 func newCtx(s socket.Socket) *context {
 	ctx := &context{
 		Socket:    s,
@@ -82,14 +83,14 @@ func (c *context) PublicLen() int {
 }
 
 func (c *context) Uri() string {
-	return c.reqHeader.GetUri()
+	return c.inputHeader.GetUri()
 }
 
 func (c *context) getUri() *url.URL {
-	if c.reqUri == nil {
-		c.reqUri, _ = url.Parse(c.Uri())
+	if c.inputUri == nil {
+		c.inputUri, _ = url.Parse(c.Uri())
 	}
-	return c.reqUri
+	return c.inputUri
 }
 
 func (c *context) Path() string {
@@ -97,14 +98,14 @@ func (c *context) Path() string {
 }
 
 func (c *context) Query() url.Values {
-	if c.reqQuery == nil {
-		c.reqQuery = c.getUri().Query()
+	if c.inputQuery == nil {
+		c.inputQuery = c.getUri().Query()
 	}
-	return c.reqQuery
+	return c.inputQuery
 }
 
 func (c *context) SetCodec(codec string) {
-	c.respHeader.Codec = codec
+	c.outputHeader.Codec = codec
 }
 
 func (c *context) Ip() string {

@@ -26,7 +26,7 @@ type GzipEncoder struct {
 	gzipWriterMap map[int]*gzip.Writer
 	w             io.Writer
 	encMap        map[int]codec.Encoder
-	encMaker      codec.EncodeMaker
+	encMaker      func(io.Writer) codec.Encoder
 }
 
 func (s *socket) getGzipEncoder(codecName string) (*GzipEncoder, error) {
@@ -34,17 +34,17 @@ func (s *socket) getGzipEncoder(codecName string) (*GzipEncoder, error) {
 	if ok {
 		return g, nil
 	}
-	encMaker, err := codec.GetEncodeMaker(codecName)
+	c, err := codec.Get(codecName)
 	if err != nil {
 		return nil, err
 	}
 	w := s.cacheWriter
-	enc := encMaker(w)
+	enc := c.NewEncoder(w)
 	g = &GzipEncoder{
 		gzipWriterMap: s.gzipWriterMap,
 		w:             w,
 		encMap:        map[int]codec.Encoder{gzip.NoCompression: enc},
-		encMaker:      encMaker,
+		encMaker:      c.NewEncoder,
 	}
 	s.gzipEncodeMap[codecName] = g
 	return g, nil
@@ -82,7 +82,7 @@ type GzipDecoder struct {
 	r          utils.Reader
 	dec        codec.Decoder
 	gzDec      codec.Decoder
-	decMaker   codec.DecodeMaker
+	decMaker   func(io.Reader) codec.Decoder
 }
 
 func (s *socket) getGzipDecoder(codecName string) (*GzipDecoder, error) {
@@ -90,19 +90,18 @@ func (s *socket) getGzipDecoder(codecName string) (*GzipDecoder, error) {
 	if ok {
 		return g, nil
 	}
-	decMaker, err := codec.GetDecodeMaker(codecName)
+	c, err := codec.Get(codecName)
 	if err != nil {
 		return nil, err
 	}
 	r := s.limitReader
-	dec := decMaker(r)
 	gzipReader := s.gzipReader
 	g = &GzipDecoder{
-		dec:        dec,
-		gzDec:      decMaker(gzipReader),
-		gzipReader: gzipReader,
 		r:          r,
-		decMaker:   decMaker,
+		gzipReader: gzipReader,
+		decMaker:   c.NewDecoder,
+		dec:        c.NewDecoder(r),
+		gzDec:      c.NewDecoder(gzipReader),
 	}
 	s.gzipDecodeMap[codecName] = g
 	return g, nil
