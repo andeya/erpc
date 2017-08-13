@@ -1,13 +1,18 @@
-# teleport   [![GoDoc](https://godoc.org/github.com/tsuna/gohbase?status.png)](http://godoc.org/github.com/henrylee2cn/teleport)    ![teleport goreportcard](https://goreportcard.com/badge/github.com/henrylee2cn/teleport)
-<!--  [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg)](https://github.com/henrylee2cn/teleport/releases) -->
+# teleport [![build status](https://img.shields.io/travis/henrylee2cn/teleport/master.svg?style=flat-square)](https://travis-ci.org/henrylee2cn/teleport) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/teleport?style=flat-square)](http://goreportcard.com/report/henrylee2cn/teleport) [![github issues](https://img.shields.io/github/issues/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/teleport) 
+<!--  [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/releases) -->
 
 Teleport is a versatile, high-performance and flexible network communication package.
 
 It can be used for RPC, micro services, peer-peer, push services, game services and so on.
 
-## Status
 
-developing...
+## Version
+
+version | status | branch
+--------|--------|--------
+v2      | developing | [master](https://github.com/henrylee2cn/teleport/tree/master)
+v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
+
 
 ## Architecture
 

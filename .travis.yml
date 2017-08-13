@@ -1,0 +1,23 @@
+language: go
+os:
+  - linux
+  - osx
+go:
+  - go1.8
+  - tip
+go_import_path: github.com/henrylee2cn/teleport
+install:
+  - go get ./...
+script:
+  - go test -v -cover ./...
+after_script:
+  # socket test
+  - cd ./socket
+  - go get ./...
+  - go test -v -cover ./...
+  - cd ../
+  # socket examples
+  - cd ./example
+  - go get ./...
+  - go build client.go
+  - go build server.go
