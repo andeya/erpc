@@ -1,4 +1,5 @@
-# teleport   [![GoDoc](https://godoc.org/github.com/tsuna/gohbase?status.png)](http://godoc.org/github.com/henrylee2cn/teleport) [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg)](https://github.com/henrylee2cn/teleport/releases)
+# teleport   [![GoDoc](https://godoc.org/github.com/tsuna/gohbase?status.png)](http://godoc.org/github.com/henrylee2cn/teleport)    ![teleport goreportcard](https://goreportcard.com/badge/github.com/henrylee2cn/teleport)
+<!--  [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg)](https://github.com/henrylee2cn/teleport/releases) -->
 
 Teleport is a versatile, high-performance and flexible network communication package.
 
