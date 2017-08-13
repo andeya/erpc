@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "u2Z8c6Lkb3pNAAWPUpwo+h9g7mw=",
+			"path": "github.com/gogo/protobuf/proto",
+			"revision": "15e5f49f11b8f01e78c402755dfdb51088f3b253",
+			"revisionTime": "2017-08-05T07:10:05Z"
+		},
+		{
+			"checksumSHA1": "Z3rLqE/xWEcSO7DtOIShxulCcoc=",
+			"path": "github.com/henrylee2cn/goutil",
+			"revision": "1e9ceda79fd30f7392e722092f12c9183b20af79",
+			"revisionTime": "2017-08-05T10:55:36Z"
+		},
+		{
+			"checksumSHA1": "wLse5xjB4Ga0UXU16yIEjgMDWFI=",
+			"path": "github.com/henrylee2cn/goutil/errors",
+			"revision": "1e9ceda79fd30f7392e722092f12c9183b20af79",
+			"revisionTime": "2017-08-05T10:55:36Z"
+		}
+	],
+	"rootPath": "github.com/henrylee2cn/teleport"
+}

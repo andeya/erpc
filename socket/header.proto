@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package socket;
+
+message header {
+	string	id			= 1;
+	int32	type 		= 2;
+	string	uri 		= 3;
+	string	codec		= 4;
+	int32	gzip		= 5;
+	int32	status_code = 6;
+	string	status		= 7;
+}

@@ -1,26 +1,8 @@
-# teleport   [![GoDoc](https://godoc.org/github.com/tsuna/gohbase?status.png)](http://godoc.org/github.com/henrylee2cn/teleport) [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg)](https://github.com/henrylee2cn/teleport/releases)
-
-Teleport is a versatile, high-performance and flexible network communication package.
-
-It can be used for RPC, micro services, peer-peer, push services, game services and so on.
-
-## Status
-
-developing...
-
-## Architecture
-
-- Execution level
-
-```
-Conn -> Socket -> Session -> ApiContext -> Handler
-```
-
-## Socket
+# Socket
 
 A concise, powerful and high-performance TCP connection socket.
 
-### Feature
+## Feature
 
 - The server and client are peer-to-peer interfaces
 - With I/O buffer
@@ -32,7 +14,7 @@ A concise, powerful and high-performance TCP connection socket.
 - Each socket is assigned an id
 - Provides `Socket` hub, `Socket` pool and `*Packet` stack
 
-### Packet
+## Packet
 
 ```
 HeaderLength | Header | BodyLength | Body
@@ -43,7 +25,7 @@ HeaderLength | Header | BodyLength | Body
 - HeaderLength: uint32, 4 bytes, big endian
 - BodyLength: uint32, 4 bytes, big endian
 
-### Header
+## Header
 
 ```go
 type Header struct {
@@ -64,9 +46,9 @@ type Header struct {
 }
 ```
 
-### Demo
+## Demo
 
-#### server.go
+### server.go
 
 ```go
 package main
@@ -122,7 +104,7 @@ func main() {
 }
 ```
 
-#### client.go
+### client.go
 
 ```go
 package main

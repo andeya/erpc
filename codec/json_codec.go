@@ -12,7 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package teleport
+package codec
 
-type Client struct {
+import (
+	"encoding/json"
+	"io"
+)
+
+func init() {
+	Reg("json", new(JsonCodec))
+}
+
+type JsonCodec struct{}
+
+// NewEncoder returns a new json encoder that writes to w.
+func (*JsonCodec) NewEncoder(w io.Writer) Encoder {
+	return json.NewEncoder(w)
+}
+
+// NewDecoder returns a new json decoder that reads from r.
+//
+// The decoder introduces its own buffering and may
+// read data from r beyond the JSON values requested.
+func (*JsonCodec) NewDecoder(r io.Reader) Decoder {
+	return json.NewDecoder(r)
 }
