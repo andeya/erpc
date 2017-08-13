@@ -194,6 +194,7 @@ func (s *socket) WritePacket(packet *Packet) error {
 	err := s.writeHeader(packet.Header)
 	packet.HeaderLength = s.bufWriter.Count()
 	packet.Length = packet.HeaderLength
+	packet.BodyLength = 0
 	if err != nil {
 		return err
 	}

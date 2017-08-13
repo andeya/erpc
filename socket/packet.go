@@ -100,7 +100,11 @@ func (p *Packet) ResetBodyGetting(bodyGetting func(*Header) interface{}) {
 }
 
 func (p *Packet) loadBody() interface{} {
-	p.Body = p.bodyGetting(p.Header)
+	if p.bodyGetting != nil {
+		p.Body = p.bodyGetting(p.Header)
+	} else {
+		p.Body = nil
+	}
 	return p.Body
 }
 
