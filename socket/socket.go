@@ -153,21 +153,29 @@ func GetSocket(c net.Conn, id ...string) Socket {
 
 var socketPool = sync.Pool{
 	New: func() interface{} {
-		s := NewSocket()
+		s := NewSocket(nil)
 		s.fromPool = true
 		return s
 	},
 }
 
 // NewSocket wraps a net.Conn as a Socket.
-func NewSocket() *socket {
-	bufWriter := utils.NewBufioWriter(nil)
-	bufReader := utils.NewBufioReader(nil)
+func NewSocket(c net.Conn, id ...string) *socket {
+	var _id string
+	if len(id) == 0 && c != nil {
+		_id = c.RemoteAddr().String()
+	} else if len(id) > 0 {
+		_id = id[0]
+	}
+	bufWriter := utils.NewBufioWriter(c)
+	bufReader := utils.NewBufioReader(c)
 	cacheWriter := bytes.NewBuffer(nil)
 	limitReader := utils.LimitReader(bufReader, 0)
 	headerEncoder, _ := codec.NewEncoder(DefaultCodecName, cacheWriter)
 	headerDecoder, _ := codec.NewDecoder(DefaultCodecName, limitReader)
-	return &socket{
+	var s = &socket{
+		id:            _id,
+		Conn:          c,
 		bufWriter:     bufWriter,
 		bufReader:     bufReader,
 		limitReader:   limitReader,
@@ -179,6 +187,7 @@ func NewSocket() *socket {
 		gzipEncodeMap: make(map[string]*GzipEncoder),
 		gzipDecodeMap: make(map[string]*GzipDecoder),
 	}
+	return s
 }
 
 // WritePacket writes header and body to the connection.
@@ -381,7 +390,7 @@ func (s *socket) Reset(netConn net.Conn, id ...string) {
 	var _id string
 	if len(id) == 0 && netConn != nil {
 		_id = netConn.RemoteAddr().String()
-	} else {
+	} else if len(id) > 0 {
 		_id = id[0]
 	}
 	s.id = _id

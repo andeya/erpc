@@ -16,44 +16,20 @@ package teleport
 
 import (
 	"net"
-	"reflect"
-	"sync"
 
 	"github.com/henrylee2cn/teleport/socket"
 )
 
 type Session struct {
-	peer        *Peer
-	router      *Router
-	socket      socket.Socket
-	ctxLock     sync.Mutex
-	freeContext *context
-}
-
-func (s *Session) getContext() *context {
-	s.ctxLock.Lock()
-	ctx := s.freeContext
-	if ctx == nil {
-		ctx = newCtx(s)
-	} else {
-		s.freeContext = ctx.next
-		*ctx = context{}
-	}
-	s.ctxLock.Unlock()
-	return ctx
-}
-
-func (s *Session) freeContext(ctx *context) {
-	s.ctxLock.Lock()
-	ctx.next = s.freeContext
-	s.freeContext = ctx
-	s.ctxLock.Unlock()
+	peer   *Peer
+	apiMap *ApiMap
+	socket socket.Socket
 }
 
 func NewSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
 		peer:   peer,
-		router: peer.router,
+		apiMap: peer.apiMap,
 		socket: socket.NewSocket(conn, id...),
 	}
 	go s.serve()
@@ -61,21 +37,22 @@ func NewSession(peer *Peer, conn net.Conn, id ...string) *Session {
 }
 
 func (s *Session) serve() {
+	var ctx = s.peer.getContext()
 	defer func() {
 		recover()
+		s.peer.putContext(ctx)
 		s.Close()
 	}()
 	for {
-		var ctx = s.getContext()
 		// read request, response or push
-		n, err := s.socket.ReadPacket(ctx.loadBody)
+		err := s.socket.ReadPacket(ctx.input)
 		if err != nil {
 			return
 		} else {
 		}
 
 		// write response
-		_, err = s.WritePacket(header, now)
+		err = s.socket.WritePacket(ctx.output)
 		if err != nil {
 		}
 	}

@@ -16,21 +16,24 @@ package teleport
 
 import (
 	"net"
+	"sync"
 )
 
 // Peer peer which is server or client.
 type Peer struct {
-	id         string
-	plugin     PluginContainer
-	router     *Router
-	sessionHub *SessionHub
+	id          string
+	plugin      PluginContainer
+	apiMap      *ApiMap
+	sessionHub  *SessionHub
+	freeContext *ApiContext
+	ctxLock     sync.Mutex
 }
 
 // NewPeer creates a new peer.
-func NewPeer(id string, router *Router, plugin PluginContainer) *Peer {
+func NewPeer(id string, apiMap *ApiMap, plugin PluginContainer) *Peer {
 	var p = &Peer{
 		id:         id,
-		router:     router,
+		apiMap:     apiMap,
 		plugin:     plugin,
 		sessionHub: newSessionHub(),
 	}
@@ -42,4 +45,25 @@ func (p *Peer) NewSession(conn net.Conn, id ...string) *Session {
 	var session = NewSession(p, conn, id...)
 	p.sessionHub.Set(session.Id(), session)
 	return session
+}
+
+func (p *Peer) getContext() *ApiContext {
+	p.ctxLock.Lock()
+	ctx := p.freeContext
+	if ctx == nil {
+		ctx = newApiContext()
+	} else {
+		p.freeContext = ctx.next
+		*ctx = ApiContext{}
+	}
+	p.ctxLock.Unlock()
+	return ctx
+}
+
+func (p *Peer) putContext(ctx *ApiContext) {
+	p.ctxLock.Lock()
+	ctx.clean()
+	ctx.next = p.freeContext
+	p.freeContext = ctx
+	p.ctxLock.Unlock()
 }

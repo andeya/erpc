@@ -40,11 +40,13 @@ type (
 		defaultBytes []byte
 		numCalls     uint64
 		sync.Mutex   // protects counters
-		PluginContainer
 	}
 )
 
+var contextType = reflect.TypeOf(Context(nil))
+
 func newController(ctrlStruct interface{}, pluginContainer PluginContainer) *Controller {
+	reflect.TypeOf(ctrlStruct)
 	if pluginContainer == nil {
 		pluginContainer = NewPluginContainer()
 	}
@@ -83,13 +85,12 @@ func (c *Controller) makeHandlers() error {
 		if mtype.NumOut() != 2 {
 			return errors.Errorf("Handler: %s.%s needs two out arguments, but have %d", c.typ.String(), mname, mtype.NumOut())
 		}
-		// First arg must be a pointer.
-		replyType := mtype.Out(0)
 		// Reply type must be exported.
+		replyType := mtype.Out(0)
 		if !goutil.IsExportedOrBuiltinType(replyType) {
 			return errors.Errorf("Handler: %s.%s first reply type not exported: %s", c.typ.String(), mname, replyType)
 		}
-		// The return type of the method must be error.
+		// The return type of the method must be Error.
 		if returnType := mtype.Out(1); returnType != typeOfError {
 			return errors.Errorf("Handler: %s.%s second reply type %s not *Error", c.typ.String(), mname, returnType)
 		}
