@@ -12,11 +12,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("[CLI] dial err: %v", err)
 	}
-	s := socket.Wrap(conn)
+	s := socket.GetSocket(conn)
 	defer s.Close()
+	var packet = socket.GetPacket(nil)
+	defer socket.PutPacket(packet)
 	for i := 0; i < 10; i++ {
 		// write request
-		var packet = socket.GetPacket(nil)
+		packet.Reset(nil)
 		packet.Header.Id = "1"
 		packet.Header.Uri = "/a/b"
 		packet.Header.Codec = "json"
@@ -28,10 +30,9 @@ func main() {
 			continue
 		}
 		log.Printf("[CLI] write request: %v", packet)
-		socket.PutPacket(packet)
 
 		// read response
-		packet = socket.GetPacket(func(_ *socket.Header) interface{} {
+		packet.Reset(func(_ *socket.Header) interface{} {
 			return new(string)
 		})
 		err = s.ReadPacket(packet)
@@ -40,6 +41,5 @@ func main() {
 		} else {
 			log.Printf("[CLI] read response: %v", packet)
 		}
-		socket.PutPacket(packet)
 	}
 }

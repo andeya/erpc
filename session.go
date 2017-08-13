@@ -24,6 +24,7 @@ import (
 
 type Session struct {
 	peer        *Peer
+	router      *Router
 	socket      socket.Socket
 	ctxLock     sync.Mutex
 	freeContext *context
@@ -33,7 +34,7 @@ func (s *Session) getContext() *context {
 	s.ctxLock.Lock()
 	ctx := s.freeContext
 	if ctx == nil {
-		ctx = new(context)
+		ctx = newCtx(s)
 	} else {
 		s.freeContext = ctx.next
 		*ctx = context{}
@@ -52,22 +53,11 @@ func (s *Session) freeContext(ctx *context) {
 func NewSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
 		peer:   peer,
-		socket: socket.Wrap(conn, id...),
+		router: peer.router,
+		socket: socket.NewSocket(conn, id...),
 	}
 	go s.serve()
 	return s
-}
-
-func (c *context) readMapping(header *socket.Header) interface{} {
-	s.readedHeader = header
-	handler, ok := s.peer.router.lookup(header)
-	if ok {
-		var ptr interface{}
-		s.readedBody, ptr = handler.NewArg()
-		return ptr
-	}
-	s.readedBody = nil
-	return nil
 }
 
 func (s *Session) serve() {
@@ -78,14 +68,13 @@ func (s *Session) serve() {
 	for {
 		var ctx = s.getContext()
 		// read request, response or push
-		n, err := s.socket.ReadPacket(ctx.readMapping)
+		n, err := s.socket.ReadPacket(ctx.loadBody)
 		if err != nil {
 			return
 		} else {
 		}
 
 		// write response
-
 		_, err = s.WritePacket(header, now)
 		if err != nil {
 		}

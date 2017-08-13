@@ -138,26 +138,29 @@ type (
 		ctxPublic     goutil.Map
 		writeMutex    sync.Mutex // exclusive writer lock
 		readMutex     sync.Mutex // exclusive read lock
+		fromPool      bool
 	}
 )
 
 var _ net.Conn = Socket(nil)
 
-// Wrap wrap a net.Conn as a Socket.
-func Wrap(c net.Conn, id ...string) Socket {
-	obj := socketPool.Get().(*socket)
-	obj.Reset(c, id...)
-	return obj
+// GetSocket gets a Socket from pool, and reset it.
+func GetSocket(c net.Conn, id ...string) Socket {
+	s := socketPool.Get().(*socket)
+	s.Reset(c, id...)
+	return s
 }
 
 var socketPool = sync.Pool{
 	New: func() interface{} {
-		return newSocket()
+		s := NewSocket()
+		s.fromPool = true
+		return s
 	},
 }
 
-// newSocket new a net.Conn as a Socket.
-func newSocket() *socket {
+// NewSocket wraps a net.Conn as a Socket.
+func NewSocket() *socket {
 	bufWriter := utils.NewBufioWriter(nil)
 	bufReader := utils.NewBufioReader(nil)
 	cacheWriter := bytes.NewBuffer(nil)
@@ -348,47 +351,6 @@ func (s *socket) readBody(header *Header, body interface{}) (int64, error) {
 	}
 }
 
-// Reset reset net.Conn
-func (s *socket) Reset(netConn net.Conn, id ...string) {
-	if s.Conn != nil {
-		s.Conn.Close()
-	}
-	var _id string
-	if len(id) == 0 && netConn != nil {
-		_id = netConn.RemoteAddr().String()
-	} else {
-		_id = id[0]
-	}
-	s.id = _id
-	s.Conn = netConn
-	s.bufReader.Reset(netConn)
-	s.bufWriter.Reset(netConn)
-}
-
-// Close closes the connection socket.
-// Any blocked Read or Write operations will be unblocked and return errors.
-func (s *socket) Close() error {
-	var errs []error
-	errs = append(errs, s.Conn.Close())
-	s.Conn = nil
-	s.bufReader.Reset(nil)
-	s.bufWriter.Reset(nil)
-	s.closeGzipReader()
-	for _, gz := range s.gzipWriterMap {
-		errs = append(errs, gz.Close())
-	}
-	s.ctxPublic = nil
-	socketPool.Put(s)
-	return errors.Merge(errs...)
-}
-
-func (s *socket) closeGzipReader() {
-	defer func() {
-		recover()
-	}()
-	s.gzipReader.Close()
-}
-
 // Public returns temporary public data of Socket.
 func (s *socket) Public() goutil.Map {
 	if s.ctxPublic == nil {
@@ -408,4 +370,48 @@ func (s *socket) PublicLen() int {
 // Id returns the socket id.
 func (s *socket) Id() string {
 	return s.id
+}
+
+// Reset reset net.Conn
+func (s *socket) Reset(netConn net.Conn, id ...string) {
+	if s.Conn != nil {
+		s.Conn.Close()
+	}
+	var _id string
+	if len(id) == 0 && netConn != nil {
+		_id = netConn.RemoteAddr().String()
+	} else {
+		_id = id[0]
+	}
+	s.id = _id
+	s.Conn = netConn
+	s.bufReader.Reset(netConn)
+	s.bufWriter.Reset(netConn)
+}
+
+// Close closes the connection socket.
+// Any blocked Read or Write operations will be unblocked and return errors.
+// If it is from 'GetSocket()' function(a pool), return itself to pool.
+func (s *socket) Close() error {
+	var errs []error
+	errs = append(errs, s.Conn.Close())
+	s.Conn = nil
+	s.bufReader.Reset(nil)
+	s.bufWriter.Reset(nil)
+	s.closeGzipReader()
+	for _, gz := range s.gzipWriterMap {
+		errs = append(errs, gz.Close())
+	}
+	s.ctxPublic = nil
+	if s.fromPool {
+		socketPool.Put(s)
+	}
+	return errors.Merge(errs...)
+}
+
+func (s *socket) closeGzipReader() {
+	defer func() {
+		recover()
+	}()
+	s.gzipReader.Close()
 }

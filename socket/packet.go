@@ -30,16 +30,16 @@ var packetStack = new(struct {
 
 // GetPacket gets a *Packet form packet stack.
 // Note:
-//  getBodyFunc is only for writing packet;
-//  getBodyFunc should be nil when reading packet.
-func GetPacket(getBodyFunc func(*Header) interface{}) *Packet {
+//  bodyGetting is only for writing packet;
+//  bodyGetting should be nil when reading packet.
+func GetPacket(bodyGetting func(*Header) interface{}) *Packet {
 	packetStack.mu.Lock()
 	p := packetStack.freePacket
 	if p == nil {
-		p = newPacket(getBodyFunc)
+		p = NewPacket(bodyGetting)
 	} else {
 		packetStack.freePacket = p.next
-		p.reset(getBodyFunc)
+		p.Reset(bodyGetting)
 	}
 	packetStack.mu.Unlock()
 	return p
@@ -70,32 +70,41 @@ type Packet struct {
 	// Note:
 	//  only for writing packet;
 	//  should be nil when reading packet.
-	getBodyByHeader func(*Header) interface{} `json:"-"`
-	next            *Packet                   `json:"-"`
+	bodyGetting func(*Header) interface{} `json:"-"`
+	next        *Packet                   `json:"-"`
 }
 
-func newPacket(getBodyFunc func(*Header) interface{}) *Packet {
+// NewPacket creates a new *Packet.
+func NewPacket(bodyGetting func(*Header) interface{}) *Packet {
 	var p = &Packet{
-		Header:          new(Header),
-		getBodyByHeader: getBodyFunc,
+		Header:      new(Header),
+		bodyGetting: bodyGetting,
 	}
 	return p
 }
 
-func (p *Packet) reset(getBodyFunc func(*Header) interface{}) {
+// Reset resets itself.
+func (p *Packet) Reset(bodyGetting func(*Header) interface{}) {
+	p.next = nil
+	p.bodyGetting = bodyGetting
 	p.Header.Reset()
 	p.Body = nil
-	p.getBodyByHeader = getBodyFunc
 	p.HeaderLength = 0
 	p.BodyLength = 0
 	p.Length = 0
 }
 
+// ResetBodyGetting resets the function of geting body.
+func (p *Packet) ResetBodyGetting(bodyGetting func(*Header) interface{}) {
+	p.bodyGetting = bodyGetting
+}
+
 func (p *Packet) loadBody() interface{} {
-	p.Body = p.getBodyByHeader(p.Header)
+	p.Body = p.bodyGetting(p.Header)
 	return p.Body
 }
 
+// String returns printing text.
 func (p *Packet) String() string {
 	b, _ := json.MarshalIndent(p, "", "  ")
 	return goutil.BytesToString(b)

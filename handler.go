@@ -36,7 +36,6 @@ type (
 		structType   reflect.Type
 		method       reflect.Method
 		argType      reflect.Type
-		argTypeIsPtr bool
 		replyType    reflect.Type
 		defaultBytes []byte
 		numCalls     uint64
@@ -72,10 +71,13 @@ func (c *Controller) makeHandlers() error {
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
 			return errors.Errorf("Handler: %s.%s receiver need be a struct pointer: %s", c.typ.String(), mname, structType)
 		}
-		// First arg need be exported or builtin.
+		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
 			return errors.Errorf("Handler: %s.%s args type not exported: %s", c.typ.String(), mname, argType)
+		}
+		if argType.Kind() != reflect.Ptr {
+			return errors.Errorf("Handler: %s.%s args type need be a pointer: %s", c.typ.String(), mname, argType)
 		}
 		// Method needs two outs: reply error.
 		if mtype.NumOut() != 2 {
@@ -92,27 +94,16 @@ func (c *Controller) makeHandlers() error {
 			return errors.Errorf("Handler: %s.%s second reply type %s not *Error", c.typ.String(), mname, returnType)
 		}
 		c.handlers[mname] = &Handler{
-			method:       method,
-			argType:      argType,
-			argTypeIsPtr: argType.Kind() == reflect.Ptr,
-			replyType:    replyType,
+			method:    method,
+			argType:   argType,
+			replyType: replyType,
 		}
 	}
 	return nil
 }
 
-func (h *Handler) NewArg() (raw *reflect.Value, ptr interface{}) {
-	if h.argTypeIsPtr {
-		_ptr := reflect.New(h.argType.Elem())
-		ptr = _ptr.Interface()
-		raw = &_ptr
-	} else {
-		_ptr := reflect.New(h.argType)
-		ptr = _ptr.Interface()
-		_raw := _ptr.Elem()
-		raw = &_raw
-	}
-	return
+func (h *Handler) NewArg() reflect.Value {
+	return reflect.New(h.argType.Elem())
 }
 
 // Precompute the reflect type for error. Can't use error directly

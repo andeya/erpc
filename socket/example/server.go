@@ -46,6 +46,6 @@ func main() {
 				log.Printf("[SVR] write response: %v", packet)
 				socket.PutPacket(packet)
 			}
-		}(socket.Wrap(conn))
+		}(socket.GetSocket(conn))
 	}
 }

@@ -42,14 +42,13 @@ type SocketCtx interface {
 }
 
 type context struct {
-	socket.Socket
-	plugin       PluginContainer
-	ctxPublic    goutil.Map
-	inputHeader  *socket.Header
-	inputBody    *reflect.Value
-	inputUri     *url.URL
-	inputQuery   url.Values
-	outputHeader *socket.Header
+	session    *Session
+	ctxPublic  goutil.Map
+	handler    *Handler
+	packet     *socket.Packet
+	inputBody  reflect.Value
+	inputUri   *url.URL
+	inputQuery url.Values
 }
 
 var (
@@ -58,18 +57,27 @@ var (
 )
 
 // newCtx creates a context of socket.Socket for one request/outputonse.
-func newCtx(s socket.Socket) *context {
-	ctx := &context{
-		Socket:    s,
-		ctxPublic: goutil.RwMap(),
-	}
+func newCtx(s *Session) *context {
+	ctx := new(context)
+	ctx.reset(s)
+	return ctx
+}
+
+func (c *context) reset(s *Session) {
+	c.session = s
+	c.ctxPublic = goutil.RwMap()
 	if s.PublicLen() > 0 {
-		s.Public().Range(func(key, value interface{}) bool {
-			ctx.ctxPublic.Store(key, value)
+		s.socket.Public().Range(func(key, value interface{}) bool {
+			c.ctxPublic.Store(key, value)
 			return true
 		})
 	}
-	return ctx
+	ctx.packet = socket.NewPacket(ctx.loadBody)
+}
+
+func (c *context) free() {
+	c.packet.Reset(nil)
+	c.ctxPublic = nil
 }
 
 // Public returns temporary public data of Conn Context.
@@ -110,4 +118,14 @@ func (c *context) SetCodec(codec string) {
 
 func (c *context) Ip() string {
 	return c.Socket.RemoteAddr().String()
+}
+
+func (c *context) loadBody(header *socket.Header) interface{} {
+	var ok bool
+	c.handler, ok = c.session.router.lookup(header)
+	if ok {
+		c.inputBody = handler.NewArg()
+		return c.inputBody.Interface()
+	}
+	return nil
 }

@@ -32,7 +32,7 @@ func TestSocket(t *testing.T) {
 			if err != nil {
 				t.Fatalf("[SVR] accept err: %v", err)
 			}
-			s := Wrap(conn)
+			s := GetSocket(conn)
 			defer s.Close()
 			t.Logf("[SVR] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
@@ -68,11 +68,12 @@ func TestSocket(t *testing.T) {
 		if err != nil {
 			t.Fatalf("[CLI] dial err: %v", err)
 		}
-		s := Wrap(socket)
+		s := GetSocket(socket)
 		t.Logf("[CLI] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
-		// write request
 		var packet = GetPacket(nil)
+
+		// write request
 		packet.Header.Id = "1"
 		packet.Header.Uri = "/a/b"
 		packet.Header.Codec = "json"
@@ -83,10 +84,9 @@ func TestSocket(t *testing.T) {
 			t.Fatalf("[CLI] write request err: %v", err)
 		}
 		t.Logf("[CLI] write request: %v", packet)
-		PutPacket(packet)
 
 		// read response
-		packet = GetPacket(func(_ *Header) interface{} {
+		packet.Reset(func(_ *Header) interface{} {
 			return new(string)
 		})
 		err = s.ReadPacket(packet)
@@ -95,6 +95,7 @@ func TestSocket(t *testing.T) {
 		} else {
 			t.Logf("[CLI] read response: %v", packet)
 		}
+
 		PutPacket(packet)
 	}
 }
