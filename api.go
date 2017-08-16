@@ -25,25 +25,14 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-type (
-	ApiMap struct {
-		apimap map[string]*ApiType
-	}
-	ApiType struct {
-		originStruct    reflect.Type
-		method          reflect.Method
-		arg             reflect.Type
-		pluginContainer PluginContainer
-	}
-)
-
-func (m *ApiMap) set(uri string, apiType *ApiType) {
-	m.apimap[uri] = apiType
-}
-
-func (m *ApiMap) get(uri string) (*ApiType, bool) {
-	apiType, ok := m.apimap[uri]
-	return apiType, ok
+// ApiType api type info
+type ApiType struct {
+	name            string
+	originStruct    reflect.Type
+	method          reflect.Method
+	arg             reflect.Type
+	reply           reflect.Type // only for api doc
+	pluginContainer PluginContainer
 }
 
 // Context server controller ApiContext.
