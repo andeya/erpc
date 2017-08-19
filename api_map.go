@@ -51,23 +51,23 @@ func (m *ApiMap) Group(pathPrefix string, plugins ...Plugin) *ApiMap {
 }
 
 // Reg registers api.
-func (m *ApiMap) Reg(pathPrefix string, ctrlStruct Context, plugin ...Plugin) error {
+func (m *ApiMap) Reg(pathPrefix string, ctrlStruct Context, plugin ...Plugin) {
 	apiTyps, err := parseApis(
 		path.Join(m.pathPrefix, pathPrefix),
 		ctrlStruct,
 		&pluginContainer{append(m.plugins, plugin...)},
 	)
 	if err != nil {
-		return err
+		Fatalf("%v", err)
 	}
 	for _, apiType := range apiTyps {
 		name := path.Join(pathPrefix, apiType.name)
 		if _, ok := m.apimap[name]; ok {
-			return errors.New("There is a route conflict: " + name)
+			Fatalf("There is a route conflict: %s", name)
 		}
 		m.apimap[name] = apiType
+		Printf("register api: %s", name)
 	}
-	return nil
 }
 
 // var contextType = reflect.TypeOf(Context(nil))

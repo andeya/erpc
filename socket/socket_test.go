@@ -64,11 +64,11 @@ func TestSocket(t *testing.T) {
 
 	// client
 	{
-		socket, err := net.Dial("tcp", "127.0.0.1:8000")
+		conn, err := net.Dial("tcp", "127.0.0.1:8000")
 		if err != nil {
 			t.Fatalf("[CLI] dial err: %v", err)
 		}
-		s := GetSocket(socket)
+		s := GetSocket(conn)
 		t.Logf("[CLI] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
 		var packet = GetPacket(nil)

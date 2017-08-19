@@ -19,7 +19,6 @@ import (
 	"reflect"
 
 	"github.com/henrylee2cn/goutil"
-	// "github.com/henrylee2cn/goutil/errors"
 
 	"github.com/henrylee2cn/teleport/socket"
 )
@@ -163,4 +162,17 @@ func (c *ApiContext) initOutput() {
 	c.output.Header.Uri = c.input.Header.Uri
 	c.output.Header.Codec = c.input.Header.Codec
 	c.output.Header.Gzip = c.input.Header.Gzip
+}
+
+func (c *ApiContext) handle() {
+	rets := c.apiType.method.Func.Call([]reflect.Value{c.arg})
+	c.output.Body = rets[0].Interface()
+	e := rets[0].Interface().(Xerror)
+	if e == nil {
+		c.output.Header.StatusCode = StatusOK
+		c.output.Header.Status = StatusText(StatusOK)
+	} else {
+		c.output.Header.StatusCode = e.Code()
+		c.output.Header.Status = e.Text()
+	}
 }

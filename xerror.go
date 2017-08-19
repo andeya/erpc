@@ -23,7 +23,7 @@ import (
 // Xerror error for Handler.
 type Xerror interface {
 	// return error code
-	Code() uint16
+	Code() int32
 	// return error text
 	Text() string
 	// return json string, implement error interface
@@ -31,7 +31,7 @@ type Xerror interface {
 }
 
 // NewError creates a new Error interface.
-func NewError(code uint16, text string) Xerror {
+func NewError(code int32, text string) Xerror {
 	return &err{
 		code: code,
 		text: text,
@@ -39,12 +39,12 @@ func NewError(code uint16, text string) Xerror {
 }
 
 type err struct {
-	code uint16
+	code int32
 	text string
 	json string
 }
 
-func (e *err) Code() uint16 {
+func (e *err) Code() int32 {
 	return e.code
 }
 

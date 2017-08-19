@@ -38,8 +38,27 @@ func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	return s
 }
 
+func (s *Session) Id() string {
+	return s.socket.Id()
+}
+
+// TODO
+func (s *Session) Pull(uri string, args interface{}, reply interface{}) error {
+	return nil
+}
+
+// TODO
+func (s *Session) Push() error {
+	return nil
+}
+
+func (s *Session) Close() error {
+	return s.socket.Close()
+}
+
+// TODO
 func (s *Session) serve() {
-	var ctx = s.peer.getContext()
+	var ctx = s.peer.getContext(s)
 	defer func() {
 		recover()
 		s.peer.putContext(ctx)
@@ -57,28 +76,31 @@ func (s *Session) serve() {
 		}
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
+			Debugf("teleport: ReadPacket: %s", err.Error())
 			return
-		} else {
 		}
-
-		// write response
-		if writeTimeout > 0 {
-			s.socket.SetWriteDeadline(coarsetime.CoarseTimeNow().Add(writeTimeout))
-		}
-		err = s.socket.WritePacket(ctx.output)
-		if err != nil {
+		switch ctx.input.Header.Type {
+		case TypeRequest:
+			// handle
+			go ctx.handle()
+			ctx.output.Header.Type = TypeResponse
+			// write response
+			if writeTimeout > 0 {
+				s.socket.SetWriteDeadline(coarsetime.CoarseTimeNow().Add(writeTimeout))
+			}
+			err = s.socket.WritePacket(ctx.output)
+			if err != nil {
+				Debugf("teleport: WritePacket: %s", err.Error())
+				return
+			}
 		}
 	}
 }
 
-func (s *Session) Id() string {
-	return s.socket.Id()
+func (s *Session) read() {
+
 }
 
-func (s *Session) Close() error {
-	return s.socket.Close()
-}
+func (s *Session) write() {
 
-func (s *Session) push()     {}
-func (s *Session) request()  {}
-func (s *Session) response() {}
+}
