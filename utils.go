@@ -26,8 +26,8 @@ func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 			return nil, err
 		}
 		tlsConfig = &tls.Config{
-			Certificates:             []tls.Certificate{cert},
-			NextProtos:               []string{"http/1.1", "h2"},
+			Certificates: []tls.Certificate{cert},
+			// NextProtos:               []string{"http/1.1", "h2"},
 			PreferServerCipherSuites: true,
 		}
 	}
