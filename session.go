@@ -17,6 +17,8 @@ package teleport
 import (
 	"net"
 
+	"github.com/henrylee2cn/goutil/coarsetime"
+
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -26,10 +28,10 @@ type Session struct {
 	socket socket.Socket
 }
 
-func NewSession(peer *Peer, conn net.Conn, id ...string) *Session {
+func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
 		peer:   peer,
-		apiMap: peer.apiMap,
+		apiMap: peer.ApiMap,
 		socket: socket.NewSocket(conn, id...),
 	}
 	go s.serve()
@@ -43,15 +45,26 @@ func (s *Session) serve() {
 		s.peer.putContext(ctx)
 		s.Close()
 	}()
+	var (
+		err          error
+		readTimeout  = s.peer.readTimeout
+		writeTimeout = s.peer.writeTimeout
+	)
 	for {
 		// read request, response or push
-		err := s.socket.ReadPacket(ctx.input)
+		if readTimeout > 0 {
+			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
+		}
+		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
 			return
 		} else {
 		}
 
 		// write response
+		if writeTimeout > 0 {
+			s.socket.SetWriteDeadline(coarsetime.CoarseTimeNow().Add(writeTimeout))
+		}
 		err = s.socket.WritePacket(ctx.output)
 		if err != nil {
 		}

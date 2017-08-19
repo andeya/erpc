@@ -6,7 +6,7 @@ import (
 
 // Demo controller
 type Demo struct {
-	SvrContext
+	SrvContext
 }
 
 func (d *Demo) Home(args string) (reply string, err error) {

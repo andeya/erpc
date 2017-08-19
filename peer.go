@@ -17,34 +17,39 @@ package teleport
 import (
 	"net"
 	"sync"
+	"time"
 )
 
 // Peer peer which is server or client.
 type Peer struct {
-	id          string
-	plugin      PluginContainer
-	apiMap      *ApiMap
-	sessionHub  *SessionHub
-	freeContext *ApiContext
-	ctxLock     sync.Mutex
+	*ApiMap
+	id              string
+	pluginContainer PluginContainer
+	sessionHub      *SessionHub
+	freeContext     *ApiContext
+	readTimeout     time.Duration // readdeadline for underlying net.Conn
+	writeTimeout    time.Duration // writedeadline for underlying net.Conn
+	closeCh         chan struct{}
+	ctxLock         sync.Mutex
 }
 
 // NewPeer creates a new peer.
-func NewPeer(id string, apiMap *ApiMap, plugin PluginContainer) *Peer {
+func NewPeer(id string, readTimeout, writeTimeout time.Duration) *Peer {
 	var p = &Peer{
-		id:         id,
-		apiMap:     apiMap,
-		plugin:     plugin,
-		sessionHub: newSessionHub(),
+		id:              id,
+		ApiMap:          newApiMap(),
+		pluginContainer: newPluginContainer(),
+		sessionHub:      newSessionHub(),
+		readTimeout:     readTimeout,
+		writeTimeout:    writeTimeout,
+		closeCh:         make(chan struct{}),
 	}
 	return p
 }
 
-// NewSession returns a session with connection.
-func (p *Peer) NewSession(conn net.Conn, id ...string) *Session {
-	var session = NewSession(p, conn, id...)
+func (p *Peer) ServeConn(conn net.Conn, id ...string) {
+	var session = newSession(p, conn, id...)
 	p.sessionHub.Set(session.Id(), session)
-	return session
 }
 
 func (p *Peer) getContext() *ApiContext {
@@ -66,4 +71,8 @@ func (p *Peer) putContext(ctx *ApiContext) {
 	ctx.next = p.freeContext
 	p.freeContext = ctx
 	p.ctxLock.Unlock()
+}
+
+func (p *Peer) Close() {
+	close(p.closeCh)
 }

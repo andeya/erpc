@@ -19,7 +19,7 @@ v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
 - Execution level
 
 ```
-Conn -> Socket -> Session -> ApiContext -> Handler
+Peer -> Conn -> Socket -> Session -> Api -> Context
 ```
 
 ## Socket

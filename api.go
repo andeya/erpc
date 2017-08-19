@@ -15,7 +15,6 @@
 package teleport
 
 import (
-	"net"
 	"net/url"
 	"reflect"
 
@@ -38,30 +37,33 @@ type ApiType struct {
 // Context server controller ApiContext.
 // For example:
 //  type Home struct{ Context }
-type Context interface {
-	Uri() string
-	Path() string
-	Query() url.Values
-	Public() goutil.Map
-	PublicLen() int
-	SetCodec(string)
-	RemoteAddr() net.Addr
-	// RealIp() string
-}
+type (
+	Context interface {
+		Uri() string
+		Path() string
+		Query() url.Values
+		Public() goutil.Map
+		PublicLen() int
+		SetCodec(string)
+		Ip() string
+		// RealIp() string
+	}
+	ApiContext struct {
+		session      *Session
+		input        *socket.Packet
+		output       *socket.Packet
+		apiType      *ApiType
+		originStruct reflect.Value
+		method       reflect.Method
+		arg          reflect.Value
+		uri          *url.URL
+		query        url.Values
+		public       goutil.Map
+		next         *ApiContext
+	}
+)
 
-type ApiContext struct {
-	session      *Session
-	input        *socket.Packet
-	output       *socket.Packet
-	apiType      *ApiType
-	originStruct reflect.Value
-	method       reflect.Method
-	arg          reflect.Value
-	uri          *url.URL
-	query        url.Values
-	public       goutil.Map
-	next         *ApiContext
-}
+var _ Context = new(ApiContext)
 
 // newApiContext creates a ApiContext for one request/response or push.
 func newApiContext() *ApiContext {
@@ -131,8 +133,8 @@ func (c *ApiContext) SetCodec(codec string) {
 	c.output.Header.Codec = codec
 }
 
-func (c *ApiContext) RemoteAddr() net.Addr {
-	return c.session.socket.RemoteAddr()
+func (c *ApiContext) Ip() string {
+	return c.session.socket.RemoteAddr().String()
 }
 
 func (c *ApiContext) binding(header *socket.Header) interface{} {

@@ -66,8 +66,8 @@ type (
 	}
 )
 
-// NewPluginContainer new a plugin container.
-func NewPluginContainer() PluginContainer {
+// newPluginContainer new a plugin container.
+func newPluginContainer() PluginContainer {
 	return new(pluginContainer)
 }
 

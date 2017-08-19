@@ -22,18 +22,21 @@ import (
 	"github.com/henrylee2cn/goutil/errors"
 )
 
-type (
-	// Router
-	Router interface {
+// ApiMap api map, that is, the router
+type ApiMap struct {
+	apimap map[string]*ApiType
+	// only for register router
+	pathPrefix string
+	plugins    []Plugin
+}
+
+func newApiMap() *ApiMap {
+	return &ApiMap{
+		apimap:     make(map[string]*ApiType),
+		pathPrefix: "/",
+		plugins:    make([]Plugin, 0),
 	}
-	// ApiMap api map, that is, the router
-	ApiMap struct {
-		apimap map[string]*ApiType
-		// only for register router
-		pathPrefix string
-		plugins    []Plugin
-	}
-)
+}
 
 // Group add api group.
 func (m *ApiMap) Group(pathPrefix string, plugins ...Plugin) *ApiMap {
@@ -47,6 +50,7 @@ func (m *ApiMap) Group(pathPrefix string, plugins ...Plugin) *ApiMap {
 	}
 }
 
+// Reg registers api.
 func (m *ApiMap) Reg(pathPrefix string, ctrlStruct Context, plugin ...Plugin) error {
 	apiTyps, err := parseApis(
 		path.Join(m.pathPrefix, pathPrefix),
@@ -68,9 +72,9 @@ func (m *ApiMap) Reg(pathPrefix string, ctrlStruct Context, plugin ...Plugin) er
 
 // var contextType = reflect.TypeOf(Context(nil))
 
-// Precompute the reflect type for error. Can't use error directly
+// Precompute the reflect type for Xerror interface. Can't use error directly
 // because Typeof takes an empty interface value. This is annoying.
-var typeOfError = reflect.TypeOf((*Error)(nil)).Elem()
+var typeOfError = reflect.TypeOf((Xerror)(nil))
 
 func parseApis(pathPrefix string, ctrlStruct Context, pluginContainer PluginContainer) ([]*ApiType, error) {
 	var (
@@ -78,7 +82,7 @@ func parseApis(pathPrefix string, ctrlStruct Context, pluginContainer PluginCont
 		apiTypes = make([]*ApiType, 0, 1)
 	)
 	if pluginContainer == nil {
-		pluginContainer = NewPluginContainer()
+		pluginContainer = newPluginContainer()
 	}
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)

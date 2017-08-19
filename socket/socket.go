@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/henrylee2cn/goutil"
@@ -138,11 +139,20 @@ type (
 		ctxPublic     goutil.Map
 		writeMutex    sync.Mutex // exclusive writer lock
 		readMutex     sync.Mutex // exclusive read lock
+		curState      int32
 		fromPool      bool
 	}
 )
 
+const (
+	idle        int32 = 0
+	activeClose int32 = 1
+)
+
 var _ net.Conn = Socket(nil)
+
+// ErrSocketClosed socket closed error.
+var ErrSocketClosed = errors.New("socket: Socket closed")
 
 // GetSocket gets a Socket from pool, and reset it.
 func GetSocket(c net.Conn, id ...string) Socket {
@@ -194,13 +204,18 @@ func NewSocket(c net.Conn, id ...string) *socket {
 // WritePacket can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // Note: must be safe for concurrent use by multiple goroutines.
-func (s *socket) WritePacket(packet *Packet) error {
+func (s *socket) WritePacket(packet *Packet) (err error) {
 	s.writeMutex.Lock()
-	defer s.writeMutex.Unlock()
+	defer func() {
+		if err != nil && atomic.LoadInt32(&s.curState) == activeClose {
+			err = ErrSocketClosed
+		}
+		s.writeMutex.Unlock()
+	}()
 	s.bufWriter.ResetCount()
 
 	// write header
-	err := s.writeHeader(packet.Header)
+	err = s.writeHeader(packet.Header)
 	packet.HeaderLength = s.bufWriter.Count()
 	packet.Length = packet.HeaderLength
 	packet.BodyLength = 0
@@ -287,9 +302,14 @@ func (s *socket) ReadPacket(packet *Packet) error {
 	packet.HeaderLength, hErr = s.readHeader(packet.Header)
 	if hErr == nil {
 		b = packet.loadBody()
+	} else if atomic.LoadInt32(&s.curState) == activeClose {
+		return ErrSocketClosed
 	}
 	packet.BodyLength, bErr = s.readBody(packet.Header, b)
 	packet.Length = packet.HeaderLength + packet.BodyLength
+	if bErr != nil && atomic.LoadInt32(&s.curState) == activeClose {
+		return ErrSocketClosed
+	}
 	return errors.Merge(hErr, bErr)
 }
 
@@ -384,9 +404,12 @@ func (s *socket) Id() string {
 
 // Reset reset net.Conn
 func (s *socket) Reset(netConn net.Conn, id ...string) {
+	atomic.StoreInt32(&s.curState, activeClose)
 	if s.Conn != nil {
 		s.Conn.Close()
 	}
+	s.readMutex.Lock()
+	s.writeMutex.Lock()
 	var _id string
 	if len(id) == 0 && netConn != nil {
 		_id = netConn.RemoteAddr().String()
@@ -397,14 +420,22 @@ func (s *socket) Reset(netConn net.Conn, id ...string) {
 	s.Conn = netConn
 	s.bufReader.Reset(netConn)
 	s.bufWriter.Reset(netConn)
+	atomic.StoreInt32(&s.curState, idle)
+	s.readMutex.Unlock()
+	s.writeMutex.Unlock()
 }
 
 // Close closes the connection socket.
 // Any blocked Read or Write operations will be unblocked and return errors.
 // If it is from 'GetSocket()' function(a pool), return itself to pool.
 func (s *socket) Close() error {
+	atomic.StoreInt32(&s.curState, activeClose)
 	var errs []error
-	errs = append(errs, s.Conn.Close())
+	if s.Conn != nil {
+		errs = append(errs, s.Conn.Close())
+	}
+	s.readMutex.Lock()
+	s.writeMutex.Lock()
 	s.Conn = nil
 	s.bufReader.Reset(nil)
 	s.bufWriter.Reset(nil)
@@ -416,6 +447,8 @@ func (s *socket) Close() error {
 	if s.fromPool {
 		socketPool.Put(s)
 	}
+	s.readMutex.Unlock()
+	s.writeMutex.Unlock()
 	return errors.Merge(errs...)
 }
 

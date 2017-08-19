@@ -20,8 +20,8 @@ import (
 	"github.com/henrylee2cn/goutil"
 )
 
-// Error error for Handler.
-type Error interface {
+// Xerror error for Handler.
+type Xerror interface {
 	// return error code
 	Code() uint16
 	// return error text
@@ -31,7 +31,7 @@ type Error interface {
 }
 
 // NewError creates a new Error interface.
-func NewError(code uint16, text string) Error {
+func NewError(code uint16, text string) Xerror {
 	return &err{
 		code: code,
 		text: text,
