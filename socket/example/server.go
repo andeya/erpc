@@ -36,7 +36,9 @@ func main() {
 				}
 
 				// write response
-				packet.Header.StatusCode = -1
+				packet.SetHeaderCodecByName("json")
+				packet.SetBodyCodecByName("json")
+				packet.Header.StatusCode = 200
 				packet.Header.Status = "ok"
 				packet.Body = time.Now()
 				err = s.WritePacket(packet)

@@ -18,10 +18,13 @@ func main() {
 	defer socket.PutPacket(packet)
 	for i := 0; i < 10; i++ {
 		// write request
-		packet.Reset(nil)
+		packet.Reset(
+			nil,
+			socket.WithHeaderCodec("json"),
+			socket.WithBodyCodec("json"),
+		)
 		packet.Header.Id = "1"
 		packet.Header.Uri = "/a/b"
-		packet.Header.Codec = "json"
 		packet.Header.Gzip = 5
 		packet.Body = map[string]string{"a": "A"}
 		err = s.WritePacket(packet)

@@ -26,18 +26,20 @@ import (
 // Peer peer which is server or client.
 type Peer struct {
 	*ApiMap
-	id              string
-	pluginContainer PluginContainer
-	sessionHub      *SessionHub
-	idMaker         IdMaker
-	closeCh         chan struct{}
-	freeContext     *ApiContext
-	ctxLock         sync.Mutex
-	readTimeout     time.Duration // readdeadline for underlying net.Conn
-	writeTimeout    time.Duration // writedeadline for underlying net.Conn
-	tlsConfig       *tls.Config
-	slowApiDuration time.Duration
-	mu              sync.Mutex
+	id               string
+	pluginContainer  PluginContainer
+	sessionHub       *SessionHub
+	idMaker          IdMaker
+	closeCh          chan struct{}
+	freeContext      *ApiContext
+	ctxLock          sync.Mutex
+	readTimeout      time.Duration // readdeadline for underlying net.Conn
+	writeTimeout     time.Duration // writedeadline for underlying net.Conn
+	tlsConfig        *tls.Config
+	slowApiDuration  time.Duration
+	defaultCodec     string
+	defaultGzipLevel int32
+	mu               sync.Mutex
 
 	// for client role
 	dialTimeout time.Duration
@@ -53,17 +55,19 @@ var ErrListenClosed = errors.New("teleport: listener closed")
 // NewPeer creates a new peer.
 func NewPeer(cfg *Config) *Peer {
 	var p = &Peer{
-		id:              cfg.Id,
-		ApiMap:          newApiMap(),
-		pluginContainer: newPluginContainer(),
-		idMaker:         newIdMaker(),
-		sessionHub:      newSessionHub(),
-		readTimeout:     cfg.ReadTimeout,
-		writeTimeout:    cfg.WriteTimeout,
-		closeCh:         make(chan struct{}),
-		slowApiDuration: cfg.SlowApiDuration,
-		dialTimeout:     cfg.DialTimeout,
-		listenAddrs:     cfg.ListenAddrs,
+		id:               cfg.Id,
+		ApiMap:           newApiMap(),
+		pluginContainer:  newPluginContainer(),
+		idMaker:          newIdMaker(),
+		sessionHub:       newSessionHub(),
+		readTimeout:      cfg.ReadTimeout,
+		writeTimeout:     cfg.WriteTimeout,
+		closeCh:          make(chan struct{}),
+		slowApiDuration:  cfg.SlowApiDuration,
+		dialTimeout:      cfg.DialTimeout,
+		listenAddrs:      cfg.ListenAddrs,
+		defaultCodec:     cfg.DefaultCodec,
+		defaultGzipLevel: cfg.DefaultGzipLevel,
 	}
 	return p
 }

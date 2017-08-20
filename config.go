@@ -20,12 +20,14 @@ import (
 
 // Config peer config
 type Config struct {
-	Id              string
-	ReadTimeout     time.Duration // readdeadline for underlying net.Conn
-	WriteTimeout    time.Duration // writedeadline for underlying net.Conn
-	TlsCertFile     string
-	TlsKeyFile      string
-	SlowApiDuration time.Duration // ns,µs,ms,s ...
+	Id               string
+	ReadTimeout      time.Duration // readdeadline for underlying net.Conn
+	WriteTimeout     time.Duration // writedeadline for underlying net.Conn
+	TlsCertFile      string
+	TlsKeyFile       string
+	SlowApiDuration  time.Duration // ns,µs,ms,s ...
+	DefaultCodec     string
+	DefaultGzipLevel int32
 
 	DialTimeout time.Duration // for client role
 	ListenAddrs []string      // for server role

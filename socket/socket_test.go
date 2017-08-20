@@ -48,7 +48,7 @@ func TestSocket(t *testing.T) {
 			}
 
 			// write response
-			packet.Header.StatusCode = -1
+			packet.Header.StatusCode = 200
 			packet.Header.Status = "ok"
 			packet.Body = time.Now()
 			err = s.WritePacket(packet)
@@ -71,12 +71,15 @@ func TestSocket(t *testing.T) {
 		s := GetSocket(conn)
 		t.Logf("[CLI] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
-		var packet = GetPacket(nil)
+		var packet = GetPacket(
+			nil,
+			WithHeaderCodec("json"),
+			WithBodyCodec("json"),
+		)
 
 		// write request
 		packet.Header.Id = "1"
 		packet.Header.Uri = "/a/b"
-		packet.Header.Codec = "json"
 		packet.Header.Gzip = 5
 		packet.Body = map[string]string{"a": "A"}
 		err = s.WritePacket(packet)

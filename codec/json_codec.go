@@ -20,10 +20,22 @@ import (
 )
 
 func init() {
-	Reg("json", new(JsonCodec))
+	Reg(new(JsonCodec))
 }
 
+// JsonCodec json codec
 type JsonCodec struct{}
+
+// Name returns codec name
+func (j *JsonCodec) Name() string {
+	return "json"
+}
+
+//
+// Id returns codec id
+func (j *JsonCodec) Id() byte {
+	return 'j'
+}
 
 // NewEncoder returns a new json encoder that writes to w.
 func (*JsonCodec) NewEncoder(w io.Writer) Encoder {

@@ -21,6 +21,8 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
+
+	"github.com/henrylee2cn/teleport/codec"
 )
 
 var packetStack = new(struct {
@@ -30,16 +32,16 @@ var packetStack = new(struct {
 
 // GetPacket gets a *Packet form packet stack.
 // Note:
-//  bodyGetting is only for writing packet;
-//  bodyGetting should be nil when reading packet.
-func GetPacket(bodyGetting func(*Header) interface{}) *Packet {
+//  bodyGetting is only for reading form connection;
+//  settings are only for writing to connection.
+func GetPacket(bodyGetting func(*Header) interface{}, settings ...PacketSetting) *Packet {
 	packetStack.mu.Lock()
 	p := packetStack.freePacket
 	if p == nil {
 		p = NewPacket(bodyGetting)
 	} else {
 		packetStack.freePacket = p.next
-		p.Reset(bodyGetting)
+		p.Reset(bodyGetting, settings...)
 	}
 	packetStack.mu.Unlock()
 	return p
@@ -56,6 +58,10 @@ func PutPacket(p *Packet) {
 
 // Packet provides header and body's containers for receiving and sending packet.
 type Packet struct {
+	// HeaderCodec header codec id
+	HeaderCodec byte
+	// BodyCodec body codec id
+	BodyCodec byte
 	// header content
 	Header *Header `json:"header"`
 	// body content
@@ -75,16 +81,27 @@ type Packet struct {
 }
 
 // NewPacket creates a new *Packet.
-func NewPacket(bodyGetting func(*Header) interface{}) *Packet {
+// Note:
+//  bodyGetting is only for reading form connection;
+//  settings are only for writing to connection.
+func NewPacket(bodyGetting func(*Header) interface{}, settings ...PacketSetting) *Packet {
 	var p = &Packet{
 		Header:      new(Header),
 		bodyGetting: bodyGetting,
+		HeaderCodec: codec.NilCodecId,
+		BodyCodec:   codec.NilCodecId,
+	}
+	for _, f := range settings {
+		f(p)
 	}
 	return p
 }
 
 // Reset resets itself.
-func (p *Packet) Reset(bodyGetting func(*Header) interface{}) {
+// Note:
+//  bodyGetting is only for reading form connection;
+//  settings are only for writing to connection.
+func (p *Packet) Reset(bodyGetting func(*Header) interface{}, settings ...PacketSetting) {
 	p.next = nil
 	p.bodyGetting = bodyGetting
 	p.Header.Reset()
@@ -92,6 +109,11 @@ func (p *Packet) Reset(bodyGetting func(*Header) interface{}) {
 	p.HeaderLength = 0
 	p.BodyLength = 0
 	p.Length = 0
+	p.HeaderCodec = codec.NilCodecId
+	p.BodyCodec = codec.NilCodecId
+	for _, f := range settings {
+		f(p)
+	}
 }
 
 // ResetBodyGetting resets the function of geting body.
@@ -112,4 +134,67 @@ func (p *Packet) loadBody() interface{} {
 func (p *Packet) String() string {
 	b, _ := json.MarshalIndent(p, "", "  ")
 	return goutil.BytesToString(b)
+}
+
+// HeaderCodecName returns packet header codec name.
+func (p *Packet) HeaderCodecName() string {
+	c, err := codec.GetById(p.HeaderCodec)
+	if err != nil {
+		return ""
+	}
+	return c.Name()
+}
+
+// BodyCodecName returns packet body codec name.
+func (p *Packet) BodyCodecName() string {
+	c, err := codec.GetById(p.BodyCodec)
+	if err != nil {
+		return ""
+	}
+	return c.Name()
+}
+
+// SetHeaderCodecByName sets header codec by name.
+func (p *Packet) SetHeaderCodecByName(codecName string) {
+	p.HeaderCodec = getCodecByName(codecName).Id()
+}
+
+// SetBodyCodecByName sets body codec by name.
+func (p *Packet) SetBodyCodecByName(codecName string) {
+	p.BodyCodec = getCodecByName(codecName).Id()
+}
+
+// PacketSetting sets Header field.
+type PacketSetting func(*Packet)
+
+// WithHeaderCodec sets header codec.
+func WithHeaderCodec(codecName string) PacketSetting {
+	c, _ := codec.GetByName(codecName)
+	codecId := c.Id()
+	return func(p *Packet) {
+		p.HeaderCodec = codecId
+	}
+}
+
+// WithBodyCodec sets body codec.
+func WithBodyCodec(codecName string) PacketSetting {
+	codecId := getCodecByName(codecName).Id()
+	return func(p *Packet) {
+		p.BodyCodec = codecId
+	}
+}
+
+// WithBodyCodec sets body gzip level.
+func WithBodyGzip(gzipLevel int32) PacketSetting {
+	return func(p *Packet) {
+		p.Header.Gzip = gzipLevel
+	}
+}
+
+func getCodecByName(codecName string) codec.Codec {
+	c, err := codec.GetByName(codecName)
+	if err != nil {
+		panic(err)
+	}
+	return c
 }

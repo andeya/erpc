@@ -17,13 +17,34 @@ A concise, powerful and high-performance TCP connection socket.
 ## Packet
 
 ```
-HeaderLength | Header | BodyLength | Body
+HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
 ```
 
 **Notes:**
 
 - HeaderLength: uint32, 4 bytes, big endian
 - BodyLength: uint32, 4 bytes, big endian
+- HeaderCodecId: uint8, 1 byte
+- BodyCodecId: uint8, 1 byte
+
+```go
+type Packet struct {
+	// HeaderCodec header codec id
+	HeaderCodec byte
+	// BodyCodec body codec id
+	BodyCodec byte
+	// header content
+	Header *Header `json:"header"`
+	// body content
+	Body interface{} `json:"body"`
+	// header length
+	HeaderLength int64 `json:"header_length"`
+	// body length
+	BodyLength int64 `json:"body_length"`
+	// HeaderLength + BodyLength
+	Length int64 `json:"length"`
+}
+```
 
 ## Header
 
@@ -35,8 +56,6 @@ type Header struct {
 	Type int32
 	// Service URI
 	Uri string
-	// Body encoding type
-	Codec string
 	// Body gizp compression level
 	Gzip int32
 	// As reply, it indicates the service status code
@@ -89,7 +108,9 @@ func main() {
 				}
 
 				// write response
-				packet.Header.StatusCode = -1
+				packet.SetHeaderCodecByName("json")
+				packet.SetBodyCodecByName("json")
+				packet.Header.StatusCode = 200
 				packet.Header.Status = "ok"
 				packet.Body = time.Now()
 				err = s.WritePacket(packet)
@@ -127,10 +148,13 @@ func main() {
 	defer socket.PutPacket(packet)
 	for i := 0; i < 10; i++ {
 		// write request
-		packet.Reset(nil)
+		packet.Reset(
+			nil,
+			socket.WithHeaderCodec("json"),
+			socket.WithBodyCodec("json"),
+		)
 		packet.Header.Id = "1"
 		packet.Header.Uri = "/a/b"
-		packet.Header.Codec = "json"
 		packet.Header.Gzip = 5
 		packet.Body = map[string]string{"a": "A"}
 		err = s.WritePacket(packet)

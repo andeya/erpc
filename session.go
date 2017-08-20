@@ -25,18 +25,18 @@ import (
 
 // Session a connection session.
 type Session struct {
-	peer    *Peer
-	apiMap  *ApiMap
-	respMap goutil.Map
-	socket  socket.Socket
+	peer       *Peer
+	apiMap     *ApiMap
+	pullCmdMap goutil.Map
+	socket     socket.Socket
 }
 
 func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
-		peer:    peer,
-		apiMap:  peer.ApiMap,
-		socket:  socket.NewSocket(conn, id...),
-		respMap: goutil.RwMap(),
+		peer:       peer,
+		apiMap:     peer.ApiMap,
+		socket:     socket.NewSocket(conn, id...),
+		pullCmdMap: goutil.RwMap(),
 	}
 	go s.serve()
 	return s
@@ -47,10 +47,27 @@ func (s *Session) Id() string {
 }
 
 // TODO
-func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd) {
+func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, packetSetting ...socket.PacketSetting) {
+	packet := &socket.Packet{
+		Header: &socket.Header{
+			Id:   s.peer.idMaker.Id(),
+			Uri:  uri,
+			Gzip: s.peer.defaultGzipLevel,
+		},
+		Body: args,
+	}
+	for _, f := range packetSetting {
+		f(packet)
+	}
+	cmd := &PullCmd{
+		packet:   packet,
+		reply:    reply,
+		doneChan: done,
+	}
+	_ = cmd
 }
 
-// TODO
+// Pull requests a service api and receives reply.
 func (s *Session) Pull(uri string, args interface{}, reply interface{}) *PullCmd {
 	doneChan := make(chan *PullCmd, 1)
 	s.GoPull(uri, args, reply, doneChan)

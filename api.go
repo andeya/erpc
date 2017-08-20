@@ -20,6 +20,7 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 
+	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -43,7 +44,7 @@ type (
 		Query() url.Values
 		Public() goutil.Map
 		PublicLen() int
-		SetCodec(string)
+		SetBodyCodec(string)
 		Ip() string
 		// RealIp() string
 	}
@@ -126,8 +127,8 @@ func (c *ApiContext) Query() url.Values {
 	return c.query
 }
 
-func (c *ApiContext) SetCodec(codec string) {
-	c.output.Header.Codec = codec
+func (c *ApiContext) SetBodyCodec(codecName string) {
+	c.output.SetBodyCodecByName(codecName)
 }
 
 func (c *ApiContext) Ip() string {
@@ -152,7 +153,7 @@ func (c *ApiContext) binding(header *socket.Header) interface{} {
 
 // TODO
 func (c *ApiContext) bindResponse(header *socket.Header) interface{} {
-	c.session.respMap.Load(header.Id)
+	c.session.pullCmdMap.Load(header.Id)
 	return nil
 }
 
@@ -175,7 +176,7 @@ func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
 	c.output.Header.Id = c.input.Header.Id
 	c.output.Header.Type = TypeResponse
 	c.output.Header.Uri = c.input.Header.Uri
-	c.output.Header.Codec = c.input.Header.Codec
+	c.output.HeaderCodec = c.input.HeaderCodec
 	c.output.Header.Gzip = c.input.Header.Gzip
 
 	var err error
@@ -207,5 +208,8 @@ func (c *ApiContext) autoHandle() {
 	} else {
 		c.output.Header.StatusCode = e.Code()
 		c.output.Header.Status = e.Text()
+	}
+	if c.output.BodyCodec == codec.NilCodecId {
+		c.output.BodyCodec = c.input.BodyCodec
 	}
 }

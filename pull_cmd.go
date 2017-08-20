@@ -20,8 +20,8 @@ import (
 
 // PullCmd the command of the pulling operation's response.
 type PullCmd struct {
-	input    *socket.Packet
-	output   *socket.Packet
+	packet   *socket.Packet
+	reply    interface{}
 	doneChan chan *PullCmd // Strobes when pull is complete.
 }
 
@@ -30,8 +30,8 @@ func (p *PullCmd) done() {
 	case p.doneChan <- p:
 		// ok
 	default:
-		// We don't want to block here. It is the caller's responsibility to make
-		// sure the channel has enough buffer space. See comment in Go().
+		// We don't want to block here. It is the puller's responsibility to make
+		// sure the channel has enough buffer space. See comment in GoPull().
 		Debugf("teleport: discarding Pull reply due to insufficient result chan capacity")
 	}
 }

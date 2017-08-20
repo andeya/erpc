@@ -35,17 +35,8 @@ import (
 
 // default codec.
 var (
-	DefaultCodecName = "json"
-	DefaultCodec     codec.Codec
+	DefaultCodec = new(codec.JsonCodec)
 )
-
-func init() {
-	var err error
-	DefaultCodec, err = codec.Get(DefaultCodecName)
-	if err != nil {
-		panic(err)
-	}
-}
 
 type (
 	// Socket is a generic stream-oriented network connection.
@@ -123,19 +114,20 @@ type (
 	}
 	socket struct {
 		net.Conn
-		id          string
-		bufWriter   *utils.BufioWriter
-		bufReader   *utils.BufioReader
+		id        string
+		bufWriter *utils.BufioWriter
+		bufReader *utils.BufioReader
+
+		cacheWriter *bytes.Buffer
 		limitReader *utils.LimitedReader
 
-		headerEncoder codec.Encoder
-		headerDecoder codec.Decoder
+		encodeMap map[byte]codec.Encoder
+		decodeMap map[byte]codec.Decoder
 
-		cacheWriter   *bytes.Buffer
 		gzipWriterMap map[int]*gzip.Writer
 		gzipReader    *gzip.Reader
-		gzipEncodeMap map[string]*GzipEncoder // codecName:GzipEncoder
-		gzipDecodeMap map[string]*GzipDecoder // codecName:GzipEncoder
+		gzipEncodeMap map[byte]*GzipEncoder // codecId:GzipEncoder
+		gzipDecodeMap map[byte]*GzipDecoder // codecId:GzipEncoder
 		ctxPublic     goutil.Map
 		writeMutex    sync.Mutex // exclusive writer lock
 		readMutex     sync.Mutex // exclusive read lock
@@ -181,21 +173,19 @@ func NewSocket(c net.Conn, id ...string) *socket {
 	bufReader := utils.NewBufioReader(c)
 	cacheWriter := bytes.NewBuffer(nil)
 	limitReader := utils.LimitReader(bufReader, 0)
-	headerEncoder, _ := codec.NewEncoder(DefaultCodecName, cacheWriter)
-	headerDecoder, _ := codec.NewDecoder(DefaultCodecName, limitReader)
 	var s = &socket{
 		id:            _id,
 		Conn:          c,
 		bufWriter:     bufWriter,
 		bufReader:     bufReader,
-		limitReader:   limitReader,
-		headerEncoder: headerEncoder,
-		headerDecoder: headerDecoder,
 		cacheWriter:   cacheWriter,
+		limitReader:   limitReader,
+		encodeMap:     make(map[byte]codec.Encoder),
+		decodeMap:     make(map[byte]codec.Decoder),
 		gzipWriterMap: make(map[int]*gzip.Writer),
 		gzipReader:    new(gzip.Reader),
-		gzipEncodeMap: make(map[string]*GzipEncoder),
-		gzipDecodeMap: make(map[string]*GzipDecoder),
+		gzipEncodeMap: make(map[byte]*GzipEncoder),
+		gzipDecodeMap: make(map[byte]*GzipDecoder),
 	}
 	return s
 }
@@ -214,8 +204,12 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 	}()
 	s.bufWriter.ResetCount()
 
+	if packet.HeaderCodec == codec.NilCodecId {
+		packet.HeaderCodec = DefaultCodec.Id()
+	}
+
 	// write header
-	err = s.writeHeader(packet.Header)
+	err = s.writeHeader(packet.HeaderCodec, packet.Header)
 	packet.HeaderLength = s.bufWriter.Count()
 	packet.Length = packet.HeaderLength
 	packet.BodyLength = 0
@@ -235,7 +229,10 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 	case *[]byte:
 		err = s.writeBytesBody(*bo)
 	default:
-		err = s.writeCacheBody(packet.Header.Codec, int(packet.Header.Gzip), bo)
+		if packet.BodyCodec == codec.NilCodecId {
+			packet.BodyCodec = DefaultCodec.Id()
+		}
+		err = s.writeCacheBody(packet.BodyCodec, int(packet.Header.Gzip), bo)
 		if err != nil {
 			return err
 		}
@@ -253,9 +250,9 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 	return s.bufWriter.Flush()
 }
 
-func (s *socket) writeHeader(header *Header) error {
+func (s *socket) writeHeader(codecId byte, header *Header) error {
 	s.cacheWriter.Reset()
-	err := s.headerEncoder.Encode(header)
+	err := s.encodeToCacheLocked(codecId, header)
 	if err != nil {
 		return err
 	}
@@ -268,6 +265,23 @@ func (s *socket) writeHeader(header *Header) error {
 	return err
 }
 
+func (s *socket) encodeToCacheLocked(codecId byte, data interface{}) error {
+	var err error
+	var enc, ok = s.encodeMap[codecId]
+	if !ok {
+		enc, err = codec.NewEncoderById(codecId, s.cacheWriter)
+		if err != nil {
+			return err
+		}
+		s.encodeMap[codecId] = enc
+	}
+	err = binary.Write(s.cacheWriter, binary.BigEndian, codecId)
+	if err != nil {
+		return err
+	}
+	return enc.Encode(data)
+}
+
 func (s *socket) writeBytesBody(body []byte) error {
 	bodySize := uint32(len(body))
 	err := binary.Write(s.bufWriter, binary.BigEndian, bodySize)
@@ -278,12 +292,13 @@ func (s *socket) writeBytesBody(body []byte) error {
 	return err
 }
 
-func (s *socket) writeCacheBody(codecName string, gzipLevel int, body interface{}) error {
+func (s *socket) writeCacheBody(codecId byte, gzipLevel int, body interface{}) error {
 	s.cacheWriter.Reset()
-	if len(codecName) == 0 {
-		codecName = DefaultCodecName
+	ge, err := s.getGzipEncoder(codecId)
+	if err != nil {
+		return err
 	}
-	ge, err := s.getGzipEncoder(codecName)
+	err = binary.Write(s.cacheWriter, binary.BigEndian, codecId)
 	if err != nil {
 		return err
 	}
@@ -299,13 +314,16 @@ func (s *socket) ReadPacket(packet *Packet) error {
 		hErr, bErr error
 		b          interface{}
 	)
-	packet.HeaderLength, hErr = s.readHeader(packet.Header)
+	packet.HeaderLength, packet.HeaderCodec, hErr = s.readHeader(packet.Header)
 	if hErr == nil {
 		b = packet.loadBody()
 	} else if atomic.LoadInt32(&s.curState) == activeClose {
+		packet.Length = packet.HeaderLength
+		packet.BodyLength = 0
+		packet.BodyCodec = codec.NilCodecId
 		return ErrSocketClosed
 	}
-	packet.BodyLength, bErr = s.readBody(packet.Header, b)
+	packet.BodyLength, packet.BodyCodec, bErr = s.readBody(int(packet.Header.Gzip), b)
 	packet.Length = packet.HeaderLength + packet.BodyLength
 	if bErr != nil && atomic.LoadInt32(&s.curState) == activeClose {
 		return ErrSocketClosed
@@ -317,35 +335,55 @@ func (s *socket) ReadPacket(packet *Packet) error {
 // readHeader can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call.
-func (s *socket) readHeader(header *Header) (int64, error) {
+func (s *socket) readHeader(header *Header) (int64, byte, error) {
 	s.bufReader.ResetCount()
-	var headerSize uint32
+	var (
+		headerSize uint32
+		codecId    = codec.NilCodecId
+	)
+
 	err := binary.Read(s.bufReader, binary.BigEndian, &headerSize)
 	if err != nil {
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 	}
 
 	s.limitReader.ResetLimit(int64(headerSize))
-	err = s.headerDecoder.Decode(header)
+
+	err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
 	if err != nil {
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 	}
-	return s.bufReader.Count(), err
+
+	dec, ok := s.decodeMap[codecId]
+	if !ok {
+		dec, err = codec.NewDecoderById(codecId, s.limitReader)
+		if err != nil {
+			return s.bufReader.Count(), codecId, err
+		}
+		s.decodeMap[codecId] = dec
+	}
+
+	err = dec.Decode(header)
+	return s.bufReader.Count(), codecId, err
 }
 
 // readBody reads body from the connection.
 // readBody can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call, and it must be called after calling the readHeader().
-func (s *socket) readBody(header *Header, body interface{}) (int64, error) {
+func (s *socket) readBody(gzipLevel int, body interface{}) (int64, byte, error) {
 	s.bufReader.ResetCount()
-	var bodySize uint32
+	var (
+		bodySize uint32
+		codecId  = codec.NilCodecId
+	)
+
 	err := binary.Read(s.bufReader, binary.BigEndian, &bodySize)
 	if err != nil {
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 	}
 	if bodySize == 0 {
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 	}
 
 	s.limitReader.ResetLimit(int64(bodySize))
@@ -354,30 +392,30 @@ func (s *socket) readBody(header *Header, body interface{}) (int64, error) {
 	switch bo := body.(type) {
 	case nil:
 		_, err = io.Copy(ioutil.Discard, s.limitReader)
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 
 	case []byte:
 		_, err = s.limitReader.Read(bo)
 		if err != nil {
-			return s.bufReader.Count(), err
+			return s.bufReader.Count(), codecId, err
 		}
 		_, err = io.Copy(ioutil.Discard, s.limitReader)
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 
 	case *[]byte:
 		*bo, err = ioutil.ReadAll(s.limitReader)
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 
 	default:
-		codecName := header.Codec
-		if len(codecName) == 0 {
-			codecName = DefaultCodecName
+		err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
+		if err != nil {
+			return s.bufReader.Count(), codecId, err
 		}
-		gd, err := s.getGzipDecoder(codecName)
+		gd, err := s.getGzipDecoder(codecId)
 		if err == nil {
-			err = gd.Decode(int(header.Gzip), body)
+			err = gd.Decode(gzipLevel, body)
 		}
-		return s.bufReader.Count(), err
+		return s.bufReader.Count(), codecId, err
 	}
 }
 
