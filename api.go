@@ -81,8 +81,6 @@ func (c *ApiContext) reInit(s *Session) {
 			return true
 		})
 	}
-	c.input.Reset(c.binding)
-	c.output.Reset(nil)
 }
 
 var (
@@ -99,7 +97,7 @@ func (c *ApiContext) clean() {
 	c.public = nil
 	c.uri = nil
 	c.query = nil
-	c.input.Reset(nil)
+	c.input.Reset(c.binding)
 	c.output.Reset(nil)
 }
 
@@ -137,7 +135,49 @@ func (c *ApiContext) Ip() string {
 }
 
 func (c *ApiContext) binding(header *socket.Header) interface{} {
-	c.initOutput()
+	switch header.Type {
+	case TypeResponse:
+		return c.bindResponse(header)
+
+	case TypePush:
+		return c.bindPush(header)
+
+	case TypeRequest:
+		return c.bindRequest(header)
+
+	default:
+		return nil
+	}
+}
+
+// TODO
+func (c *ApiContext) bindResponse(header *socket.Header) interface{} {
+	c.session.respMap.Load(header.Id)
+	return nil
+}
+
+func (c *ApiContext) bindPush(header *socket.Header) interface{} {
+	var err error
+	c.uri, err = url.Parse(header.Uri)
+	if err != nil {
+		return nil
+	}
+	var ok bool
+	c.apiType, ok = c.session.apiMap.get(c.Path())
+	if !ok {
+		return nil
+	}
+	c.arg = reflect.New(c.apiType.arg)
+	return c.arg.Interface()
+}
+
+func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
+	c.output.Header.Id = c.input.Header.Id
+	c.output.Header.Type = TypeResponse
+	c.output.Header.Uri = c.input.Header.Uri
+	c.output.Header.Codec = c.input.Header.Codec
+	c.output.Header.Gzip = c.input.Header.Gzip
+
 	var err error
 	c.uri, err = url.Parse(header.Uri)
 	if err != nil {
@@ -156,15 +196,8 @@ func (c *ApiContext) binding(header *socket.Header) interface{} {
 	return c.arg.Interface()
 }
 
-func (c *ApiContext) initOutput() {
-	c.output.Header.Id = c.input.Header.Id
-	c.output.Header.Type = TypeResponse
-	c.output.Header.Uri = c.input.Header.Uri
-	c.output.Header.Codec = c.input.Header.Codec
-	c.output.Header.Gzip = c.input.Header.Gzip
-}
-
-func (c *ApiContext) handle() {
+// autoHandle handles request and push packet.
+func (c *ApiContext) autoHandle() {
 	rets := c.apiType.method.Func.Call([]reflect.Value{c.arg})
 	c.output.Body = rets[0].Interface()
 	e := rets[0].Interface().(Xerror)

@@ -17,22 +17,26 @@ package teleport
 import (
 	"net"
 
+	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 
 	"github.com/henrylee2cn/teleport/socket"
 )
 
+// Session a connection session.
 type Session struct {
-	peer   *Peer
-	apiMap *ApiMap
-	socket socket.Socket
+	peer    *Peer
+	apiMap  *ApiMap
+	respMap goutil.Map
+	socket  socket.Socket
 }
 
 func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
-		peer:   peer,
-		apiMap: peer.ApiMap,
-		socket: socket.NewSocket(conn, id...),
+		peer:    peer,
+		apiMap:  peer.ApiMap,
+		socket:  socket.NewSocket(conn, id...),
+		respMap: goutil.RwMap(),
 	}
 	go s.serve()
 	return s
@@ -43,8 +47,16 @@ func (s *Session) Id() string {
 }
 
 // TODO
-func (s *Session) Pull(uri string, args interface{}, reply interface{}) error {
-	return nil
+func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd) {
+}
+
+// TODO
+func (s *Session) Pull(uri string, args interface{}, reply interface{}) *PullCmd {
+	doneChan := make(chan *PullCmd, 1)
+	s.GoPull(uri, args, reply, doneChan)
+	pullCmd := <-doneChan
+	close(doneChan)
+	return pullCmd
 }
 
 // TODO
@@ -82,7 +94,7 @@ func (s *Session) serve() {
 		switch ctx.input.Header.Type {
 		case TypeRequest:
 			// handle
-			go ctx.handle()
+			go ctx.autoHandle()
 			ctx.output.Header.Type = TypeResponse
 			// write response
 			if writeTimeout > 0 {
