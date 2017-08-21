@@ -113,14 +113,17 @@ func (c *ApiContext) PublicLen() int {
 	return c.public.Len()
 }
 
+// Uri returns the input packet uri.
 func (c *ApiContext) Uri() string {
 	return c.input.Header.Uri
 }
 
+// Path returns the input packet uri path.
 func (c *ApiContext) Path() string {
 	return c.uri.Path
 }
 
+// Query returns the input packet uri query.
 func (c *ApiContext) Query() url.Values {
 	if c.query == nil {
 		c.query = c.uri.Query()
@@ -128,10 +131,12 @@ func (c *ApiContext) Query() url.Values {
 	return c.query
 }
 
+// SetBodyCodec sets the body codec for response packet.
 func (c *ApiContext) SetBodyCodec(codecName string) {
 	c.output.BodyCodec = codecName
 }
 
+// Ip returns the remote addr.
 func (c *ApiContext) Ip() string {
 	return c.session.socket.RemoteAddr().String()
 }
@@ -152,7 +157,6 @@ func (c *ApiContext) binding(header *socket.Header) interface{} {
 	}
 }
 
-// TODO
 func (c *ApiContext) bindResponse(header *socket.Header) interface{} {
 	pullCmd, ok := c.session.pullCmdMap.Load(header.Seq)
 	if !ok {
