@@ -98,55 +98,45 @@ type Header struct {
 package main
 
 import (
-	"log"
-	"net"
 	"time"
 
-	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport"
 )
 
 func main() {
-	lis, err := net.Listen("tcp", "0.0.0.0:8000")
-	if err != nil {
-		log.Fatalf("[SVR] listen err: %v", err)
+	var cfg = &teleport.Config{
+		Id:                       "server-peer",
+		ReadTimeout:              time.Second * 10,
+		WriteTimeout:             time.Second * 10,
+		TlsCertFile:              "",
+		TlsKeyFile:               "",
+		SlowCometDuration:        time.Millisecond * 500,
+		DefaultCodec:             "json",
+		DefaultGzipLevel:         5,
+		MaxGoroutinesAmount:      1024,
+		MaxGoroutineIdleDuration: time.Second * 10,
+		ListenAddrs: []string{
+			"0.0.0.0:9090",
+			"0.0.0.0:9091",
+		},
 	}
-	log.Printf("listen tcp 0.0.0.0:8000")
-	for {
-		conn, err := lis.Accept()
-		if err != nil {
-			log.Fatalf("[SVR] accept err: %v", err)
-		}
-		go func(s socket.Socket) {
-			log.Printf("accept %s", s.Id())
-			defer s.Close()
-			for {
-				// read request
-				var packet = socket.GetPacket(func(_ *socket.Header) interface{} {
-					return new(map[string]string)
-				})
-				err = s.ReadPacket(packet)
-				if err != nil {
-					log.Printf("[SVR] read request err: %v", err)
-					return
-				} else {
-					log.Printf("[SVR] read request: %v", packet)
-				}
+	var peer = teleport.NewPeer(cfg)
+	{
+		group := peer.RequestRouter.Group("group")
+		group.Reg(new(Home))
+	}
+	peer.Listen()
+}
 
-				// write response
-				packet.HeaderCodec = "json"
-				packet.BodyCodec = "json"
-				packet.Header.StatusCode = 200
-				packet.Header.Status = "ok"
-				packet.Body = time.Now()
-				err = s.WritePacket(packet)
-				if err != nil {
-					log.Printf("[SVR] write response err: %v", err)
-				}
-				log.Printf("[SVR] write response: %v", packet)
-				socket.PutPacket(packet)
-			}
-		}(socket.GetSocket(conn))
-	}
+// Home controller
+type Home struct {
+	teleport.RequestCtx
+}
+
+// Test handler
+func (h *Home) Test(args *string) (string, teleport.Xerror) {
+	teleport.Infof("query: %#v", h.Query())
+	return "home-test response:" + *args, nil
 }
 ```
 
@@ -156,47 +146,51 @@ func main() {
 package main
 
 import (
-	"log"
-	"net"
+	"time"
 
-	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport"
 )
 
 func main() {
-	conn, err := net.Dial("tcp", "127.0.0.1:8000")
-	if err != nil {
-		log.Fatalf("[CLI] dial err: %v", err)
+	var cfg = &teleport.Config{
+		Id:                       "client-peer",
+		ReadTimeout:              time.Second * 10,
+		WriteTimeout:             time.Second * 10,
+		TlsCertFile:              "",
+		TlsKeyFile:               "",
+		SlowCometDuration:        time.Millisecond * 500,
+		DefaultCodec:             "json",
+		DefaultGzipLevel:         5,
+		MaxGoroutinesAmount:      1024,
+		MaxGoroutineIdleDuration: time.Second * 10,
 	}
-	s := socket.GetSocket(conn)
-	defer s.Close()
-	var packet = socket.GetPacket(nil)
-	defer socket.PutPacket(packet)
-	for i := 0; i < 10; i++ {
-		// write request
-		packet.Reset(nil)
-		packet.HeaderCodec = "json"
-		packet.BodyCodec = "json"
-		packet.Header.Seq = 1
-		packet.Header.Uri = "/a/b"
-		packet.Header.Gzip = 5
-		packet.Body = map[string]string{"a": "A"}
-		err = s.WritePacket(packet)
-		if err != nil {
-			log.Printf("[CLI] write request err: %v", err)
-			continue
-		}
-		log.Printf("[CLI] write request: %v", packet)
 
-		// read response
-		packet.Reset(func(_ *socket.Header) interface{} {
-			return new(string)
-		})
-		err = s.ReadPacket(packet)
+	var peer = teleport.NewPeer(cfg)
+
+	{
+		var sess, err = peer.Dial("127.0.0.1:9090")
 		if err != nil {
-			log.Printf("[CLI] read response err: %v", err)
-		} else {
-			log.Printf("[CLI] read response: %v", packet)
+			teleport.Panicf("%v", err)
 		}
+		var reply string
+		var pullcmd = sess.Pull("/group/home/test?port=9090", "test_args_9090", &reply)
+		if pullcmd.Xerror != nil {
+			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+		}
+		teleport.Infof("9090reply: %s", reply)
+	}
+
+	{
+		var sess, err = peer.Dial("127.0.0.1:9091")
+		if err != nil {
+			teleport.Panicf("%v", err)
+		}
+		var reply string
+		var pullcmd = sess.Pull("/group/home/test?port=9091", "test_args_9091", &reply)
+		if pullcmd.Xerror != nil {
+			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+		}
+		teleport.Infof("9091reply: %s", reply)
 	}
 }
 ```

@@ -35,12 +35,12 @@ type (
 	}
 	// Handler request or push handler type info
 	Handler struct {
-		name            string
-		originStruct    reflect.Type
-		method          reflect.Method
-		arg             reflect.Type
-		reply           reflect.Type // only for request handler doc
-		pluginContainer PluginContainer
+		name              string
+		originStructMaker func(*ApiContext) reflect.Value
+		method            reflect.Method
+		arg               reflect.Type
+		reply             reflect.Type // only for request handler doc
+		pluginContainer   PluginContainer
 	}
 	// HandlersMaker makes []*Handler
 	HandlersMaker func(string, interface{}, PluginContainer) ([]*Handler, error)
@@ -98,15 +98,35 @@ func newRequestRouter() *Router {
 // Note: ctrlStruct needs to implement RequestCtx interface.
 func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
 	var (
-		ctype    = reflect.TypeOf(ctrlStruct)
-		handlers = make([]*Handler, 0, 1)
+		ctype             = reflect.TypeOf(ctrlStruct)
+		handlers          = make([]*Handler, 0, 1)
+		originStructMaker func(*ApiContext) reflect.Value
 	)
+	if ctype.Kind() != reflect.Ptr {
+		return nil, errors.Errorf("register request handler: the type is not struct point: %s", ctype.String())
+	}
+	var ctypeElem = ctype.Elem()
+	if ctypeElem.Kind() != reflect.Struct {
+		return nil, errors.Errorf("register request handler: the type is not struct point: %s", ctype.String())
+	}
 	if _, ok := ctrlStruct.(RequestCtx); !ok {
 		return nil, errors.Errorf("register request handler: the type is not implemented RequestCtx interface: %s", ctype.String())
+	} else {
+		if iType, ok := ctypeElem.FieldByName("RequestCtx"); ok && iType.Anonymous {
+			originStructMaker = func(ctx *ApiContext) reflect.Value {
+				ctrl := reflect.New(ctypeElem)
+				ctrl.Elem().FieldByName("RequestCtx").Set(reflect.ValueOf(ctx))
+				return ctrl
+			}
+		} else {
+			return nil, errors.Errorf("register request handler: the struct do not have anonymous field RequestCtx: %s", ctype.String())
+		}
 	}
+
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
+
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
 		mtype := method.Type
@@ -145,13 +165,14 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 		if returnType := mtype.Out(1); strings.TrimPrefix(returnType.Name(), "teleport.") != "Xerror" {
 			return nil, errors.Errorf("register request handler: %s.%s second reply type %s not teleport.Xerror", ctype.String(), mname, returnType)
 		}
+
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, goutil.SnakeString(ctype.Name()), goutil.SnakeString(mname)),
-			originStruct:    ctype,
-			method:          method,
-			arg:             argType,
-			reply:           replyType,
-			pluginContainer: pluginContainer,
+			name:              path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
+			originStructMaker: originStructMaker,
+			method:            method,
+			arg:               argType.Elem(),
+			reply:             replyType,
+			pluginContainer:   pluginContainer,
 		})
 	}
 	return handlers, nil
@@ -172,12 +193,31 @@ func newPushRouter() *Router {
 // Note: ctrlStruct needs to implement PushCtx interface.
 func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
 	var (
-		ctype    = reflect.TypeOf(ctrlStruct)
-		handlers = make([]*Handler, 0, 1)
+		ctype             = reflect.TypeOf(ctrlStruct)
+		handlers          = make([]*Handler, 0, 1)
+		originStructMaker func(*ApiContext) reflect.Value
 	)
+	if ctype.Kind() != reflect.Ptr {
+		return nil, errors.Errorf("register push handler: the type is not struct point: %s", ctype.String())
+	}
+	var ctypeElem = ctype.Elem()
+	if ctypeElem.Kind() != reflect.Struct {
+		return nil, errors.Errorf("register push handler: the type is not struct point: %s", ctype.String())
+	}
 	if _, ok := ctrlStruct.(PushCtx); !ok {
 		return nil, errors.Errorf("register push handler: the type is not implemented PushCtx interface: %s", ctype.String())
+	} else {
+		if iType, ok := ctypeElem.FieldByName("PushCtx"); ok && iType.Anonymous {
+			originStructMaker = func(ctx *ApiContext) reflect.Value {
+				ctrl := reflect.New(ctypeElem)
+				ctrl.Elem().FieldByName("PushCtx").Set(reflect.ValueOf(ctx))
+				return ctrl
+			}
+		} else {
+			return nil, errors.Errorf("register push handler: the struct do not have anonymous field PushCtx: %s", ctype.String())
+		}
 	}
+
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
@@ -211,11 +251,11 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			return nil, errors.Errorf("register push handler: %s.%s does not need out argument, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, goutil.SnakeString(ctype.Name()), goutil.SnakeString(mname)),
-			originStruct:    ctype,
-			method:          method,
-			arg:             argType,
-			pluginContainer: pluginContainer,
+			name:              path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
+			originStructMaker: originStructMaker,
+			method:            method,
+			arg:               argType.Elem(),
+			pluginContainer:   pluginContainer,
 		})
 	}
 	return handlers, nil
@@ -239,4 +279,10 @@ func isPushCtxMethod(name string) bool {
 		}
 	}
 	return false
+}
+
+func ctrlStructSnakeName(ctype reflect.Type) string {
+	split := strings.Split(ctype.String(), ".")
+	tName := split[len(split)-1]
+	return goutil.SnakeString(tName)
 }

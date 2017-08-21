@@ -15,6 +15,7 @@
 package teleport
 
 import (
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -173,7 +174,9 @@ func (s *Session) Close() error {
 
 func (s *Session) readAndHandle() {
 	defer func() {
-		recover()
+		if p := recover(); p != nil {
+			Debugf("*Session.readAndHandle() panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		}
 		s.Close()
 	}()
 	var (
@@ -189,7 +192,9 @@ func (s *Session) readAndHandle() {
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
 			s.peer.putContext(ctx)
-			Debugf("teleport: ReadPacket failed: %s", err.Error())
+			if err != io.EOF {
+				Debugf("teleport: ReadPacket failed: %s", err.Error())
+			}
 			return
 		}
 
@@ -202,6 +207,7 @@ func (s *Session) readAndHandle() {
 
 			case TypePush:
 				// handle push
+				Debugf("ctx.handle()")
 				ctx.handle()
 
 			case TypeRequest:

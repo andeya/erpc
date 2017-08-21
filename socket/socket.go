@@ -301,21 +301,30 @@ func (s *socket) ReadPacket(packet *Packet) error {
 		hErr, bErr error
 		b          interface{}
 	)
+
 	packet.HeaderLength, packet.HeaderCodec, hErr = s.readHeader(packet.Header)
 	if hErr == nil {
 		b = packet.loadBody()
-	} else if atomic.LoadInt32(&s.curState) == activeClose {
-		packet.Length = packet.HeaderLength
-		packet.BodyLength = 0
-		packet.BodyCodec = ""
-		return ErrSocketClosed
+	} else {
+		if hErr == io.EOF || hErr == io.ErrUnexpectedEOF {
+			packet.Length = packet.HeaderLength
+			packet.BodyLength = 0
+			packet.BodyCodec = ""
+			return hErr
+		} else if atomic.LoadInt32(&s.curState) == activeClose {
+			packet.Length = packet.HeaderLength
+			packet.BodyLength = 0
+			packet.BodyCodec = ""
+			return ErrSocketClosed
+		}
 	}
+
 	packet.BodyLength, packet.BodyCodec, bErr = s.readBody(int(packet.Header.Gzip), b)
 	packet.Length = packet.HeaderLength + packet.BodyLength
-	if bErr != nil && atomic.LoadInt32(&s.curState) == activeClose {
+	if atomic.LoadInt32(&s.curState) == activeClose {
 		return ErrSocketClosed
 	}
-	return errors.Merge(hErr, bErr)
+	return bErr
 }
 
 // readHeader reads header from the connection.

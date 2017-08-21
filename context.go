@@ -15,6 +15,7 @@
 package teleport
 
 import (
+	"encoding/json"
 	"net/url"
 	"reflect"
 	"time"
@@ -47,20 +48,20 @@ type (
 	}
 	// ApiContext the underlying common instance of RequestCtx and PushCtx.
 	ApiContext struct {
-		session      *Session
-		input        *socket.Packet
-		output       *socket.Packet
-		apiType      *Handler
-		originStruct reflect.Value
-		method       reflect.Method
-		arg          reflect.Value
-		pullCmd      *PullCmd
-		uri          *url.URL
-		query        url.Values
-		public       goutil.Map
-		start        time.Time
-		cost         time.Duration
-		next         *ApiContext
+		session           *Session
+		input             *socket.Packet
+		output            *socket.Packet
+		apiType           *Handler
+		originStructMaker func(*ApiContext) reflect.Value
+		method            reflect.Method
+		arg               reflect.Value
+		pullCmd           *PullCmd
+		uri               *url.URL
+		query             url.Values
+		public            goutil.Map
+		start             time.Time
+		cost              time.Duration
+		next              *ApiContext
 	}
 )
 
@@ -97,7 +98,7 @@ func (c *ApiContext) clean() {
 	c.session = nil
 	c.apiType = nil
 	c.arg = emptyValue
-	c.originStruct = emptyValue
+	c.originStructMaker = nil
 	c.method = emptyMethod
 	c.pullCmd = nil
 	c.public = nil
@@ -184,6 +185,7 @@ func (c *ApiContext) bindPush(header *socket.Header) interface{} {
 	if !ok {
 		return nil
 	}
+	c.originStructMaker = c.apiType.originStructMaker
 	c.arg = reflect.New(c.apiType.arg)
 	return c.arg.Interface()
 }
@@ -209,25 +211,29 @@ func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
 		c.output.Header.Status = StatusText(StatusNotFound)
 		return nil
 	}
+	c.originStructMaker = c.apiType.originStructMaker
 	c.arg = reflect.New(c.apiType.arg)
 	return c.arg.Interface()
 }
 
 // handle handles request and push packet.
 func (c *ApiContext) handle() {
-	rets := c.apiType.method.Func.Call([]reflect.Value{c.arg})
-	if len(rets) == 0 {
-		return
+	if c.output.Header.StatusCode != StatusNotFound {
+		rets := c.apiType.method.Func.Call([]reflect.Value{c.originStructMaker(c), c.arg})
+		if len(rets) == 0 {
+			return
+		}
+		c.output.Body = rets[0].Interface()
+		e, ok := rets[1].Interface().(Xerror)
+		if !ok || e == nil {
+			c.output.Header.StatusCode = StatusOK
+			c.output.Header.Status = StatusText(StatusOK)
+		} else {
+			c.output.Header.StatusCode = e.Code()
+			c.output.Header.Status = e.Text()
+		}
 	}
-	c.output.Body = rets[0].Interface()
-	e := rets[0].Interface().(Xerror)
-	if e == nil {
-		c.output.Header.StatusCode = StatusOK
-		c.output.Header.Status = StatusText(StatusOK)
-	} else {
-		c.output.Header.StatusCode = e.Code()
-		c.output.Header.Status = e.Text()
-	}
+
 	if len(c.output.BodyCodec) == 0 {
 		c.output.BodyCodec = c.input.BodyCodec
 	}
@@ -250,10 +256,11 @@ func (c *ApiContext) handle() {
 		code = color.Green(n)
 	}
 	c.cost = time.Since(c.start)
+	body, _ := json.Marshal(c.output.Body)
 	if c.cost < c.session.peer.slowCometDuration {
-		Infof("%15s %3s %10d %12s %-30s | %v", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, c.output.Body)
+		Infof("%15s %3s %10d %12s %-30s |\n%s\n", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, body)
 	} else {
-		Warnf(" %15s %3s %10d %12s(slow) %-30s | %v", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, c.output.Body)
+		Warnf(" %15s %3s %10d %12s(slow) %-30s |\n%s\n", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, body)
 	}
 }
 

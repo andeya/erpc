@@ -179,8 +179,8 @@ func (p *Peer) getContext(s *Session) *ApiContext {
 		ctx = newApiContext()
 	} else {
 		p.freeContext = ctx.next
-		ctx.reInit(s)
 	}
+	ctx.reInit(s)
 	p.ctxLock.Unlock()
 	return ctx
 }
