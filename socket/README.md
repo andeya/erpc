@@ -29,10 +29,10 @@ HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
 
 ```go
 type Packet struct {
-	// HeaderCodec header codec id
-	HeaderCodec byte
-	// BodyCodec body codec id
-	BodyCodec byte
+	// HeaderCodec header codec string
+	HeaderCodec string
+	// BodyCodec body codec string
+	BodyCodec string
 	// header content
 	Header *Header `json:"header"`
 	// body content

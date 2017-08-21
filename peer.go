@@ -21,11 +21,13 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/goutil/errors"
+	"github.com/henrylee2cn/goutil/pool"
 )
 
 // Peer peer which is server or client.
 type Peer struct {
-	*ApiMap
+	RequestRouter    *Router
+	PushRouter       *Router
 	id               string
 	pluginContainer  PluginContainer
 	sessionHub       *SessionHub
@@ -38,6 +40,7 @@ type Peer struct {
 	slowApiDuration  time.Duration
 	defaultCodec     string
 	defaultGzipLevel int32
+	gopool           *pool.GoPool
 	mu               sync.Mutex
 
 	// for client role
@@ -55,7 +58,8 @@ var ErrListenClosed = errors.New("teleport: listener closed")
 func NewPeer(cfg *Config) *Peer {
 	var p = &Peer{
 		id:               cfg.Id,
-		ApiMap:           newApiMap(),
+		RequestRouter:    newRequestRouter(),
+		PushRouter:       newPushRouter(),
 		pluginContainer:  newPluginContainer(),
 		sessionHub:       newSessionHub(),
 		readTimeout:      cfg.ReadTimeout,
@@ -66,6 +70,7 @@ func NewPeer(cfg *Config) *Peer {
 		listenAddrs:      cfg.ListenAddrs,
 		defaultCodec:     cfg.DefaultCodec,
 		defaultGzipLevel: cfg.DefaultGzipLevel,
+		gopool:           pool.NewGoPool(cfg.MaxGoroutinesAmount, cfg.MaxGoroutineIdleDuration),
 	}
 	return p
 }
@@ -157,6 +162,10 @@ func (p *Peer) listen(addr string) error {
 		tempDelay = 0
 		p.ServeConn(rw)
 	}
+}
+
+func (p *Peer) Session(sessionId string) (*Session, bool) {
+	return p.sessionHub.Get(sessionId)
 }
 
 func (p *Peer) Close() {

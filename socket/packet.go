@@ -155,7 +155,21 @@ func (p *Packet) BodyCodecId() byte {
 // PacketSetting sets Header field.
 type PacketSetting func(*Packet)
 
-// WithBodyCodec sets body gzip level.
+// WithHeaderCodec sets header codec name.
+func WithHeaderCodec(codecName string) PacketSetting {
+	return func(p *Packet) {
+		p.HeaderCodec = codecName
+	}
+}
+
+// WithBodyCodec sets body codec name.
+func WithBodyCodec(codecName string) PacketSetting {
+	return func(p *Packet) {
+		p.BodyCodec = codecName
+	}
+}
+
+// WithBodyGzip sets body gzip level.
 func WithBodyGzip(gzipLevel int32) PacketSetting {
 	return func(p *Packet) {
 		p.Header.Gzip = gzipLevel

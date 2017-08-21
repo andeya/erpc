@@ -30,8 +30,8 @@ type Xerror interface {
 	Error() string
 }
 
-// NewError creates a new Error interface.
-func NewError(code int32, text string) Xerror {
+// NewXerror creates a new Error interface.
+func NewXerror(code int32, text string) Xerror {
 	return &err{
 		code: code,
 		text: text,

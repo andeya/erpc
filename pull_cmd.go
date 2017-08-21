@@ -23,15 +23,9 @@ type PullCmd struct {
 	packet   *socket.Packet
 	reply    interface{}
 	doneChan chan *PullCmd // Strobes when pull is complete.
+	Xerror   Xerror
 }
 
 func (p *PullCmd) done() {
-	select {
-	case p.doneChan <- p:
-		// ok
-	default:
-		// We don't want to block here. It is the puller's responsibility to make
-		// sure the channel has enough buffer space. See comment in GoPull().
-		Debugf("teleport: discarding Pull reply due to insufficient result chan capacity")
-	}
+	p.doneChan <- p
 }

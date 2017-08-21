@@ -24,9 +24,8 @@ const (
 )
 
 // Response Header status codes as registered with IANA.
-// See: http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
 const (
-	StatusContinue           = 100 // RFC 7231, 6.2.1
+	StatusWriteFailed        = 100
 	StatusSwitchingProtocols = 101 // RFC 7231, 6.2.2
 	StatusProcessing         = 102 // RFC 2518, 10.1
 
@@ -93,7 +92,7 @@ const (
 )
 
 var statusText = map[int]string{
-	StatusContinue:           "Continue",
+	StatusWriteFailed:        "write failed",
 	StatusSwitchingProtocols: "Switching Protocols",
 	StatusProcessing:         "Processing",
 

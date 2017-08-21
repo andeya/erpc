@@ -23,38 +23,36 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-// ApiType api type info
-type ApiType struct {
-	name            string
-	originStruct    reflect.Type
-	method          reflect.Method
-	arg             reflect.Type
-	reply           reflect.Type // only for api doc
-	pluginContainer PluginContainer
-}
-
-// Context server controller ApiContext.
-// For example:
-//  type Home struct{ Context }
 type (
-	Context interface {
+	// RequestCtx request handler context.
+	// For example:
+	//  type Home struct{ RequestCtx }
+	RequestCtx interface {
+		PushCtx
+		SetBodyCodec(string)
+	}
+	// PushCtx push handler context.
+	// For example:
+	//  type Home struct{ PushCtx }
+	PushCtx interface {
 		Uri() string
 		Path() string
 		Query() url.Values
 		Public() goutil.Map
 		PublicLen() int
-		SetBodyCodec(string)
 		Ip() string
 		// RealIp() string
 	}
+	// ApiContext the underlying common instance of RequestCtx and PushCtx.
 	ApiContext struct {
 		session      *Session
 		input        *socket.Packet
 		output       *socket.Packet
-		apiType      *ApiType
+		apiType      *Handler
 		originStruct reflect.Value
 		method       reflect.Method
 		arg          reflect.Value
+		pullCmd      *PullCmd
 		uri          *url.URL
 		query        url.Values
 		public       goutil.Map
@@ -62,7 +60,10 @@ type (
 	}
 )
 
-var _ Context = new(ApiContext)
+var (
+	_ RequestCtx = new(ApiContext)
+	_ PushCtx    = new(ApiContext)
+)
 
 // newApiContext creates a ApiContext for one request/response or push.
 func newApiContext() *ApiContext {
@@ -94,6 +95,7 @@ func (c *ApiContext) clean() {
 	c.arg = emptyValue
 	c.originStruct = emptyValue
 	c.method = emptyMethod
+	c.pullCmd = nil
 	c.public = nil
 	c.uri = nil
 	c.query = nil
@@ -152,8 +154,13 @@ func (c *ApiContext) binding(header *socket.Header) interface{} {
 
 // TODO
 func (c *ApiContext) bindResponse(header *socket.Header) interface{} {
-	c.session.pullCmdMap.Load(header.Seq)
-	return nil
+	pullCmd, ok := c.session.pullCmdMap.Load(header.Seq)
+	if !ok {
+		return nil
+	}
+	c.session.pullCmdMap.Delete(header.Seq)
+	c.pullCmd = pullCmd.(*PullCmd)
+	return c.pullCmd.reply
 }
 
 func (c *ApiContext) bindPush(header *socket.Header) interface{} {
@@ -163,7 +170,7 @@ func (c *ApiContext) bindPush(header *socket.Header) interface{} {
 		return nil
 	}
 	var ok bool
-	c.apiType, ok = c.session.apiMap.get(c.Path())
+	c.apiType, ok = c.session.pushRouter.get(c.Path())
 	if !ok {
 		return nil
 	}
@@ -186,7 +193,7 @@ func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
 		return nil
 	}
 	var ok bool
-	c.apiType, ok = c.session.apiMap.get(c.Path())
+	c.apiType, ok = c.session.requestRouter.get(c.Path())
 	if !ok {
 		c.output.Header.StatusCode = StatusNotFound
 		c.output.Header.Status = StatusText(StatusNotFound)
@@ -196,9 +203,12 @@ func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
 	return c.arg.Interface()
 }
 
-// autoHandle handles request and push packet.
-func (c *ApiContext) autoHandle() {
+// handle handles request and push packet.
+func (c *ApiContext) handle() {
 	rets := c.apiType.method.Func.Call([]reflect.Value{c.arg})
+	if len(rets) == 0 {
+		return
+	}
 	c.output.Body = rets[0].Interface()
 	e := rets[0].Interface().(Xerror)
 	if e == nil {
@@ -211,4 +221,9 @@ func (c *ApiContext) autoHandle() {
 	if len(c.output.BodyCodec) == 0 {
 		c.output.BodyCodec = c.input.BodyCodec
 	}
+}
+
+// respHandle handles request and push packet.
+func (c *ApiContext) respHandle() {
+	c.pullCmd.done()
 }
