@@ -70,8 +70,26 @@ func (s *Session) RemoteAddr() string {
 	return s.socket.RemoteAddr().String()
 }
 
-// TODO
+// PullCmd the command of the pulling operation's response.
+type PullCmd struct {
+	packet   *socket.Packet
+	reply    interface{}
+	doneChan chan *PullCmd // Strobes when pull is complete.
+	Xerror   Xerror
+}
+
+func (p *PullCmd) done() {
+	p.doneChan <- p
+}
+
+// GoPull sends a packet and receives reply asynchronously.
 func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting) {
+	if done == nil && cap(done) == 0 {
+		// It must arrange that done has enough buffer for the number of simultaneous
+		// RPCs that will be using that channel. If the channel
+		// is totally unbuffered, it's best not to run at all.
+		Panicf("teleport: *Session.GoPull(): done channel is unbuffered")
+	}
 	packet := &socket.Packet{
 		Header: &socket.Header{
 			Seq:  s.pullSeq,

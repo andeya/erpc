@@ -51,9 +51,6 @@ type Peer struct {
 	listens     []net.Listener
 }
 
-// ErrListenClosed listener closed error.
-var ErrListenClosed = errors.New("teleport: listener closed")
-
 // NewPeer creates a new peer.
 func NewPeer(cfg *Config) *Peer {
 	var p = &Peer{
@@ -92,6 +89,9 @@ func (p *Peer) Dial(addr string) (*Session, error) {
 	sess := p.ServeConn(conn)
 	return sess, nil
 }
+
+// ErrListenClosed listener closed error.
+var ErrListenClosed = errors.New("teleport: listener closed")
 
 func (p *Peer) Listen() error {
 	var (
