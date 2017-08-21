@@ -29,7 +29,6 @@ type Peer struct {
 	id               string
 	pluginContainer  PluginContainer
 	sessionHub       *SessionHub
-	idMaker          IdMaker
 	closeCh          chan struct{}
 	freeContext      *ApiContext
 	ctxLock          sync.Mutex
@@ -58,7 +57,6 @@ func NewPeer(cfg *Config) *Peer {
 		id:               cfg.Id,
 		ApiMap:           newApiMap(),
 		pluginContainer:  newPluginContainer(),
-		idMaker:          newIdMaker(),
 		sessionHub:       newSessionHub(),
 		readTimeout:      cfg.ReadTimeout,
 		writeTimeout:     cfg.WriteTimeout,
@@ -70,10 +68,6 @@ func NewPeer(cfg *Config) *Peer {
 		defaultGzipLevel: cfg.DefaultGzipLevel,
 	}
 	return p
-}
-
-func (p *Peer) SetIdMaker(idMaker IdMaker) {
-	p.idMaker = idMaker
 }
 
 func (p *Peer) ServeConn(conn net.Conn, id ...string) *Session {

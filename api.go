@@ -152,7 +152,7 @@ func (c *ApiContext) binding(header *socket.Header) interface{} {
 
 // TODO
 func (c *ApiContext) bindResponse(header *socket.Header) interface{} {
-	c.session.pullCmdMap.Load(header.Id)
+	c.session.pullCmdMap.Load(header.Seq)
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (c *ApiContext) bindPush(header *socket.Header) interface{} {
 }
 
 func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
-	c.output.Header.Id = c.input.Header.Id
+	c.output.Header.Seq = c.input.Header.Seq
 	c.output.Header.Type = TypeResponse
 	c.output.Header.Uri = c.input.Header.Uri
 	c.output.HeaderCodec = c.input.HeaderCodec

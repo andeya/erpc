@@ -26,6 +26,7 @@ import (
 // Session a connection session.
 type Session struct {
 	peer       *Peer
+	seq        uint64
 	apiMap     *ApiMap
 	pullCmdMap goutil.Map
 	socket     socket.Socket
@@ -50,12 +51,13 @@ func (s *Session) Id() string {
 func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, packetSetting ...socket.PacketSetting) {
 	packet := &socket.Packet{
 		Header: &socket.Header{
-			Id:   s.peer.idMaker.Id(),
+			Seq:  s.seq,
 			Uri:  uri,
 			Gzip: s.peer.defaultGzipLevel,
 		},
 		Body: args,
 	}
+	s.seq++
 	for _, f := range packetSetting {
 		f(packet)
 	}

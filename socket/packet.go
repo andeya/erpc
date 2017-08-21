@@ -25,6 +25,30 @@ import (
 	"github.com/henrylee2cn/teleport/codec"
 )
 
+// Packet provides header and body's containers for receiving and sending packet.
+type Packet struct {
+	// HeaderCodec header codec name
+	HeaderCodec string
+	// BodyCodec body codec name
+	BodyCodec string
+	// header content
+	Header *Header `json:"header"`
+	// body content
+	Body interface{} `json:"body"`
+	// header length
+	HeaderLength int64 `json:"header_length"`
+	// body length
+	BodyLength int64 `json:"body_length"`
+	// HeaderLength + BodyLength
+	Length int64 `json:"length"`
+	// get body by header
+	// Note:
+	//  only for writing packet;
+	//  should be nil when reading packet.
+	bodyGetting func(*Header) interface{} `json:"-"`
+	next        *Packet                   `json:"-"`
+}
+
 var packetStack = new(struct {
 	freePacket *Packet
 	mu         sync.Mutex
@@ -54,30 +78,6 @@ func PutPacket(p *Packet) {
 	p.next = packetStack.freePacket
 	packetStack.freePacket = p
 	packetStack.mu.Unlock()
-}
-
-// Packet provides header and body's containers for receiving and sending packet.
-type Packet struct {
-	// HeaderCodec header codec name
-	HeaderCodec string
-	// BodyCodec body codec name
-	BodyCodec string
-	// header content
-	Header *Header `json:"header"`
-	// body content
-	Body interface{} `json:"body"`
-	// header length
-	HeaderLength int64 `json:"header_length"`
-	// body length
-	BodyLength int64 `json:"body_length"`
-	// HeaderLength + BodyLength
-	Length int64 `json:"length"`
-	// get body by header
-	// Note:
-	//  only for writing packet;
-	//  should be nil when reading packet.
-	bodyGetting func(*Header) interface{} `json:"-"`
-	next        *Packet                   `json:"-"`
 }
 
 // NewPacket creates a new *Packet.

@@ -176,7 +176,7 @@ func main() {
 		packet.Reset(nil)
 		packet.HeaderCodec = "json"
 		packet.BodyCodec = "json"
-		packet.Header.Id = "1"
+		packet.Header.Seq = 1
 		packet.Header.Uri = "/a/b"
 		packet.Header.Gzip = 5
 		packet.Body = map[string]string{"a": "A"}
