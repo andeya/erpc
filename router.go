@@ -17,6 +17,7 @@ package teleport
 import (
 	"path"
 	"reflect"
+	"strings"
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
@@ -54,26 +55,26 @@ func (r *Router) Group(pathPrefix string, plugins ...Plugin) *Router {
 		handlers:   r.handlers,
 		pathPrefix: path.Join(r.pathPrefix, pathPrefix),
 		plugins:    ps,
+		fn:         r.fn,
 	}
 }
 
 // Reg registers handler.
-func (r *Router) Reg(pathPrefix string, ctrlStruct interface{}, plugin ...Plugin) {
+func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 	handlers, err := r.fn(
-		path.Join(r.pathPrefix, pathPrefix),
+		r.pathPrefix,
 		ctrlStruct,
 		&pluginContainer{append(r.plugins, plugin...)},
 	)
 	if err != nil {
-		Fatalf("%v", err)
+		Panicf("%v", err)
 	}
-	for _, requestHandler := range handlers {
-		name := path.Join(pathPrefix, requestHandler.name)
-		if _, ok := r.handlers[name]; ok {
-			Fatalf("There is a %s handler conflict: %s", r.typ, name)
+	for _, h := range handlers {
+		if _, ok := r.handlers[h.name]; ok {
+			Fatalf("There is a %s handler conflict: %s", r.typ, h.name)
 		}
-		r.handlers[name] = requestHandler
-		Printf("register %s handler: %s", r.typ, name)
+		r.handlers[h.name] = h
+		Printf("register %s handler: %s", r.typ, h.name)
 	}
 }
 
@@ -94,10 +95,6 @@ func newRequestRouter() *Router {
 	}
 }
 
-// Precompute the reflect type for Xerror interface. Can't use error directly
-// because Typeof takes an empty interface value. This is annoying.
-var typeOfError = reflect.TypeOf((Xerror)(nil))
-
 // Note: ctrlStruct needs to implement RequestCtx interface.
 func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
 	var (
@@ -115,7 +112,7 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" {
+		if method.PkgPath != "" || isRequestCtxMethod(mname) {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
@@ -145,11 +142,11 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 			return nil, errors.Errorf("register request handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
 		}
 		// The return type of the method must be Error.
-		if returnType := mtype.Out(1); returnType != typeOfError {
-			return nil, errors.Errorf("register request handler: %s.%s second reply type %s not *Error", ctype.String(), mname, returnType)
+		if returnType := mtype.Out(1); strings.TrimPrefix(returnType.Name(), "teleport.") != "Xerror" {
+			return nil, errors.Errorf("register request handler: %s.%s second reply type %s not teleport.Xerror", ctype.String(), mname, returnType)
 		}
 		handlers = append(handlers, &Handler{
-			name:            goutil.CamelString(ctype.Name() + "/" + mname),
+			name:            path.Join(pathPrefix, goutil.SnakeString(ctype.Name()), goutil.SnakeString(mname)),
 			originStruct:    ctype,
 			method:          method,
 			arg:             argType,
@@ -189,7 +186,7 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" {
+		if method.PkgPath != "" || isPushCtxMethod(mname) {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
@@ -214,7 +211,7 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			return nil, errors.Errorf("register push handler: %s.%s does not need out argument, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 		handlers = append(handlers, &Handler{
-			name:            goutil.CamelString(ctype.Name() + "/" + mname),
+			name:            path.Join(pathPrefix, goutil.SnakeString(ctype.Name()), goutil.SnakeString(mname)),
 			originStruct:    ctype,
 			method:          method,
 			arg:             argType,
@@ -222,4 +219,24 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		})
 	}
 	return handlers, nil
+}
+
+func isRequestCtxMethod(name string) bool {
+	ctype := reflect.TypeOf(RequestCtx(new(ApiContext)))
+	for m := 0; m < ctype.NumMethod(); m++ {
+		if name == ctype.Method(m).Name {
+			return true
+		}
+	}
+	return false
+}
+
+func isPushCtxMethod(name string) bool {
+	ctype := reflect.TypeOf(PushCtx(new(ApiContext)))
+	for m := 0; m < ctype.NumMethod(); m++ {
+		if name == ctype.Method(m).Name {
+			return true
+		}
+	}
+	return false
 }

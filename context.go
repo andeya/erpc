@@ -17,7 +17,9 @@ package teleport
 import (
 	"net/url"
 	"reflect"
+	"time"
 
+	"github.com/henrylee2cn/go-logging/color"
 	"github.com/henrylee2cn/goutil"
 
 	"github.com/henrylee2cn/teleport/socket"
@@ -56,6 +58,8 @@ type (
 		uri          *url.URL
 		query        url.Values
 		public       goutil.Map
+		start        time.Time
+		cost         time.Duration
 		next         *ApiContext
 	}
 )
@@ -99,6 +103,7 @@ func (c *ApiContext) clean() {
 	c.public = nil
 	c.uri = nil
 	c.query = nil
+	c.cost = 0
 	c.input.Reset(c.binding)
 	c.output.Reset(nil)
 }
@@ -142,6 +147,7 @@ func (c *ApiContext) Ip() string {
 }
 
 func (c *ApiContext) binding(header *socket.Header) interface{} {
+	c.start = time.Now()
 	switch header.Type {
 	case TypeResponse:
 		return c.bindResponse(header)
@@ -224,6 +230,30 @@ func (c *ApiContext) handle() {
 	}
 	if len(c.output.BodyCodec) == 0 {
 		c.output.BodyCodec = c.input.BodyCodec
+	}
+
+	err := c.session.write(c.output)
+	if err != nil {
+		Debugf("teleport: WritePacket: %s", err.Error())
+	}
+
+	var n = c.output.Header.StatusCode
+	var code string
+	switch {
+	case n >= 500:
+		code = color.Red(n)
+	case n >= 400:
+		code = color.Magenta(n)
+	case n >= 300:
+		code = color.Grey(n)
+	default:
+		code = color.Green(n)
+	}
+	c.cost = time.Since(c.start)
+	if c.cost < c.session.peer.slowCometDuration {
+		Infof("%15s %3s %10d %12s %-30s | %v", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, c.output.Body)
+	} else {
+		Warnf(" %15s %3s %10d %12s(slow) %-30s | %v", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, c.output.Body)
 	}
 }
 

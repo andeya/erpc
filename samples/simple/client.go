@@ -8,7 +8,7 @@ import (
 
 func main() {
 	var cfg = &teleport.Config{
-		Id:                       "server-peer",
+		Id:                       "client-peer",
 		ReadTimeout:              time.Second * 10,
 		WriteTimeout:             time.Second * 10,
 		TlsCertFile:              "",
@@ -18,24 +18,18 @@ func main() {
 		DefaultGzipLevel:         5,
 		MaxGoroutinesAmount:      1024,
 		MaxGoroutineIdleDuration: time.Second * 1,
-		ListenAddrs: []string{
-			"0.0.0.0:9090",
-			"0.0.0.0:9091",
-		},
 	}
+
 	var peer = teleport.NewPeer(cfg)
-	{
-		group := peer.RequestRouter.Group("group")
-		group.Reg(new(Home))
+
+	var sess, err = peer.Dial("127.0.0.1:9090")
+	if err != nil {
+		teleport.Panicf("%v", err)
 	}
-	peer.Listen()
-}
-
-// Home controller
-type Home struct {
-	teleport.RequestCtx
-}
-
-func (t *Home) Test(args *string) (string, teleport.Xerror) {
-	return "home-test response:" + *args, nil
+	var reply string
+	pullcmd := sess.Pull("/group/home/test", "test_args", reply)
+	if pullcmd.Xerror != nil {
+		teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+	}
+	teleport.Infof("reply: %s", reply)
 }

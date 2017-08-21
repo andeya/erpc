@@ -25,9 +25,9 @@ const (
 
 // Response Header status codes as registered with IANA.
 const (
-	StatusWriteFailed        = 100
-	StatusSwitchingProtocols = 101 // RFC 7231, 6.2.2
-	StatusProcessing         = 102 // RFC 2518, 10.1
+	StatusWriteFailed = 100
+	StatusConnClosed  = 101
+	StatusProcessing  = 102 // RFC 2518, 10.1
 
 	StatusOK                   = 200 // RFC 7231, 6.3.1
 	StatusCreated              = 201 // RFC 7231, 6.3.2
@@ -92,9 +92,9 @@ const (
 )
 
 var statusText = map[int]string{
-	StatusWriteFailed:        "write failed",
-	StatusSwitchingProtocols: "Switching Protocols",
-	StatusProcessing:         "Processing",
+	StatusWriteFailed: "write failed",
+	StatusConnClosed:  "Connection Closed",
+	StatusProcessing:  "Processing",
 
 	StatusOK:                   "OK",
 	StatusCreated:              "Created",

@@ -26,22 +26,22 @@ import (
 
 // Peer peer which is server or client.
 type Peer struct {
-	RequestRouter    *Router
-	PushRouter       *Router
-	id               string
-	pluginContainer  PluginContainer
-	sessionHub       *SessionHub
-	closeCh          chan struct{}
-	freeContext      *ApiContext
-	ctxLock          sync.Mutex
-	readTimeout      time.Duration // readdeadline for underlying net.Conn
-	writeTimeout     time.Duration // writedeadline for underlying net.Conn
-	tlsConfig        *tls.Config
-	slowApiDuration  time.Duration
-	defaultCodec     string
-	defaultGzipLevel int32
-	gopool           *pool.GoPool
-	mu               sync.Mutex
+	RequestRouter     *Router
+	PushRouter        *Router
+	id                string
+	pluginContainer   PluginContainer
+	sessionHub        *SessionHub
+	closeCh           chan struct{}
+	freeContext       *ApiContext
+	ctxLock           sync.Mutex
+	readTimeout       time.Duration // readdeadline for underlying net.Conn
+	writeTimeout      time.Duration // writedeadline for underlying net.Conn
+	tlsConfig         *tls.Config
+	slowCometDuration time.Duration
+	defaultCodec      string
+	defaultGzipLevel  int32
+	gopool            *pool.GoPool
+	mu                sync.Mutex
 
 	// for client role
 	dialTimeout time.Duration
@@ -54,20 +54,20 @@ type Peer struct {
 // NewPeer creates a new peer.
 func NewPeer(cfg *Config) *Peer {
 	var p = &Peer{
-		id:               cfg.Id,
-		RequestRouter:    newRequestRouter(),
-		PushRouter:       newPushRouter(),
-		pluginContainer:  newPluginContainer(),
-		sessionHub:       newSessionHub(),
-		readTimeout:      cfg.ReadTimeout,
-		writeTimeout:     cfg.WriteTimeout,
-		closeCh:          make(chan struct{}),
-		slowApiDuration:  cfg.SlowApiDuration,
-		dialTimeout:      cfg.DialTimeout,
-		listenAddrs:      cfg.ListenAddrs,
-		defaultCodec:     cfg.DefaultCodec,
-		defaultGzipLevel: cfg.DefaultGzipLevel,
-		gopool:           pool.NewGoPool(cfg.MaxGoroutinesAmount, cfg.MaxGoroutineIdleDuration),
+		id:                cfg.Id,
+		RequestRouter:     newRequestRouter(),
+		PushRouter:        newPushRouter(),
+		pluginContainer:   newPluginContainer(),
+		sessionHub:        newSessionHub(),
+		readTimeout:       cfg.ReadTimeout,
+		writeTimeout:      cfg.WriteTimeout,
+		closeCh:           make(chan struct{}),
+		slowCometDuration: cfg.SlowCometDuration,
+		dialTimeout:       cfg.DialTimeout,
+		listenAddrs:       cfg.ListenAddrs,
+		defaultCodec:      cfg.DefaultCodec,
+		defaultGzipLevel:  cfg.DefaultGzipLevel,
+		gopool:            pool.NewGoPool(cfg.MaxGoroutinesAmount, cfg.MaxGoroutineIdleDuration),
 	}
 	return p
 }
@@ -101,10 +101,10 @@ func (p *Peer) Listen() error {
 	)
 	wg.Add(count)
 	for _, addr := range p.listenAddrs {
-		go func() {
+		go func(addr string) {
 			defer wg.Done()
 			errCh <- p.listen(addr)
-		}()
+		}(addr)
 	}
 	wg.Wait()
 	close(errCh)

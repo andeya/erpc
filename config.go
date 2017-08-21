@@ -25,7 +25,7 @@ type Config struct {
 	WriteTimeout             time.Duration // writedeadline for underlying net.Conn
 	TlsCertFile              string
 	TlsKeyFile               string
-	SlowApiDuration          time.Duration // ns,µs,ms,s ...
+	SlowCometDuration        time.Duration // ns,µs,ms,s ...
 	DefaultCodec             string
 	DefaultGzipLevel         int32
 	MaxGoroutinesAmount      int

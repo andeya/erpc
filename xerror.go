@@ -33,23 +33,23 @@ type Xerror interface {
 // NewXerror creates a new Error interface.
 func NewXerror(code int32, text string) Xerror {
 	return &err{
-		code: code,
-		text: text,
+		Cod: code,
+		Txt: text,
 	}
 }
 
 type err struct {
-	code int32
-	text string
-	json string
+	Cod  int32  `json:"code"`
+	Txt  string `json:"text"`
+	json string `json:"-"`
 }
 
 func (e *err) Code() int32 {
-	return e.code
+	return e.Cod
 }
 
 func (e *err) Text() string {
-	return e.text
+	return e.Txt
 }
 
 func (e *err) Error() string {

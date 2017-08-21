@@ -123,6 +123,9 @@ func (s *Session) Pull(uri string, args interface{}, reply interface{}, setting 
 	doneChan := make(chan *PullCmd, 1)
 	s.GoPull(uri, args, reply, doneChan, setting...)
 	pullCmd := <-doneChan
+	defer func() {
+		recover()
+	}()
 	close(doneChan)
 	return pullCmd
 }
@@ -158,6 +161,12 @@ func (s *Session) Close() error {
 		return nil
 	}
 	s.closed = true
+	s.pullCmdMap.Range(func(_, v interface{}) bool {
+		pullCmd := v.(*PullCmd)
+		pullCmd.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
+		pullCmd.done()
+		return true
+	})
 	s.pullCmdMap = nil
 	return s.socket.Close()
 }
@@ -180,9 +189,10 @@ func (s *Session) readAndHandle() {
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
 			s.peer.putContext(ctx)
-			Debugf("teleport: ReadPacket: %s", err.Error())
+			Debugf("teleport: ReadPacket failed: %s", err.Error())
 			return
 		}
+
 		err = s.gopool.Go(func() {
 			defer s.peer.putContext(ctx)
 			switch ctx.input.Header.Type {
@@ -198,10 +208,6 @@ func (s *Session) readAndHandle() {
 				// handle response
 				ctx.handle()
 				ctx.output.Header.Type = TypeResponse
-				err = s.write(ctx.output)
-				if err != nil {
-					Debugf("teleport: WritePacket: %s", err.Error())
-				}
 			}
 		})
 		if err != nil {
