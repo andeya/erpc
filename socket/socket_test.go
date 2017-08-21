@@ -71,13 +71,11 @@ func TestSocket(t *testing.T) {
 		s := GetSocket(conn)
 		t.Logf("[CLI] s.LocalAddr(): %s, s.RemoteAddr(): %s", s.LocalAddr(), s.RemoteAddr())
 
-		var packet = GetPacket(
-			nil,
-			WithHeaderCodec("json"),
-			WithBodyCodec("json"),
-		)
+		var packet = GetPacket(nil)
 
 		// write request
+		packet.HeaderCodec = "json"
+		packet.BodyCodec = "json"
 		packet.Header.Id = "1"
 		packet.Header.Uri = "/a/b"
 		packet.Header.Gzip = 5

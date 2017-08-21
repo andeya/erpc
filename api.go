@@ -20,7 +20,6 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 
-	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -128,7 +127,7 @@ func (c *ApiContext) Query() url.Values {
 }
 
 func (c *ApiContext) SetBodyCodec(codecName string) {
-	c.output.SetBodyCodecByName(codecName)
+	c.output.BodyCodec = codecName
 }
 
 func (c *ApiContext) Ip() string {
@@ -209,7 +208,7 @@ func (c *ApiContext) autoHandle() {
 		c.output.Header.StatusCode = e.Code()
 		c.output.Header.Status = e.Text()
 	}
-	if c.output.BodyCodec == codec.NilCodecId {
+	if len(c.output.BodyCodec) == 0 {
 		c.output.BodyCodec = c.input.BodyCodec
 	}
 }

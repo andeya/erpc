@@ -23,31 +23,37 @@ import (
 )
 
 type GzipEncoder struct {
+	id            byte
 	gzipWriterMap map[int]*gzip.Writer
 	w             io.Writer
 	encMap        map[int]codec.Encoder
 	encMaker      func(io.Writer) codec.Encoder
 }
 
-func (s *socket) getGzipEncoder(codecId byte) (*GzipEncoder, error) {
-	g, ok := s.gzipEncodeMap[codecId]
+func (s *socket) getGzipEncoder(codecName string) (*GzipEncoder, error) {
+	g, ok := s.gzipEncodeMap[codecName]
 	if ok {
 		return g, nil
 	}
-	c, err := codec.GetById(codecId)
+	c, err := codec.GetByName(codecName)
 	if err != nil {
 		return nil, err
 	}
 	w := s.cacheWriter
 	enc := c.NewEncoder(w)
 	g = &GzipEncoder{
+		id:            c.Id(),
 		gzipWriterMap: s.gzipWriterMap,
 		w:             w,
 		encMap:        map[int]codec.Encoder{gzip.NoCompression: enc},
 		encMaker:      c.NewEncoder,
 	}
-	s.gzipEncodeMap[codecId] = g
+	s.gzipEncodeMap[codecName] = g
 	return g, nil
+}
+
+func (g *GzipEncoder) Id() byte {
+	return g.id
 }
 
 func (g *GzipEncoder) Encode(gzipLevel int, v interface{}) error {
@@ -78,6 +84,7 @@ func (g *GzipEncoder) Encode(gzipLevel int, v interface{}) error {
 }
 
 type GzipDecoder struct {
+	name       string
 	gzipReader *gzip.Reader
 	r          utils.Reader
 	dec        codec.Decoder
@@ -102,9 +109,14 @@ func (s *socket) getGzipDecoder(codecId byte) (*GzipDecoder, error) {
 		decMaker:   c.NewDecoder,
 		dec:        c.NewDecoder(r),
 		gzDec:      c.NewDecoder(gzipReader),
+		name:       c.Name(),
 	}
 	s.gzipDecodeMap[codecId] = g
 	return g, nil
+}
+
+func (g *GzipDecoder) Name() string {
+	return g.name
 }
 
 func (g *GzipDecoder) Decode(gzipLevel int, v interface{}) error {

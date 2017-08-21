@@ -18,11 +18,9 @@ func main() {
 	defer socket.PutPacket(packet)
 	for i := 0; i < 10; i++ {
 		// write request
-		packet.Reset(
-			nil,
-			socket.WithHeaderCodec("json"),
-			socket.WithBodyCodec("json"),
-		)
+		packet.Reset(nil)
+		packet.HeaderCodec = "json"
+		packet.BodyCodec = "json"
 		packet.Header.Id = "1"
 		packet.Header.Uri = "/a/b"
 		packet.Header.Gzip = 5

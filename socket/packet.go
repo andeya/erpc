@@ -58,10 +58,10 @@ func PutPacket(p *Packet) {
 
 // Packet provides header and body's containers for receiving and sending packet.
 type Packet struct {
-	// HeaderCodec header codec id
-	HeaderCodec byte
-	// BodyCodec body codec id
-	BodyCodec byte
+	// HeaderCodec header codec name
+	HeaderCodec string
+	// BodyCodec body codec name
+	BodyCodec string
 	// header content
 	Header *Header `json:"header"`
 	// body content
@@ -88,8 +88,6 @@ func NewPacket(bodyGetting func(*Header) interface{}, settings ...PacketSetting)
 	var p = &Packet{
 		Header:      new(Header),
 		bodyGetting: bodyGetting,
-		HeaderCodec: codec.NilCodecId,
-		BodyCodec:   codec.NilCodecId,
 	}
 	for _, f := range settings {
 		f(p)
@@ -109,8 +107,8 @@ func (p *Packet) Reset(bodyGetting func(*Header) interface{}, settings ...Packet
 	p.HeaderLength = 0
 	p.BodyLength = 0
 	p.Length = 0
-	p.HeaderCodec = codec.NilCodecId
-	p.BodyCodec = codec.NilCodecId
+	p.HeaderCodec = ""
+	p.BodyCodec = ""
 	for _, f := range settings {
 		f(p)
 	}
@@ -136,53 +134,26 @@ func (p *Packet) String() string {
 	return goutil.BytesToString(b)
 }
 
-// HeaderCodecName returns packet header codec name.
-func (p *Packet) HeaderCodecName() string {
-	c, err := codec.GetById(p.HeaderCodec)
+// HeaderCodecName returns packet header codec id.
+func (p *Packet) HeaderCodecId() byte {
+	c, err := codec.GetByName(p.HeaderCodec)
 	if err != nil {
-		return ""
+		return codec.NilCodecId
 	}
-	return c.Name()
+	return c.Id()
 }
 
-// BodyCodecName returns packet body codec name.
-func (p *Packet) BodyCodecName() string {
-	c, err := codec.GetById(p.BodyCodec)
+// BodyCodecName returns packet body codec id.
+func (p *Packet) BodyCodecId() byte {
+	c, err := codec.GetByName(p.BodyCodec)
 	if err != nil {
-		return ""
+		return codec.NilCodecId
 	}
-	return c.Name()
-}
-
-// SetHeaderCodecByName sets header codec by name.
-func (p *Packet) SetHeaderCodecByName(codecName string) {
-	p.HeaderCodec = getCodecByName(codecName).Id()
-}
-
-// SetBodyCodecByName sets body codec by name.
-func (p *Packet) SetBodyCodecByName(codecName string) {
-	p.BodyCodec = getCodecByName(codecName).Id()
+	return c.Id()
 }
 
 // PacketSetting sets Header field.
 type PacketSetting func(*Packet)
-
-// WithHeaderCodec sets header codec.
-func WithHeaderCodec(codecName string) PacketSetting {
-	c, _ := codec.GetByName(codecName)
-	codecId := c.Id()
-	return func(p *Packet) {
-		p.HeaderCodec = codecId
-	}
-}
-
-// WithBodyCodec sets body codec.
-func WithBodyCodec(codecName string) PacketSetting {
-	codecId := getCodecByName(codecName).Id()
-	return func(p *Packet) {
-		p.BodyCodec = codecId
-	}
-}
 
 // WithBodyCodec sets body gzip level.
 func WithBodyGzip(gzipLevel int32) PacketSetting {
@@ -191,10 +162,18 @@ func WithBodyGzip(gzipLevel int32) PacketSetting {
 	}
 }
 
-func getCodecByName(codecName string) codec.Codec {
+func getCodecId(codecName string) byte {
 	c, err := codec.GetByName(codecName)
 	if err != nil {
-		panic(err)
+		return codec.NilCodecId
 	}
-	return c
+	return c.Id()
+}
+
+func getCodecName(codecId byte) string {
+	c, err := codec.GetById(codecId)
+	if err != nil {
+		return ""
+	}
+	return c.Name()
 }

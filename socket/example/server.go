@@ -36,8 +36,8 @@ func main() {
 				}
 
 				// write response
-				packet.SetHeaderCodecByName("json")
-				packet.SetBodyCodecByName("json")
+				packet.HeaderCodec = "json"
+				packet.BodyCodec = "json"
 				packet.Header.StatusCode = 200
 				packet.Header.Status = "ok"
 				packet.Body = time.Now()
