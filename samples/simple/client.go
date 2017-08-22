@@ -39,7 +39,7 @@ func main() {
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9090reply: %s", reply)
+		teleport.Infof("9090reply: %#v", reply)
 	}
 
 	{
@@ -58,7 +58,7 @@ func main() {
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9091reply: %v", reply)
+		teleport.Infof("9091reply: %#v", reply)
 	}
 }
 

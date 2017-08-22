@@ -28,17 +28,17 @@ type (
 	Router struct {
 		handlers map[string]*Handler
 		// only for register router
-		pathPrefix string
-		plugins    []Plugin
-		typ        string
-		fn         HandlersMaker
+		pathPrefix      string
+		pluginContainer PluginContainer
+		typ             string
+		fn              HandlersMaker
 	}
 	// Handler request or push handler type info
 	Handler struct {
 		name              string
-		originStructMaker func(*ApiContext) reflect.Value
+		originStructMaker func(*readHandleCtx) reflect.Value
 		method            reflect.Method
-		arg               reflect.Type
+		argElem           reflect.Type
 		reply             reflect.Type // only for request handler doc
 		pluginContainer   PluginContainer
 	}
@@ -47,31 +47,41 @@ type (
 )
 
 // Group add handler group.
-func (r *Router) Group(pathPrefix string, plugins ...Plugin) *Router {
-	ps := make([]Plugin, len(r.plugins)+len(plugins))
-	copy(ps, r.plugins)
-	copy(ps[len(r.plugins):], plugins)
+func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
+	pluginContainer, err := r.pluginContainer.cloneAdd(plugin...)
+	if err != nil {
+		Fatalf("%v", err)
+	}
+	warnInvaildRouterHooks(plugin)
 	return &Router{
-		handlers:   r.handlers,
-		pathPrefix: path.Join(r.pathPrefix, pathPrefix),
-		plugins:    ps,
-		fn:         r.fn,
+		handlers:        r.handlers,
+		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
+		pluginContainer: pluginContainer,
+		fn:              r.fn,
 	}
 }
 
 // Reg registers handler.
 func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
+	pluginContainer, err := r.pluginContainer.cloneAdd(plugin...)
+	if err != nil {
+		Fatalf("%v", err)
+	}
+	warnInvaildRouterHooks(plugin)
 	handlers, err := r.fn(
 		r.pathPrefix,
 		ctrlStruct,
-		&pluginContainer{append(r.plugins, plugin...)},
+		pluginContainer,
 	)
 	if err != nil {
-		Panicf("%v", err)
+		Fatalf("%v", err)
 	}
 	for _, h := range handlers {
 		if _, ok := r.handlers[h.name]; ok {
 			Fatalf("There is a %s handler conflict: %s", r.typ, h.name)
+		}
+		if err = pluginContainer.PostReg(h); err != nil {
+			Fatalf("%v", err)
 		}
 		r.handlers[h.name] = h
 		Printf("register %s handler: %s", r.typ, h.name)
@@ -85,13 +95,13 @@ func (r *Router) get(uriPath string) (*Handler, bool) {
 
 // newPullRouter creates request packet router.
 // Note: ctrlStruct needs to implement PullCtx interface.
-func newPullRouter() *Router {
+func newPullRouter(pluginContainer PluginContainer) *Router {
 	return &Router{
-		handlers:   make(map[string]*Handler),
-		pathPrefix: "/",
-		plugins:    make([]Plugin, 0),
-		fn:         requestHandlersMaker,
-		typ:        "request",
+		handlers:        make(map[string]*Handler),
+		pathPrefix:      "/",
+		pluginContainer: pluginContainer,
+		fn:              requestHandlersMaker,
+		typ:             "request",
 	}
 }
 
@@ -100,7 +110,7 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 	var (
 		ctype             = reflect.TypeOf(ctrlStruct)
 		handlers          = make([]*Handler, 0, 1)
-		originStructMaker func(*ApiContext) reflect.Value
+		originStructMaker func(*readHandleCtx) reflect.Value
 	)
 	if ctype.Kind() != reflect.Ptr {
 		return nil, errors.Errorf("register request handler: the type is not struct point: %s", ctype.String())
@@ -113,7 +123,7 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 		return nil, errors.Errorf("register request handler: the type is not implemented PullCtx interface: %s", ctype.String())
 	} else {
 		if iType, ok := ctypeElem.FieldByName("PullCtx"); ok && iType.Anonymous {
-			originStructMaker = func(ctx *ApiContext) reflect.Value {
+			originStructMaker = func(ctx *readHandleCtx) reflect.Value {
 				ctrl := reflect.New(ctypeElem)
 				ctrl.Elem().FieldByName("PullCtx").Set(reflect.ValueOf(ctx))
 				return ctrl
@@ -170,7 +180,7 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 			name:              path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
 			originStructMaker: originStructMaker,
 			method:            method,
-			arg:               argType.Elem(),
+			argElem:           argType.Elem(),
 			reply:             replyType,
 			pluginContainer:   pluginContainer,
 		})
@@ -180,13 +190,13 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 
 // newPushRouter creates push packet router.
 // Note: ctrlStruct needs to implement PushCtx interface.
-func newPushRouter() *Router {
+func newPushRouter(pluginContainer PluginContainer) *Router {
 	return &Router{
-		handlers:   make(map[string]*Handler),
-		pathPrefix: "/",
-		plugins:    make([]Plugin, 0),
-		fn:         pushHandlersMaker,
-		typ:        "push",
+		handlers:        make(map[string]*Handler),
+		pathPrefix:      "/",
+		pluginContainer: pluginContainer,
+		fn:              pushHandlersMaker,
+		typ:             "push",
 	}
 }
 
@@ -195,7 +205,7 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 	var (
 		ctype             = reflect.TypeOf(ctrlStruct)
 		handlers          = make([]*Handler, 0, 1)
-		originStructMaker func(*ApiContext) reflect.Value
+		originStructMaker func(*readHandleCtx) reflect.Value
 	)
 	if ctype.Kind() != reflect.Ptr {
 		return nil, errors.Errorf("register push handler: the type is not struct point: %s", ctype.String())
@@ -208,7 +218,7 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		return nil, errors.Errorf("register push handler: the type is not implemented PushCtx interface: %s", ctype.String())
 	} else {
 		if iType, ok := ctypeElem.FieldByName("PushCtx"); ok && iType.Anonymous {
-			originStructMaker = func(ctx *ApiContext) reflect.Value {
+			originStructMaker = func(ctx *readHandleCtx) reflect.Value {
 				ctrl := reflect.New(ctypeElem)
 				ctrl.Elem().FieldByName("PushCtx").Set(reflect.ValueOf(ctx))
 				return ctrl
@@ -254,7 +264,7 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			name:              path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
 			originStructMaker: originStructMaker,
 			method:            method,
-			arg:               argType.Elem(),
+			argElem:           argType.Elem(),
 			pluginContainer:   pluginContainer,
 		})
 	}
@@ -262,7 +272,7 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 }
 
 func isPullCtxMethod(name string) bool {
-	ctype := reflect.TypeOf(PullCtx(new(ApiContext)))
+	ctype := reflect.TypeOf(PullCtx(new(readHandleCtx)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
 			return true
@@ -272,7 +282,7 @@ func isPullCtxMethod(name string) bool {
 }
 
 func isPushCtxMethod(name string) bool {
-	ctype := reflect.TypeOf(PushCtx(new(ApiContext)))
+	ctype := reflect.TypeOf(PushCtx(new(readHandleCtx)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
 			return true
@@ -285,4 +295,29 @@ func ctrlStructSnakeName(ctype reflect.Type) string {
 	split := strings.Split(ctype.String(), ".")
 	tName := split[len(split)-1]
 	return goutil.SnakeString(tName)
+}
+
+// Name returns the handler name.
+func (h *Handler) Name() string {
+	return h.name
+}
+
+// ArgElemType returns the handler arg elem type.
+func (h *Handler) ArgElemType() reflect.Type {
+	return h.argElem
+}
+
+// ReplyType returns the handler reply type
+func (h *Handler) ReplyType() reflect.Type {
+	return h.reply
+}
+
+// IsPush checks if it is push handler or not.
+func (h *Handler) IsPush() bool {
+	return h.reply == nil
+}
+
+// IsPull checks if it is pull handler or not.
+func (h *Handler) IsPull() bool {
+	return !h.IsPush()
 }

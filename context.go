@@ -27,14 +27,14 @@ import (
 type (
 	// PullCtx request handler context.
 	// For example:
-	//  type Home struct{ PullCtx }
+	//  type HomePull struct{ PullCtx }
 	PullCtx interface {
 		PushCtx
 		SetBodyCodec(string)
 	}
 	// PushCtx push handler context.
 	// For example:
-	//  type Home struct{ PushCtx }
+	//  type HomePush struct{ PushCtx }
 	PushCtx interface {
 		Uri() string
 		Path() string
@@ -45,39 +45,60 @@ type (
 		Peer() *Peer
 		Session() *Session
 	}
-	// ApiContext the underlying common instance of PullCtx and PushCtx.
-	ApiContext struct {
-		session           *Session
-		input             *socket.Packet
-		output            *socket.Packet
-		apiType           *Handler
-		originStructMaker func(*ApiContext) reflect.Value
-		method            reflect.Method
-		arg               reflect.Value
-		pullCmd           *PullCmd
-		uri               *url.URL
-		query             url.Values
-		public            goutil.Map
-		start             time.Time
-		cost              time.Duration
-		next              *ApiContext
+	// WriteCtx for writing packet.
+	WriteCtx interface {
+		Public() goutil.Map
+		PublicLen() int
+		Ip() string
+		Peer() *Peer
+		Session() *Session
+		Output() *socket.Packet
+	}
+	// ReadCtx for reading packet.
+	ReadCtx interface {
+		Public() goutil.Map
+		PublicLen() int
+		Ip() string
+		Peer() *Peer
+		Session() *Session
+		Input() *socket.Packet
 	}
 )
 
+// readHandleCtx the underlying common instance of PullCtx and PushCtx.
+type readHandleCtx struct {
+	session           *Session
+	input             *socket.Packet
+	output            *socket.Packet
+	apiType           *Handler
+	originStructMaker func(*readHandleCtx) reflect.Value
+	method            reflect.Method
+	arg               reflect.Value
+	pullCmd           *PullCmd
+	uri               *url.URL
+	query             url.Values
+	public            goutil.Map
+	start             time.Time
+	cost              time.Duration
+	next              *readHandleCtx
+}
+
 var (
-	_ PullCtx = new(ApiContext)
-	_ PushCtx = new(ApiContext)
+	_ PullCtx  = new(readHandleCtx)
+	_ PushCtx  = new(readHandleCtx)
+	_ WriteCtx = new(readHandleCtx)
+	_ ReadCtx  = new(readHandleCtx)
 )
 
-// newApiContext creates a ApiContext for one request/response or push.
-func newApiContext() *ApiContext {
-	c := new(ApiContext)
+// newReadHandleCtx creates a readHandleCtx for one request/response or push.
+func newReadHandleCtx() *readHandleCtx {
+	c := new(readHandleCtx)
 	c.input = socket.NewPacket(c.binding)
 	c.output = socket.NewPacket(nil)
 	return c
 }
 
-func (c *ApiContext) reInit(s *Session) {
+func (c *readHandleCtx) reInit(s *Session) {
 	c.session = s
 	c.public = goutil.RwMap()
 	if s.socket.PublicLen() > 0 {
@@ -93,7 +114,7 @@ var (
 	emptyMethod = reflect.Method{}
 )
 
-func (c *ApiContext) clean() {
+func (c *readHandleCtx) clean() {
 	c.session = nil
 	c.apiType = nil
 	c.arg = emptyValue
@@ -109,37 +130,47 @@ func (c *ApiContext) clean() {
 }
 
 // Peer returns the peer.
-func (c *ApiContext) Peer() *Peer {
+func (c *readHandleCtx) Peer() *Peer {
 	return c.session.peer
 }
 
 // Session returns the session.
-func (c *ApiContext) Session() *Session {
+func (c *readHandleCtx) Session() *Session {
 	return c.session
 }
 
-// Public returns temporary public data of Conn Context.
-func (c *ApiContext) Public() goutil.Map {
+// Input returns readed packet.
+func (c *readHandleCtx) Input() *socket.Packet {
+	return c.input
+}
+
+// Output returns writed packet.
+func (c *readHandleCtx) Output() *socket.Packet {
+	return c.output
+}
+
+// Public returns temporary public data of context.
+func (c *readHandleCtx) Public() goutil.Map {
 	return c.public
 }
 
-// PublicLen returns the length of public data of Conn Context.
-func (c *ApiContext) PublicLen() int {
+// PublicLen returns the length of public data of context.
+func (c *readHandleCtx) PublicLen() int {
 	return c.public.Len()
 }
 
 // Uri returns the input packet uri.
-func (c *ApiContext) Uri() string {
+func (c *readHandleCtx) Uri() string {
 	return c.input.Header.Uri
 }
 
 // Path returns the input packet uri path.
-func (c *ApiContext) Path() string {
+func (c *readHandleCtx) Path() string {
 	return c.uri.Path
 }
 
 // Query returns the input packet uri query.
-func (c *ApiContext) Query() url.Values {
+func (c *readHandleCtx) Query() url.Values {
 	if c.query == nil {
 		c.query = c.uri.Query()
 	}
@@ -147,20 +178,26 @@ func (c *ApiContext) Query() url.Values {
 }
 
 // SetBodyCodec sets the body codec for response packet.
-func (c *ApiContext) SetBodyCodec(codecName string) {
+func (c *readHandleCtx) SetBodyCodec(codecName string) {
 	c.output.BodyCodec = codecName
 }
 
 // Ip returns the remote addr.
-func (c *ApiContext) Ip() string {
+func (c *readHandleCtx) Ip() string {
 	return c.session.RemoteIp()
 }
 
-func (c *ApiContext) binding(header *socket.Header) interface{} {
+func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
+	defer func() {
+		if p := recover(); p != nil {
+			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+			body = nil
+		}
+	}()
 	c.start = time.Now()
 	switch header.Type {
-	case TypePullReply:
-		return c.bindPullReply(header)
+	case TypeReply:
+		return c.bindReply(header)
 
 	case TypePush:
 		return c.bindPush(header)
@@ -173,56 +210,111 @@ func (c *ApiContext) binding(header *socket.Header) interface{} {
 	}
 }
 
-func (c *ApiContext) bindPush(header *socket.Header) interface{} {
-	var err error
+func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
+	err := c.session.peer.pluginContainer.PostReadHeader(c)
+	if err != nil {
+		Errorf("%s", err.Error())
+		return nil
+	}
+
 	c.uri, err = url.Parse(header.Uri)
 	if err != nil {
 		return nil
 	}
+
 	var ok bool
 	c.apiType, ok = c.session.pushRouter.get(c.Path())
 	if !ok {
 		return nil
 	}
+
 	c.originStructMaker = c.apiType.originStructMaker
-	c.arg = reflect.New(c.apiType.arg)
-	return c.arg.Interface()
+	c.arg = reflect.New(c.apiType.argElem)
+	c.input.Body = c.arg.Interface()
+
+	err = c.apiType.pluginContainer.PreReadBody(c)
+	if err != nil {
+		Errorf("%s", err.Error())
+		return nil
+	}
+
+	return c.input.Body
 }
 
-func (c *ApiContext) bindPull(header *socket.Header) interface{} {
+func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
+	err := c.session.peer.pluginContainer.PostReadHeader(c)
+	if err != nil {
+		errStr := err.Error()
+		Errorf("%s", errStr)
+		c.output.Header.StatusCode = StatusFailedPlugin
+		c.output.Header.Status = errStr
+		return nil
+	}
+
 	c.output.Header.Seq = c.input.Header.Seq
-	c.output.Header.Type = TypePullReply
+	c.output.Header.Type = TypeReply
 	c.output.Header.Uri = c.input.Header.Uri
 	c.output.HeaderCodec = c.input.HeaderCodec
 	c.output.Header.Gzip = c.input.Header.Gzip
 
-	var err error
 	c.uri, err = url.Parse(header.Uri)
 	if err != nil {
-		c.output.Header.StatusCode = StatusBadPull
+		c.output.Header.StatusCode = StatusBadUri
 		c.output.Header.Status = err.Error()
 		return nil
 	}
+
 	var ok bool
-	c.apiType, ok = c.session.requestRouter.get(c.Path())
+	c.apiType, ok = c.session.pullRouter.get(c.Path())
 	if !ok {
 		c.output.Header.StatusCode = StatusNotFound
 		c.output.Header.Status = StatusText(StatusNotFound)
 		return nil
 	}
+
 	c.originStructMaker = c.apiType.originStructMaker
-	c.arg = reflect.New(c.apiType.arg)
-	return c.arg.Interface()
+	c.arg = reflect.New(c.apiType.argElem)
+	c.input.Body = c.arg.Interface()
+
+	err = c.apiType.pluginContainer.PreReadBody(c)
+	if err != nil {
+		errStr := err.Error()
+		Errorf("%s", errStr)
+		c.output.Header.StatusCode = StatusFailedPlugin
+		c.output.Header.Status = errStr
+		return nil
+	}
+
+	c.output.Header.StatusCode = StatusOK
+	c.output.Header.Status = StatusText(StatusOK)
+	return c.input.Body
 }
 
 // handle handles and replies pull, or handles push.
-func (c *ApiContext) handle() {
+func (c *readHandleCtx) handle() {
 	defer func() {
+		if p := recover(); p != nil {
+			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		}
 		c.cost = time.Since(c.start)
 		c.session.runlog(c.cost, c.input, c.output)
 	}()
 
-	if c.output.Header.StatusCode != StatusNotFound {
+	err := c.apiType.pluginContainer.PostReadBody(c)
+	if err != nil {
+		errStr := err.Error()
+		Errorf("%s", errStr)
+		if isPullHandle(c.input, c.output) {
+			c.output.Header.StatusCode = StatusFailedPlugin
+			c.output.Header.Status = errStr
+			c.output = nil
+		} else {
+			return
+		}
+	}
+
+	var statusOK = c.output.Header.StatusCode == StatusOK
+	if statusOK {
 		rets := c.apiType.method.Func.Call([]reflect.Value{c.originStructMaker(c), c.arg})
 
 		// receive push
@@ -232,10 +324,7 @@ func (c *ApiContext) handle() {
 
 		c.output.Body = rets[0].Interface()
 		e, ok := rets[1].Interface().(Xerror)
-		if !ok || e == nil {
-			c.output.Header.StatusCode = StatusOK
-			c.output.Header.Status = StatusText(StatusOK)
-		} else {
+		if ok && e != nil {
 			c.output.Header.StatusCode = e.Code()
 			c.output.Header.Status = e.Text()
 		}
@@ -246,25 +335,100 @@ func (c *ApiContext) handle() {
 		c.output.BodyCodec = c.input.BodyCodec
 	}
 
-	err := c.session.write(c.output)
-	if err != nil {
-		Debugf("WritePacket: %s", err.Error())
+	if err = c.apiType.pluginContainer.PreWriteReply(c); err != nil {
+		errStr := err.Error()
+		c.output.Body = nil
+		if statusOK {
+			c.output.Header.StatusCode = StatusFailedPlugin
+			c.output.Header.Status = errStr
+		}
+		Errorf("%s", errStr)
+	}
+	if err = c.session.write(c.output); err != nil {
+		Warnf("WritePacket: %s", err.Error())
+	}
+	if err = c.apiType.pluginContainer.PostWriteReply(c); err != nil {
+		Errorf("%s", err.Error())
 	}
 }
 
-func (c *ApiContext) bindPullReply(header *socket.Header) interface{} {
+func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 	pullCmd, ok := c.session.pullCmdMap.Load(header.Seq)
 	if !ok {
 		return nil
 	}
 	c.session.pullCmdMap.Delete(header.Seq)
 	c.pullCmd = pullCmd.(*PullCmd)
+
+	err := c.session.peer.pluginContainer.PostReadHeader(c)
+	if err != nil {
+		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
+		return nil
+	}
+	err = c.session.peer.pluginContainer.PreReadBody(c)
+	if err != nil {
+		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
+		return nil
+	}
 	return c.pullCmd.reply
 }
 
-// pullHandle receives pull reply.
-func (c *ApiContext) pullReplyHandle() {
+// handleReply handles pull reply.
+func (c *readHandleCtx) handleReply() {
+	err := c.session.peer.pluginContainer.PostReadBody(c)
+	if err != nil {
+		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
+	}
+
 	c.pullCmd.done()
 	c.pullCmd.cost = time.Since(c.pullCmd.start)
 	c.session.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
+}
+
+// PullCmd the command of the pulling operation's response.
+type PullCmd struct {
+	session  *Session
+	output   *socket.Packet
+	reply    interface{}
+	doneChan chan *PullCmd // Strobes when pull is complete.
+	start    time.Time
+	cost     time.Duration
+	public   goutil.Map
+	Xerror   Xerror
+}
+
+var _ WriteCtx = new(PullCmd)
+
+// Peer returns the peer.
+func (c *PullCmd) Peer() *Peer {
+	return c.session.peer
+}
+
+// Session returns the session.
+func (c *PullCmd) Session() *Session {
+	return c.session
+}
+
+// Ip returns the remote addr.
+func (c *PullCmd) Ip() string {
+	return c.session.RemoteIp()
+}
+
+// Public returns temporary public data of context.
+func (c *PullCmd) Public() goutil.Map {
+	return c.public
+}
+
+// PublicLen returns the length of public data of context.
+func (c *PullCmd) PublicLen() int {
+	return c.public.Len()
+}
+
+// Output returns writed packet.
+func (c *PullCmd) Output() *socket.Packet {
+	return c.output
+}
+
+func (p *PullCmd) done() {
+	p.doneChan <- p
 }

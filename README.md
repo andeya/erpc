@@ -10,7 +10,7 @@ It can be used for RPC, micro services, peer-peer, push services, game services 
 
 version | status | branch
 --------|--------|--------
-v2      | developing | [master](https://github.com/henrylee2cn/teleport/tree/master)
+v2      | beta | [master](https://github.com/henrylee2cn/teleport/tree/master)
 v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
 
 
@@ -193,7 +193,7 @@ func main() {
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9090reply: %s", reply)
+		teleport.Infof("9090reply: %#v", reply)
 	}
 
 	{
@@ -212,7 +212,7 @@ func main() {
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9091reply: %v", reply)
+		teleport.Infof("9091reply: %#v", reply)
 	}
 }
 

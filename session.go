@@ -32,17 +32,17 @@ import (
 
 // Session a connection session.
 type Session struct {
-	peer          *Peer
-	requestRouter *Router
-	pushRouter    *Router
-	pushSeq       uint64
-	pullSeq       uint64
-	pullCmdMap    goutil.Map
-	socket        socket.Socket
-	closed        bool
-	writeLock     sync.Mutex
-	closedLock    sync.RWMutex
-	gopool        *pool.GoPool
+	peer       *Peer
+	pullRouter *Router
+	pushRouter *Router
+	pushSeq    uint64
+	pullSeq    uint64
+	pullCmdMap goutil.Map
+	socket     socket.Socket
+	closed     bool
+	writeLock  sync.Mutex
+	closedLock sync.RWMutex
+	gopool     *pool.GoPool
 }
 
 const (
@@ -52,12 +52,12 @@ const (
 
 func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
-		peer:          peer,
-		requestRouter: peer.PullRouter,
-		pushRouter:    peer.PushRouter,
-		socket:        socket.NewSocket(conn, id...),
-		pullCmdMap:    goutil.RwMap(),
-		gopool:        peer.gopool,
+		peer:       peer,
+		pullRouter: peer.PullRouter,
+		pushRouter: peer.PushRouter,
+		socket:     socket.NewSocket(conn, id...),
+		pullCmdMap: goutil.RwMap(),
+		gopool:     peer.gopool,
 	}
 	err := s.gopool.Go(s.readAndHandle)
 	if err != nil {
@@ -69,6 +69,11 @@ func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 // Peer returns the peer.
 func (s *Session) Peer() *Peer {
 	return s.peer
+}
+
+// Socket returns the Socket.
+func (s *Session) Socket() socket.Socket {
+	return s.socket
 }
 
 // Id returns the session id.
@@ -88,20 +93,6 @@ func (s *Session) ChangeId(newId string) {
 // RemoteIp returns the remote peer ip.
 func (s *Session) RemoteIp() string {
 	return s.socket.RemoteAddr().String()
-}
-
-// PullCmd the command of the pulling operation's response.
-type PullCmd struct {
-	output   *socket.Packet
-	reply    interface{}
-	doneChan chan *PullCmd // Strobes when pull is complete.
-	start    time.Time
-	cost     time.Duration
-	Xerror   Xerror
-}
-
-func (p *PullCmd) done() {
-	p.doneChan <- p
 }
 
 // GoPull sends a packet and receives reply asynchronously.
@@ -129,19 +120,38 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 	}
 
 	cmd := &PullCmd{
+		session:  s,
 		output:   output,
 		reply:    reply,
 		doneChan: done,
 		start:    time.Now(),
+		public:   goutil.RwMap(),
+	}
+	if s.socket.PublicLen() > 0 {
+		s.socket.Public().Range(func(key, value interface{}) bool {
+			cmd.public.Store(key, value)
+			return true
+		})
 	}
 
-	err := s.write(output)
+	defer func() {
+		if p := recover(); p != nil {
+			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		}
+	}()
+
+	err := s.peer.pluginContainer.PreWritePull(cmd)
 	if err == nil {
-		s.pullCmdMap.Store(output.Header.Seq, cmd)
-	} else {
-		cmd.Xerror = NewXerror(StatusWriteFailed, err.Error())
-		cmd.done()
+		if err = s.write(output); err == nil {
+			s.pullCmdMap.Store(output.Header.Seq, cmd)
+			if err = s.peer.pluginContainer.PostWritePull(cmd); err != nil {
+				Errorf("%s", err.Error())
+			}
+			return
+		}
 	}
+	cmd.Xerror = NewXerror(StatusWriteFailed, err.Error())
+	cmd.done()
 }
 
 // Pull sends a packet and receives reply.
@@ -157,24 +167,38 @@ func (s *Session) Pull(uri string, args interface{}, reply interface{}, setting 
 }
 
 // Push sends a packet, but do not receives reply.
-func (s *Session) Push(uri string, args interface{}) error {
-	start := time.Now()
-	packet := &socket.Packet{
-		Header: &socket.Header{
-			Seq:  s.pushSeq,
-			Type: TypePush,
-			Uri:  uri,
-			Gzip: s.peer.defaultGzipLevel,
-		},
-		Body:        args,
-		HeaderCodec: s.peer.defaultCodec,
-		BodyCodec:   s.peer.defaultCodec,
-	}
+func (s *Session) Push(uri string, args interface{}) (err error) {
+	ctx := s.peer.getContext(s)
+	ctx.start = time.Now()
+
+	output := ctx.output
+	header := output.Header
+	header.Seq = s.pushSeq
+	header.Type = TypePush
+	header.Uri = uri
+	header.Gzip = s.peer.defaultGzipLevel
+
+	output.Body = args
+	output.HeaderCodec = s.peer.defaultCodec
+	output.BodyCodec = s.peer.defaultCodec
+
 	s.pushSeq++
+
 	defer func() {
-		s.runlog(time.Since(start), nil, packet)
+		if p := recover(); p != nil {
+			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		}
+		s.runlog(time.Since(ctx.start), nil, output)
+		s.peer.putContext(ctx)
 	}()
-	return s.write(packet)
+
+	err = s.peer.pluginContainer.PreWritePush(ctx)
+	if err == nil {
+		if err = s.write(output); err == nil {
+			err = s.peer.pluginContainer.PostWritePush(ctx)
+		}
+	}
+	return err
 }
 
 // Closed checks if the session is closed.
@@ -192,6 +216,7 @@ func (s *Session) Close() error {
 		return nil
 	}
 	s.closed = true
+	s.peer.sessionHub.Delete(s.Id())
 	s.pullCmdMap.Range(func(_, v interface{}) bool {
 		pullCmd := v.(*PullCmd)
 		pullCmd.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
@@ -205,7 +230,7 @@ func (s *Session) Close() error {
 func (s *Session) readAndHandle() {
 	defer func() {
 		if p := recover(); p != nil {
-			Debugf("*Session.readAndHandle() panic:\n%v\n%s", p, goutil.PanicTrace(1))
+			Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 		s.Close()
 	}()
@@ -219,6 +244,13 @@ func (s *Session) readAndHandle() {
 		if readTimeout > 0 {
 			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
 		}
+
+		err = s.peer.pluginContainer.PreReadHeader(ctx)
+		if err != nil {
+			Errorf("%s", err.Error())
+			return
+		}
+
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
 			s.peer.putContext(ctx)
@@ -231,9 +263,9 @@ func (s *Session) readAndHandle() {
 		err = s.gopool.Go(func() {
 			defer s.peer.putContext(ctx)
 			switch ctx.input.Header.Type {
-			case TypePullReply:
+			case TypeReply:
 				// handles pull reply
-				ctx.pullReplyHandle()
+				ctx.handleReply()
 
 			case TypePush:
 				//  handles push
@@ -242,7 +274,7 @@ func (s *Session) readAndHandle() {
 			case TypePull:
 				// handles and replies pull
 				ctx.handle()
-				ctx.output.Header.Type = TypePullReply
+				ctx.output.Header.Type = TypeReply
 			}
 		})
 		if err != nil {
@@ -288,7 +320,7 @@ func isPullLaunch(input, output *socket.Packet) bool {
 	return output.Header.Type == TypePull
 }
 func isPullHandle(input, output *socket.Packet) bool {
-	return output.Header.Type == TypePullReply
+	return output.Header.Type == TypeReply
 }
 
 func (s *Session) runlog(costTime time.Duration, input, output *socket.Packet) {

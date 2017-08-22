@@ -16,8 +16,6 @@ package teleport
 
 import (
 	"github.com/henrylee2cn/goutil/errors"
-
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // Interfaces about plugin.
@@ -25,44 +23,70 @@ type (
 	Plugin interface {
 		Name() string
 	}
-	PreConnectPlugin interface {
-		PreConnect(string, interface{}) error
+	PostRegPlugin interface {
+		PostReg(*Handler) error
 	}
-	PostConnectPlugin interface {
-		PostConnect(socket.Socket) error
+	PostDialPlugin interface {
+		PostDial(*Session) error
 	}
-	PreWritePacketPlugin interface {
-		PreWritePacket(PullCtx, interface{}) error
+	PostAcceptPlugin interface {
+		PostAccept(*Session) error
 	}
-	PostWritePacketPlugin interface {
-		PostWritePacket(PullCtx, interface{}) error
+	PreWritePullPlugin interface {
+		PreWritePull(WriteCtx) error
+	}
+	PostWritePullPlugin interface {
+		PostWritePull(WriteCtx) error
+	}
+	PreWriteReplyPlugin interface {
+		PreWriteReply(WriteCtx) error
+	}
+	PostWriteReplyPlugin interface {
+		PostWriteReply(WriteCtx) error
+	}
+	PreWritePushPlugin interface {
+		PreWritePush(WriteCtx) error
+	}
+	PostWritePushPlugin interface {
+		PostWritePush(WriteCtx) error
 	}
 	PreReadHeaderPlugin interface {
-		PreReadHeader(PullCtx) error
+		PreReadHeader(ReadCtx) error
 	}
 	PostReadHeaderPlugin interface {
-		PostReadHeader(PullCtx) error
+		PostReadHeader(ReadCtx) error
 	}
 	PreReadBodyPlugin interface {
-		PreReadBody(PullCtx, interface{}) error
+		PreReadBody(ReadCtx) error
 	}
 	PostReadBodyPlugin interface {
-		PostReadBody(PullCtx, interface{}) error
+		PostReadBody(ReadCtx) error
 	}
+
 	// PluginContainer plugin container that defines base methods to manage plugins.
 	PluginContainer interface {
 		Add(plugins ...Plugin) error
 		Remove(pluginName string) error
 		GetByName(pluginName string) Plugin
 		GetAll() []Plugin
-		PreConnectPlugin
-		PostConnectPlugin
-		PreWritePacketPlugin
-		PostWritePacketPlugin
+
+		PostDialPlugin
+		PostAcceptPlugin
+		PreWritePullPlugin
+		PostWritePullPlugin
+		PreWritePushPlugin
+		PostWritePushPlugin
 		PreReadHeaderPlugin
 		PostReadHeaderPlugin
+
+		PostRegPlugin
+
+		PreWriteReplyPlugin
+		PostWriteReplyPlugin
 		PreReadBodyPlugin
 		PostReadBodyPlugin
+
+		cloneAdd(...Plugin) (PluginContainer, error)
 	}
 )
 
@@ -75,6 +99,19 @@ type pluginContainer struct {
 	plugins []Plugin
 }
 
+func (p *pluginContainer) cloneAdd(plugins ...Plugin) (PluginContainer, error) {
+	clone := newPluginContainer()
+	err := clone.Add(p.GetAll()...)
+	if err != nil {
+		return nil, err
+	}
+	err = clone.Add(plugins...)
+	if err != nil {
+		return nil, err
+	}
+	return clone, nil
+}
+
 // Add adds a plugin.
 func (p *pluginContainer) Add(plugins ...Plugin) error {
 	if p.plugins == nil {
@@ -82,11 +119,11 @@ func (p *pluginContainer) Add(plugins ...Plugin) error {
 	}
 	for _, plugin := range plugins {
 		if plugin == nil {
-			return errors.New("the plugin cannot be nil!")
+			return errors.New("plugin cannot be nil!")
 		}
 		pName := plugin.Name()
 		if len(pName) == 0 && p.GetByName(pName) != nil {
-			return errors.Errorf("repeat add the plugin: %s", pName)
+			return errors.Errorf("repeat add plugin: %s", pName)
 		}
 		p.plugins = append(p.plugins, plugin)
 	}
@@ -134,54 +171,110 @@ func (p *pluginContainer) GetAll() []Plugin {
 	return p.plugins
 }
 
-func (p *pluginContainer) PreConnect(nodePath string, rcvr interface{}) error {
+func (p *pluginContainer) PostReg(h *Handler) error {
 	var errs []error
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PreConnectPlugin); ok {
-			err := _plugin.PreConnect(nodePath, rcvr)
+		if _plugin, ok := plugin.(PostRegPlugin); ok {
+			err := _plugin.PostReg(h)
 			if err != nil {
-				errs = append(errs, errors.Errorf("PreConnectPlugin(%s): %s", plugin.Name(), err.Error()))
+				errs = append(errs, errors.Errorf("PostRegPlugin(%s): %s", plugin.Name(), err.Error()))
 			}
 		}
 	}
 	return errors.Merge(errs...)
 }
 
-func (p *pluginContainer) PostConnect(s socket.Socket) error {
+func (p *pluginContainer) PostDial(s *Session) error {
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostConnectPlugin); ok {
-			if err := _plugin.PostConnect(s); err != nil {
+		if _plugin, ok := plugin.(PostDialPlugin); ok {
+			if err := _plugin.PostDial(s); err != nil {
 				s.Close()
-				return errors.Errorf("PostConnectPlugin(%s): %s", plugin.Name(), err.Error())
+				return errors.Errorf("PostDialPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreWritePacket(ctx PullCtx, body interface{}) error {
+func (p *pluginContainer) PostAccept(s *Session) error {
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PreWritePacketPlugin); ok {
-			if err := _plugin.PreWritePacket(ctx, body); err != nil {
-				return errors.Errorf("PreWritePacketPlugin(%s): %s", plugin.Name(), err.Error())
+		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
+			if err := _plugin.PostAccept(s); err != nil {
+				s.Close()
+				return errors.Errorf("PostAcceptPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostWritePacket(ctx PullCtx, body interface{}) error {
+func (p *pluginContainer) PreWritePull(ctx WriteCtx) error {
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostWritePacketPlugin); ok {
-			if err := _plugin.PostWritePacket(ctx, body); err != nil {
-				return errors.Errorf("PostWritePacketPlugin(%s): %s", plugin.Name(), err.Error())
+		if _plugin, ok := plugin.(PreWritePullPlugin); ok {
+			if err := _plugin.PreWritePull(ctx); err != nil {
+				return errors.Errorf("PreWritePullPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreReadHeader(ctx PullCtx) error {
+func (p *pluginContainer) PostWritePull(ctx WriteCtx) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostWritePullPlugin); ok {
+			if err := _plugin.PostWritePull(ctx); err != nil {
+				return errors.Errorf("PostWritePullPlugin(%s): %s", plugin.Name(), err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PreWriteReply(ctx WriteCtx) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreWriteReplyPlugin); ok {
+			if err := _plugin.PreWriteReply(ctx); err != nil {
+				return errors.Errorf("PreWriteReplyPlugin(%s): %s", plugin.Name(), err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PostWriteReply(ctx WriteCtx) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostWriteReplyPlugin); ok {
+			if err := _plugin.PostWriteReply(ctx); err != nil {
+				return errors.Errorf("PostWriteReplyPlugin(%s): %s", plugin.Name(), err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PreWritePush(ctx WriteCtx) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreWritePushPlugin); ok {
+			if err := _plugin.PreWritePush(ctx); err != nil {
+				return errors.Errorf("PreWritePushPlugin(%s): %s", plugin.Name(), err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PostWritePush(ctx WriteCtx) error {
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostWritePushPlugin); ok {
+			if err := _plugin.PostWritePush(ctx); err != nil {
+				return errors.Errorf("PostWritePushPlugin(%s): %s", plugin.Name(), err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PreReadHeader(ctx ReadCtx) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
 			if err := _plugin.PreReadHeader(ctx); err != nil {
@@ -192,7 +285,7 @@ func (p *pluginContainer) PreReadHeader(ctx PullCtx) error {
 	return nil
 }
 
-func (p *pluginContainer) PostReadHeader(ctx PullCtx) error {
+func (p *pluginContainer) PostReadHeader(ctx ReadCtx) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadHeaderPlugin); ok {
 			if err := _plugin.PostReadHeader(ctx); err != nil {
@@ -203,10 +296,10 @@ func (p *pluginContainer) PostReadHeader(ctx PullCtx) error {
 	return nil
 }
 
-func (p *pluginContainer) PreReadBody(ctx PullCtx, body interface{}) error {
+func (p *pluginContainer) PreReadBody(ctx ReadCtx) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadBodyPlugin); ok {
-			if err := _plugin.PreReadBody(ctx, body); err != nil {
+			if err := _plugin.PreReadBody(ctx); err != nil {
 				return errors.Errorf("PreReadBodyPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -214,13 +307,36 @@ func (p *pluginContainer) PreReadBody(ctx PullCtx, body interface{}) error {
 	return nil
 }
 
-func (p *pluginContainer) PostReadBody(ctx PullCtx, body interface{}) error {
+func (p *pluginContainer) PostReadBody(ctx ReadCtx) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadBodyPlugin); ok {
-			if err := _plugin.PostReadBody(ctx, body); err != nil {
+			if err := _plugin.PostReadBody(ctx); err != nil {
 				return errors.Errorf("PostReadBodyPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
 	}
 	return nil
+}
+
+func warnInvaildRouterHooks(plugin []Plugin) {
+	for _, p := range plugin {
+		switch p.(type) {
+		case PostDialPlugin:
+			Warnf("invalid PostDialPlugin in router: %s", p.Name())
+		case PostAcceptPlugin:
+			Warnf("invalid PostAcceptPlugin in router: %s", p.Name())
+		case PreWritePullPlugin:
+			Warnf("invalid PreWritePullPlugin in router: %s", p.Name())
+		case PostWritePullPlugin:
+			Warnf("invalid PostWritePullPlugin in router: %s", p.Name())
+		case PreReadHeaderPlugin:
+			Warnf("invalid PreReadHeaderPlugin in router: %s", p.Name())
+		case PostReadHeaderPlugin:
+			Warnf("invalid PostReadHeaderPlugin in router: %s", p.Name())
+		case PreWritePushPlugin:
+			Warnf("invalid PreWritePushPlugin in router: %s", p.Name())
+		case PostWritePushPlugin:
+			Warnf("invalid PostWritePushPlugin in router: %s", p.Name())
+		}
+	}
 }

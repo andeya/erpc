@@ -32,7 +32,7 @@ type Peer struct {
 	pluginContainer   PluginContainer
 	sessionHub        *SessionHub
 	closeCh           chan struct{}
-	freeContext       *ApiContext
+	freeContext       *readHandleCtx
 	ctxLock           sync.Mutex
 	readTimeout       time.Duration // readdeadline for underlying net.Conn
 	writeTimeout      time.Duration // writedeadline for underlying net.Conn
@@ -53,15 +53,19 @@ type Peer struct {
 }
 
 // NewPeer creates a new peer.
-func NewPeer(cfg *Config) *Peer {
+func NewPeer(cfg *Config, plugin ...Plugin) *Peer {
 	var slowCometDuration time.Duration = math.MaxInt64
 	if cfg.SlowCometDuration > 0 {
 		slowCometDuration = cfg.SlowCometDuration
 	}
+	var pluginContainer = newPluginContainer()
+	if err := pluginContainer.Add(plugin...); err != nil {
+		Fatalf("%v", err)
+	}
 	var p = &Peer{
-		PullRouter:        newPullRouter(),
-		PushRouter:        newPushRouter(),
-		pluginContainer:   newPluginContainer(),
+		PullRouter:        newPullRouter(pluginContainer),
+		PushRouter:        newPushRouter(pluginContainer),
+		pluginContainer:   pluginContainer,
 		sessionHub:        newSessionHub(),
 		readTimeout:       cfg.ReadTimeout,
 		writeTimeout:      cfg.WriteTimeout,
@@ -98,8 +102,13 @@ func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	sess := p.ServeConn(conn, id...)
-	Printf("dial(addr: %s, id: %s) success", addr, sess.Id())
+	var sess = newSession(p, conn, id...)
+	if err = p.pluginContainer.PostDial(sess); err != nil {
+		sess.Close()
+		return nil, err
+	}
+	p.sessionHub.Set(sess)
+	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
 	return sess, nil
 }
 
@@ -146,7 +155,7 @@ func (p *Peer) listen(addr string) error {
 	p.listens = append(p.listens, lis)
 	defer lis.Close()
 
-	Printf("listen(addr: %s) success", addr)
+	Printf("listen(addr: %s) ok", addr)
 
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
@@ -171,7 +180,7 @@ func (p *Peer) listen(addr string) error {
 					tempDelay = max
 				}
 
-				Tracef("accept error: %v; retrying in %v", e, tempDelay)
+				Tracef("accept error: %s; retrying in %v", e.Error(), tempDelay)
 
 				time.Sleep(tempDelay)
 				continue
@@ -180,9 +189,14 @@ func (p *Peer) listen(addr string) error {
 		}
 		tempDelay = 0
 
-		sess = p.ServeConn(rw)
-
-		Tracef("accept session(addr: %s, id: %s)", sess.RemoteIp(), sess.Id())
+		sess = newSession(p, rw)
+		if e = p.pluginContainer.PostAccept(sess); e != nil {
+			sess.Close()
+			Tracef("accept session(addr: %s, id: %s) error: %s", sess.RemoteIp(), sess.Id(), err.Error())
+		} else {
+			p.sessionHub.Set(sess)
+			Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
+		}
 	}
 }
 
@@ -191,11 +205,11 @@ func (p *Peer) Close() {
 	close(p.closeCh)
 }
 
-func (p *Peer) getContext(s *Session) *ApiContext {
+func (p *Peer) getContext(s *Session) *readHandleCtx {
 	p.ctxLock.Lock()
 	ctx := p.freeContext
 	if ctx == nil {
-		ctx = newApiContext()
+		ctx = newReadHandleCtx()
 	} else {
 		p.freeContext = ctx.next
 	}
@@ -204,7 +218,7 @@ func (p *Peer) getContext(s *Session) *ApiContext {
 	return ctx
 }
 
-func (p *Peer) putContext(ctx *ApiContext) {
+func (p *Peer) putContext(ctx *readHandleCtx) {
 	p.ctxLock.Lock()
 	ctx.clean()
 	ctx.next = p.freeContext
