@@ -95,7 +95,7 @@ var globalLogger = func() Logger {
 		Logger: log.New(color.NewColorableStdout(), "", 0),
 		Color:  true,
 	}
-	consoleFormat := logging.MustStringFormatter("[%{time:2006/01/02 15:04:05.000}] %{color:bold}[%{level:.4s}]%{color:reset} %{message} <%{longfile}>")
+	consoleFormat := logging.MustStringFormatter("[%{time:2006/01/02 15:04:05.000}] %{color:bold}[%{level:.4s}]%{color:reset} %{message}<%{longfile}>")
 	consoleBackendLevel := logging.AddModuleLevel(logging.NewBackendFormatter(consoleLogBackend, consoleFormat))
 	level, err := logging.LogLevel(__loglevel__)
 	if err != nil {

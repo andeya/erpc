@@ -8,7 +8,6 @@ import (
 
 func main() {
 	var cfg = &teleport.Config{
-		Id:                       "server-peer",
 		ReadTimeout:              time.Second * 10,
 		WriteTimeout:             time.Second * 10,
 		TlsCertFile:              "",
@@ -18,6 +17,7 @@ func main() {
 		DefaultGzipLevel:         5,
 		MaxGoroutinesAmount:      1024,
 		MaxGoroutineIdleDuration: time.Second * 10,
+		PrintBody:                true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",
@@ -25,7 +25,7 @@ func main() {
 	}
 	var peer = teleport.NewPeer(cfg)
 	{
-		group := peer.RequestRouter.Group("group")
+		group := peer.PullRouter.Group("group")
 		group.Reg(new(Home))
 	}
 	peer.Listen()
@@ -33,25 +33,17 @@ func main() {
 
 // Home controller
 type Home struct {
-	teleport.RequestCtx
+	teleport.PullCtx
 }
 
 // Test handler
-func (h *Home) Test(args *string) (string, teleport.Xerror) {
-	teleport.Infof("query: %#v", h.Query())
-
-	sess := h.Session()
-
-	newId := h.Query().Get("peer_id")
-	teleport.Infof("session default id: %s", sess.Id())
-
-	sess.ChangeId(newId)
-	teleport.Infof("session new id: %s", sess.Id())
-
-	sess.Push("/push/test?tag=from home-test", map[string]interface{}{
-		"your_id": newId,
+func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, teleport.Xerror) {
+	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
+		"your_id": h.Query().Get("peer_id"),
 		"a":       1,
 	})
-
-	return "home-test response:" + *args, nil
+	return map[string]interface{}{
+		"your_args":   *args,
+		"server_time": time.Now(),
+	}, nil
 }

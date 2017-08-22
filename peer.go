@@ -16,6 +16,7 @@ package teleport
 
 import (
 	"crypto/tls"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -26,9 +27,8 @@ import (
 
 // Peer peer which is server or client.
 type Peer struct {
-	RequestRouter     *Router
+	PullRouter        *Router
 	PushRouter        *Router
-	id                string
 	pluginContainer   PluginContainer
 	sessionHub        *SessionHub
 	closeCh           chan struct{}
@@ -41,6 +41,7 @@ type Peer struct {
 	defaultCodec      string
 	defaultGzipLevel  int32
 	gopool            *pool.GoPool
+	printBody         bool
 	mu                sync.Mutex
 
 	// for client role
@@ -53,20 +54,24 @@ type Peer struct {
 
 // NewPeer creates a new peer.
 func NewPeer(cfg *Config) *Peer {
+	var slowCometDuration time.Duration = math.MaxInt64
+	if cfg.SlowCometDuration > 0 {
+		slowCometDuration = cfg.SlowCometDuration
+	}
 	var p = &Peer{
-		id:                cfg.Id,
-		RequestRouter:     newRequestRouter(),
+		PullRouter:        newPullRouter(),
 		PushRouter:        newPushRouter(),
 		pluginContainer:   newPluginContainer(),
 		sessionHub:        newSessionHub(),
 		readTimeout:       cfg.ReadTimeout,
 		writeTimeout:      cfg.WriteTimeout,
 		closeCh:           make(chan struct{}),
-		slowCometDuration: cfg.SlowCometDuration,
+		slowCometDuration: slowCometDuration,
 		dialTimeout:       cfg.DialTimeout,
 		listenAddrs:       cfg.ListenAddrs,
 		defaultCodec:      cfg.DefaultCodec,
 		defaultGzipLevel:  cfg.DefaultGzipLevel,
+		printBody:         cfg.PrintBody,
 		gopool:            pool.NewGoPool(cfg.MaxGoroutinesAmount, cfg.MaxGoroutineIdleDuration),
 	}
 	return p
@@ -94,11 +99,12 @@ func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
 	sess := p.ServeConn(conn, id...)
+	Printf("dial(addr: %s, id: %s) success", addr, sess.Id())
 	return sess, nil
 }
 
 // ErrListenClosed listener is closed error.
-var ErrListenClosed = errors.New("teleport: listener is closed")
+var ErrListenClosed = errors.New("listener is closed")
 
 // Listen turns on the listening service.
 func (p *Peer) Listen() error {
@@ -140,9 +146,12 @@ func (p *Peer) listen(addr string) error {
 	p.listens = append(p.listens, lis)
 	defer lis.Close()
 
+	Printf("listen(addr: %s) success", addr)
+
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
 		closeCh   = p.closeCh
+		sess      *Session
 	)
 	for {
 		rw, e := lis.Accept()
@@ -161,14 +170,19 @@ func (p *Peer) listen(addr string) error {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				Tracef("teleport: Accept error: %v; retrying in %v", e, tempDelay)
+
+				Tracef("accept error: %v; retrying in %v", e, tempDelay)
+
 				time.Sleep(tempDelay)
 				continue
 			}
 			return e
 		}
 		tempDelay = 0
-		p.ServeConn(rw)
+
+		sess = p.ServeConn(rw)
+
+		Tracef("accept session(addr: %s, id: %s)", sess.RemoteIp(), sess.Id())
 	}
 }
 

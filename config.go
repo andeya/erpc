@@ -20,7 +20,6 @@ import (
 
 // Config peer config
 type Config struct {
-	Id                       string
 	ReadTimeout              time.Duration // readdeadline for underlying net.Conn
 	WriteTimeout             time.Duration // writedeadline for underlying net.Conn
 	TlsCertFile              string
@@ -30,6 +29,7 @@ type Config struct {
 	DefaultGzipLevel         int32
 	MaxGoroutinesAmount      int
 	MaxGoroutineIdleDuration time.Duration // ns,µs,ms,s ...
+	PrintBody                bool
 
 	DialTimeout time.Duration // for client role
 	ListenAddrs []string      // for server role

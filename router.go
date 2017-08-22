@@ -83,9 +83,9 @@ func (r *Router) get(uriPath string) (*Handler, bool) {
 	return t, ok
 }
 
-// newRequestRouter creates request packet router.
-// Note: ctrlStruct needs to implement RequestCtx interface.
-func newRequestRouter() *Router {
+// newPullRouter creates request packet router.
+// Note: ctrlStruct needs to implement PullCtx interface.
+func newPullRouter() *Router {
 	return &Router{
 		handlers:   make(map[string]*Handler),
 		pathPrefix: "/",
@@ -95,7 +95,7 @@ func newRequestRouter() *Router {
 	}
 }
 
-// Note: ctrlStruct needs to implement RequestCtx interface.
+// Note: ctrlStruct needs to implement PullCtx interface.
 func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
 	var (
 		ctype             = reflect.TypeOf(ctrlStruct)
@@ -109,17 +109,17 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 	if ctypeElem.Kind() != reflect.Struct {
 		return nil, errors.Errorf("register request handler: the type is not struct point: %s", ctype.String())
 	}
-	if _, ok := ctrlStruct.(RequestCtx); !ok {
-		return nil, errors.Errorf("register request handler: the type is not implemented RequestCtx interface: %s", ctype.String())
+	if _, ok := ctrlStruct.(PullCtx); !ok {
+		return nil, errors.Errorf("register request handler: the type is not implemented PullCtx interface: %s", ctype.String())
 	} else {
-		if iType, ok := ctypeElem.FieldByName("RequestCtx"); ok && iType.Anonymous {
+		if iType, ok := ctypeElem.FieldByName("PullCtx"); ok && iType.Anonymous {
 			originStructMaker = func(ctx *ApiContext) reflect.Value {
 				ctrl := reflect.New(ctypeElem)
-				ctrl.Elem().FieldByName("RequestCtx").Set(reflect.ValueOf(ctx))
+				ctrl.Elem().FieldByName("PullCtx").Set(reflect.ValueOf(ctx))
 				return ctrl
 			}
 		} else {
-			return nil, errors.Errorf("register request handler: the struct do not have anonymous field RequestCtx: %s", ctype.String())
+			return nil, errors.Errorf("register request handler: the struct do not have anonymous field PullCtx: %s", ctype.String())
 		}
 	}
 
@@ -132,7 +132,7 @@ func requestHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginConta
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" || isRequestCtxMethod(mname) {
+		if method.PkgPath != "" || isPullCtxMethod(mname) {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
@@ -261,8 +261,8 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 	return handlers, nil
 }
 
-func isRequestCtxMethod(name string) bool {
-	ctype := reflect.TypeOf(RequestCtx(new(ApiContext)))
+func isPullCtxMethod(name string) bool {
+	ctype := reflect.TypeOf(PullCtx(new(ApiContext)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
 			return true

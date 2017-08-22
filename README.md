@@ -122,7 +122,7 @@ func main() {
 	}
 	var peer = teleport.NewPeer(cfg)
 	{
-		group := peer.RequestRouter.Group("group")
+		group := peer.PullRouter.Group("group")
 		group.Reg(new(Home))
 	}
 	peer.Listen()
@@ -130,7 +130,7 @@ func main() {
 
 // Home controller
 type Home struct {
-	teleport.RequestCtx
+	teleport.PullCtx
 }
 
 // Test handler

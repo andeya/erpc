@@ -15,22 +15,20 @@
 package teleport
 
 import (
-	"encoding/json"
 	"net/url"
 	"reflect"
 	"time"
 
-	"github.com/henrylee2cn/go-logging/color"
 	"github.com/henrylee2cn/goutil"
 
 	"github.com/henrylee2cn/teleport/socket"
 )
 
 type (
-	// RequestCtx request handler context.
+	// PullCtx request handler context.
 	// For example:
-	//  type Home struct{ RequestCtx }
-	RequestCtx interface {
+	//  type Home struct{ PullCtx }
+	PullCtx interface {
 		PushCtx
 		SetBodyCodec(string)
 	}
@@ -47,7 +45,7 @@ type (
 		Peer() *Peer
 		Session() *Session
 	}
-	// ApiContext the underlying common instance of RequestCtx and PushCtx.
+	// ApiContext the underlying common instance of PullCtx and PushCtx.
 	ApiContext struct {
 		session           *Session
 		input             *socket.Packet
@@ -67,8 +65,8 @@ type (
 )
 
 var (
-	_ RequestCtx = new(ApiContext)
-	_ PushCtx    = new(ApiContext)
+	_ PullCtx = new(ApiContext)
+	_ PushCtx = new(ApiContext)
 )
 
 // newApiContext creates a ApiContext for one request/response or push.
@@ -155,34 +153,24 @@ func (c *ApiContext) SetBodyCodec(codecName string) {
 
 // Ip returns the remote addr.
 func (c *ApiContext) Ip() string {
-	return c.session.Ip()
+	return c.session.RemoteIp()
 }
 
 func (c *ApiContext) binding(header *socket.Header) interface{} {
 	c.start = time.Now()
 	switch header.Type {
-	case TypeResponse:
-		return c.bindResponse(header)
+	case TypePullReply:
+		return c.bindPullReply(header)
 
 	case TypePush:
 		return c.bindPush(header)
 
-	case TypeRequest:
-		return c.bindRequest(header)
+	case TypePull:
+		return c.bindPull(header)
 
 	default:
 		return nil
 	}
-}
-
-func (c *ApiContext) bindResponse(header *socket.Header) interface{} {
-	pullCmd, ok := c.session.pullCmdMap.Load(header.Seq)
-	if !ok {
-		return nil
-	}
-	c.session.pullCmdMap.Delete(header.Seq)
-	c.pullCmd = pullCmd.(*PullCmd)
-	return c.pullCmd.reply
 }
 
 func (c *ApiContext) bindPush(header *socket.Header) interface{} {
@@ -201,9 +189,9 @@ func (c *ApiContext) bindPush(header *socket.Header) interface{} {
 	return c.arg.Interface()
 }
 
-func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
+func (c *ApiContext) bindPull(header *socket.Header) interface{} {
 	c.output.Header.Seq = c.input.Header.Seq
-	c.output.Header.Type = TypeResponse
+	c.output.Header.Type = TypePullReply
 	c.output.Header.Uri = c.input.Header.Uri
 	c.output.HeaderCodec = c.input.HeaderCodec
 	c.output.Header.Gzip = c.input.Header.Gzip
@@ -211,7 +199,7 @@ func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
 	var err error
 	c.uri, err = url.Parse(header.Uri)
 	if err != nil {
-		c.output.Header.StatusCode = StatusBadRequest
+		c.output.Header.StatusCode = StatusBadPull
 		c.output.Header.Status = err.Error()
 		return nil
 	}
@@ -227,13 +215,21 @@ func (c *ApiContext) bindRequest(header *socket.Header) interface{} {
 	return c.arg.Interface()
 }
 
-// handle handles request and push packet.
+// handle handles and replies pull, or handles push.
 func (c *ApiContext) handle() {
+	defer func() {
+		c.cost = time.Since(c.start)
+		c.session.runlog(c.cost, c.input, c.output)
+	}()
+
 	if c.output.Header.StatusCode != StatusNotFound {
 		rets := c.apiType.method.Func.Call([]reflect.Value{c.originStructMaker(c), c.arg})
+
+		// receive push
 		if len(rets) == 0 {
 			return
 		}
+
 		c.output.Body = rets[0].Interface()
 		e, ok := rets[1].Interface().(Xerror)
 		if !ok || e == nil {
@@ -245,37 +241,30 @@ func (c *ApiContext) handle() {
 		}
 	}
 
+	// reply pull
 	if len(c.output.BodyCodec) == 0 {
 		c.output.BodyCodec = c.input.BodyCodec
 	}
 
 	err := c.session.write(c.output)
 	if err != nil {
-		Debugf("teleport: WritePacket: %s", err.Error())
-	}
-
-	var n = c.output.Header.StatusCode
-	var code string
-	switch {
-	case n >= 500:
-		code = color.Red(n)
-	case n >= 400:
-		code = color.Magenta(n)
-	case n >= 300:
-		code = color.Grey(n)
-	default:
-		code = color.Green(n)
-	}
-	c.cost = time.Since(c.start)
-	body, _ := json.Marshal(c.output.Body)
-	if c.cost < c.session.peer.slowCometDuration {
-		Infof("%15s %3s %10d %12s %-30s |\n%s\n", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, body)
-	} else {
-		Warnf(" %15s %3s %10d %12s(slow) %-30s |\n%s\n", c.Ip(), code, c.output.Length, c.cost, c.output.Header.Uri, body)
+		Debugf("WritePacket: %s", err.Error())
 	}
 }
 
-// respHandle handles request and push packet.
-func (c *ApiContext) respHandle() {
+func (c *ApiContext) bindPullReply(header *socket.Header) interface{} {
+	pullCmd, ok := c.session.pullCmdMap.Load(header.Seq)
+	if !ok {
+		return nil
+	}
+	c.session.pullCmdMap.Delete(header.Seq)
+	c.pullCmd = pullCmd.(*PullCmd)
+	return c.pullCmd.reply
+}
+
+// pullHandle receives pull reply.
+func (c *ApiContext) pullReplyHandle() {
 	c.pullCmd.done()
+	c.pullCmd.cost = time.Since(c.pullCmd.start)
+	c.session.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
 }

@@ -16,11 +16,12 @@ package teleport
 
 // Packet Header types
 const (
-	TypeRequest   int32 = 0
-	TypeResponse  int32 = 1
-	TypePush      int32 = 2
-	TypeAuth      int32 = 4
-	TypeHeartbeat int32 = 5
+	TypeUndefined int32 = 0
+	TypePull      int32 = 1
+	TypePullReply int32 = 2
+	TypePush      int32 = 4
+	TypeAuth      int32 = 5
+	TypeHeartbeat int32 = 6
 )
 
 // Response Header status codes as registered with IANA.
@@ -50,33 +51,33 @@ const (
 	StatusTemporaryRedirect = 307 // RFC 7231, 6.4.7
 	StatusPermanentRedirect = 308 // RFC 7538, 3
 
-	StatusBadRequest                   = 400 // RFC 7231, 6.5.1
-	StatusUnauthorized                 = 401 // RFC 7235, 3.1
-	StatusPaymentRequired              = 402 // RFC 7231, 6.5.2
-	StatusForbidden                    = 403 // RFC 7231, 6.5.3
-	StatusNotFound                     = 404 // RFC 7231, 6.5.4
-	StatusMethodNotAllowed             = 405 // RFC 7231, 6.5.5
-	StatusNotAcceptable                = 406 // RFC 7231, 6.5.6
-	StatusProxyAuthRequired            = 407 // RFC 7235, 3.2
-	StatusRequestTimeout               = 408 // RFC 7231, 6.5.7
-	StatusConflict                     = 409 // RFC 7231, 6.5.8
-	StatusGone                         = 410 // RFC 7231, 6.5.9
-	StatusLengthRequired               = 411 // RFC 7231, 6.5.10
-	StatusPreconditionFailed           = 412 // RFC 7232, 4.2
-	StatusRequestEntityTooLarge        = 413 // RFC 7231, 6.5.11
-	StatusRequestURITooLong            = 414 // RFC 7231, 6.5.12
-	StatusUnsupportedMediaType         = 415 // RFC 7231, 6.5.13
-	StatusRequestedRangeNotSatisfiable = 416 // RFC 7233, 4.4
-	StatusExpectationFailed            = 417 // RFC 7231, 6.5.14
-	StatusTeapot                       = 418 // RFC 7168, 2.3.3
-	StatusUnprocessableEntity          = 422 // RFC 4918, 11.2
-	StatusLocked                       = 423 // RFC 4918, 11.3
-	StatusFailedDependency             = 424 // RFC 4918, 11.4
-	StatusUpgradeRequired              = 426 // RFC 7231, 6.5.15
-	StatusPreconditionRequired         = 428 // RFC 6585, 3
-	StatusTooManyRequests              = 429 // RFC 6585, 4
-	StatusRequestHeaderFieldsTooLarge  = 431 // RFC 6585, 5
-	StatusUnavailableForLegalReasons   = 451 // RFC 7725, 3
+	StatusBadPull                    = 400 // RFC 7231, 6.5.1
+	StatusUnauthorized               = 401 // RFC 7235, 3.1
+	StatusPaymentRequired            = 402 // RFC 7231, 6.5.2
+	StatusForbidden                  = 403 // RFC 7231, 6.5.3
+	StatusNotFound                   = 404 // RFC 7231, 6.5.4
+	StatusMethodNotAllowed           = 405 // RFC 7231, 6.5.5
+	StatusNotAcceptable              = 406 // RFC 7231, 6.5.6
+	StatusProxyAuthRequired          = 407 // RFC 7235, 3.2
+	StatusPullTimeout                = 408 // RFC 7231, 6.5.7
+	StatusConflict                   = 409 // RFC 7231, 6.5.8
+	StatusGone                       = 410 // RFC 7231, 6.5.9
+	StatusLengthRequired             = 411 // RFC 7231, 6.5.10
+	StatusPreconditionFailed         = 412 // RFC 7232, 4.2
+	StatusPullEntityTooLarge         = 413 // RFC 7231, 6.5.11
+	StatusPullURITooLong             = 414 // RFC 7231, 6.5.12
+	StatusUnsupportedMediaType       = 415 // RFC 7231, 6.5.13
+	StatusPulledRangeNotSatisfiable  = 416 // RFC 7233, 4.4
+	StatusExpectationFailed          = 417 // RFC 7231, 6.5.14
+	StatusTeapot                     = 418 // RFC 7168, 2.3.3
+	StatusUnprocessableEntity        = 422 // RFC 4918, 11.2
+	StatusLocked                     = 423 // RFC 4918, 11.3
+	StatusFailedDependency           = 424 // RFC 4918, 11.4
+	StatusUpgradeRequired            = 426 // RFC 7231, 6.5.15
+	StatusPreconditionRequired       = 428 // RFC 6585, 3
+	StatusTooManyPulls               = 429 // RFC 6585, 4
+	StatusPullHeaderFieldsTooLarge   = 431 // RFC 6585, 5
+	StatusUnavailableForLegalReasons = 451 // RFC 7725, 3
 
 	StatusInternalServerError = 500 // RFC 7231, 6.6.1
 	StatusNotImplemented      = 501 // RFC 7231, 6.6.2
@@ -116,33 +117,33 @@ var statusText = map[int]string{
 	StatusTemporaryRedirect: "Temporary Redirect",
 	StatusPermanentRedirect: "Permanent Redirect",
 
-	StatusBadRequest:                   "Bad Request",
-	StatusUnauthorized:                 "Unauthorized",
-	StatusPaymentRequired:              "Payment Required",
-	StatusForbidden:                    "Forbidden",
-	StatusNotFound:                     "Not Found",
-	StatusMethodNotAllowed:             "Method Not Allowed",
-	StatusNotAcceptable:                "Not Acceptable",
-	StatusProxyAuthRequired:            "Proxy Authentication Required",
-	StatusRequestTimeout:               "Request Timeout",
-	StatusConflict:                     "Conflict",
-	StatusGone:                         "Gone",
-	StatusLengthRequired:               "Length Required",
-	StatusPreconditionFailed:           "Precondition Failed",
-	StatusRequestEntityTooLarge:        "Request Entity Too Large",
-	StatusRequestURITooLong:            "Request URI Too Long",
-	StatusUnsupportedMediaType:         "Unsupported Media Type",
-	StatusRequestedRangeNotSatisfiable: "Requested Range Not Satisfiable",
-	StatusExpectationFailed:            "Expectation Failed",
-	StatusTeapot:                       "I'm a teapot",
-	StatusUnprocessableEntity:          "Unprocessable Entity",
-	StatusLocked:                       "Locked",
-	StatusFailedDependency:             "Failed Dependency",
-	StatusUpgradeRequired:              "Upgrade Required",
-	StatusPreconditionRequired:         "Precondition Required",
-	StatusTooManyRequests:              "Too Many Requests",
-	StatusRequestHeaderFieldsTooLarge:  "Request Header Fields Too Large",
-	StatusUnavailableForLegalReasons:   "Unavailable For Legal Reasons",
+	StatusBadPull:                    "Bad Pull",
+	StatusUnauthorized:               "Unauthorized",
+	StatusPaymentRequired:            "Payment Required",
+	StatusForbidden:                  "Forbidden",
+	StatusNotFound:                   "Not Found",
+	StatusMethodNotAllowed:           "Method Not Allowed",
+	StatusNotAcceptable:              "Not Acceptable",
+	StatusProxyAuthRequired:          "Proxy Authentication Required",
+	StatusPullTimeout:                "Pull Timeout",
+	StatusConflict:                   "Conflict",
+	StatusGone:                       "Gone",
+	StatusLengthRequired:             "Length Required",
+	StatusPreconditionFailed:         "Precondition Failed",
+	StatusPullEntityTooLarge:         "Pull Entity Too Large",
+	StatusPullURITooLong:             "Pull URI Too Long",
+	StatusUnsupportedMediaType:       "Unsupported Media Type",
+	StatusPulledRangeNotSatisfiable:  "Pulled Range Not Satisfiable",
+	StatusExpectationFailed:          "Expectation Failed",
+	StatusTeapot:                     "I'm a teapot",
+	StatusUnprocessableEntity:        "Unprocessable Entity",
+	StatusLocked:                     "Locked",
+	StatusFailedDependency:           "Failed Dependency",
+	StatusUpgradeRequired:            "Upgrade Required",
+	StatusPreconditionRequired:       "Precondition Required",
+	StatusTooManyPulls:               "Too Many Pulls",
+	StatusPullHeaderFieldsTooLarge:   "Pull Header Fields Too Large",
+	StatusUnavailableForLegalReasons: "Unavailable For Legal Reasons",
 
 	StatusInternalServerError: "Internal Server Error",
 	StatusNotImplemented:      "Not Implemented",

@@ -15,11 +15,13 @@
 package teleport
 
 import (
+	"encoding/json"
 	"io"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/henrylee2cn/go-logging/color"
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
@@ -51,7 +53,7 @@ const (
 func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
 		peer:          peer,
-		requestRouter: peer.RequestRouter,
+		requestRouter: peer.PullRouter,
 		pushRouter:    peer.PushRouter,
 		socket:        socket.NewSocket(conn, id...),
 		pullCmdMap:    goutil.RwMap(),
@@ -80,18 +82,21 @@ func (s *Session) ChangeId(newId string) {
 	s.socket.ChangeId(newId)
 	s.peer.sessionHub.Set(s)
 	s.peer.sessionHub.Delete(oldId)
+	Tracef("session changes id: %s -> %s", oldId, newId)
 }
 
-// Ip returns the remote peer ip.
-func (s *Session) Ip() string {
+// RemoteIp returns the remote peer ip.
+func (s *Session) RemoteIp() string {
 	return s.socket.RemoteAddr().String()
 }
 
 // PullCmd the command of the pulling operation's response.
 type PullCmd struct {
-	packet   *socket.Packet
+	output   *socket.Packet
 	reply    interface{}
 	doneChan chan *PullCmd // Strobes when pull is complete.
+	start    time.Time
+	cost     time.Duration
 	Xerror   Xerror
 }
 
@@ -105,12 +110,12 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 		// It must arrange that done has enough buffer for the number of simultaneous
 		// RPCs that will be using that channel. If the channel
 		// is totally unbuffered, it's best not to run at all.
-		Panicf("teleport: *Session.GoPull(): done channel is unbuffered")
+		Panicf("*Session.GoPull(): done channel is unbuffered")
 	}
-	packet := &socket.Packet{
+	output := &socket.Packet{
 		Header: &socket.Header{
 			Seq:  s.pullSeq,
-			Type: TypeRequest,
+			Type: TypePull,
 			Uri:  uri,
 			Gzip: s.peer.defaultGzipLevel,
 		},
@@ -120,16 +125,19 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 	}
 	s.pullSeq++
 	for _, f := range setting {
-		f(packet)
+		f(output)
 	}
+
 	cmd := &PullCmd{
-		packet:   packet,
+		output:   output,
 		reply:    reply,
 		doneChan: done,
+		start:    time.Now(),
 	}
-	err := s.write(packet)
+
+	err := s.write(output)
 	if err == nil {
-		s.pullCmdMap.Store(packet.Header.Seq, cmd)
+		s.pullCmdMap.Store(output.Header.Seq, cmd)
 	} else {
 		cmd.Xerror = NewXerror(StatusWriteFailed, err.Error())
 		cmd.done()
@@ -150,6 +158,7 @@ func (s *Session) Pull(uri string, args interface{}, reply interface{}, setting 
 
 // Push sends a packet, but do not receives reply.
 func (s *Session) Push(uri string, args interface{}) error {
+	start := time.Now()
 	packet := &socket.Packet{
 		Header: &socket.Header{
 			Seq:  s.pushSeq,
@@ -162,6 +171,9 @@ func (s *Session) Push(uri string, args interface{}) error {
 		BodyCodec:   s.peer.defaultCodec,
 	}
 	s.pushSeq++
+	defer func() {
+		s.runlog(time.Since(start), nil, packet)
+	}()
 	return s.write(packet)
 }
 
@@ -211,7 +223,7 @@ func (s *Session) readAndHandle() {
 		if err != nil {
 			s.peer.putContext(ctx)
 			if err != io.EOF {
-				Debugf("teleport: ReadPacket failed: %s", err.Error())
+				Debugf("ReadPacket() failed: %s", err.Error())
 			}
 			return
 		}
@@ -219,18 +231,18 @@ func (s *Session) readAndHandle() {
 		err = s.gopool.Go(func() {
 			defer s.peer.putContext(ctx)
 			switch ctx.input.Header.Type {
-			case TypeResponse:
-				// handle response
-				ctx.respHandle()
+			case TypePullReply:
+				// handles pull reply
+				ctx.pullReplyHandle()
 
 			case TypePush:
-				// handle push
+				//  handles push
 				ctx.handle()
 
-			case TypeRequest:
-				// handle response
+			case TypePull:
+				// handles and replies pull
 				ctx.handle()
-				ctx.output.Header.Type = TypeResponse
+				ctx.output.Header.Type = TypePullReply
 			}
 		})
 		if err != nil {
@@ -240,7 +252,7 @@ func (s *Session) readAndHandle() {
 }
 
 // ErrConnClosed connection is closed error.
-var ErrConnClosed = errors.New("teleport: connection is closed")
+var ErrConnClosed = errors.New("connection is closed")
 
 func (s *Session) write(packet *socket.Packet) (err error) {
 	s.writeLock.Lock()
@@ -264,4 +276,88 @@ func (s *Session) write(packet *socket.Packet) (err error) {
 		s.Close()
 	}
 	return err
+}
+
+func isPushLaunch(input, output *socket.Packet) bool {
+	return input == nil || output.Header.Type == TypePush
+}
+func isPushHandle(input, output *socket.Packet) bool {
+	return output == nil || input.Header.Type == TypePush
+}
+func isPullLaunch(input, output *socket.Packet) bool {
+	return output.Header.Type == TypePull
+}
+func isPullHandle(input, output *socket.Packet) bool {
+	return output.Header.Type == TypePullReply
+}
+
+func (s *Session) runlog(costTime time.Duration, input, output *socket.Packet) {
+	var (
+		printFunc func(string, ...interface{})
+		slowStr   string
+		logformat string
+		printBody = s.peer.printBody
+	)
+	if costTime < s.peer.slowCometDuration {
+		printFunc = Infof
+	} else {
+		printFunc = Warnf
+		slowStr = "(slow)"
+	}
+
+	if isPushLaunch(input, output) {
+		if printBody {
+			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\n body-json: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length, bodyLogBytes(output.Body))
+
+		} else {
+			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length)
+		}
+
+	} else if isPushHandle(input, output) {
+		if printBody {
+			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\n body-json: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length, bodyLogBytes(input.Body))
+		} else {
+			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length)
+		}
+
+	} else if isPullLaunch(input, output) {
+		if printBody {
+			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\n body-json: %s\nRECV:\n status: %s %s\n packet-length: %d\n body-json: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length, bodyLogBytes(output.Body), colorCode(input.Header.StatusCode), input.Header.Status, input.Length, bodyLogBytes(input.Body))
+		} else {
+			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\nRECV:\n status: %s %s\n packet-length: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length, colorCode(input.Header.StatusCode), input.Header.Status, input.Length)
+		}
+
+	} else if isPullHandle(input, output) {
+		if printBody {
+			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\n body-json: %s\nSEND:\n status: %s %s\n packet-length: %d\n body-json: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length, bodyLogBytes(input.Body), colorCode(output.Header.StatusCode), output.Header.Status, output.Length, bodyLogBytes(output.Body))
+		} else {
+			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\nSEND:\n status: %s %s\n packet-length: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length, colorCode(output.Header.StatusCode), output.Header.Status, output.Length)
+		}
+	}
+}
+
+func bodyLogBytes(v interface{}) []byte {
+	b, _ := json.MarshalIndent(v, " ", "  ")
+	return b
+}
+
+func colorCode(code int32) string {
+	switch {
+	case code >= 500 || code < 200:
+		return color.Red(code)
+	case code >= 400:
+		return color.Magenta(code)
+	case code >= 300:
+		return color.Grey(code)
+	default:
+		return color.Green(code)
+	}
 }
