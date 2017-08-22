@@ -105,7 +105,6 @@ import (
 
 func main() {
 	var cfg = &teleport.Config{
-		Id:                       "server-peer",
 		ReadTimeout:              time.Second * 10,
 		WriteTimeout:             time.Second * 10,
 		TlsCertFile:              "",
@@ -115,6 +114,7 @@ func main() {
 		DefaultGzipLevel:         5,
 		MaxGoroutinesAmount:      1024,
 		MaxGoroutineIdleDuration: time.Second * 10,
+		PrintBody:                true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",
@@ -134,9 +134,15 @@ type Home struct {
 }
 
 // Test handler
-func (h *Home) Test(args *string) (string, teleport.Xerror) {
-	teleport.Infof("query: %#v", h.Query())
-	return "home-test response:" + *args, nil
+func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, teleport.Xerror) {
+	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
+		"your_id": h.Query().Get("peer_id"),
+		"a":       1,
+	})
+	return map[string]interface{}{
+		"your_args":   *args,
+		"server_time": time.Now(),
+	}, nil
 }
 ```
 
@@ -153,7 +159,6 @@ import (
 
 func main() {
 	var cfg = &teleport.Config{
-		Id:                       "client-peer",
 		ReadTimeout:              time.Second * 10,
 		WriteTimeout:             time.Second * 10,
 		TlsCertFile:              "",
@@ -163,17 +168,25 @@ func main() {
 		DefaultGzipLevel:         5,
 		MaxGoroutinesAmount:      1024,
 		MaxGoroutineIdleDuration: time.Second * 10,
+		PrintBody:                false,
 	}
 
 	var peer = teleport.NewPeer(cfg)
+	peer.PushRouter.Reg(new(Push))
 
 	{
-		var sess, err = peer.Dial("127.0.0.1:9090")
+		var sess, err = peer.Dial("127.0.0.1:9090", "simple_server:9090")
 		if err != nil {
 			teleport.Panicf("%v", err)
 		}
-		var reply string
-		var pullcmd = sess.Pull("/group/home/test?port=9090", "test_args_9090", &reply)
+
+		var reply interface{}
+		var pullcmd = sess.Pull(
+			"/group/home/test?peer_id=client9090",
+			map[string]interface{}{"conn_port": 9090},
+			&reply,
+		)
+
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
@@ -185,12 +198,28 @@ func main() {
 		if err != nil {
 			teleport.Panicf("%v", err)
 		}
-		var reply string
-		var pullcmd = sess.Pull("/group/home/test?port=9091", "test_args_9091", &reply)
+
+		var reply interface{}
+		var pullcmd = sess.Pull(
+			"/group/home/test?peer_id=client9091",
+			map[string]interface{}{"conn_port": 9091},
+			&reply,
+		)
+
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9091reply: %s", reply)
+		teleport.Infof("9091reply: %v", reply)
 	}
+}
+
+// Push controller
+type Push struct {
+	teleport.PushCtx
+}
+
+// Test handler
+func (p *Push) Test(args *map[string]interface{}) {
+	teleport.Infof("push-test(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
 }
 ```
