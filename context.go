@@ -149,7 +149,7 @@ func (c *ApiContext) SetBodyCodec(codecName string) {
 
 // Ip returns the remote addr.
 func (c *ApiContext) Ip() string {
-	return c.session.socket.RemoteAddr().String()
+	return c.session.Ip()
 }
 
 func (c *ApiContext) binding(header *socket.Header) interface{} {

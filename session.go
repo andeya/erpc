@@ -63,6 +63,7 @@ func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	return s
 }
 
+// Id returns the session id.
 func (s *Session) Id() string {
 	return s.socket.Id()
 }
@@ -75,7 +76,8 @@ func (s *Session) ChangeId(newId string) {
 	s.peer.sessionHub.Delete(oldId)
 }
 
-func (s *Session) RemoteAddr() string {
+// Ip returns the remote peer ip.
+func (s *Session) Ip() string {
 	return s.socket.RemoteAddr().String()
 }
 
