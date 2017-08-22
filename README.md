@@ -39,7 +39,7 @@ A concise, powerful and high-performance TCP connection socket.
 - Provides `Socket` hub, `Socket` pool and `*Packet` stack
 
 
-![teleport_server](https://github.com/henrylee2cn/teleport/tree/master/doc/teleport_server.png)
+![teleport_server](https://github.com/henrylee2cn/teleport/blob/master/doc/teleport_server.png)
 
 ### Packet
 
