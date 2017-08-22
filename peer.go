@@ -85,7 +85,7 @@ func (p *Peer) ServeConn(conn net.Conn, id ...string) *Session {
 }
 
 // Dial connects with the peer of the destination address.
-func (p *Peer) Dial(addr string) (*Session, error) {
+func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
 	var conn, err = net.DialTimeout("tcp", addr, p.dialTimeout)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (p *Peer) Dial(addr string) (*Session, error) {
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	sess := p.ServeConn(conn)
+	sess := p.ServeConn(conn, id...)
 	return sess, nil
 }
 
@@ -168,7 +168,7 @@ func (p *Peer) listen(addr string) error {
 			return e
 		}
 		tempDelay = 0
-		p.ServeConn(rw, p.id)
+		p.ServeConn(rw)
 	}
 }
 
