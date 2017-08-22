@@ -72,12 +72,19 @@ func NewPeer(cfg *Config) *Peer {
 	return p
 }
 
+// Session gets the session by id.
+func (p *Peer) Session(sessionId string) (*Session, bool) {
+	return p.sessionHub.Get(sessionId)
+}
+
+// ServeConn serves the connection and returns a session.
 func (p *Peer) ServeConn(conn net.Conn, id ...string) *Session {
 	var session = newSession(p, conn, id...)
-	p.sessionHub.Set(session.Id(), session)
+	p.sessionHub.Set(session)
 	return session
 }
 
+// Dial connects with the peer of the destination address.
 func (p *Peer) Dial(addr string) (*Session, error) {
 	var conn, err = net.DialTimeout("tcp", addr, p.dialTimeout)
 	if err != nil {
@@ -93,6 +100,7 @@ func (p *Peer) Dial(addr string) (*Session, error) {
 // ErrListenClosed listener closed error.
 var ErrListenClosed = errors.New("teleport: listener closed")
 
+// Listen turns on the listening service.
 func (p *Peer) Listen() error {
 	var (
 		wg    sync.WaitGroup
@@ -160,14 +168,11 @@ func (p *Peer) listen(addr string) error {
 			return e
 		}
 		tempDelay = 0
-		p.ServeConn(rw)
+		p.ServeConn(rw, p.id)
 	}
 }
 
-func (p *Peer) Session(sessionId string) (*Session, bool) {
-	return p.sessionHub.Get(sessionId)
-}
-
+// Close closes peer.
 func (p *Peer) Close() {
 	close(p.closeCh)
 }

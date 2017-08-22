@@ -34,8 +34,8 @@ func NewSocketHub() *SocketHub {
 }
 
 // Set sets a Socket.
-func (sh *SocketHub) Set(id string, socket Socket) {
-	_socket, loaded := sh.sockets.LoadOrStore(id, socket)
+func (sh *SocketHub) Set(socket Socket) {
+	_socket, loaded := sh.sockets.LoadOrStore(socket.Id(), socket)
 	if !loaded {
 		return
 	}
@@ -56,20 +56,20 @@ func (sh *SocketHub) Get(id string) (Socket, bool) {
 
 // Range calls f sequentially for each id and Socket present in the socket hub.
 // If f returns false, range stops the iteration.
-func (sh *SocketHub) Range(f func(string, Socket) bool) {
+func (sh *SocketHub) Range(f func(Socket) bool) {
 	sh.sockets.Range(func(key, value interface{}) bool {
-		return f(key.(string), value.(Socket))
+		return f(value.(Socket))
 	})
 }
 
 // Random gets a Socket randomly.
 // If third returned arg is false, mean no Socket is exist.
-func (sh *SocketHub) Random() (string, Socket, bool) {
-	id, socket, exist := sh.sockets.Random()
+func (sh *SocketHub) Random() (Socket, bool) {
+	_, socket, exist := sh.sockets.Random()
 	if !exist {
-		return "", nil, false
+		return nil, false
 	}
-	return id.(string), socket.(Socket), true
+	return socket.(Socket), true
 }
 
 // Len returns the length of the socket hub.
@@ -81,4 +81,12 @@ func (sh *SocketHub) Len() int {
 // Delete deletes the Socket for a id.
 func (sh *SocketHub) Delete(id string) {
 	sh.sockets.Delete(id)
+}
+
+// ChangeId changes the socket id.
+func (sh *SocketHub) ChangeId(newId string, socket Socket) {
+	oldId := socket.Id()
+	socket.ChangeId(newId)
+	sh.Set(socket)
+	sh.Delete(oldId)
 }

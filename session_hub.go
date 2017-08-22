@@ -34,8 +34,8 @@ func newSessionHub() *SessionHub {
 }
 
 // Set sets a *Session.
-func (sh *SessionHub) Set(id string, session *Session) {
-	_session, loaded := sh.sessions.LoadOrStore(id, session)
+func (sh *SessionHub) Set(session *Session) {
+	_session, loaded := sh.sessions.LoadOrStore(session.Id(), session)
 	if !loaded {
 		return
 	}
@@ -56,20 +56,20 @@ func (sh *SessionHub) Get(id string) (*Session, bool) {
 
 // Range calls f sequentially for each id and *Session present in the session hub.
 // If f returns false, range stops the iteration.
-func (sh *SessionHub) Range(f func(string, *Session) bool) {
+func (sh *SessionHub) Range(f func(*Session) bool) {
 	sh.sessions.Range(func(key, value interface{}) bool {
-		return f(key.(string), value.(*Session))
+		return f(value.(*Session))
 	})
 }
 
 // Random gets a *Session randomly.
 // If third returned arg is false, mean no *Session is exist.
-func (sh *SessionHub) Random() (string, *Session, bool) {
-	id, session, exist := sh.sessions.Random()
+func (sh *SessionHub) Random() (*Session, bool) {
+	_, session, exist := sh.sessions.Random()
 	if !exist {
-		return "", nil, false
+		return nil, false
 	}
-	return id.(string), session.(*Session), true
+	return session.(*Session), true
 }
 
 // Len returns the length of the session hub.

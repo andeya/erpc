@@ -44,7 +44,7 @@ type (
 		Public() goutil.Map
 		PublicLen() int
 		Ip() string
-		// RealIp() string
+		Session() *Session
 	}
 	// ApiContext the underlying common instance of RequestCtx and PushCtx.
 	ApiContext struct {
@@ -107,6 +107,11 @@ func (c *ApiContext) clean() {
 	c.cost = 0
 	c.input.Reset(c.binding)
 	c.output.Reset(nil)
+}
+
+// Session returns the session.
+func (c *ApiContext) Session() *Session {
+	return c.session
 }
 
 // Public returns temporary public data of Conn Context.

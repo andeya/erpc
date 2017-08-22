@@ -67,6 +67,14 @@ func (s *Session) Id() string {
 	return s.socket.Id()
 }
 
+// ChangeId changes the session id.
+func (s *Session) ChangeId(newId string) {
+	oldId := s.Id()
+	s.socket.ChangeId(newId)
+	s.peer.sessionHub.Set(s)
+	s.peer.sessionHub.Delete(oldId)
+}
+
 func (s *Session) RemoteAddr() string {
 	return s.socket.RemoteAddr().String()
 }

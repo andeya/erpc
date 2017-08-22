@@ -111,10 +111,13 @@ type (
 		PublicLen() int
 		// Id returns the socket id.
 		Id() string
+		// ChangeId changes the socket id.
+		ChangeId(string)
 	}
 	socket struct {
 		net.Conn
 		id        string
+		idMutex   sync.RWMutex
 		bufWriter *utils.BufioWriter
 		bufReader *utils.BufioReader
 
@@ -160,18 +163,12 @@ var socketPool = sync.Pool{
 
 // NewSocket wraps a net.Conn as a Socket.
 func NewSocket(c net.Conn, id ...string) *socket {
-	var _id string
-	if len(id) == 0 && c != nil {
-		_id = c.RemoteAddr().String()
-	} else if len(id) > 0 {
-		_id = id[0]
-	}
 	bufWriter := utils.NewBufioWriter(c)
 	bufReader := utils.NewBufioReader(c)
 	cacheWriter := bytes.NewBuffer(nil)
 	limitReader := utils.LimitReader(bufReader, 0)
 	var s = &socket{
-		id:            _id,
+		id:            getId(c, id),
 		Conn:          c,
 		bufWriter:     bufWriter,
 		bufReader:     bufReader,
@@ -427,7 +424,17 @@ func (s *socket) PublicLen() int {
 
 // Id returns the socket id.
 func (s *socket) Id() string {
-	return s.id
+	s.idMutex.RLock()
+	id := s.id
+	s.idMutex.RUnlock()
+	return id
+}
+
+// ChangeId changes the socket id.
+func (s *socket) ChangeId(id string) {
+	s.idMutex.Lock()
+	s.id = id
+	s.idMutex.Unlock()
 }
 
 // Reset reset net.Conn
@@ -438,13 +445,7 @@ func (s *socket) Reset(netConn net.Conn, id ...string) {
 	}
 	s.readMutex.Lock()
 	s.writeMutex.Lock()
-	var _id string
-	if len(id) == 0 && netConn != nil {
-		_id = netConn.RemoteAddr().String()
-	} else if len(id) > 0 {
-		_id = id[0]
-	}
-	s.id = _id
+	s.ChangeId(getId(netConn, id))
 	s.Conn = netConn
 	s.bufReader.Reset(netConn)
 	s.bufWriter.Reset(netConn)
@@ -485,4 +486,14 @@ func (s *socket) closeGzipReader() {
 		recover()
 	}()
 	s.gzipReader.Close()
+}
+
+func getId(c net.Conn, ids []string) string {
+	var id string
+	if len(ids) > 0 && len(ids[0]) > 0 {
+		id = ids[0]
+	} else if c != nil {
+		id = c.RemoteAddr().String()
+	}
+	return id
 }
