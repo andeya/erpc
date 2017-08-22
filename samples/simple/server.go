@@ -39,17 +39,19 @@ type Home struct {
 // Test handler
 func (h *Home) Test(args *string) (string, teleport.Xerror) {
 	teleport.Infof("query: %#v", h.Query())
+
+	sess := h.Session()
+
 	newId := h.Query().Get("peer_id")
-	teleport.Infof("session default id: %s", h.Session().Id())
-	h.Session().ChangeId(newId)
-	teleport.Infof("session new id: %s", h.Session().Id())
-	sess, ok := h.Peer().GetSession(newId)
-	if !ok {
-		teleport.Panicf("")
-	}
+	teleport.Infof("session default id: %s", sess.Id())
+
+	sess.ChangeId(newId)
+	teleport.Infof("session new id: %s", sess.Id())
+
 	sess.Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": newId,
 		"a":       1,
 	})
+
 	return "home-test response:" + *args, nil
 }

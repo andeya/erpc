@@ -28,6 +28,7 @@ func main() {
 		if err != nil {
 			teleport.Panicf("%v", err)
 		}
+
 		var reply string
 		var pullcmd = sess.Pull("/group/home/test?peer_id=client9090", "test_args_9090", &reply)
 		if pullcmd.Xerror != nil {
@@ -41,6 +42,7 @@ func main() {
 		if err != nil {
 			teleport.Panicf("%v", err)
 		}
+
 		var reply string
 		var pullcmd = sess.Pull("/group/home/test?peer_id=client9091", "test_args_9091", &reply)
 		if pullcmd.Xerror != nil {
