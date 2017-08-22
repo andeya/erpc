@@ -21,6 +21,7 @@ func main() {
 	}
 
 	var peer = teleport.NewPeer(cfg)
+	peer.PushRouter.Reg(new(Push))
 
 	{
 		var sess, err = peer.Dial("127.0.0.1:9090")
@@ -47,4 +48,14 @@ func main() {
 		}
 		teleport.Infof("9091reply: %s", reply)
 	}
+}
+
+// Push controller
+type Push struct {
+	teleport.PushCtx
+}
+
+// Test handler
+func (p *Push) Test(args *map[string]interface{}) {
+	teleport.Infof("push-test:\nargs: %#v\nquery: %#v\n", args, p.Query())
 }

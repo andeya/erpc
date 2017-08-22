@@ -39,5 +39,7 @@ type Home struct {
 // Test handler
 func (h *Home) Test(args *string) (string, teleport.Xerror) {
 	teleport.Infof("query: %#v", h.Query())
+	sess := h.Session()
+	sess.Push("/push/test?tag=from home-test", map[string]interface{}{"a": 1})
 	return "home-test response:" + *args, nil
 }

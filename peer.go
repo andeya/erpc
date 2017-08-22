@@ -97,8 +97,8 @@ func (p *Peer) Dial(addr string) (*Session, error) {
 	return sess, nil
 }
 
-// ErrListenClosed listener closed error.
-var ErrListenClosed = errors.New("teleport: listener closed")
+// ErrListenClosed listener is closed error.
+var ErrListenClosed = errors.New("teleport: listener is closed")
 
 // Listen turns on the listening service.
 func (p *Peer) Listen() error {

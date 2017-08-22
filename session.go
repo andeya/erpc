@@ -22,6 +22,7 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
+	"github.com/henrylee2cn/goutil/errors"
 	"github.com/henrylee2cn/goutil/pool"
 
 	"github.com/henrylee2cn/teleport/socket"
@@ -104,6 +105,7 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 	packet := &socket.Packet{
 		Header: &socket.Header{
 			Seq:  s.pullSeq,
+			Type: TypeRequest,
 			Uri:  uri,
 			Gzip: s.peer.defaultGzipLevel,
 		},
@@ -146,6 +148,7 @@ func (s *Session) Push(uri string, args interface{}) error {
 	packet := &socket.Packet{
 		Header: &socket.Header{
 			Seq:  s.pushSeq,
+			Type: TypePush,
 			Uri:  uri,
 			Gzip: s.peer.defaultGzipLevel,
 		},
@@ -217,7 +220,6 @@ func (s *Session) readAndHandle() {
 
 			case TypePush:
 				// handle push
-				Debugf("ctx.handle()")
 				ctx.handle()
 
 			case TypeRequest:
@@ -232,9 +234,19 @@ func (s *Session) readAndHandle() {
 	}
 }
 
-func (s *Session) write(packet *socket.Packet) error {
+// ErrConnClosed connection is closed error.
+var ErrConnClosed = errors.New("teleport: connection is closed")
+
+func (s *Session) write(packet *socket.Packet) (err error) {
 	s.writeLock.Lock()
-	defer s.writeLock.Unlock()
+	defer func() {
+		if p := recover(); p != nil {
+			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		} else if err == io.EOF {
+			err = ErrConnClosed
+		}
+		s.writeLock.Unlock()
+	}()
 	// if s.Closed() {
 	// 	return
 	// }
@@ -242,7 +254,7 @@ func (s *Session) write(packet *socket.Packet) error {
 	if writeTimeout > 0 {
 		s.socket.SetWriteDeadline(coarsetime.CoarseTimeNow().Add(writeTimeout))
 	}
-	err := s.socket.WritePacket(packet)
+	err = s.socket.WritePacket(packet)
 	if err != nil {
 		s.Close()
 	}
