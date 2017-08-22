@@ -64,6 +64,11 @@ func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	return s
 }
 
+// Peer returns the peer.
+func (s *Session) Peer() *Peer {
+	return s.peer
+}
+
 // Id returns the session id.
 func (s *Session) Id() string {
 	return s.socket.Id()

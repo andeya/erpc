@@ -72,8 +72,8 @@ func NewPeer(cfg *Config) *Peer {
 	return p
 }
 
-// Session gets the session by id.
-func (p *Peer) Session(sessionId string) (*Session, bool) {
+// GetSession gets the session by id.
+func (p *Peer) GetSession(sessionId string) (*Session, bool) {
 	return p.sessionHub.Get(sessionId)
 }
 

@@ -29,7 +29,7 @@ func main() {
 			teleport.Panicf("%v", err)
 		}
 		var reply string
-		var pullcmd = sess.Pull("/group/home/test?port=9090", "test_args_9090", &reply)
+		var pullcmd = sess.Pull("/group/home/test?peer_id=client9090", "test_args_9090", &reply)
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
@@ -42,7 +42,7 @@ func main() {
 			teleport.Panicf("%v", err)
 		}
 		var reply string
-		var pullcmd = sess.Pull("/group/home/test?port=9091", "test_args_9091", &reply)
+		var pullcmd = sess.Pull("/group/home/test?peer_id=client9091", "test_args_9091", &reply)
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}

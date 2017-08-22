@@ -44,6 +44,7 @@ type (
 		Public() goutil.Map
 		PublicLen() int
 		Ip() string
+		Peer() *Peer
 		Session() *Session
 	}
 	// ApiContext the underlying common instance of RequestCtx and PushCtx.
@@ -107,6 +108,11 @@ func (c *ApiContext) clean() {
 	c.cost = 0
 	c.input.Reset(c.binding)
 	c.output.Reset(nil)
+}
+
+// Peer returns the peer.
+func (c *ApiContext) Peer() *Peer {
+	return c.session.peer
 }
 
 // Session returns the session.
