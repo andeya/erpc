@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 			for {
 				// read request
 				var packet = socket.GetPacket(func(_ *socket.Header) interface{} {
-					return new(map[string]string)
+					return new(pb.PbTest)
 				})
 				err = s.ReadPacket(packet)
 				if err != nil {
@@ -37,10 +38,10 @@ func main() {
 
 				// write response
 				packet.HeaderCodec = "json"
-				packet.BodyCodec = "json"
+				packet.BodyCodec = "protobuf"
 				packet.Header.StatusCode = 200
 				packet.Header.Status = "ok"
-				packet.Body = time.Now()
+				packet.Body = &pb.PbTest{A: 456, B: time.Now().String()}
 				err = s.WritePacket(packet)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)

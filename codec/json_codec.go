@@ -37,15 +37,15 @@ func (j *JsonCodec) Id() byte {
 	return 'j'
 }
 
-// NewEncoder returns a new json encoder that writes to w.
-func (*JsonCodec) NewEncoder(w io.Writer) Encoder {
-	return json.NewEncoder(w)
+// NewEncoder returns a new json encoder that writes to writer.
+func (*JsonCodec) NewEncoder(writer io.Writer) Encoder {
+	return json.NewEncoder(writer)
 }
 
-// NewDecoder returns a new json decoder that reads from r.
+// NewDecoder returns a new json decoder that reads from limit reader.
 //
 // The decoder introduces its own buffering and may
-// read data from r beyond the JSON values requested.
-func (*JsonCodec) NewDecoder(r io.Reader) Decoder {
-	return json.NewDecoder(r)
+// read data from limitReader beyond the JSON values requested.
+func (*JsonCodec) NewDecoder(limitReader io.Reader) Decoder {
+	return json.NewDecoder(limitReader)
 }

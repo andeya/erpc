@@ -5,6 +5,8 @@ import (
 	"net"
 
 	"github.com/henrylee2cn/teleport/socket"
+
+	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
 func main() {
@@ -16,15 +18,15 @@ func main() {
 	defer s.Close()
 	var packet = socket.GetPacket(nil)
 	defer socket.PutPacket(packet)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1; i++ {
 		// write request
 		packet.Reset(nil)
 		packet.HeaderCodec = "json"
-		packet.BodyCodec = "json"
+		packet.BodyCodec = "protobuf"
 		packet.Header.Seq = 1
 		packet.Header.Uri = "/a/b"
 		packet.Header.Gzip = 5
-		packet.Body = map[string]string{"a": "A"}
+		packet.Body = &pb.PbTest{A: 123, B: "pbtest"}
 		err = s.WritePacket(packet)
 		if err != nil {
 			log.Printf("[CLI] write request err: %v", err)
@@ -34,7 +36,7 @@ func main() {
 
 		// read response
 		packet.Reset(func(_ *socket.Header) interface{} {
-			return new(string)
+			return new(pb.PbTest)
 		})
 		err = s.ReadPacket(packet)
 		if err != nil {

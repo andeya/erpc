@@ -1,0 +1,6 @@
+syntax = "proto3";
+package pb;
+message PbTest {
+	int32 a = 1;
+	string b = 2;
+}

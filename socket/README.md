@@ -7,7 +7,7 @@ A concise, powerful and high-performance TCP connection socket.
 - The server and client are peer-to-peer interfaces
 - With I/O buffer
 - Packet contains both Header and Body
-- Supports custom encoding types, e.g JSON
+- Supports custom encoding types, e.g `JSON` `Protobuf`
 - Header and Body can use different coding types
 - Body supports gzip compression
 - Header contains the status code and its description text

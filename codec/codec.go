@@ -22,10 +22,14 @@ import (
 type (
 	// Codec makes Encoder and Decoder
 	Codec interface {
+		// Id returns codec id.
 		Id() byte
+		// Name returns codec name.
 		Name() string
-		NewEncoder(io.Writer) Encoder
-		NewDecoder(io.Reader) Decoder
+		// NewEncoder returns a new encoder that writes to writer.
+		NewEncoder(writer io.Writer) Encoder
+		// NewDecoder returns a new decoder that reads from limit reader.
+		NewDecoder(limitReader io.Reader) Decoder
 	}
 	// Encoder encodes data
 	Encoder interface {
@@ -82,38 +86,38 @@ func GetById(id byte) (Codec, error) {
 	return codec, nil
 }
 
-// NewEncoderByName returns a new encoder that writes to w.
-func NewEncoderByName(name string, w io.Writer) (Encoder, error) {
+// NewEncoderByName returns a new encoder that writes to writer.
+func NewEncoderByName(name string, writer io.Writer) (Encoder, error) {
 	codec, err := GetByName(name)
 	if err != nil {
 		return nil, err
 	}
-	return codec.NewEncoder(w), nil
+	return codec.NewEncoder(writer), nil
 }
 
-// NewDecoderByName returns a new decoder that reads from r.
-func NewDecoderByName(name string, r io.Reader) (Decoder, error) {
+// NewDecoderByName returns a new decoder that reads from limit reader.
+func NewDecoderByName(name string, limitReader io.Reader) (Decoder, error) {
 	codec, err := GetByName(name)
 	if err != nil {
 		return nil, err
 	}
-	return codec.NewDecoder(r), nil
+	return codec.NewDecoder(limitReader), nil
 }
 
-// NewEncoderById returns a new encoder that writes to w.
-func NewEncoderById(id byte, w io.Writer) (Encoder, error) {
+// NewEncoderById returns a new encoder that writes to writer.
+func NewEncoderById(id byte, writer io.Writer) (Encoder, error) {
 	codec, err := GetById(id)
 	if err != nil {
 		return nil, err
 	}
-	return codec.NewEncoder(w), nil
+	return codec.NewEncoder(writer), nil
 }
 
-// NewDecoderById returns a new decoder that reads from r.
-func NewDecoderById(id byte, r io.Reader) (Decoder, error) {
+// NewDecoderById returns a new decoder that reads from limit reader.
+func NewDecoderById(id byte, limitReader io.Reader) (Decoder, error) {
 	codec, err := GetById(id)
 	if err != nil {
 		return nil, err
 	}
-	return codec.NewDecoder(r), nil
+	return codec.NewDecoder(limitReader), nil
 }
