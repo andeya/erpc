@@ -17,7 +17,11 @@
 package socket
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/binary"
 	"encoding/json"
+	"io"
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
@@ -28,9 +32,9 @@ import (
 // Packet provides header and body's containers for receiving and sending packet.
 type Packet struct {
 	// HeaderCodec header codec name
-	HeaderCodec string
+	HeaderCodec string `json:"header_codec"`
 	// BodyCodec body codec name
-	BodyCodec string
+	BodyCodec string `json:"body_codec"`
 	// header content
 	Header *Header `json:"header"`
 	// body content
@@ -134,7 +138,7 @@ func (p *Packet) String() string {
 	return goutil.BytesToString(b)
 }
 
-// HeaderCodecName returns packet header codec id.
+// HeaderCodecId returns packet header codec id.
 func (p *Packet) HeaderCodecId() byte {
 	c, err := codec.GetByName(p.HeaderCodec)
 	if err != nil {
@@ -143,7 +147,7 @@ func (p *Packet) HeaderCodecId() byte {
 	return c.Id()
 }
 
-// BodyCodecName returns packet body codec id.
+// BodyCodecId returns packet body codec id.
 func (p *Packet) BodyCodecId() byte {
 	c, err := codec.GetByName(p.BodyCodec)
 	if err != nil {
@@ -190,4 +194,45 @@ func getCodecName(codecId byte) string {
 		return ""
 	}
 	return c.Name()
+}
+
+// Unmarshal unmarshals bytes to header or body receiver.
+func Unmarshal(b []byte, v interface{}, isGzip bool) (codecName string, err error) {
+	switch recv := v.(type) {
+	case nil:
+		return "", nil
+
+	case []byte:
+		copy(recv, b)
+		return "", nil
+
+	case *[]byte:
+		*recv = b
+		return "", nil
+	}
+
+	var codecId byte
+	limitReader := bytes.NewReader(b)
+	err = binary.Read(limitReader, binary.BigEndian, &codecId)
+	if err != nil {
+		return "", err
+	}
+
+	c, err := codec.GetById(codecId)
+	if err != nil {
+		return "", err
+	}
+
+	var r io.Reader
+	if isGzip {
+		r, err = gzip.NewReader(limitReader)
+		if err != nil {
+			return getCodecName(codecId), err
+		}
+		defer r.(*gzip.Reader).Close()
+	} else {
+		r = limitReader
+	}
+
+	return c.Name(), c.NewDecoder(r).Decode(v)
 }

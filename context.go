@@ -15,6 +15,7 @@
 package teleport
 
 import (
+	"compress/gzip"
 	"net/url"
 	"reflect"
 	"time"
@@ -44,6 +45,14 @@ type (
 		Ip() string
 		Peer() *Peer
 		Session() *Session
+	}
+	UnknowPullCtx interface {
+		PullCtx
+		Unmarshal(b []byte, v interface{}, assignToInput ...bool) (codecName string, err error)
+	}
+	UnknowPushCtx interface {
+		PushCtx
+		Unmarshal(b []byte, v interface{}, assignToInput ...bool) (codecName string, err error)
 	}
 	// WriteCtx for writing packet.
 	WriteCtx interface {
@@ -80,14 +89,17 @@ type readHandleCtx struct {
 	public            goutil.Map
 	start             time.Time
 	cost              time.Duration
+	pluginContainer   PluginContainer
 	next              *readHandleCtx
 }
 
 var (
-	_ PullCtx  = new(readHandleCtx)
-	_ PushCtx  = new(readHandleCtx)
-	_ WriteCtx = new(readHandleCtx)
-	_ ReadCtx  = new(readHandleCtx)
+	_ PullCtx       = new(readHandleCtx)
+	_ PushCtx       = new(readHandleCtx)
+	_ WriteCtx      = new(readHandleCtx)
+	_ ReadCtx       = new(readHandleCtx)
+	_ UnknowPullCtx = new(readHandleCtx)
+	_ UnknowPushCtx = new(readHandleCtx)
 )
 
 // newReadHandleCtx creates a readHandleCtx for one request/response or push.
@@ -125,6 +137,7 @@ func (c *readHandleCtx) clean() {
 	c.uri = nil
 	c.query = nil
 	c.cost = 0
+	c.pluginContainer = nil
 	c.input.Reset(c.binding)
 	c.output.Reset(nil)
 }
@@ -195,6 +208,7 @@ func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
 		}
 	}()
 	c.start = time.Now()
+	c.pluginContainer = c.session.peer.pluginContainer
 	switch header.Type {
 	case TypeReply:
 		return c.bindReply(header)
@@ -211,7 +225,7 @@ func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
 }
 
 func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
-	err := c.session.peer.pluginContainer.PostReadHeader(c)
+	err := c.pluginContainer.PostReadHeader(c)
 	if err != nil {
 		Errorf("%s", err.Error())
 		return nil
@@ -228,11 +242,12 @@ func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
 		return nil
 	}
 
+	c.pluginContainer = c.apiType.pluginContainer
 	c.originStructMaker = c.apiType.originStructMaker
 	c.arg = reflect.New(c.apiType.argElem)
 	c.input.Body = c.arg.Interface()
 
-	err = c.apiType.pluginContainer.PreReadBody(c)
+	err = c.pluginContainer.PreReadBody(c)
 	if err != nil {
 		Errorf("%s", err.Error())
 		return nil
@@ -242,7 +257,7 @@ func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
 }
 
 func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
-	err := c.session.peer.pluginContainer.PostReadHeader(c)
+	err := c.pluginContainer.PostReadHeader(c)
 	if err != nil {
 		errStr := err.Error()
 		Errorf("%s", errStr)
@@ -272,11 +287,12 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 		return nil
 	}
 
+	c.pluginContainer = c.apiType.pluginContainer
 	c.originStructMaker = c.apiType.originStructMaker
 	c.arg = reflect.New(c.apiType.argElem)
 	c.input.Body = c.arg.Interface()
 
-	err = c.apiType.pluginContainer.PreReadBody(c)
+	err = c.pluginContainer.PreReadBody(c)
 	if err != nil {
 		errStr := err.Error()
 		Errorf("%s", errStr)
@@ -299,8 +315,7 @@ func (c *readHandleCtx) handle() {
 		c.cost = time.Since(c.start)
 		c.session.runlog(c.cost, c.input, c.output)
 	}()
-
-	err := c.apiType.pluginContainer.PostReadBody(c)
+	err := c.pluginContainer.PostReadBody(c)
 	if err != nil {
 		errStr := err.Error()
 		Errorf("%s", errStr)
@@ -315,7 +330,7 @@ func (c *readHandleCtx) handle() {
 
 	var statusOK = c.output.Header.StatusCode == StatusOK
 	if statusOK {
-		rets := c.apiType.method.Func.Call([]reflect.Value{c.originStructMaker(c), c.arg})
+		rets := c.apiType.method.Call([]reflect.Value{c.originStructMaker(c), c.arg})
 
 		// receive push
 		if len(rets) == 0 {
@@ -335,7 +350,7 @@ func (c *readHandleCtx) handle() {
 		c.output.BodyCodec = c.input.BodyCodec
 	}
 
-	if err = c.apiType.pluginContainer.PreWriteReply(c); err != nil {
+	if err = c.pluginContainer.PreWriteReply(c); err != nil {
 		errStr := err.Error()
 		c.output.Body = nil
 		if statusOK {
@@ -344,10 +359,12 @@ func (c *readHandleCtx) handle() {
 		}
 		Errorf("%s", errStr)
 	}
+
 	if err = c.session.write(c.output); err != nil {
 		Warnf("WritePacket: %s", err.Error())
 	}
-	if err = c.apiType.pluginContainer.PostWriteReply(c); err != nil {
+
+	if err = c.pluginContainer.PostWriteReply(c); err != nil {
 		Errorf("%s", err.Error())
 	}
 }
@@ -361,12 +378,12 @@ func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 	c.pullCmd = pullCmd.(*PullCmd)
 	c.public = c.pullCmd.public
 
-	err := c.session.peer.pluginContainer.PostReadHeader(c)
+	err := c.pluginContainer.PostReadHeader(c)
 	if err != nil {
 		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
 		return nil
 	}
-	err = c.session.peer.pluginContainer.PreReadBody(c)
+	err = c.pluginContainer.PreReadBody(c)
 	if err != nil {
 		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
 		return nil
@@ -376,7 +393,7 @@ func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 
 // handleReply handles pull reply.
 func (c *readHandleCtx) handleReply() {
-	err := c.session.peer.pluginContainer.PostReadBody(c)
+	err := c.pluginContainer.PostReadBody(c)
 	if err != nil {
 		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
 	}
@@ -384,6 +401,16 @@ func (c *readHandleCtx) handleReply() {
 	c.pullCmd.done()
 	c.pullCmd.cost = time.Since(c.pullCmd.start)
 	c.session.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
+}
+
+// Unmarshal unmarshals bytes to header or body receiver.
+func (c *readHandleCtx) Unmarshal(b []byte, v interface{}, assignToInput ...bool) (string, error) {
+	codecName, err := socket.Unmarshal(b, v, c.input.Header.Gzip != gzip.NoCompression)
+	if len(assignToInput) > 0 && assignToInput[0] {
+		c.input.Body = v
+		c.input.BodyCodec = codecName
+	}
+	return codecName, err
 }
 
 // PullCmd the command of the pulling operation's response.

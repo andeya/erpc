@@ -50,7 +50,7 @@ func main() {
 
 		var reply interface{}
 		var pullcmd = sess.Pull(
-			"/group/home/test?peer_id=client9091",
+			"/group/home/test_unknow?peer_id=client9091",
 			map[string]interface{}{"conn_port": 9091},
 			&reply,
 		)
@@ -58,7 +58,7 @@ func main() {
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9091reply: %#v", reply)
+		teleport.Infof("9091reply test_unknow: %#v", reply)
 	}
 }
 
