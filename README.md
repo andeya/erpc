@@ -22,6 +22,12 @@ v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
 Peer -> Session -> Socket -> Conn -> ApiContext
 ```
 
+## Install
+
+```sh
+go get -u -v github.com/henrylee2cn/teleport
+```
+
 ## Socket
 
 A concise, powerful and high-performance TCP connection socket.
