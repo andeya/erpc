@@ -101,12 +101,12 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 	var name string
 	switch r.typ {
 	case "pull":
-		name = "handle_unknown_pull"
+		name = "unknown_pull_handle"
 		if _, ok := unknownHandler.(func(ctx UnknownPullCtx, body *[]byte) (reply interface{}, xerr Xerror)); !ok {
 			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPullCtx, body *[]byte) (reply interface{}, xerr Xerror)", name)
 		}
 	case "push":
-		name = "handle_unknown_push"
+		name = "unknown_push_handle"
 		if _, ok := unknownHandler.(func(ctx UnknownPushCtx, body *[]byte)); !ok {
 			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPushCtx, body *[]byte)", name)
 		}
