@@ -28,7 +28,7 @@ func main() {
 		group := peer.PullRouter.Group("group")
 		group.Reg(new(Home))
 	}
-	peer.PullRouter.SetUnknow(UnknowPullHandle)
+	peer.PullRouter.SetUnknown(UnknownPullHandle)
 	peer.Listen()
 }
 
@@ -50,7 +50,7 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, telep
 	}, nil
 }
 
-func UnknowPullHandle(ctx teleport.UnknowPullCtx, body *[]byte) (interface{}, teleport.Xerror) {
+func UnknownPullHandle(ctx teleport.UnknownPullCtx, body *[]byte) (interface{}, teleport.Xerror) {
 	var v interface{}
 	codecName, err := ctx.Unmarshal(*body, &v, true)
 	if err != nil {

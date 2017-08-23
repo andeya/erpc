@@ -26,8 +26,8 @@ import (
 // Router the router of pull or push.
 type (
 	Router struct {
-		handlers      map[string]*Handler
-		unknowApiType **Handler
+		handlers       map[string]*Handler
+		unknownApiType **Handler
 		// only for register router
 		pathPrefix      string
 		pluginContainer PluginContainer
@@ -56,7 +56,7 @@ func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 	warnInvaildRouterHooks(plugin)
 	return &Router{
 		handlers:        r.handlers,
-		unknowApiType:   r.unknowApiType,
+		unknownApiType:  r.unknownApiType,
 		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
 		pluginContainer: pluginContainer,
 		fn:              r.fn,
@@ -90,8 +90,9 @@ func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 	}
 }
 
-// SetUnknow sets
-func (r *Router) SetUnknow(unknowHandler interface{}, plugin ...Plugin) {
+// SetUnknown sets the default handler,
+// which is called when no handler for pull or push is found.
+func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 	pluginContainer, err := r.pluginContainer.cloneAdd(plugin...)
 	if err != nil {
 		Fatalf("%v", err)
@@ -100,14 +101,14 @@ func (r *Router) SetUnknow(unknowHandler interface{}, plugin ...Plugin) {
 	var name string
 	switch r.typ {
 	case "pull":
-		name = "handle_unknow_pull"
-		if _, ok := unknowHandler.(func(ctx UnknowPullCtx, body *[]byte) (reply interface{}, xerr Xerror)); !ok {
-			Fatalf("*Router.SetUnknow(): %s handler needs type:\n func(ctx UnknowPullCtx, body *[]byte) (reply interface{}, xerr Xerror)", name)
+		name = "handle_unknown_pull"
+		if _, ok := unknownHandler.(func(ctx UnknownPullCtx, body *[]byte) (reply interface{}, xerr Xerror)); !ok {
+			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPullCtx, body *[]byte) (reply interface{}, xerr Xerror)", name)
 		}
 	case "push":
-		name = "handle_unknow_push"
-		if _, ok := unknowHandler.(func(ctx UnknowPushCtx, body *[]byte)); !ok {
-			Fatalf("*Router.SetUnknow(): %s handler needs type:\n func(ctx UnknowPushCtx, body *[]byte)", name)
+		name = "handle_unknown_push"
+		if _, ok := unknownHandler.(func(ctx UnknownPushCtx, body *[]byte)); !ok {
+			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPushCtx, body *[]byte)", name)
 		}
 	}
 
@@ -116,17 +117,17 @@ func (r *Router) SetUnknow(unknowHandler interface{}, plugin ...Plugin) {
 		originStructMaker: func(ctx *readHandleCtx) reflect.Value {
 			return reflect.ValueOf(ctx)
 		},
-		method:          reflect.ValueOf(unknowHandler),
+		method:          reflect.ValueOf(unknownHandler),
 		argElem:         reflect.TypeOf([]byte{}),
 		pluginContainer: pluginContainer,
 	}
 
-	if *r.unknowApiType == nil {
+	if *r.unknownApiType == nil {
 		Printf("set %s handler", name)
 	} else {
 		Warnf("covered %s handler", name)
 	}
-	r.unknowApiType = &h
+	r.unknownApiType = &h
 }
 
 func (r *Router) get(uriPath string) (*Handler, bool) {
@@ -134,8 +135,8 @@ func (r *Router) get(uriPath string) (*Handler, bool) {
 	if ok {
 		return t, true
 	}
-	if unknow := *r.unknowApiType; unknow != nil {
-		return unknow, true
+	if unknown := *r.unknownApiType; unknown != nil {
+		return unknown, true
 	}
 	return nil, false
 }
@@ -145,7 +146,7 @@ func (r *Router) get(uriPath string) (*Handler, bool) {
 func newPullRouter(pluginContainer PluginContainer) *Router {
 	return &Router{
 		handlers:        make(map[string]*Handler),
-		unknowApiType:   new(*Handler),
+		unknownApiType:  new(*Handler),
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
 		fn:              pullHandlersMaker,
@@ -241,7 +242,7 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 func newPushRouter(pluginContainer PluginContainer) *Router {
 	return &Router{
 		handlers:        make(map[string]*Handler),
-		unknowApiType:   new(*Handler),
+		unknownApiType:  new(*Handler),
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
 		fn:              pushHandlersMaker,

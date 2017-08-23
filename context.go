@@ -46,11 +46,11 @@ type (
 		Peer() *Peer
 		Session() *Session
 	}
-	UnknowPullCtx interface {
+	UnknownPullCtx interface {
 		PullCtx
 		Unmarshal(b []byte, v interface{}, assignToInput ...bool) (codecName string, err error)
 	}
-	UnknowPushCtx interface {
+	UnknownPushCtx interface {
 		PushCtx
 		Unmarshal(b []byte, v interface{}, assignToInput ...bool) (codecName string, err error)
 	}
@@ -94,12 +94,12 @@ type readHandleCtx struct {
 }
 
 var (
-	_ PullCtx       = new(readHandleCtx)
-	_ PushCtx       = new(readHandleCtx)
-	_ WriteCtx      = new(readHandleCtx)
-	_ ReadCtx       = new(readHandleCtx)
-	_ UnknowPullCtx = new(readHandleCtx)
-	_ UnknowPushCtx = new(readHandleCtx)
+	_ PullCtx        = new(readHandleCtx)
+	_ PushCtx        = new(readHandleCtx)
+	_ WriteCtx       = new(readHandleCtx)
+	_ ReadCtx        = new(readHandleCtx)
+	_ UnknownPullCtx = new(readHandleCtx)
+	_ UnknownPushCtx = new(readHandleCtx)
 )
 
 // newReadHandleCtx creates a readHandleCtx for one request/response or push.
