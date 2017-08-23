@@ -7,9 +7,11 @@ import (
 )
 
 func main() {
+	teleport.GraceSignal()
+	teleport.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &teleport.Config{
-		ReadTimeout:              time.Second * 10,
-		WriteTimeout:             time.Second * 10,
+		ReadTimeout:              time.Minute * 3,
+		WriteTimeout:             time.Minute * 3,
 		TlsCertFile:              "",
 		TlsKeyFile:               "",
 		SlowCometDuration:        time.Millisecond * 500,
@@ -39,7 +41,7 @@ type Home struct {
 
 // Test handler
 func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, teleport.Xerror) {
-	// time.Sleep(1e9)
+	time.Sleep(10e9)
 	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": h.Query().Get("peer_id"),
 		"a":       1,

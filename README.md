@@ -28,11 +28,7 @@ Peer -> Session -> Socket -> Conn -> ApiContext
 go get -u -v github.com/henrylee2cn/teleport
 ```
 
-## Socket
-
-A concise, powerful and high-performance TCP connection socket.
-
-### Feature
+## Feature
 
 - The server and client are peer-to-peer interfaces
 - With I/O buffer
@@ -41,8 +37,8 @@ A concise, powerful and high-performance TCP connection socket.
 - Header and Body can use different coding types
 - Body supports gzip compression
 - Header contains the status code and its description text
-- Each socket is assigned an id
-- Provides `Socket` hub, `Socket` pool and `*Packet` stack
+- Support reboot and shutdown gracefully
+- Support reverse proxy
 
 
 ![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)

@@ -19,6 +19,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/henrylee2cn/go-logging/color"
@@ -32,17 +33,20 @@ import (
 
 // Session a connection session.
 type Session struct {
-	peer       *Peer
-	pullRouter *Router
-	pushRouter *Router
-	pushSeq    uint64
-	pullSeq    uint64
-	pullCmdMap goutil.Map
-	socket     socket.Socket
-	closed     bool
-	writeLock  sync.Mutex
-	closedLock sync.RWMutex
-	gopool     *pool.GoPool
+	peer           *Peer
+	pullRouter     *Router
+	pushRouter     *Router
+	pushSeq        uint64
+	pullSeq        uint64
+	pullCmdMap     goutil.Map
+	socket         socket.Socket
+	closed         int32 // 0:false, 1:true
+	disconnected   int32 // 0:false, 1:true
+	closeLock      sync.RWMutex
+	disconnectLock sync.RWMutex
+	writeLock      sync.Mutex
+	gopool         *pool.GoPool
+	graceWaitGroup sync.WaitGroup
 }
 
 const (
@@ -127,6 +131,12 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 		start:    time.Now(),
 		public:   goutil.RwMap(),
 	}
+
+	{
+		// count pull-launch
+		s.graceWaitGroup.Add(1)
+	}
+
 	if s.socket.PublicLen() > 0 {
 		s.socket.Public().Range(func(key, value interface{}) bool {
 			cmd.public.Store(key, value)
@@ -201,32 +211,6 @@ func (s *Session) Push(uri string, args interface{}) (err error) {
 	return err
 }
 
-// Closed checks if the session is closed.
-func (s *Session) Closed() bool {
-	s.closedLock.RLock()
-	defer s.closedLock.RUnlock()
-	return s.closed
-}
-
-// Close closes the session.
-func (s *Session) Close() error {
-	s.closedLock.Lock()
-	defer s.closedLock.Unlock()
-	if s.closed {
-		return nil
-	}
-	s.closed = true
-	s.peer.sessionHub.Delete(s.Id())
-	s.pullCmdMap.Range(func(_, v interface{}) bool {
-		pullCmd := v.(*PullCmd)
-		pullCmd.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
-		pullCmd.done()
-		return true
-	})
-	s.pullCmdMap = nil
-	return s.socket.Close()
-}
-
 func (s *Session) readAndHandle() {
 	defer func() {
 		if p := recover(); p != nil {
@@ -234,11 +218,12 @@ func (s *Session) readAndHandle() {
 		}
 		s.Close()
 	}()
+
 	var (
 		err         error
 		readTimeout = s.peer.readTimeout
 	)
-	for !s.Closed() {
+	for s.IsOk() {
 		var ctx = s.peer.getContext(s)
 		// read request, response or push
 		if readTimeout > 0 {
@@ -247,7 +232,9 @@ func (s *Session) readAndHandle() {
 
 		err = s.peer.pluginContainer.PreReadHeader(ctx)
 		if err != nil {
+			s.peer.putContext(ctx)
 			Errorf("%s", err.Error())
+			s.markDisconnected()
 			return
 		}
 
@@ -257,6 +244,7 @@ func (s *Session) readAndHandle() {
 			if err != io.EOF {
 				Debugf("ReadPacket() failed: %s", err.Error())
 			}
+			s.markDisconnected()
 			return
 		}
 
@@ -305,9 +293,51 @@ func (s *Session) write(packet *socket.Packet) (err error) {
 	}
 	err = s.socket.WritePacket(packet)
 	if err != nil {
-		s.Close()
+		s.markDisconnected()
 	}
 	return err
+}
+
+// IsOk checks if the session is ok.
+func (s *Session) IsOk() bool {
+	if atomic.LoadInt32(&s.disconnected) == 1 {
+		return false
+	}
+	if atomic.LoadInt32(&s.closed) == 1 {
+		return false
+	}
+	return true
+}
+
+// Close closes the session.
+func (s *Session) Close() error {
+	if atomic.LoadInt32(&s.closed) == 1 {
+		return nil
+	}
+	atomic.StoreInt32(&s.closed, 1)
+
+	s.closeLock.Lock()
+	defer s.closeLock.Unlock()
+	s.graceWaitGroup.Wait()
+	s.peer.sessionHub.Delete(s.Id())
+	s.pullCmdMap = nil
+	return s.socket.Close()
+}
+
+func (s *Session) markDisconnected() {
+	if atomic.LoadInt32(&s.disconnected) == 1 {
+		return
+	}
+	atomic.StoreInt32(&s.disconnected, 1)
+
+	s.disconnectLock.Lock()
+	defer s.disconnectLock.Unlock()
+	s.pullCmdMap.Range(func(_, v interface{}) bool {
+		pullCmd := v.(*PullCmd)
+		pullCmd.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
+		pullCmd.done()
+		return true
+	})
 }
 
 func isPushLaunch(input, output *socket.Packet) bool {
@@ -392,4 +422,69 @@ func colorCode(code int32) string {
 	default:
 		return color.Green(code)
 	}
+}
+
+// SessionHub sessions hub
+type SessionHub struct {
+	// key: session id (ip, name and so on)
+	// value: *Session
+	sessions goutil.Map
+}
+
+// newSessionHub creates a new sessions hub.
+func newSessionHub() *SessionHub {
+	chub := &SessionHub{
+		sessions: goutil.AtomicMap(),
+	}
+	return chub
+}
+
+// Set sets a *Session.
+func (sh *SessionHub) Set(session *Session) {
+	_session, loaded := sh.sessions.LoadOrStore(session.Id(), session)
+	if !loaded {
+		return
+	}
+	if oldSession := _session.(*Session); session != oldSession {
+		oldSession.Close()
+	}
+}
+
+// Get gets *Session by id.
+// If second returned arg is false, mean the *Session is not found.
+func (sh *SessionHub) Get(id string) (*Session, bool) {
+	_session, ok := sh.sessions.Load(id)
+	if !ok {
+		return nil, false
+	}
+	return _session.(*Session), true
+}
+
+// Range calls f sequentially for each id and *Session present in the session hub.
+// If f returns false, range stops the iteration.
+func (sh *SessionHub) Range(f func(*Session) bool) {
+	sh.sessions.Range(func(key, value interface{}) bool {
+		return f(value.(*Session))
+	})
+}
+
+// Random gets a *Session randomly.
+// If third returned arg is false, mean no *Session is exist.
+func (sh *SessionHub) Random() (*Session, bool) {
+	_, session, exist := sh.sessions.Random()
+	if !exist {
+		return nil, false
+	}
+	return session.(*Session), true
+}
+
+// Len returns the length of the session hub.
+// Note: the count implemented using sync.Map may be inaccurate.
+func (sh *SessionHub) Len() int {
+	return sh.sessions.Len()
+}
+
+// Delete deletes the *Session for a id.
+func (sh *SessionHub) Delete(id string) {
+	sh.sessions.Delete(id)
 }

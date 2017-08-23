@@ -19,6 +19,7 @@ import (
 
 	"github.com/henrylee2cn/go-logging"
 	"github.com/henrylee2cn/go-logging/color"
+	"github.com/henrylee2cn/goutil/graceful"
 )
 
 // Logger interface
@@ -90,7 +91,9 @@ type Logger interface {
 const __loglevel__ = "TRACE"
 
 // global logger
-var globalLogger = func() Logger {
+var globalLogger Logger
+
+func init() {
 	var consoleLogBackend = &logging.LogBackend{
 		Logger: log.New(color.NewColorableStdout(), "", 0),
 		Color:  true,
@@ -105,8 +108,9 @@ var globalLogger = func() Logger {
 	logger := logging.NewLogger("teleport")
 	logger.SetBackend(consoleBackendLevel)
 	logger.ExtraCalldepth++
-	return logger
-}()
+
+	SetLogger(logger)
+}
 
 // SetLog sets global logger.
 // Note: Concurrent is not safe!
@@ -115,6 +119,7 @@ func SetLogger(logger Logger) {
 		return
 	}
 	globalLogger = logger
+	graceful.SetLog(logger)
 }
 
 // Printf formats according to a format specifier and writes to standard output.

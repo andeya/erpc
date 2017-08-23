@@ -8,8 +8,8 @@ import (
 
 func main() {
 	var cfg = &teleport.Config{
-		ReadTimeout:              time.Second * 10,
-		WriteTimeout:             time.Second * 10,
+		ReadTimeout:              time.Minute * 3,
+		WriteTimeout:             time.Minute * 3,
 		TlsCertFile:              "",
 		TlsKeyFile:               "",
 		SlowCometDuration:        time.Millisecond * 500,

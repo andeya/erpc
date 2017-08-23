@@ -459,4 +459,8 @@ func (c *PullCmd) Output() *socket.Packet {
 
 func (p *PullCmd) done() {
 	p.doneChan <- p
+	{
+		// free count pull-launch
+		p.session.graceWaitGroup.Done()
+	}
 }
