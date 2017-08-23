@@ -359,6 +359,7 @@ func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 	}
 	c.session.pullCmdMap.Delete(header.Seq)
 	c.pullCmd = pullCmd.(*PullCmd)
+	c.public = c.pullCmd.public
 
 	err := c.session.peer.pluginContainer.PostReadHeader(c)
 	if err != nil {
