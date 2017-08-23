@@ -38,6 +38,7 @@ type Home struct {
 
 // Test handler
 func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, teleport.Xerror) {
+	// time.Sleep(1e9)
 	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": h.Query().Get("peer_id"),
 		"a":       1,
