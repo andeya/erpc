@@ -56,21 +56,21 @@ type (
 	}
 	// WriteCtx for writing packet.
 	WriteCtx interface {
+		Output() *socket.Packet
 		Public() goutil.Map
 		PublicLen() int
 		Ip() string
 		Peer() *Peer
 		Session() *Session
-		Output() *socket.Packet
 	}
 	// ReadCtx for reading packet.
 	ReadCtx interface {
+		Input() *socket.Packet
 		Public() goutil.Map
 		PublicLen() int
 		Ip() string
 		Peer() *Peer
 		Session() *Session
-		Input() *socket.Packet
 	}
 )
 
@@ -280,6 +280,12 @@ func (c *readHandleCtx) handlePush() {
 }
 
 func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
+	c.output.Header.Seq = c.input.Header.Seq
+	c.output.Header.Type = TypeReply
+	c.output.Header.Uri = c.input.Header.Uri
+	c.output.HeaderCodec = c.input.HeaderCodec
+	c.output.Header.Gzip = c.input.Header.Gzip
+
 	err := c.pluginContainer.PostReadHeader(c)
 	if err != nil {
 		errStr := err.Error()
@@ -288,12 +294,6 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 		c.output.Header.Status = errStr
 		return nil
 	}
-
-	c.output.Header.Seq = c.input.Header.Seq
-	c.output.Header.Type = TypeReply
-	c.output.Header.Uri = c.input.Header.Uri
-	c.output.HeaderCodec = c.input.HeaderCodec
-	c.output.Header.Gzip = c.input.Header.Gzip
 
 	c.uri, err = url.Parse(header.Uri)
 	if err != nil {
