@@ -15,9 +15,11 @@
 package codec
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
+
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 func init() {
@@ -61,19 +63,24 @@ func (p *JsonEncoder) Encode(v interface{}) error {
 // JsonDecoder json decoder
 type JsonDecoder struct {
 	limitReader io.Reader
+	buf         *bytes.Buffer
 }
 
 // NewDecoder returns a new json decoder that reads from limit reader.
 func (*JsonCodec) NewDecoder(limitReader io.Reader) Decoder {
-	return &JsonDecoder{limitReader}
+	return &JsonDecoder{
+		limitReader: limitReader,
+		buf:         bytes.NewBuffer(make([]byte, 0, bytes.MinRead)),
+	}
 }
 
 // Decode reads the next json-encoded value from its
 // input and stores it in the value pointed to by v.
 func (p *JsonDecoder) Decode(v interface{}) error {
-	b, err := ioutil.ReadAll(p.limitReader)
+	p.buf.Reset()
+	err := utils.ReadAll(p.limitReader, p.buf)
 	if err != nil && err != io.ErrUnexpectedEOF {
 		return err
 	}
-	return json.Unmarshal(b, v)
+	return json.Unmarshal(p.buf.Bytes(), v)
 }

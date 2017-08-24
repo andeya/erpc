@@ -15,11 +15,13 @@
 package codec
 
 import (
+	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/gogo/protobuf/proto"
+
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 func init() {
@@ -62,21 +64,26 @@ func (p *ProtoEncoder) Encode(v interface{}) error {
 // ProtoDecoder proto decoder
 type ProtoDecoder struct {
 	limitReader io.Reader
+	buf         *bytes.Buffer
 }
 
 // NewDecoder returns a new protobuf decoder that reads from limit reader.
 func (*ProtoCodec) NewDecoder(limitReader io.Reader) Decoder {
-	return &ProtoDecoder{limitReader}
+	return &ProtoDecoder{
+		limitReader: limitReader,
+		buf:         bytes.NewBuffer(make([]byte, 0, bytes.MinRead)),
+	}
 }
 
 // Decode reads the next Protobuf-encoded value from its
 // input and stores it in the value pointed to by v.
 func (p *ProtoDecoder) Decode(v interface{}) error {
-	b, err := ioutil.ReadAll(p.limitReader)
+	p.buf.Reset()
+	err := utils.ReadAll(p.limitReader, p.buf)
 	if err != nil && err != io.ErrUnexpectedEOF {
 		return err
 	}
-	return ProtoUnmarshal(b, v)
+	return ProtoUnmarshal(p.buf.Bytes(), v)
 }
 
 var emptyStruct = struct{}{}

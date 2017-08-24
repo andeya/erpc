@@ -14,24 +14,27 @@
 
 package utils
 
-// Counter count size
-type Counter struct {
-	count int
-}
+import (
+	"bytes"
+	"io"
+)
 
-// Write count size of writed.
-func (c *Counter) Write(b []byte) (int, error) {
-	cnt := len(b)
-	c.count += cnt
-	return cnt, nil
-}
-
-// Count returns count.
-func (c *Counter) Count() int {
-	return c.count
-}
-
-// Reset clear count.
-func (c *Counter) Reset() {
-	c.count = 0
+// ReadAll reads from r until an error or EOF and returns the data.
+// It read from the external buffer.
+func ReadAll(r io.Reader, buf io.ReaderFrom) (err error) {
+	// If the buffer overflows, we will get bytes.ErrTooLarge.
+	// Return that as an error. Any other panic remains.
+	defer func() {
+		e := recover()
+		if e == nil {
+			return
+		}
+		if panicErr, ok := e.(error); ok && panicErr == bytes.ErrTooLarge {
+			err = panicErr
+		} else {
+			panic(e)
+		}
+	}()
+	_, err = buf.ReadFrom(r)
+	return err
 }
