@@ -361,7 +361,10 @@ func (c *readHandleCtx) handle() {
 	}
 
 	if err = c.session.write(c.output); err != nil {
-		Warnf("WritePacket: %s", err.Error())
+		c.output.Header.StatusCode = StatusWriteFailed
+		errStr := err.Error()
+		c.output.Header.Status = errStr
+		Warnf("WritePacket: %s", errStr)
 	}
 
 	if err = c.pluginContainer.PostWriteReply(c); err != nil {

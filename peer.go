@@ -18,12 +18,10 @@ import (
 	"crypto/tls"
 	"math"
 	"net"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/henrylee2cn/goutil/errors"
-	"github.com/henrylee2cn/goutil/graceful"
 	"github.com/henrylee2cn/goutil/pool"
 )
 
@@ -143,15 +141,7 @@ func (p *Peer) Listen() error {
 }
 
 func (p *Peer) listen(addr string) error {
-	var (
-		err error
-		lis net.Listener
-	)
-	if p.tlsConfig != nil {
-		lis, err = tls.Listen("tcp", addr, p.tlsConfig)
-	} else {
-		lis, err = net.Listen("tcp", addr)
-	}
+	var lis, err = listen(addr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
 	}
@@ -242,102 +232,4 @@ func (p *Peer) putContext(ctx *readHandleCtx) {
 	ctx.next = p.freeContext
 	p.freeContext = ctx
 	p.ctxLock.Unlock()
-}
-
-var peers = struct {
-	list map[*Peer]struct{}
-	rwmu sync.RWMutex
-}{
-	list: make(map[*Peer]struct{}),
-}
-
-func addPeer(p *Peer) {
-	peers.rwmu.Lock()
-	peers.list[p] = struct{}{}
-	peers.rwmu.Unlock()
-}
-
-func deletePeer(p *Peer) {
-	peers.rwmu.Lock()
-	delete(peers.list, p)
-	peers.rwmu.Unlock()
-}
-
-func shutdown() error {
-	peers.rwmu.Lock()
-	var errs []error
-	for p := range peers.list {
-		errs = append(errs, p.Close())
-	}
-	peers.rwmu.Unlock()
-	return errors.Merge(errs...)
-}
-
-// GraceSignal open graceful shutdown or reboot signal.
-func GraceSignal() {
-	graceful.GraceSignal()
-}
-
-// Reboot all the frame process gracefully.
-// Notes: Windows system are not supported!
-func Reboot(timeout ...time.Duration) {
-	graceful.Reboot(timeout...)
-}
-
-func init() {
-	SetShutdown(5*time.Second, nil, nil)
-}
-
-// SetShutdown sets the function which is called after the process shutdown,
-// and the time-out period for the process shutdown.
-// If 0<=timeout<5s, automatically use 'MinShutdownTimeout'(5s).
-// If timeout<0, indefinite period.
-// 'firstSweep' is first executed.
-// 'beforeExiting' is executed before process exiting.
-func SetShutdown(timeout time.Duration, firstSweep, beforeExiting func() error) {
-	if firstSweep == nil {
-		firstSweep = func() error { return nil }
-	}
-	if beforeExiting == nil {
-		beforeExiting = func() error { return nil }
-	}
-	graceful.SetShutdown(timeout, func() error {
-		return errors.Merge(firstSweep(), setExtractProcFiles())
-	}, func() error {
-		closeListenFiles()
-		return errors.Merge(shutdown(), beforeExiting())
-	})
-}
-
-// Shutdown closes all the frame process gracefully.
-// Parameter timeout is used to reset time-out period for the process shutdown.
-func Shutdown(timeout ...time.Duration) {
-	graceful.Shutdown(timeout...)
-}
-
-var listenFiles []*os.File
-
-func closeListenFiles() {
-	for _, f := range listenFiles {
-		f.Close()
-	}
-}
-
-func setExtractProcFiles() error {
-	var err error
-	for p := range peers.list {
-		for _, l := range p.listens {
-			f, e := l.(filer).File()
-			if e != nil {
-				err = errors.Append(err, e)
-			}
-			listenFiles = append(listenFiles, f)
-		}
-	}
-	graceful.SetExtractProcFiles(listenFiles)
-	return err
-}
-
-type filer interface {
-	File() (*os.File, error)
 }

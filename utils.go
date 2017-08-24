@@ -16,7 +16,12 @@ package teleport
 
 import (
 	"crypto/tls"
+	"os"
 )
+
+func init() {
+	Printf("The current process PID: %d", os.Getpid())
+}
 
 func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	var tlsConfig *tls.Config

@@ -303,9 +303,6 @@ func (s *Session) IsOk() bool {
 	if atomic.LoadInt32(&s.disconnected) == 1 {
 		return false
 	}
-	if atomic.LoadInt32(&s.closed) == 1 {
-		return false
-	}
 	return true
 }
 
@@ -318,14 +315,19 @@ func (s *Session) Close() error {
 
 	s.closeLock.Lock()
 	defer s.closeLock.Unlock()
+
 	s.graceWaitGroup.Wait()
+
+	// make sure return s.readAndHandle
+	atomic.StoreInt32(&s.disconnected, 1)
+
 	s.peer.sessionHub.Delete(s.Id())
 	s.pullCmdMap = nil
 	return s.socket.Close()
 }
 
 func (s *Session) markDisconnected() {
-	if atomic.LoadInt32(&s.disconnected) == 1 {
+	if atomic.LoadInt32(&s.closed) == 1 || atomic.LoadInt32(&s.disconnected) == 1 {
 		return
 	}
 	atomic.StoreInt32(&s.disconnected, 1)
