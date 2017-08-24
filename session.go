@@ -26,7 +26,6 @@ import (
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
-	"github.com/henrylee2cn/goutil/pool"
 
 	"github.com/henrylee2cn/teleport/socket"
 )
@@ -37,22 +36,19 @@ type Session struct {
 	pullRouter     *Router
 	pushRouter     *Router
 	pushSeq        uint64
+	pushSeqLock    sync.Mutex
 	pullSeq        uint64
 	pullCmdMap     goutil.Map
+	pullSeqLock    sync.Mutex
 	socket         socket.Socket
 	closed         int32 // 0:false, 1:true
 	disconnected   int32 // 0:false, 1:true
 	closeLock      sync.RWMutex
 	disconnectLock sync.RWMutex
 	writeLock      sync.Mutex
-	gopool         *pool.GoPool
 	graceWaitGroup sync.WaitGroup
+	isReading      int32
 }
-
-const (
-	maxGoroutinesAmount      = 1024
-	maxGoroutineIdleDuration = 10 * time.Second
-)
 
 func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
@@ -61,9 +57,8 @@ func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 		pushRouter: peer.PushRouter,
 		socket:     socket.NewSocket(conn, id...),
 		pullCmdMap: goutil.RwMap(),
-		gopool:     peer.gopool,
 	}
-	err := s.gopool.Go(s.readAndHandle)
+	err := Go(s.readAndHandle)
 	if err != nil {
 		Warnf("%s", err.Error())
 	}
@@ -107,9 +102,13 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 		// is totally unbuffered, it's best not to run at all.
 		Panicf("*Session.GoPull(): done channel is unbuffered")
 	}
+	s.pullSeqLock.Lock()
+	seq := s.pullSeq
+	s.pullSeq++
+	s.pullSeqLock.Unlock()
 	output := &socket.Packet{
 		Header: &socket.Header{
-			Seq:  s.pullSeq,
+			Seq:  seq,
 			Type: TypePull,
 			Uri:  uri,
 			Gzip: s.peer.defaultGzipLevel,
@@ -118,7 +117,6 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 		HeaderCodec: s.peer.defaultCodec,
 		BodyCodec:   s.peer.defaultCodec,
 	}
-	s.pullSeq++
 	for _, f := range setting {
 		f(output)
 	}
@@ -150,16 +148,17 @@ func (s *Session) GoPull(uri string, args interface{}, reply interface{}, done c
 		}
 	}()
 
+	s.pullCmdMap.Store(output.Header.Seq, cmd)
 	err := s.peer.pluginContainer.PreWritePull(cmd)
 	if err == nil {
 		if err = s.write(output); err == nil {
-			s.pullCmdMap.Store(output.Header.Seq, cmd)
 			if err = s.peer.pluginContainer.PostWritePull(cmd); err != nil {
 				Errorf("%s", err.Error())
 			}
 			return
 		}
 	}
+	s.pullCmdMap.Delete(output.Header.Seq)
 	cmd.Xerror = NewXerror(StatusWriteFailed, err.Error())
 	cmd.done()
 }
@@ -178,12 +177,18 @@ func (s *Session) Pull(uri string, args interface{}, reply interface{}, setting 
 
 // Push sends a packet, but do not receives reply.
 func (s *Session) Push(uri string, args interface{}) (err error) {
-	ctx := s.peer.getContext(s)
-	ctx.start = time.Now()
+	start := time.Now()
 
+	s.pushSeqLock.Lock()
+	ctx := s.peer.getContext(s)
 	output := ctx.output
 	header := output.Header
 	header.Seq = s.pushSeq
+	s.pushSeq++
+	s.pushSeqLock.Unlock()
+
+	ctx.start = start
+
 	header.Type = TypePush
 	header.Uri = uri
 	header.Gzip = s.peer.defaultGzipLevel
@@ -191,8 +196,6 @@ func (s *Session) Push(uri string, args interface{}) (err error) {
 	output.Body = args
 	output.HeaderCodec = s.peer.defaultCodec
 	output.BodyCodec = s.peer.defaultCodec
-
-	s.pushSeq++
 
 	defer func() {
 		if p := recover(); p != nil {
@@ -214,7 +217,7 @@ func (s *Session) Push(uri string, args interface{}) (err error) {
 func (s *Session) readAndHandle() {
 	defer func() {
 		if p := recover(); p != nil {
-			Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+			Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
 		}
 		s.Close()
 	}()
@@ -223,33 +226,38 @@ func (s *Session) readAndHandle() {
 		err         error
 		readTimeout = s.peer.readTimeout
 	)
+
+	// read pull, pull reple or push
 	for s.IsOk() {
 		var ctx = s.peer.getContext(s)
-		// read request, response or push
-		if readTimeout > 0 {
-			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
-		}
-
+		atomic.StoreInt32(&s.isReading, 1)
 		err = s.peer.pluginContainer.PreReadHeader(ctx)
 		if err != nil {
 			s.peer.putContext(ctx)
-			Errorf("%s", err.Error())
-			s.markDisconnected()
+			atomic.StoreInt32(&s.isReading, 0)
+			s.markDisconnected(err)
 			return
 		}
-
+		if readTimeout > 0 {
+			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
+		}
 		err = s.socket.ReadPacket(ctx.input)
+		atomic.StoreInt32(&s.isReading, 0)
 		if err != nil {
 			s.peer.putContext(ctx)
 			if err != io.EOF {
 				Debugf("ReadPacket() failed: %s", err.Error())
 			}
-			s.markDisconnected()
+			s.markDisconnected(err)
 			return
 		}
-
-		err = s.gopool.Go(func() {
-			defer s.peer.putContext(ctx)
+		err = Go(func() {
+			defer func() {
+				if p := recover(); p != nil {
+					Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+				}
+				s.peer.putContext(ctx)
+			}()
 			switch ctx.input.Header.Type {
 			case TypeReply:
 				// handles pull reply
@@ -257,12 +265,13 @@ func (s *Session) readAndHandle() {
 
 			case TypePush:
 				//  handles push
-				ctx.handle()
+				ctx.handlePush()
 
 			case TypePull:
 				// handles and replies pull
-				ctx.handle()
-				ctx.output.Header.Type = TypeReply
+				ctx.handlePull()
+			default:
+				ctx.handleUnsupported()
 			}
 		})
 		if err != nil {
@@ -275,25 +284,25 @@ func (s *Session) readAndHandle() {
 var ErrConnClosed = errors.New("connection is closed")
 
 func (s *Session) write(packet *socket.Packet) (err error) {
+	if !s.IsOk() {
+		return ErrConnClosed
+	}
 	s.writeLock.Lock()
 	defer func() {
 		if p := recover(); p != nil {
-			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
 		} else if err == io.EOF {
 			err = ErrConnClosed
 		}
 		s.writeLock.Unlock()
 	}()
-	// if s.Closed() {
-	// 	return
-	// }
 	var writeTimeout = s.peer.writeTimeout
 	if writeTimeout > 0 {
 		s.socket.SetWriteDeadline(coarsetime.CoarseTimeNow().Add(writeTimeout))
 	}
 	err = s.socket.WritePacket(packet)
 	if err != nil {
-		s.markDisconnected()
+		s.markDisconnected(err)
 	}
 	return err
 }
@@ -314,7 +323,15 @@ func (s *Session) Close() error {
 	atomic.StoreInt32(&s.closed, 1)
 
 	s.closeLock.Lock()
-	defer s.closeLock.Unlock()
+	defer func() {
+		recover()
+		s.closeLock.Unlock()
+	}()
+
+	// ignore reading context in readAndHandle().
+	if atomic.LoadInt32(&s.isReading) == 1 {
+		s.graceWaitGroup.Done()
+	}
 
 	s.graceWaitGroup.Wait()
 
@@ -322,18 +339,25 @@ func (s *Session) Close() error {
 	atomic.StoreInt32(&s.disconnected, 1)
 
 	s.peer.sessionHub.Delete(s.Id())
-	s.pullCmdMap = nil
+
 	return s.socket.Close()
 }
 
-func (s *Session) markDisconnected() {
+func (s *Session) markDisconnected(err error) {
 	if atomic.LoadInt32(&s.closed) == 1 || atomic.LoadInt32(&s.disconnected) == 1 {
 		return
 	}
-	atomic.StoreInt32(&s.disconnected, 1)
-
 	s.disconnectLock.Lock()
 	defer s.disconnectLock.Unlock()
+	if atomic.LoadInt32(&s.closed) == 1 || atomic.LoadInt32(&s.disconnected) == 1 {
+		return
+	}
+
+	atomic.StoreInt32(&s.disconnected, 1)
+
+	// debug:
+	// Fatalf("markDisconnected: %v", err.Error())
+
 	s.pullCmdMap.Range(func(_, v interface{}) bool {
 		pullCmd := v.(*PullCmd)
 		pullCmd.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
@@ -343,16 +367,16 @@ func (s *Session) markDisconnected() {
 }
 
 func isPushLaunch(input, output *socket.Packet) bool {
-	return input == nil || output.Header.Type == TypePush
+	return input == nil || (output != nil && output.Header.Type == TypePush)
 }
 func isPushHandle(input, output *socket.Packet) bool {
-	return output == nil || input.Header.Type == TypePush
+	return output == nil || (input != nil && input.Header.Type == TypePush)
 }
 func isPullLaunch(input, output *socket.Packet) bool {
-	return output.Header.Type == TypePull
+	return output != nil && output.Header.Type == TypePull
 }
 func isPullHandle(input, output *socket.Packet) bool {
-	return output.Header.Type == TypeReply
+	return output != nil && output.Header.Type == TypeReply
 }
 
 func (s *Session) runlog(costTime time.Duration, input, output *socket.Packet) {

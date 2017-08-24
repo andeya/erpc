@@ -9,17 +9,15 @@ import (
 func main() {
 	teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &teleport.Config{
-		ReadTimeout:              time.Minute * 3,
-		WriteTimeout:             time.Minute * 3,
-		TlsCertFile:              "",
-		TlsKeyFile:               "",
-		SlowCometDuration:        time.Millisecond * 500,
-		DefaultCodec:             "json",
-		DefaultGzipLevel:         5,
-		MaxGoroutinesAmount:      1024,
-		MaxGoroutineIdleDuration: time.Second * 10,
-		PrintBody:                false,
+	var cfg = &teleport.PeerConfig{
+		ReadTimeout:       time.Minute * 3,
+		WriteTimeout:      time.Minute * 3,
+		TlsCertFile:       "",
+		TlsKeyFile:        "",
+		SlowCometDuration: time.Millisecond * 500,
+		DefaultCodec:      "json",
+		DefaultGzipLevel:  5,
+		PrintBody:         false,
 	}
 
 	var peer = teleport.NewPeer(cfg)
@@ -71,5 +69,5 @@ type Push struct {
 
 // Test handler
 func (p *Push) Test(args *map[string]interface{}) {
-	teleport.Infof("push-test(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+	teleport.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
 }

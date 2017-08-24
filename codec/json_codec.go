@@ -17,6 +17,7 @@ package codec
 import (
 	"encoding/json"
 	"io"
+	"io/ioutil"
 )
 
 func init() {
@@ -37,15 +38,42 @@ func (j *JsonCodec) Id() byte {
 	return 'j'
 }
 
+// JsonEncoder json decoder
+type JsonEncoder struct {
+	writer io.Writer
+}
+
 // NewEncoder returns a new json encoder that writes to writer.
 func (*JsonCodec) NewEncoder(writer io.Writer) Encoder {
-	return json.NewEncoder(writer)
+	return &JsonEncoder{writer}
+}
+
+// Encode writes the json encoding of v to the writer.
+func (p *JsonEncoder) Encode(v interface{}) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	_, err = p.writer.Write(b)
+	return err
+}
+
+// JsonDecoder json decoder
+type JsonDecoder struct {
+	limitReader io.Reader
 }
 
 // NewDecoder returns a new json decoder that reads from limit reader.
-//
-// The decoder introduces its own buffering and may
-// read data from limitReader beyond the JSON values requested.
 func (*JsonCodec) NewDecoder(limitReader io.Reader) Decoder {
-	return json.NewDecoder(limitReader)
+	return &JsonDecoder{limitReader}
+}
+
+// Decode reads the next json-encoded value from its
+// input and stores it in the value pointed to by v.
+func (p *JsonDecoder) Decode(v interface{}) error {
+	b, err := ioutil.ReadAll(p.limitReader)
+	if err != nil && err != io.ErrUnexpectedEOF {
+		return err
+	}
+	return json.Unmarshal(b, v)
 }

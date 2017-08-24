@@ -9,17 +9,15 @@ import (
 func main() {
 	teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &teleport.Config{
-		ReadTimeout:              time.Minute * 3,
-		WriteTimeout:             time.Minute * 3,
-		TlsCertFile:              "",
-		TlsKeyFile:               "",
-		SlowCometDuration:        time.Millisecond * 500,
-		DefaultCodec:             "json",
-		DefaultGzipLevel:         5,
-		MaxGoroutinesAmount:      1024,
-		MaxGoroutineIdleDuration: time.Second * 10,
-		PrintBody:                true,
+	var cfg = &teleport.PeerConfig{
+		ReadTimeout:       time.Minute * 3,
+		WriteTimeout:      time.Minute * 3,
+		TlsCertFile:       "",
+		TlsKeyFile:        "",
+		SlowCometDuration: time.Millisecond * 500,
+		DefaultCodec:      "json",
+		DefaultGzipLevel:  5,
+		PrintBody:         true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",
@@ -41,7 +39,6 @@ type Home struct {
 
 // Test handler
 func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, teleport.Xerror) {
-	time.Sleep(5e9)
 	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": h.Query().Get("peer_id"),
 		"a":       1,

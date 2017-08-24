@@ -26,12 +26,13 @@ const (
 
 // Response Header status codes as registered with IANA.
 const (
-	StatusWriteFailed  = 100
-	StatusConnClosed   = 101
-	StatusOK           = 200
-	StatusBadUri       = 400
-	StatusNotFound     = 404
-	StatusFailedPlugin = 424
+	StatusWriteFailed   = 100
+	StatusConnClosed    = 101
+	StatusOK            = 200
+	StatusBadUri        = 400
+	StatusNotFound      = 404
+	StatusUnsupportedTx = 410
+	StatusFailedPlugin  = 424
 
 	StatusInternalServerError           = 500
 	StatusNotImplemented                = 501
@@ -46,12 +47,13 @@ const (
 )
 
 var statusText = map[int]string{
-	StatusWriteFailed:  "write failed",
-	StatusConnClosed:   "Connection Closed",
-	StatusOK:           "OK",
-	StatusBadUri:       "Bad URI",
-	StatusNotFound:     "Not Found",
-	StatusFailedPlugin: "Failed Plugin",
+	StatusWriteFailed:   "write failed",
+	StatusConnClosed:    "Connection Closed",
+	StatusOK:            "OK",
+	StatusBadUri:        "Bad URI",
+	StatusNotFound:      "Not Found",
+	StatusUnsupportedTx: "Unsupported transaction type",
+	StatusFailedPlugin:  "Failed Plugin",
 
 	StatusInternalServerError:           "Internal Server Error",
 	StatusNotImplemented:                "Not Implemented",

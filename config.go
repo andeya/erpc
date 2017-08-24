@@ -18,19 +18,16 @@ import (
 	"time"
 )
 
-// Config peer config
-type Config struct {
-	ReadTimeout              time.Duration // readdeadline for underlying net.Conn
-	WriteTimeout             time.Duration // writedeadline for underlying net.Conn
-	TlsCertFile              string
-	TlsKeyFile               string
-	SlowCometDuration        time.Duration // ns,µs,ms,s ...
-	DefaultCodec             string
-	DefaultGzipLevel         int32
-	MaxGoroutinesAmount      int
-	MaxGoroutineIdleDuration time.Duration // ns,µs,ms,s ...
-	PrintBody                bool
-
-	DialTimeout time.Duration // for client role
-	ListenAddrs []string      // for server role
+// PeerConfig peer config
+type PeerConfig struct {
+	TlsCertFile       string
+	TlsKeyFile        string
+	ReadTimeout       time.Duration // readdeadline for underlying net.Conn
+	WriteTimeout      time.Duration // writedeadline for underlying net.Conn
+	SlowCometDuration time.Duration // ns,µs,ms,s ...
+	DefaultCodec      string
+	DefaultGzipLevel  int32
+	PrintBody         bool
+	DialTimeout       time.Duration // for client role
+	ListenAddrs       []string      // for server role
 }

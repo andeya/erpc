@@ -256,6 +256,29 @@ func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
 	return c.input.Body
 }
 
+// handlePush handles push.
+func (c *readHandleCtx) handlePush() {
+	defer func() {
+		if p := recover(); p != nil {
+			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		}
+		c.cost = time.Since(c.start)
+		c.session.runlog(c.cost, c.input, nil)
+	}()
+
+	if c.apiType == nil {
+		return
+	}
+
+	err := c.pluginContainer.PostReadBody(c)
+	if err != nil {
+		Errorf("%s", err.Error())
+		return
+	}
+
+	c.apiType.method.Call([]reflect.Value{c.originStructMaker(c), c.arg})
+}
+
 func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 	err := c.pluginContainer.PostReadHeader(c)
 	if err != nil {
@@ -306,8 +329,8 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 	return c.input.Body
 }
 
-// handle handles and replies pull, or handles push.
-func (c *readHandleCtx) handle() {
+// handlePull handles and replies pull.
+func (c *readHandleCtx) handlePull() {
 	defer func() {
 		if p := recover(); p != nil {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
@@ -319,24 +342,15 @@ func (c *readHandleCtx) handle() {
 	if err != nil {
 		errStr := err.Error()
 		Errorf("%s", errStr)
-		if isPullHandle(c.input, c.output) {
-			c.output.Header.StatusCode = StatusFailedPlugin
-			c.output.Header.Status = errStr
-			c.output = nil
-		} else {
-			return
-		}
+		c.output.Header.Status = errStr
+		c.output.Header.StatusCode = StatusFailedPlugin
+		c.output = nil
 	}
 
+	// handle pull
 	var statusOK = c.output.Header.StatusCode == StatusOK
 	if statusOK {
 		rets := c.apiType.method.Call([]reflect.Value{c.originStructMaker(c), c.arg})
-
-		// receive push
-		if len(rets) == 0 {
-			return
-		}
-
 		c.output.Body = rets[0].Interface()
 		e, ok := rets[1].Interface().(Xerror)
 		if ok && e != nil {
@@ -375,6 +389,7 @@ func (c *readHandleCtx) handle() {
 func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 	pullCmd, ok := c.session.pullCmdMap.Load(header.Seq)
 	if !ok {
+		Debugf("bindReply() not found: %#v", header)
 		return nil
 	}
 	c.session.pullCmdMap.Delete(header.Seq)
@@ -396,14 +411,63 @@ func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 
 // handleReply handles pull reply.
 func (c *readHandleCtx) handleReply() {
+	if c.pullCmd == nil {
+		Debugf("c.pullCmd == nil:\npacket:%#v\nheader%#v", c.input, c.input.Header)
+		return
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		}
+		c.pullCmd.done()
+		c.pullCmd.cost = time.Since(c.pullCmd.start)
+		c.session.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
+	}()
+	if c.pullCmd.Xerror != nil {
+		return
+	}
 	err := c.pluginContainer.PostReadBody(c)
 	if err != nil {
 		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
 	}
+}
 
-	c.pullCmd.done()
-	c.pullCmd.cost = time.Since(c.pullCmd.start)
-	c.session.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
+func (c *readHandleCtx) handleUnsupported() {
+	defer func() {
+		if p := recover(); p != nil {
+			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+		}
+		c.cost = time.Since(c.start)
+		c.session.runlog(c.cost, c.input, c.output)
+	}()
+	err := c.pluginContainer.PostReadBody(c)
+	if err != nil {
+		errStr := err.Error()
+		Errorf("%s", errStr)
+	}
+
+	c.output.Header.StatusCode = StatusUnsupportedTx
+	c.output.Header.Status = StatusText(StatusUnsupportedTx)
+	c.output.Body = nil
+
+	if len(c.output.BodyCodec) == 0 {
+		c.output.BodyCodec = c.input.BodyCodec
+	}
+
+	if err = c.pluginContainer.PreWriteReply(c); err != nil {
+		Errorf("%s", err.Error())
+	}
+
+	if err = c.session.write(c.output); err != nil {
+		c.output.Header.StatusCode = StatusWriteFailed
+		errStr := err.Error()
+		c.output.Header.Status = errStr
+		Warnf("WritePacket: %s", errStr)
+	}
+
+	if err = c.pluginContainer.PostWriteReply(c); err != nil {
+		Errorf("%s", err.Error())
+	}
 }
 
 // Unmarshal unmarshals bytes to header or body receiver.
@@ -461,6 +525,9 @@ func (c *PullCmd) Output() *socket.Packet {
 }
 
 func (p *PullCmd) done() {
+	defer func() {
+		recover()
+	}()
 	p.doneChan <- p
 	{
 		// free count pull-launch

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/goutil/errors"
-	"github.com/henrylee2cn/goutil/pool"
 )
 
 // Peer peer which is server or client.
@@ -40,7 +39,6 @@ type Peer struct {
 	slowCometDuration time.Duration
 	defaultCodec      string
 	defaultGzipLevel  int32
-	gopool            *pool.GoPool
 	printBody         bool
 	mu                sync.Mutex
 
@@ -53,7 +51,7 @@ type Peer struct {
 }
 
 // NewPeer creates a new peer.
-func NewPeer(cfg *Config, plugin ...Plugin) *Peer {
+func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 	var slowCometDuration time.Duration = math.MaxInt64
 	if cfg.SlowCometDuration > 0 {
 		slowCometDuration = cfg.SlowCometDuration
@@ -76,7 +74,6 @@ func NewPeer(cfg *Config, plugin ...Plugin) *Peer {
 		defaultCodec:      cfg.DefaultCodec,
 		defaultGzipLevel:  cfg.DefaultGzipLevel,
 		printBody:         cfg.PrintBody,
-		gopool:            pool.NewGoPool(cfg.MaxGoroutinesAmount, cfg.MaxGoroutineIdleDuration),
 	}
 	addPeer(p)
 	return p
@@ -224,6 +221,10 @@ func (p *Peer) getContext(s *Session) *readHandleCtx {
 
 func (p *Peer) putContext(ctx *readHandleCtx) {
 	p.ctxLock.Lock()
+	defer func() {
+		recover()
+		p.ctxLock.Unlock()
+	}()
 	{
 		// count get context
 		ctx.session.graceWaitGroup.Done()
@@ -231,5 +232,4 @@ func (p *Peer) putContext(ctx *readHandleCtx) {
 	ctx.clean()
 	ctx.next = p.freeContext
 	p.freeContext = ctx
-	p.ctxLock.Unlock()
 }

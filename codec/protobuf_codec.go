@@ -34,7 +34,6 @@ func (p *ProtoCodec) Name() string {
 	return "protobuf"
 }
 
-//
 // Id returns codec id
 func (p *ProtoCodec) Id() byte {
 	return 'p'

@@ -109,17 +109,17 @@ import (
 )
 
 func main() {
-	var cfg = &teleport.Config{
-		ReadTimeout:              time.Second * 10,
-		WriteTimeout:             time.Second * 10,
-		TlsCertFile:              "",
-		TlsKeyFile:               "",
-		SlowCometDuration:        time.Millisecond * 500,
-		DefaultCodec:             "json",
-		DefaultGzipLevel:         5,
-		MaxGoroutinesAmount:      1024,
-		MaxGoroutineIdleDuration: time.Second * 10,
-		PrintBody:                true,
+	teleport.GraceSignal()
+	teleport.SetShutdown(time.Second*20, nil, nil)
+	var cfg = &teleport.PeerConfig{
+		ReadTimeout:       time.Minute * 3,
+		WriteTimeout:      time.Minute * 3,
+		TlsCertFile:       "",
+		TlsKeyFile:        "",
+		SlowCometDuration: time.Millisecond * 500,
+		DefaultCodec:      "json",
+		DefaultGzipLevel:  5,
+		PrintBody:         true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",
@@ -130,6 +130,7 @@ func main() {
 		group := peer.PullRouter.Group("group")
 		group.Reg(new(Home))
 	}
+	peer.PullRouter.SetUnknown(UnknownPullHandle)
 	peer.Listen()
 }
 
@@ -149,6 +150,16 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, telep
 		"server_time": time.Now(),
 	}, nil
 }
+
+func UnknownPullHandle(ctx teleport.UnknownPullCtx, body *[]byte) (interface{}, teleport.Xerror) {
+	var v interface{}
+	codecName, err := ctx.Unmarshal(*body, &v, true)
+	if err != nil {
+		return nil, teleport.NewXerror(0, err.Error())
+	}
+	teleport.Debugf("unmarshal body: codec: %s, content: %#v", codecName, v)
+	return []string{"a", "aa", "aaa"}, nil
+}
 ```
 
 #### client.go
@@ -163,17 +174,17 @@ import (
 )
 
 func main() {
-	var cfg = &teleport.Config{
-		ReadTimeout:              time.Second * 10,
-		WriteTimeout:             time.Second * 10,
-		TlsCertFile:              "",
-		TlsKeyFile:               "",
-		SlowCometDuration:        time.Millisecond * 500,
-		DefaultCodec:             "json",
-		DefaultGzipLevel:         5,
-		MaxGoroutinesAmount:      1024,
-		MaxGoroutineIdleDuration: time.Second * 10,
-		PrintBody:                false,
+	teleport.GraceSignal()
+	teleport.SetShutdown(time.Second*20, nil, nil)
+	var cfg = &teleport.PeerConfig{
+		ReadTimeout:       time.Minute * 3,
+		WriteTimeout:      time.Minute * 3,
+		TlsCertFile:       "",
+		TlsKeyFile:        "",
+		SlowCometDuration: time.Millisecond * 500,
+		DefaultCodec:      "json",
+		DefaultGzipLevel:  5,
+		PrintBody:         false,
 	}
 
 	var peer = teleport.NewPeer(cfg)
@@ -206,7 +217,7 @@ func main() {
 
 		var reply interface{}
 		var pullcmd = sess.Pull(
-			"/group/home/test?peer_id=client9091",
+			"/group/home/test_unknown?peer_id=client9091",
 			map[string]interface{}{"conn_port": 9091},
 			&reply,
 		)
@@ -214,7 +225,7 @@ func main() {
 		if pullcmd.Xerror != nil {
 			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9091reply: %#v", reply)
+		teleport.Infof("9091reply test_unknown: %#v", reply)
 	}
 }
 
@@ -225,6 +236,6 @@ type Push struct {
 
 // Test handler
 func (p *Push) Test(args *map[string]interface{}) {
-	teleport.Infof("push-test(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+	teleport.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
 }
 ```

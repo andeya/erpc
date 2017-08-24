@@ -343,14 +343,16 @@ func (s *socket) readHeader(header *Header) (int64, string, error) {
 	s.limitReader.ResetLimit(int64(headerSize))
 
 	err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
+
 	if err != nil {
 		return s.bufReader.Count(), getCodecName(codecId), err
 	}
 
 	gd, err := s.getGzipDecoder(codecId)
-	if err == nil {
-		err = gd.Decode(gzip.NoCompression, header)
+	if err != nil {
+		return s.bufReader.Count(), getCodecName(codecId), err
 	}
+	err = gd.Decode(gzip.NoCompression, header)
 	return s.bufReader.Count(), gd.Name(), err
 }
 
@@ -399,9 +401,10 @@ func (s *socket) readBody(gzipLevel int, body interface{}) (int64, string, error
 			return s.bufReader.Count(), getCodecName(codecId), err
 		}
 		gd, err := s.getGzipDecoder(codecId)
-		if err == nil {
-			err = gd.Decode(gzipLevel, body)
+		if err != nil {
+			return s.bufReader.Count(), getCodecName(codecId), err
 		}
+		err = gd.Decode(gzipLevel, body)
 		return s.bufReader.Count(), gd.Name(), err
 	}
 }

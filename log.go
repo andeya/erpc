@@ -88,12 +88,18 @@ type Logger interface {
 	Tracef(format string, args ...interface{})
 }
 
-const __loglevel__ = "TRACE"
-
-// global logger
-var globalLogger Logger
+var (
+	// global logger
+	globalLogger Logger
+	// __loglevel__: PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
+	__loglevel__ = "TRACE"
+)
 
 func init() {
+	setRawlogger()
+}
+
+func setRawlogger() {
 	var consoleLogBackend = &logging.LogBackend{
 		Logger: log.New(color.NewColorableStdout(), "", 0),
 		Color:  true,
@@ -112,7 +118,14 @@ func init() {
 	SetLogger(logger)
 }
 
-// SetLog sets global logger.
+// SetRawlogLevel sets the default logger's level.
+// Note: Concurrent is not safe!
+func SetRawlogLevel(level string) {
+	__loglevel__ = level
+	setRawlogger()
+}
+
+// SetLogger sets global logger.
 // Note: Concurrent is not safe!
 func SetLogger(logger Logger) {
 	if logger == nil {

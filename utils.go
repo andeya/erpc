@@ -17,7 +17,24 @@ package teleport
 import (
 	"crypto/tls"
 	"os"
+	"time"
+
+	"github.com/henrylee2cn/goutil/pool"
 )
+
+var (
+	maxGoroutinesAmount      int
+	maxGoroutineIdleDuration time.Duration
+	_gopool                  *pool.GoPool
+)
+
+// Go go func
+func Go(fn func()) error {
+	if _gopool == nil {
+		_gopool = pool.NewGoPool(maxGoroutinesAmount, maxGoroutineIdleDuration)
+	}
+	return _gopool.Go(fn)
+}
 
 func init() {
 	Printf("The current process PID: %d", os.Getpid())
