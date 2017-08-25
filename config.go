@@ -17,7 +17,7 @@ package teleport
 import (
 	"time"
 
-	"gitlab.xiaoenai.net/xserver/utils/cfgo"
+	"github.com/henrylee2cn/cfgo"
 )
 
 // PeerConfig peer config
