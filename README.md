@@ -38,6 +38,7 @@ go get -u github.com/henrylee2cn/teleport
 - Whether server or client, the peer support reboot and shutdown gracefully
 - Support reverse proxy
 - Detailed log information, support print input and output details
+- Supports setting slow operation alarm threshold
 - With a connection I/O buffer
 - Use I/O multiplexing technology
 
@@ -119,19 +120,20 @@ type Header struct {
 
 ```go
 var cfg = &teleport.PeerConfig{
-	ReadTimeout:       time.Minute * 3,
-	WriteTimeout:      time.Minute * 3,
-	TlsCertFile:       "",
-	TlsKeyFile:        "",
-	SlowCometDuration: time.Millisecond * 500,
-	DefaultCodec:      "json",
-	DefaultGzipLevel:  5,
-	PrintBody:         true,
-	DialTimeout:       time.Second * 10,
+	DefaultReadTimeout:  time.Minute * 3,
+	DefaultWriteTimeout: time.Minute * 3,
+	TlsCertFile:         "",
+	TlsKeyFile:          "",
+	SlowCometDuration:   time.Millisecond * 500,
+	DefaultCodec:        "json",
+	DefaultGzipLevel:    5,
+	PrintBody:           true,
+	DefaultDialTimeout:  time.Second * 10,
 	ListenAddrs: []string{
 		"0.0.0.0:9090",
 	},
 }
+
 
 var peer = teleport.NewPeer(cfg)
 
@@ -274,8 +276,8 @@ func main() {
 	teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &teleport.PeerConfig{
-		ReadTimeout:       time.Minute * 3,
-		WriteTimeout:      time.Minute * 3,
+		DefaultReadTimeout:       time.Minute * 3,
+		DefaultWriteTimeout:      time.Minute * 3,
 		TlsCertFile:       "",
 		TlsKeyFile:        "",
 		SlowCometDuration: time.Millisecond * 500,
@@ -339,14 +341,14 @@ func main() {
 	teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &teleport.PeerConfig{
-		ReadTimeout:       time.Minute * 3,
-		WriteTimeout:      time.Minute * 3,
-		TlsCertFile:       "",
-		TlsKeyFile:        "",
-		SlowCometDuration: time.Millisecond * 500,
-		DefaultCodec:      "json",
-		DefaultGzipLevel:  5,
-		PrintBody:         false,
+		DefaultReadTimeout:  time.Minute * 3,
+		DefaultWriteTimeout: time.Minute * 3,
+		TlsCertFile:         "",
+		TlsKeyFile:          "",
+		SlowCometDuration:   time.Millisecond * 500,
+		DefaultCodec:        "json",
+		DefaultGzipLevel:    5,
+		PrintBody:           false,
 	}
 
 	var peer = teleport.NewPeer(cfg)

@@ -10,14 +10,14 @@ func main() {
 	teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &teleport.PeerConfig{
-		ReadTimeout:       time.Minute * 3,
-		WriteTimeout:      time.Minute * 3,
-		TlsCertFile:       "",
-		TlsKeyFile:        "",
-		SlowCometDuration: time.Millisecond * 500,
-		DefaultCodec:      "json",
-		DefaultGzipLevel:  5,
-		PrintBody:         true,
+		DefaultReadTimeout:  time.Minute * 3,
+		DefaultWriteTimeout: time.Minute * 3,
+		TlsCertFile:         "",
+		TlsKeyFile:          "",
+		SlowCometDuration:   time.Millisecond * 500,
+		DefaultCodec:        "json",
+		DefaultGzipLevel:    5,
+		PrintBody:           true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",

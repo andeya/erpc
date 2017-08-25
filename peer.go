@@ -15,6 +15,7 @@
 package teleport
 
 import (
+	"context"
 	"crypto/tls"
 	"math"
 	"net"
@@ -26,24 +27,24 @@ import (
 
 // Peer peer which is server or client.
 type Peer struct {
-	PullRouter        *Router
-	PushRouter        *Router
-	pluginContainer   PluginContainer
-	sessionHub        *SessionHub
-	closeCh           chan struct{}
-	freeContext       *readHandleCtx
-	ctxLock           sync.Mutex
-	readTimeout       time.Duration // readdeadline for underlying net.Conn
-	writeTimeout      time.Duration // writedeadline for underlying net.Conn
-	tlsConfig         *tls.Config
-	slowCometDuration time.Duration
-	defaultCodec      string
-	defaultGzipLevel  int32
-	printBody         bool
-	mu                sync.Mutex
+	PullRouter          *Router
+	PushRouter          *Router
+	pluginContainer     PluginContainer
+	sessionHub          *SessionHub
+	closeCh             chan struct{}
+	freeContext         *readHandleCtx
+	ctxLock             sync.Mutex
+	defaultReadTimeout  int64 // time.Duration // readdeadline for underlying net.Conn
+	defaultWriteTimeout int64 // time.Duration // writedeadline for underlying net.Conn
+	tlsConfig           *tls.Config
+	slowCometDuration   time.Duration
+	defaultCodec        string
+	defaultGzipLevel    int32
+	printBody           bool
+	mu                  sync.Mutex
 
 	// for client role
-	dialTimeout time.Duration
+	defaultDialTimeout time.Duration
 
 	// for server role
 	listenAddrs []string
@@ -61,19 +62,19 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		Fatalf("%v", err)
 	}
 	var p = &Peer{
-		PullRouter:        newPullRouter(pluginContainer),
-		PushRouter:        newPushRouter(pluginContainer),
-		pluginContainer:   pluginContainer,
-		sessionHub:        newSessionHub(),
-		readTimeout:       cfg.ReadTimeout,
-		writeTimeout:      cfg.WriteTimeout,
-		closeCh:           make(chan struct{}),
-		slowCometDuration: slowCometDuration,
-		dialTimeout:       cfg.DialTimeout,
-		listenAddrs:       cfg.ListenAddrs,
-		defaultCodec:      cfg.DefaultCodec,
-		defaultGzipLevel:  cfg.DefaultGzipLevel,
-		printBody:         cfg.PrintBody,
+		PullRouter:          newPullRouter(pluginContainer),
+		PushRouter:          newPushRouter(pluginContainer),
+		pluginContainer:     pluginContainer,
+		sessionHub:          newSessionHub(),
+		defaultReadTimeout:  int64(cfg.DefaultReadTimeout),
+		defaultWriteTimeout: int64(cfg.DefaultWriteTimeout),
+		closeCh:             make(chan struct{}),
+		slowCometDuration:   slowCometDuration,
+		defaultDialTimeout:  cfg.DefaultDialTimeout,
+		listenAddrs:         cfg.ListenAddrs,
+		defaultCodec:        cfg.DefaultCodec,
+		defaultGzipLevel:    cfg.DefaultGzipLevel,
+		printBody:           cfg.PrintBody,
 	}
 	addPeer(p)
 	return p
@@ -93,7 +94,28 @@ func (p *Peer) ServeConn(conn net.Conn, id ...string) *Session {
 
 // Dial connects with the peer of the destination address.
 func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
-	var conn, err = net.DialTimeout("tcp", addr, p.dialTimeout)
+	var conn, err = net.DialTimeout("tcp", addr, p.defaultDialTimeout)
+	if err != nil {
+		return nil, err
+	}
+	if p.tlsConfig != nil {
+		conn = tls.Client(conn, p.tlsConfig)
+	}
+	var sess = newSession(p, conn, id...)
+	if err = p.pluginContainer.PostDial(sess); err != nil {
+		sess.Close()
+		return nil, err
+	}
+	p.sessionHub.Set(sess)
+	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
+	return sess, nil
+}
+
+// DialContext connects with the peer of the destination address,
+// using the provided context.
+func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (*Session, error) {
+	var d net.Dialer
+	var conn, err = d.DialContext(ctx, "tpc", addr)
 	if err != nil {
 		return nil, err
 	}

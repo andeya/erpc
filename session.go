@@ -48,15 +48,19 @@ type Session struct {
 	writeLock      sync.Mutex
 	graceWaitGroup sync.WaitGroup
 	isReading      int32
+	readTimeout    int64 // time.Duration
+	writeTimeout   int64 // time.Duration
 }
 
 func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 	var s = &Session{
-		peer:       peer,
-		pullRouter: peer.PullRouter,
-		pushRouter: peer.PushRouter,
-		socket:     socket.NewSocket(conn, id...),
-		pullCmdMap: goutil.RwMap(),
+		peer:         peer,
+		pullRouter:   peer.PullRouter,
+		pushRouter:   peer.PushRouter,
+		socket:       socket.NewSocket(conn, id...),
+		pullCmdMap:   goutil.RwMap(),
+		readTimeout:  peer.defaultReadTimeout,
+		writeTimeout: peer.defaultWriteTimeout,
 	}
 	err := Go(s.readAndHandle)
 	if err != nil {
@@ -92,6 +96,26 @@ func (s *Session) ChangeId(newId string) {
 // RemoteIp returns the remote peer ip.
 func (s *Session) RemoteIp() string {
 	return s.socket.RemoteAddr().String()
+}
+
+// ReadTimeout returns readdeadline for underlying net.Conn.
+func (s *Session) ReadTimeout() time.Duration {
+	return time.Duration(atomic.LoadInt64(&s.readTimeout))
+}
+
+// WriteTimeout returns writedeadline for underlying net.Conn.
+func (s *Session) WriteTimeout() time.Duration {
+	return time.Duration(atomic.LoadInt64(&s.writeTimeout))
+}
+
+// ReadTimeout returns readdeadline for underlying net.Conn.
+func (s *Session) SetReadTimeout(duration time.Duration) {
+	atomic.StoreInt64(&s.readTimeout, int64(duration))
+}
+
+// WriteTimeout returns writedeadline for underlying net.Conn.
+func (s *Session) SetWriteTimeout(duration time.Duration) {
+	atomic.StoreInt64(&s.writeTimeout, int64(duration))
 }
 
 // GoPull sends a packet and receives reply asynchronously.
@@ -224,7 +248,7 @@ func (s *Session) readAndHandle() {
 
 	var (
 		err         error
-		readTimeout = s.peer.readTimeout
+		readTimeout time.Duration
 	)
 
 	// read pull, pull reple or push
@@ -238,6 +262,7 @@ func (s *Session) readAndHandle() {
 			s.markDisconnected(err)
 			return
 		}
+		readTimeout = s.ReadTimeout()
 		if readTimeout > 0 {
 			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
 		}
@@ -296,7 +321,7 @@ func (s *Session) write(packet *socket.Packet) (err error) {
 		}
 		s.writeLock.Unlock()
 	}()
-	var writeTimeout = s.peer.writeTimeout
+	writeTimeout := s.WriteTimeout()
 	if writeTimeout > 0 {
 		s.socket.SetWriteDeadline(coarsetime.CoarseTimeNow().Add(writeTimeout))
 	}
