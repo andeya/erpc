@@ -26,12 +26,10 @@ import (
 )
 
 var peers = struct {
-	list     map[*Peer]struct{}
-	rwmu     sync.RWMutex
-	graceNet *inherit_net.Net
+	list map[*Peer]struct{}
+	rwmu sync.RWMutex
 }{
-	list:     make(map[*Peer]struct{}),
-	graceNet: new(inherit_net.Net),
+	list: make(map[*Peer]struct{}),
 }
 
 func addPeer(p *Peer) {
@@ -67,6 +65,7 @@ func GraceSignal() {
 
 // FirstSweep is first executed.
 // BeforeExiting is executed before process exiting.
+// Usage: share github.com/henrylee2cn/goutil/graceful with other project.
 var FirstSweep, BeforeExiting func() error
 
 // SetShutdown sets the function which is called after the process shutdown,
@@ -83,7 +82,7 @@ func SetShutdown(timeout time.Duration, firstSweep, beforeExiting func() error) 
 		beforeExiting = func() error { return nil }
 	}
 	FirstSweep = func() error {
-		return errors.Merge(firstSweep(), peers.graceNet.SetInherited())
+		return errors.Merge(firstSweep(), inherit_net.SetInherited())
 	}
 	BeforeExiting = func() error {
 		return errors.Merge(shutdown(), beforeExiting())
@@ -104,7 +103,7 @@ func Reboot(timeout ...time.Duration) {
 }
 
 func listen(laddr string, tlsConfig *tls.Config) (net.Listener, error) {
-	lis, err := peers.graceNet.Listen("tcp", laddr)
+	lis, err := inherit_net.Listen("tcp", laddr)
 	if err != nil {
 		return nil, err
 	}
