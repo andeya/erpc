@@ -10,7 +10,7 @@ It can be used for rpc, micro services, peer-peer, push services, game services 
 
 ![teleport_client](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_client.png)
 
-<center><i>Mac 4CPU 8GB: QPS 24500+</i></center>
+<center><i>AB Testing: [Mac 4CPU 8GB] [single-process single-conn] QPS 26200+</i></center>
 
 ## 1. Version
 

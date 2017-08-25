@@ -65,11 +65,9 @@ func GraceSignal() {
 	graceful.GraceSignal()
 }
 
-// Reboot all the frame process gracefully.
-// Notes: Windows system are not supported!
-func Reboot(timeout ...time.Duration) {
-	graceful.Reboot(timeout...)
-}
+// FirstSweep is first executed.
+// BeforeExiting is executed before process exiting.
+var FirstSweep, BeforeExiting func() error
 
 // SetShutdown sets the function which is called after the process shutdown,
 // and the time-out period for the process shutdown.
@@ -84,17 +82,25 @@ func SetShutdown(timeout time.Duration, firstSweep, beforeExiting func() error) 
 	if beforeExiting == nil {
 		beforeExiting = func() error { return nil }
 	}
-	graceful.SetShutdown(timeout, func() error {
+	FirstSweep = func() error {
 		return errors.Merge(firstSweep(), peers.graceNet.SetInherited())
-	}, func() error {
+	}
+	BeforeExiting = func() error {
 		return errors.Merge(shutdown(), beforeExiting())
-	})
+	}
+	graceful.SetShutdown(timeout, FirstSweep, BeforeExiting)
 }
 
 // Shutdown closes all the frame process gracefully.
 // Parameter timeout is used to reset time-out period for the process shutdown.
 func Shutdown(timeout ...time.Duration) {
 	graceful.Shutdown(timeout...)
+}
+
+// Reboot all the frame process gracefully.
+// Notes: Windows system are not supported!
+func Reboot(timeout ...time.Duration) {
+	graceful.Reboot(timeout...)
 }
 
 func listen(laddr string, tlsConfig *tls.Config) (net.Listener, error) {
