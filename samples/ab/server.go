@@ -1,12 +1,17 @@
 package main
 
 import (
+	// "net/http"
+	// _ "net/http/pprof"
 	"time"
 
 	"github.com/henrylee2cn/teleport"
 )
 
 func main() {
+	// go func() {
+	// 	http.ListenAndServe("0.0.0.0:9091", nil)
+	// }()
 	teleport.SetRawlogLevel("error")
 	go teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)

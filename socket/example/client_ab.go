@@ -22,20 +22,19 @@ func main() {
 
 	var count sync.WaitGroup
 	t := time.Now()
-	loop := 100
-	group := 1000
+	loop := 30
+	group := 10000
 	var failNum uint32
 	defer func() {
 		cost := time.Since(t)
 		times := time.Duration(loop * group)
 		log.Printf("------------------- call times: %d ok: %d fail: %d | cost time: %v | QPS: %d -----------------", times, uint32(times)-failNum, failNum, cost, time.Second*times/cost)
-		select {}
 	}()
 
 	for j := 0; j < loop; j++ {
 		count.Add(group)
 		for i := 0; i < group; i++ {
-			go func() {
+			go func(a uint64) {
 				var packet = socket.GetPacket(nil)
 				defer func() {
 					socket.PutPacket(packet)
@@ -45,9 +44,9 @@ func main() {
 				packet.Reset(nil)
 				packet.HeaderCodec = "protobuf"
 				packet.BodyCodec = "protobuf"
-				packet.Header.Seq = 1
+				packet.Header.Seq = a
 				packet.Header.Uri = "/a/b"
-				packet.Header.Gzip = 5
+				packet.Header.Gzip = 0
 				packet.Body = &pb.PbTest{A: 123, B: "pbtest"}
 				err = s.WritePacket(packet)
 				if err != nil {
@@ -65,7 +64,7 @@ func main() {
 					atomic.AddUint32(&failNum, 1)
 					log.Printf("[CLI] read response err: %v", err)
 				}
-			}()
+			}(uint64(i * group))
 		}
 		count.Wait()
 	}

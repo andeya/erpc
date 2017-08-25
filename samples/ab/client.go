@@ -1,6 +1,8 @@
 package main
 
 import (
+	// "net/http"
+	// _ "net/http/pprof"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -9,6 +11,9 @@ import (
 )
 
 func main() {
+	// go func() {
+	// 	http.ListenAndServe("0.0.0.0:9092", nil)
+	// }()
 	teleport.SetRawlogLevel("error")
 	go teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
@@ -32,7 +37,7 @@ func main() {
 
 	var count sync.WaitGroup
 	t := time.Now()
-	loop := 10
+	loop := 30
 	group := 10000
 	var failNum uint32
 	defer func() {
