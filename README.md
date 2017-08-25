@@ -7,10 +7,13 @@ It can be used for rpc, micro services, peer-peer, push services, game services 
 
 ![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
 
+<br>
+
+<center><i>AB Testing: [Mac 4CPU 8GB] [single-process single-conn] Farme: QPS 28863 Socket: QPS 44742</i></center>
 
 ![teleport_client](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_client.png)
 
-<center><i>AB Testing: [Mac 4CPU 8GB] [single-process single-conn] QPS 28863</i></center>
+![teleport_client](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_client_ab.png)
 
 ## 1. Version
 
