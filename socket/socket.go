@@ -143,8 +143,8 @@ const (
 
 var _ net.Conn = Socket(nil)
 
-// ErrSocketClosed socket closed error.
-var ErrSocketClosed = errors.New("socket: Socket closed")
+// ErrProactivelyCloseSocket proactively close the socket error.
+var ErrProactivelyCloseSocket = errors.New("socket: Proactively close the socket")
 
 // GetSocket gets a Socket from pool, and reset it.
 func GetSocket(c net.Conn, id ...string) Socket {
@@ -190,7 +190,7 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 	s.writeMutex.Lock()
 	defer func() {
 		if err != nil && atomic.LoadInt32(&s.curState) == activeClose {
-			err = ErrSocketClosed
+			err = ErrProactivelyCloseSocket
 		}
 		s.writeMutex.Unlock()
 	}()
@@ -312,14 +312,14 @@ func (s *socket) ReadPacket(packet *Packet) error {
 			packet.Length = packet.HeaderLength
 			packet.BodyLength = 0
 			packet.BodyCodec = ""
-			return ErrSocketClosed
+			return ErrProactivelyCloseSocket
 		}
 	}
 
 	packet.BodyLength, packet.BodyCodec, bErr = s.readBody(int(packet.Header.Gzip), b)
 	packet.Length = packet.HeaderLength + packet.BodyLength
 	if atomic.LoadInt32(&s.curState) == activeClose {
-		return ErrSocketClosed
+		return ErrProactivelyCloseSocket
 	}
 	return bErr
 }

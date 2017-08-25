@@ -17,6 +17,7 @@ package teleport
 import (
 	"crypto/tls"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/henrylee2cn/goutil/pool"
@@ -26,14 +27,23 @@ var (
 	maxGoroutinesAmount      int
 	maxGoroutineIdleDuration time.Duration
 	_gopool                  *pool.GoPool
+	newGopoolOnce            sync.Once
 )
 
 // Go go func
-func Go(fn func()) error {
-	if _gopool == nil {
+func Go(fn func()) {
+	newGopoolOnce.Do(func() {
 		_gopool = pool.NewGoPool(maxGoroutinesAmount, maxGoroutineIdleDuration)
+	})
+	var err error
+	for {
+		if err = _gopool.Go(fn); err != nil {
+			Warnf("%s", err.Error())
+			time.Sleep(time.Millisecond * 20)
+		} else {
+			break
+		}
 	}
-	return _gopool.Go(fn)
 }
 
 func init() {

@@ -32,27 +32,27 @@ type Xerror interface {
 
 // NewXerror creates a new Error interface.
 func NewXerror(code int32, text string) Xerror {
-	return &err{
+	return &xerr{
 		Cod: code,
 		Txt: text,
 	}
 }
 
-type err struct {
+type xerr struct {
 	Cod  int32  `json:"code"`
 	Txt  string `json:"text"`
 	json string `json:"-"`
 }
 
-func (e *err) Code() int32 {
+func (e *xerr) Code() int32 {
 	return e.Cod
 }
 
-func (e *err) Text() string {
+func (e *xerr) Text() string {
 	return e.Txt
 }
 
-func (e *err) Error() string {
+func (e *xerr) Error() string {
 	if len(e.json) == 0 {
 		b, _ := json.Marshal(e)
 		e.json = goutil.BytesToString(b)

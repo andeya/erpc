@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
 )
 
@@ -213,15 +214,30 @@ func (p *Peer) listen(addr string) error {
 }
 
 // Close closes peer.
-func (p *Peer) Close() error {
+func (p *Peer) Close() (err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
+		}
+	}()
 	close(p.closeCh)
 	delete(peers.list, p)
-	var errs []error
+	var (
+		count int
+		errCh = make(chan error, 10)
+	)
 	p.sessionHub.Range(func(sess *Session) bool {
-		errs = append(errs, sess.Close())
+		count++
+		Go(func() {
+			errCh <- sess.Close()
+		})
 		return true
 	})
-	return errors.Merge(errs...)
+	for i := 0; i < count; i++ {
+		err = errors.Merge(err, <-errCh)
+	}
+	close(errCh)
+	return err
 }
 
 func (p *Peer) getContext(s *Session) *readHandleCtx {

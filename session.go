@@ -62,10 +62,7 @@ func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 		readTimeout:  peer.defaultReadTimeout,
 		writeTimeout: peer.defaultWriteTimeout,
 	}
-	err := Go(s.readAndHandle)
-	if err != nil {
-		Warnf("%s", err.Error())
-	}
+	Go(s.readAndHandle)
 	return s
 }
 
@@ -270,13 +267,13 @@ func (s *Session) readAndHandle() {
 		atomic.StoreInt32(&s.isReading, 0)
 		if err != nil {
 			s.peer.putContext(ctx)
-			if err != io.EOF {
+			if err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 				Debugf("ReadPacket() failed: %s", err.Error())
 			}
 			s.markDisconnected(err)
 			return
 		}
-		err = Go(func() {
+		Go(func() {
 			defer func() {
 				if p := recover(); p != nil {
 					Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
@@ -299,9 +296,6 @@ func (s *Session) readAndHandle() {
 				ctx.handleUnsupported()
 			}
 		})
-		if err != nil {
-			Warnf("%s", err.Error())
-		}
 	}
 }
 
@@ -316,7 +310,7 @@ func (s *Session) write(packet *socket.Packet) (err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
-		} else if err == io.EOF {
+		} else if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
 			err = ErrConnClosed
 		}
 		s.writeLock.Unlock()
