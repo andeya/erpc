@@ -273,7 +273,7 @@ import (
 )
 
 func main() {
-	teleport.GraceSignal()
+	go teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &teleport.PeerConfig{
 		DefaultReadTimeout:       time.Minute * 3,
@@ -338,7 +338,7 @@ import (
 )
 
 func main() {
-	teleport.GraceSignal()
+	go teleport.GraceSignal()
 	teleport.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &teleport.PeerConfig{
 		DefaultReadTimeout:  time.Minute * 3,
