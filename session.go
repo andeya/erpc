@@ -15,7 +15,6 @@
 package teleport
 
 import (
-	"encoding/json"
 	"io"
 	"net"
 	"sync"
@@ -26,6 +25,7 @@ import (
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
+	"github.com/json-iterator/go"
 
 	"github.com/henrylee2cn/teleport/socket"
 )
@@ -452,7 +452,7 @@ func (s *Session) runlog(costTime time.Duration, input, output *socket.Packet) {
 }
 
 func bodyLogBytes(v interface{}) []byte {
-	b, _ := json.MarshalIndent(v, " ", "  ")
+	b, _ := jsoniter.MarshalIndent(v, "", "  ")
 	return b
 }
 

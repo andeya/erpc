@@ -18,6 +18,7 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"unsafe"
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
@@ -37,15 +38,23 @@ type (
 	// Handler pull or push handler type info
 	Handler struct {
 		name              string
-		originStructMaker func(*readHandleCtx) reflect.Value
-		method            reflect.Value
+		isUnknown         bool
 		argElem           reflect.Type
 		reply             reflect.Type // only for pull handler doc
+		handleFunc        func(*readHandleCtx, reflect.Value)
+		unknownHandleFunc func(*readHandleCtx)
 		pluginContainer   PluginContainer
 	}
 	// HandlersMaker makes []*Handler
 	HandlersMaker func(string, interface{}, PluginContainer) ([]*Handler, error)
 )
+
+// const (
+// 	kindPullHandle uint8 = iota
+// 	kindPushHandle
+// 	kindUnknownPullHandle
+// 	kindUnknownPushHandle
+// )
 
 // Group add handler group.
 func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
@@ -98,34 +107,45 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 		Fatalf("%v", err)
 	}
 	warnInvaildRouterHooks(plugin)
-	var name string
-	switch r.typ {
-	case "pull":
-		name = "unknown_pull_handle"
-		if _, ok := unknownHandler.(func(ctx UnknownPullCtx, body *[]byte) (reply interface{}, xerr Xerror)); !ok {
-			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPullCtx, body *[]byte) (reply interface{}, xerr Xerror)", name)
-		}
-	case "push":
-		name = "unknown_push_handle"
-		if _, ok := unknownHandler.(func(ctx UnknownPushCtx, body *[]byte)); !ok {
-			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPushCtx, body *[]byte)", name)
-		}
-	}
 
-	h := &Handler{
-		name: name,
-		originStructMaker: func(ctx *readHandleCtx) reflect.Value {
-			return reflect.ValueOf(ctx)
-		},
-		method:          reflect.ValueOf(unknownHandler),
+	var h = &Handler{
+		isUnknown:       true,
 		argElem:         reflect.TypeOf([]byte{}),
 		pluginContainer: pluginContainer,
 	}
 
+	switch r.typ {
+	case "pull":
+		h.name = "unknown_pull_handle"
+		fn, ok := unknownHandler.(func(ctx UnknownPullCtx) (interface{}, Xerror))
+		if !ok {
+			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPullCtx) (reply interface{}, xerr Xerror)", h.name)
+		}
+		h.unknownHandleFunc = func(ctx *readHandleCtx) {
+			body, xerr := fn(ctx)
+			if xerr != nil {
+				ctx.output.Header.StatusCode = xerr.Code()
+				ctx.output.Header.Status = xerr.Text()
+			} else {
+				ctx.output.Body = body
+			}
+		}
+
+	case "push":
+		h.name = "unknown_push_handle"
+		fn, ok := unknownHandler.(func(ctx UnknownPushCtx))
+		if !ok {
+			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPushCtx)", h.name)
+		}
+		h.unknownHandleFunc = func(ctx *readHandleCtx) {
+			fn(ctx)
+		}
+	}
+
 	if *r.unknownApiType == nil {
-		Printf("set %s handler", name)
+		Printf("set %s handler", h.name)
 	} else {
-		Warnf("covered %s handler", name)
+		Warnf("covered %s handler", h.name)
 	}
 	r.unknownApiType = &h
 }
@@ -157,30 +177,29 @@ func newPullRouter(pluginContainer PluginContainer) *Router {
 // Note: ctrlStruct needs to implement PullCtx interface.
 func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
 	var (
-		ctype             = reflect.TypeOf(ctrlStruct)
-		handlers          = make([]*Handler, 0, 1)
-		originStructMaker func(*readHandleCtx) reflect.Value
+		ctype    = reflect.TypeOf(ctrlStruct)
+		handlers = make([]*Handler, 0, 1)
 	)
+
 	if ctype.Kind() != reflect.Ptr {
 		return nil, errors.Errorf("register pull handler: the type is not struct point: %s", ctype.String())
 	}
+
 	var ctypeElem = ctype.Elem()
 	if ctypeElem.Kind() != reflect.Struct {
 		return nil, errors.Errorf("register pull handler: the type is not struct point: %s", ctype.String())
 	}
+
 	if _, ok := ctrlStruct.(PullCtx); !ok {
 		return nil, errors.Errorf("register pull handler: the type is not implemented PullCtx interface: %s", ctype.String())
-	} else {
-		if iType, ok := ctypeElem.FieldByName("PullCtx"); ok && iType.Anonymous {
-			originStructMaker = func(ctx *readHandleCtx) reflect.Value {
-				ctrl := reflect.New(ctypeElem)
-				ctrl.Elem().FieldByName("PullCtx").Set(reflect.ValueOf(ctx))
-				return ctrl
-			}
-		} else {
-			return nil, errors.Errorf("register pull handler: the struct do not have anonymous field PullCtx: %s", ctype.String())
-		}
 	}
+
+	iType, ok := ctypeElem.FieldByName("PullCtx")
+	if !ok || !iType.Anonymous {
+		return nil, errors.Errorf("register pull handler: the struct do not have anonymous field PullCtx: %s", ctype.String())
+	}
+
+	var pullCtxOffset = iType.Offset
 
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
@@ -225,13 +244,27 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			return nil, errors.Errorf("register pull handler: %s.%s second reply type %s not teleport.Xerror", ctype.String(), mname, returnType)
 		}
 
+		var methodFunc = method.Func
+		var handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+			ctrl := reflect.New(ctypeElem)
+			pullCtxPtr := ctrl.Pointer() + pullCtxOffset
+			*((*PullCtx)(unsafe.Pointer(pullCtxPtr))) = ctx
+			// ctrl.Elem().FieldByName("PullCtx").Set(reflect.ValueOf(ctx))
+			rets := methodFunc.Call([]reflect.Value{ctrl, argValue})
+			ctx.output.Body = rets[0].Interface()
+			xerr, ok := rets[1].Interface().(Xerror)
+			if ok && xerr != nil {
+				ctx.output.Header.StatusCode = xerr.Code()
+				ctx.output.Header.Status = xerr.Text()
+			}
+		}
+
 		handlers = append(handlers, &Handler{
-			name:              path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
-			originStructMaker: originStructMaker,
-			method:            method.Func,
-			argElem:           argType.Elem(),
-			reply:             replyType,
-			pluginContainer:   pluginContainer,
+			name:            path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
+			handleFunc:      handleFunc,
+			argElem:         argType.Elem(),
+			reply:           replyType,
+			pluginContainer: pluginContainer,
 		})
 	}
 	return handlers, nil
@@ -253,34 +286,34 @@ func newPushRouter(pluginContainer PluginContainer) *Router {
 // Note: ctrlStruct needs to implement PushCtx interface.
 func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
 	var (
-		ctype             = reflect.TypeOf(ctrlStruct)
-		handlers          = make([]*Handler, 0, 1)
-		originStructMaker func(*readHandleCtx) reflect.Value
+		ctype    = reflect.TypeOf(ctrlStruct)
+		handlers = make([]*Handler, 0, 1)
 	)
+
 	if ctype.Kind() != reflect.Ptr {
 		return nil, errors.Errorf("register push handler: the type is not struct point: %s", ctype.String())
 	}
+
 	var ctypeElem = ctype.Elem()
 	if ctypeElem.Kind() != reflect.Struct {
 		return nil, errors.Errorf("register push handler: the type is not struct point: %s", ctype.String())
 	}
+
 	if _, ok := ctrlStruct.(PushCtx); !ok {
 		return nil, errors.Errorf("register push handler: the type is not implemented PushCtx interface: %s", ctype.String())
-	} else {
-		if iType, ok := ctypeElem.FieldByName("PushCtx"); ok && iType.Anonymous {
-			originStructMaker = func(ctx *readHandleCtx) reflect.Value {
-				ctrl := reflect.New(ctypeElem)
-				ctrl.Elem().FieldByName("PushCtx").Set(reflect.ValueOf(ctx))
-				return ctrl
-			}
-		} else {
-			return nil, errors.Errorf("register push handler: the struct do not have anonymous field PushCtx: %s", ctype.String())
-		}
 	}
+
+	iType, ok := ctypeElem.FieldByName("PushCtx")
+	if !ok || !iType.Anonymous {
+		return nil, errors.Errorf("register push handler: the struct do not have anonymous field PushCtx: %s", ctype.String())
+	}
+
+	var pushCtxOffset = iType.Offset
 
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
+
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
 		mtype := method.Type
@@ -310,12 +343,21 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		if mtype.NumOut() != 0 {
 			return nil, errors.Errorf("register push handler: %s.%s does not need out argument, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
+
+		var methodFunc = method.Func
+		var handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+			ctrl := reflect.New(ctypeElem)
+			pushCtxPtr := ctrl.Pointer() + pushCtxOffset
+			*((*PushCtx)(unsafe.Pointer(pushCtxPtr))) = ctx
+			// ctrl.Elem().FieldByName("PushCtx").Set(reflect.ValueOf(ctx))
+			methodFunc.Call([]reflect.Value{ctrl, argValue})
+		}
+
 		handlers = append(handlers, &Handler{
-			name:              path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
-			originStructMaker: originStructMaker,
-			method:            method.Func,
-			argElem:           argType.Elem(),
-			pluginContainer:   pluginContainer,
+			name:            path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
+			handleFunc:      handleFunc,
+			argElem:         argType.Elem(),
+			pluginContainer: pluginContainer,
 		})
 	}
 	return handlers, nil

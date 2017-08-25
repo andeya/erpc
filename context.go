@@ -48,11 +48,13 @@ type (
 	}
 	UnknownPullCtx interface {
 		PullCtx
-		Unmarshal(b []byte, v interface{}, assignToInput ...bool) (codecName string, err error)
+		InputBodyBytes() []byte
+		Bind(v interface{}) (codecName string, err error)
 	}
 	UnknownPushCtx interface {
 		PushCtx
-		Unmarshal(b []byte, v interface{}, assignToInput ...bool) (codecName string, err error)
+		InputBodyBytes() []byte
+		Bind(v interface{}) (codecName string, err error)
 	}
 	// WriteCtx for writing packet.
 	WriteCtx interface {
@@ -76,21 +78,19 @@ type (
 
 // readHandleCtx the underlying common instance of PullCtx and PushCtx.
 type readHandleCtx struct {
-	session           *Session
-	input             *socket.Packet
-	output            *socket.Packet
-	apiType           *Handler
-	originStructMaker func(*readHandleCtx) reflect.Value
-	method            reflect.Method
-	arg               reflect.Value
-	pullCmd           *PullCmd
-	uri               *url.URL
-	query             url.Values
-	public            goutil.Map
-	start             time.Time
-	cost              time.Duration
-	pluginContainer   PluginContainer
-	next              *readHandleCtx
+	session         *Session
+	input           *socket.Packet
+	output          *socket.Packet
+	apiType         *Handler
+	arg             reflect.Value
+	pullCmd         *PullCmd
+	uri             *url.URL
+	query           url.Values
+	public          goutil.Map
+	start           time.Time
+	cost            time.Duration
+	pluginContainer PluginContainer
+	next            *readHandleCtx
 }
 
 var (
@@ -130,8 +130,6 @@ func (c *readHandleCtx) clean() {
 	c.session = nil
 	c.apiType = nil
 	c.arg = emptyValue
-	c.originStructMaker = nil
-	c.method = emptyMethod
 	c.pullCmd = nil
 	c.public = nil
 	c.uri = nil
@@ -243,7 +241,6 @@ func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
 	}
 
 	c.pluginContainer = c.apiType.pluginContainer
-	c.originStructMaker = c.apiType.originStructMaker
 	c.arg = reflect.New(c.apiType.argElem)
 	c.input.Body = c.arg.Interface()
 
@@ -276,7 +273,11 @@ func (c *readHandleCtx) handlePush() {
 		return
 	}
 
-	c.apiType.method.Call([]reflect.Value{c.originStructMaker(c), c.arg})
+	if c.apiType.isUnknown {
+		c.apiType.unknownHandleFunc(c)
+	} else {
+		c.apiType.handleFunc(c, c.arg)
+	}
 }
 
 func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
@@ -311,9 +312,12 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 	}
 
 	c.pluginContainer = c.apiType.pluginContainer
-	c.originStructMaker = c.apiType.originStructMaker
-	c.arg = reflect.New(c.apiType.argElem)
-	c.input.Body = c.arg.Interface()
+	if c.apiType.isUnknown {
+		c.input.Body = new([]byte)
+	} else {
+		c.arg = reflect.New(c.apiType.argElem)
+		c.input.Body = c.arg.Interface()
+	}
 
 	err = c.pluginContainer.PreReadBody(c)
 	if err != nil {
@@ -350,12 +354,10 @@ func (c *readHandleCtx) handlePull() {
 	// handle pull
 	var statusOK = c.output.Header.StatusCode == StatusOK
 	if statusOK {
-		rets := c.apiType.method.Call([]reflect.Value{c.originStructMaker(c), c.arg})
-		c.output.Body = rets[0].Interface()
-		e, ok := rets[1].Interface().(Xerror)
-		if ok && e != nil {
-			c.output.Header.StatusCode = e.Code()
-			c.output.Header.Status = e.Text()
+		if c.apiType.isUnknown {
+			c.apiType.unknownHandleFunc(c)
+		} else {
+			c.apiType.handleFunc(c, c.arg)
 		}
 	}
 
@@ -470,13 +472,22 @@ func (c *readHandleCtx) handleUnsupported() {
 	}
 }
 
-// Unmarshal unmarshals bytes to header or body receiver.
-func (c *readHandleCtx) Unmarshal(b []byte, v interface{}, assignToInput ...bool) (string, error) {
-	codecName, err := socket.Unmarshal(b, v, c.input.Header.Gzip != gzip.NoCompression)
-	if len(assignToInput) > 0 && assignToInput[0] {
-		c.input.Body = v
-		c.input.BodyCodec = codecName
+// InputBodyBytes if the input receiver is []byte type, returns it, else returns nil.
+func (c *readHandleCtx) InputBodyBytes() []byte {
+	b, ok := c.input.Body.(*[]byte)
+	if !ok {
+		return nil
 	}
+	return *b
+}
+
+// Bind when the receiver is []byte type, binds the input body to v.
+func (c *readHandleCtx) Bind(v interface{}) (string, error) {
+	b := c.InputBodyBytes()
+	if b == nil {
+		return "", nil
+	}
+	codecName, err := socket.Unmarshal(b, v, c.input.Header.Gzip != gzip.NoCompression)
 	return codecName, err
 }
 

@@ -50,12 +50,12 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, telep
 	}, nil
 }
 
-func UnknownPullHandle(ctx teleport.UnknownPullCtx, body *[]byte) (interface{}, teleport.Xerror) {
+func UnknownPullHandle(ctx teleport.UnknownPullCtx) (interface{}, teleport.Xerror) {
 	var v interface{}
-	codecName, err := ctx.Unmarshal(*body, &v, true)
+	codecName, err := ctx.Bind(&v)
 	if err != nil {
 		return nil, teleport.NewXerror(0, err.Error())
 	}
-	teleport.Debugf("unmarshal body: codec: %s, content: %#v", codecName, v)
+	teleport.Debugf("UnknownPullHandle: codec: %s, content: %#v", codecName, v)
 	return []string{"a", "aa", "aaa"}, nil
 }
