@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 		TlsCertFile:         "",
 		TlsKeyFile:          "",
 		SlowCometDuration:   time.Millisecond * 500,
-		DefaultCodec:        "json",
+		DefaultCodec:        "protobuf",
 		DefaultGzipLevel:    0,
 		PrintBody:           false,
 	}
@@ -51,11 +52,11 @@ func main() {
 		count.Add(group)
 		for i := 0; i < group; i++ {
 			go func() {
-				var reply int
+				var reply = new(pb.PbTest)
 				var pullcmd = sess.Pull(
 					"/group/home/test",
-					[2]int{1, 2},
-					&reply,
+					&pb.PbTest{A: 10, B: 2},
+					reply,
 				)
 				if pullcmd.Xerror != nil {
 					atomic.AddUint32(&failNum, 1)

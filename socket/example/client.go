@@ -21,12 +21,12 @@ func main() {
 	for i := 0; i < 1; i++ {
 		// write request
 		packet.Reset(nil)
-		packet.HeaderCodec = "json"
+		packet.HeaderCodec = "protobuf"
 		packet.BodyCodec = "protobuf"
-		packet.Header.Seq = 1
+		packet.Header.Seq = i
 		packet.Header.Uri = "/a/b"
 		packet.Header.Gzip = 5
-		packet.Body = &pb.PbTest{A: 123, B: "pbtest"}
+		packet.Body = &pb.PbTest{A: 10, B: 2}
 		err = s.WritePacket(packet)
 		if err != nil {
 			log.Printf("[CLI] write request err: %v", err)

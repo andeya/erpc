@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 		TlsCertFile:         "",
 		TlsKeyFile:          "",
 		SlowCometDuration:   time.Millisecond * 500,
-		DefaultCodec:        "json",
+		DefaultCodec:        "protobuf",
 		DefaultGzipLevel:    0,
 		PrintBody:           false,
 		ListenAddrs: []string{
@@ -42,8 +43,9 @@ type Home struct {
 }
 
 // Test handler
-func (h *Home) Test(args *[2]int) (int, teleport.Xerror) {
-	a := (*args)[0]
-	b := (*args)[1]
-	return a + b, nil
+func (h *Home) Test(args *pb.PbTest) (*pb.PbTest, teleport.Xerror) {
+	return &pb.PbTest{
+		A: args.A + args.B,
+		B: args.A - args.B,
+	}, nil
 }

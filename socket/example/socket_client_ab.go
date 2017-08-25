@@ -47,7 +47,7 @@ func main() {
 				packet.Header.Seq = a
 				packet.Header.Uri = "/a/b"
 				packet.Header.Gzip = 0
-				packet.Body = &pb.PbTest{A: 123, B: "pbtest"}
+				packet.Body = &pb.PbTest{A: 10, B: 2}
 				err = s.WritePacket(packet)
 				if err != nil {
 					atomic.AddUint32(&failNum, 1)

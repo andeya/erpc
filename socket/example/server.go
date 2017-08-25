@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net"
-	"time"
 
 	"github.com/henrylee2cn/teleport/socket"
 	"github.com/henrylee2cn/teleport/socket/example/pb"
@@ -23,10 +22,12 @@ func main() {
 		go func(s socket.Socket) {
 			log.Printf("accept %s", s.Id())
 			defer s.Close()
+			var pbTest = new(pb.PbTest)
 			for {
 				// read request
 				var packet = socket.GetPacket(func(_ *socket.Header) interface{} {
-					return new(pb.PbTest)
+					*pbTest = pb.PbTest{}
+					return pbTest
 				})
 				err = s.ReadPacket(packet)
 				if err != nil {
@@ -37,11 +38,15 @@ func main() {
 				}
 
 				// write response
-				packet.HeaderCodec = "json"
+				packet.HeaderCodec = "protobuf"
 				packet.BodyCodec = "protobuf"
 				packet.Header.StatusCode = 200
 				packet.Header.Status = "ok"
-				packet.Body = &pb.PbTest{A: 456, B: time.Now().String()}
+
+				pbTest.A = pbTest.A + pbTest.B
+				pbTest.B = pbTest.A - pbTest.B
+				packet.Body = pbTest
+
 				err = s.WritePacket(packet)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)

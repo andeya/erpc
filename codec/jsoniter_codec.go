@@ -16,43 +16,44 @@ package codec
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
+
+	"github.com/json-iterator/go"
 
 	"github.com/henrylee2cn/teleport/utils"
 )
 
 func init() {
-	// Reg(new(JsonCodec))
+	Reg(new(JsoniterCodec))
 }
 
-// JsonCodec json codec
-type JsonCodec struct{}
+// JsoniterCodec json codec
+type JsoniterCodec struct{}
 
 // Name returns codec name
-func (j *JsonCodec) Name() string {
+func (j *JsoniterCodec) Name() string {
 	return "json"
 }
 
 //
 // Id returns codec id
-func (j *JsonCodec) Id() byte {
+func (j *JsoniterCodec) Id() byte {
 	return 'j'
 }
 
-// JsonEncoder json decoder
-type JsonEncoder struct {
+// JsoniterEncoder json decoder
+type JsoniterEncoder struct {
 	writer io.Writer
 }
 
 // NewEncoder returns a new json encoder that writes to writer.
-func (*JsonCodec) NewEncoder(writer io.Writer) Encoder {
-	return &JsonEncoder{writer}
+func (*JsoniterCodec) NewEncoder(writer io.Writer) Encoder {
+	return &JsoniterEncoder{writer}
 }
 
 // Encode writes the json encoding of v to the writer.
-func (p *JsonEncoder) Encode(v interface{}) error {
-	b, err := json.Marshal(v)
+func (p *JsoniterEncoder) Encode(v interface{}) error {
+	b, err := jsoniter.Marshal(v)
 	if err != nil {
 		return err
 	}
@@ -60,15 +61,15 @@ func (p *JsonEncoder) Encode(v interface{}) error {
 	return err
 }
 
-// JsonDecoder json decoder
-type JsonDecoder struct {
+// JsoniterDecoder json decoder
+type JsoniterDecoder struct {
 	limitReader io.Reader
 	buf         *bytes.Buffer
 }
 
 // NewDecoder returns a new json decoder that reads from limit reader.
-func (*JsonCodec) NewDecoder(limitReader io.Reader) Decoder {
-	return &JsonDecoder{
+func (*JsoniterCodec) NewDecoder(limitReader io.Reader) Decoder {
+	return &JsoniterDecoder{
 		limitReader: limitReader,
 		buf:         bytes.NewBuffer(make([]byte, 0, bytes.MinRead)),
 	}
@@ -76,11 +77,11 @@ func (*JsonCodec) NewDecoder(limitReader io.Reader) Decoder {
 
 // Decode reads the next json-encoded value from its
 // input and stores it in the value pointed to by v.
-func (p *JsonDecoder) Decode(v interface{}) error {
+func (p *JsoniterDecoder) Decode(v interface{}) error {
 	p.buf.Reset()
 	err := utils.ReadAll(p.limitReader, p.buf)
 	if err != nil && err != io.ErrUnexpectedEOF {
 		return err
 	}
-	return json.Unmarshal(p.buf.Bytes(), v)
+	return jsoniter.Unmarshal(p.buf.Bytes(), v)
 }
