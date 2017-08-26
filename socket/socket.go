@@ -13,6 +13,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+//
+// Packet protocol:
+//  HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
+//
+// Notes:
+//  HeaderLength: uint32, 4 bytes, big endian
+//  BodyLength: uint32, 4 bytes, big endian
+//  HeaderCodecId: uint8, 1 byte
+//  BodyCodecId: uint8, 1 byte
+//
 package socket
 
 import (
@@ -180,7 +191,9 @@ func NewSocket(c net.Conn, id ...string) *socket {
 // WritePacket writes header and body to the connection.
 // WritePacket can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
-// Note: must be safe for concurrent use by multiple goroutines.
+// Note:
+//  For the byte stream type of body, write directly, do not do any processing;
+//  Must be safe for concurrent use by multiple goroutines.
 func (s *socket) WritePacket(packet *Packet) (err error) {
 	s.writeMutex.Lock()
 	defer func() {
@@ -285,7 +298,9 @@ func (s *socket) writeBody(codecName string, gzipLevel int, body interface{}) er
 }
 
 // ReadPacket reads header and body from the connection.
-// Note: must be safe for concurrent use by multiple goroutines.
+// Note:
+//  For the byte stream type of body, read directly, do not do any processing;
+//  Must be safe for concurrent use by multiple goroutines.
 func (s *socket) ReadPacket(packet *Packet) error {
 	s.readMutex.Lock()
 	defer s.readMutex.Unlock()
