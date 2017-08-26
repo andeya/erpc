@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package teleport
+package tp
 
 import (
 	"path"
@@ -239,8 +239,9 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		if !goutil.IsExportedOrBuiltinType(replyType) {
 			return nil, errors.Errorf("register pull handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
 		}
+
 		// The return type of the method must be Error.
-		if returnType := mtype.Out(1); strings.TrimPrefix(returnType.Name(), "teleport.") != "Xerror" {
+		if returnType := mtype.Out(1); returnType.Name() != "Xerror" {
 			return nil, errors.Errorf("register pull handler: %s.%s second reply type %s not teleport.Xerror", ctype.String(), mname, returnType)
 		}
 

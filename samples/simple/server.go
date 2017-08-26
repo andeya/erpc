@@ -3,13 +3,13 @@ package main
 import (
 	"time"
 
-	"github.com/henrylee2cn/teleport"
+	tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
-	go teleport.GraceSignal()
-	teleport.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &teleport.PeerConfig{
+	go tp.GraceSignal()
+	tp.SetShutdown(time.Second*20, nil, nil)
+	var cfg = &tp.PeerConfig{
 		DefaultReadTimeout:  time.Minute * 3,
 		DefaultWriteTimeout: time.Minute * 3,
 		TlsCertFile:         "",
@@ -23,7 +23,7 @@ func main() {
 			"0.0.0.0:9091",
 		},
 	}
-	var peer = teleport.NewPeer(cfg)
+	var peer = tp.NewPeer(cfg)
 	{
 		group := peer.PullRouter.Group("group")
 		group.Reg(new(Home))
@@ -34,11 +34,11 @@ func main() {
 
 // Home controller
 type Home struct {
-	teleport.PullCtx
+	tp.PullCtx
 }
 
 // Test handler
-func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, teleport.Xerror) {
+func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, tp.Xerror) {
 	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": h.Query().Get("peer_id"),
 		"a":       1,
@@ -50,12 +50,12 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, telep
 	}, nil
 }
 
-func UnknownPullHandle(ctx teleport.UnknownPullCtx) (interface{}, teleport.Xerror) {
+func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, tp.Xerror) {
 	var v interface{}
 	codecName, err := ctx.Bind(&v)
 	if err != nil {
-		return nil, teleport.NewXerror(0, err.Error())
+		return nil, tp.NewXerror(0, err.Error())
 	}
-	teleport.Debugf("UnknownPullHandle: codec: %s, content: %#v", codecName, v)
+	tp.Debugf("UnknownPullHandle: codec: %s, content: %#v", codecName, v)
 	return []string{"a", "aa", "aaa"}, nil
 }

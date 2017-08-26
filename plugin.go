@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package teleport
+package tp
 
 import (
 	"github.com/henrylee2cn/goutil/errors"

@@ -3,13 +3,13 @@ package main
 import (
 	"time"
 
-	"github.com/henrylee2cn/teleport"
+	tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
-	go teleport.GraceSignal()
-	teleport.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &teleport.PeerConfig{
+	go tp.GraceSignal()
+	tp.SetShutdown(time.Second*20, nil, nil)
+	var cfg = &tp.PeerConfig{
 		DefaultReadTimeout:  time.Minute * 3,
 		DefaultWriteTimeout: time.Minute * 3,
 		TlsCertFile:         "",
@@ -20,13 +20,13 @@ func main() {
 		PrintBody:           false,
 	}
 
-	var peer = teleport.NewPeer(cfg)
+	var peer = tp.NewPeer(cfg)
 	peer.PushRouter.Reg(new(Push))
 
 	{
 		var sess, err = peer.Dial("127.0.0.1:9090", "simple_server:9090")
 		if err != nil {
-			teleport.Panicf("%v", err)
+			tp.Panicf("%v", err)
 		}
 
 		var reply interface{}
@@ -37,15 +37,15 @@ func main() {
 		)
 
 		if pullcmd.Xerror != nil {
-			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9090reply: %#v", reply)
+		tp.Infof("9090reply: %#v", reply)
 	}
 
 	{
 		var sess, err = peer.Dial("127.0.0.1:9091")
 		if err != nil {
-			teleport.Panicf("%v", err)
+			tp.Panicf("%v", err)
 		}
 
 		var reply interface{}
@@ -56,18 +56,18 @@ func main() {
 		)
 
 		if pullcmd.Xerror != nil {
-			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9091reply test_unknown: %#v", reply)
+		tp.Infof("9091reply test_unknown: %#v", reply)
 	}
 }
 
 // Push controller
 type Push struct {
-	teleport.PushCtx
+	tp.PushCtx
 }
 
 // Test handler
 func (p *Push) Test(args *map[string]interface{}) {
-	teleport.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+	tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
 }

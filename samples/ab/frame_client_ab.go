@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/henrylee2cn/teleport"
+	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
@@ -15,10 +15,10 @@ func main() {
 	// go func() {
 	// 	http.ListenAndServe("0.0.0.0:9092", nil)
 	// }()
-	teleport.SetRawlogLevel("error")
-	go teleport.GraceSignal()
-	teleport.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &teleport.PeerConfig{
+	tp.SetRawlogLevel("error")
+	go tp.GraceSignal()
+	tp.SetShutdown(time.Second*20, nil, nil)
+	var cfg = &tp.PeerConfig{
 		DefaultReadTimeout:  time.Minute * 1,
 		DefaultWriteTimeout: time.Minute * 1,
 		TlsCertFile:         "",
@@ -29,11 +29,11 @@ func main() {
 		PrintBody:           false,
 	}
 
-	var peer = teleport.NewPeer(cfg)
+	var peer = tp.NewPeer(cfg)
 
 	var sess, err = peer.Dial("127.0.0.1:9090", "simple_server:9090")
 	if err != nil {
-		teleport.Panicf("%v", err)
+		tp.Panicf("%v", err)
 	}
 
 	var count sync.WaitGroup
@@ -45,7 +45,7 @@ func main() {
 		peer.Close()
 		cost := time.Since(t)
 		times := time.Duration(loop * group)
-		teleport.Printf("------------------- call times: %d ok: %d fail: %d | cost time: %v | QPS: %d -----------------", times, uint32(times)-failNum, failNum, cost, time.Second*times/cost)
+		tp.Printf("------------------- call times: %d ok: %d fail: %d | cost time: %v | QPS: %d -----------------", times, uint32(times)-failNum, failNum, cost, time.Second*times/cost)
 	}()
 
 	for j := 0; j < loop; j++ {
@@ -60,7 +60,7 @@ func main() {
 				)
 				if pullcmd.Xerror != nil {
 					atomic.AddUint32(&failNum, 1)
-					teleport.Errorf("pull error: %v", pullcmd.Xerror.Error())
+					tp.Errorf("pull error: %v", pullcmd.Xerror.Error())
 				}
 				count.Done()
 			}()

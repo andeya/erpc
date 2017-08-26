@@ -122,7 +122,7 @@ type Header struct {
 - Create a server or client peer
 
 ```go
-var cfg = &teleport.PeerConfig{
+var cfg = &tp.PeerConfig{
 	DefaultReadTimeout:  time.Minute * 3,
 	DefaultWriteTimeout: time.Minute * 3,
 	TlsCertFile:         "",
@@ -138,7 +138,7 @@ var cfg = &teleport.PeerConfig{
 }
 
 
-var peer = teleport.NewPeer(cfg)
+var peer = tp.NewPeer(cfg)
 
 // It can be used as a server
 peer.Listen()
@@ -146,7 +146,7 @@ peer.Listen()
 // It can also be used as a client at the same time
 var sess, err = peer.Dial("127.0.0.1:8080", "peerid-client")
 if err != nil {
-	teleport.Panicf("%v", err)
+	tp.Panicf("%v", err)
 }
 ```
 
@@ -155,11 +155,11 @@ if err != nil {
 ```go
 // Home controller
 type Home struct {
-	teleport.PullCtx
+	tp.PullCtx
 }
 
 // Test handler
-func (h *Home) Test(args *[2]int) (int, teleport.Xerror) {
+func (h *Home) Test(args *[2]int) (int, tp.Xerror) {
 	a := (*args)[0]
 	b := (*args)[1]
 	return a + b, nil
@@ -171,25 +171,25 @@ func (h *Home) Test(args *[2]int) (int, teleport.Xerror) {
 ```go
 // Msg controller
 type Msg struct {
-	teleport.PushCtx
+	tp.PushCtx
 }
 
 // Test handler
 func (m *Msg) Test(args *map[string]interface{}) {
-	teleport.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", m.Ip(), args, m.Query())
+	tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", m.Ip(), args, m.Query())
 }
 ```
 
 - Define a handler for unknown pull request
 
 ```go
-func UnknownPullHandle(ctx teleport.UnknownPullCtx, body *[]byte) (interface{}, teleport.Xerror) {
+func UnknownPullHandle(ctx tp.UnknownPullCtx, body *[]byte) (interface{}, tp.Xerror) {
 	var v interface{}
 	codecName, err := ctx.Unmarshal(*body, &v, true)
 	if err != nil {
-		return nil, teleport.NewXerror(0, err.Error())
+		return nil, tp.NewXerror(0, err.Error())
 	}
-	teleport.Infof("receive unknown pull:\n codec: %s\n content: %#v", codecName, v)
+	tp.Infof("receive unknown pull:\n codec: %s\n content: %#v", codecName, v)
 	return "this is reply string for unknown pull", nil
 }
 
@@ -198,13 +198,13 @@ func UnknownPullHandle(ctx teleport.UnknownPullCtx, body *[]byte) (interface{}, 
 - Define a handler for unknown push request
 
 ```go
-func UnknownPushHandle(ctx teleport.UnknownPushCtx, body *[]byte) {
+func UnknownPushHandle(ctx tp.UnknownPushCtx, body *[]byte) {
 	var v interface{}
 	codecName, err := ctx.Unmarshal(*body, &v, true)
 	if err != nil {
-		teleport.Errorf("%v", err)
+		tp.Errorf("%v", err)
 	} else {
-		teleport.Infof("receive unknown push:\n codec: %s\n content: %#v", codecName, v)
+		tp.Infof("receive unknown push:\n codec: %s\n content: %#v", codecName, v)
 	}
 }
 ```
@@ -234,7 +234,7 @@ func (p *AliasPlugin) Name() string {
 }
 
 // PostReadHeader converts the alias of this service.
-func (p *AliasPlugin) PostReadHeader(ctx teleport.ReadCtx) error {
+func (p *AliasPlugin) PostReadHeader(ctx tp.ReadCtx) error {
 	var u = ctx.Input().Header.Uri
 	if p.Aliases != nil {
 		if a = p.Aliases[u]; a != "" {
@@ -272,13 +272,13 @@ package main
 import (
 	"time"
 
-	"github.com/henrylee2cn/teleport"
+	tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
-	go teleport.GraceSignal()
-	teleport.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &teleport.PeerConfig{
+	go tp.GraceSignal()
+	tp.SetShutdown(time.Second*20, nil, nil)
+	var cfg = &tp.PeerConfig{
 		DefaultReadTimeout:       time.Minute * 3,
 		DefaultWriteTimeout:      time.Minute * 3,
 		TlsCertFile:       "",
@@ -292,7 +292,7 @@ func main() {
 			"0.0.0.0:9091",
 		},
 	}
-	var peer = teleport.NewPeer(cfg)
+	var peer = tp.NewPeer(cfg)
 	{
 		group := peer.PullRouter.Group("group")
 		group.Reg(new(Home))
@@ -303,11 +303,11 @@ func main() {
 
 // Home controller
 type Home struct {
-	teleport.PullCtx
+	tp.PullCtx
 }
 
 // Test handler
-func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, teleport.Xerror) {
+func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, tp.Xerror) {
 	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": h.Query().Get("peer_id"),
 		"a":       1,
@@ -318,13 +318,13 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, telep
 	}, nil
 }
 
-func UnknownPullHandle(ctx teleport.UnknownPullCtx, body *[]byte) (interface{}, teleport.Xerror) {
+func UnknownPullHandle(ctx tp.UnknownPullCtx, body *[]byte) (interface{}, tp.Xerror) {
 	var v interface{}
 	codecName, err := ctx.Unmarshal(*body, &v, true)
 	if err != nil {
-		return nil, teleport.NewXerror(0, err.Error())
+		return nil, tp.NewXerror(0, err.Error())
 	}
-	teleport.Debugf("unmarshal body: codec: %s, content: %#v", codecName, v)
+	tp.Debugf("unmarshal body: codec: %s, content: %#v", codecName, v)
 	return []string{"a", "aa", "aaa"}, nil
 }
 ```
@@ -337,13 +337,13 @@ package main
 import (
 	"time"
 
-	"github.com/henrylee2cn/teleport"
+	tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
-	go teleport.GraceSignal()
-	teleport.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &teleport.PeerConfig{
+	go tp.GraceSignal()
+	tp.SetShutdown(time.Second*20, nil, nil)
+	var cfg = &tp.PeerConfig{
 		DefaultReadTimeout:  time.Minute * 3,
 		DefaultWriteTimeout: time.Minute * 3,
 		TlsCertFile:         "",
@@ -354,13 +354,13 @@ func main() {
 		PrintBody:           false,
 	}
 
-	var peer = teleport.NewPeer(cfg)
+	var peer = tp.NewPeer(cfg)
 	peer.PushRouter.Reg(new(Push))
 
 	{
 		var sess, err = peer.Dial("127.0.0.1:9090", "simple_server:9090")
 		if err != nil {
-			teleport.Panicf("%v", err)
+			tp.Panicf("%v", err)
 		}
 
 		var reply interface{}
@@ -371,15 +371,15 @@ func main() {
 		)
 
 		if pullcmd.Xerror != nil {
-			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9090reply: %#v", reply)
+		tp.Infof("9090reply: %#v", reply)
 	}
 
 	{
 		var sess, err = peer.Dial("127.0.0.1:9091")
 		if err != nil {
-			teleport.Panicf("%v", err)
+			tp.Panicf("%v", err)
 		}
 
 		var reply interface{}
@@ -390,19 +390,19 @@ func main() {
 		)
 
 		if pullcmd.Xerror != nil {
-			teleport.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
 		}
-		teleport.Infof("9091reply test_unknown: %#v", reply)
+		tp.Infof("9091reply test_unknown: %#v", reply)
 	}
 }
 
 // Push controller
 type Push struct {
-	teleport.PushCtx
+	tp.PushCtx
 }
 
 // Test handler
 func (p *Push) Test(args *map[string]interface{}) {
-	teleport.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+	tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
 }
 ```

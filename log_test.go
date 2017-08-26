@@ -1,4 +1,4 @@
-package teleport
+package tp
 
 import (
 	"testing"
