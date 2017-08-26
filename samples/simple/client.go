@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"github.com/json-iterator/go"
+
 	tp "github.com/henrylee2cn/teleport"
 )
 
@@ -33,7 +35,10 @@ func main() {
 		var reply interface{}
 		var pullcmd = sess.Pull(
 			"/group/home/test?peer_id=client9090",
-			map[string]interface{}{"conn_port": 9090},
+			map[string]interface{}{
+				"conn_port": 9090,
+				"bytes":     []byte("bytestest9090"),
+			},
 			&reply,
 		)
 
@@ -52,7 +57,15 @@ func main() {
 		var reply interface{}
 		var pullcmd = sess.Pull(
 			"/group/home/test_unknown?peer_id=client9091",
-			map[string]interface{}{"conn_port": 9091},
+			struct {
+				ConnPort int
+				jsoniter.RawMessage
+				Bytes []byte
+			}{
+				9091,
+				jsoniter.RawMessage(`{"RawMessage":"test9091"}`),
+				[]byte("bytes-test"),
+			},
 			&reply,
 		)
 

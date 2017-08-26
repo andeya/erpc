@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"github.com/json-iterator/go"
+
 	tp "github.com/henrylee2cn/teleport"
 )
 
@@ -52,11 +54,17 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, tp.Xe
 }
 
 func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, tp.Xerror) {
-	var v interface{}
+	var v = struct {
+		ConnPort int
+		jsoniter.RawMessage
+		Bytes []byte
+	}{}
 	codecName, err := ctx.Bind(&v)
 	if err != nil {
-		return nil, tp.NewXerror(0, err.Error())
+		return nil, tp.NewXerror(1, err.Error())
 	}
-	tp.Debugf("UnknownPullHandle: codec: %s, content: %#v", codecName, v)
+	tp.Debugf("UnknownPullHandle: codec: %s, conn_port: %d, RawMessage: %s, bytes: %s",
+		codecName, v.ConnPort, v.RawMessage, v.Bytes,
+	)
 	return []string{"a", "aa", "aaa"}, nil
 }

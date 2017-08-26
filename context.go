@@ -471,7 +471,7 @@ func (c *readHandleCtx) handleUnsupported() {
 	}
 }
 
-// InputBodyBytes if the input receiver is []byte type, returns it, else returns nil.
+// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
 func (c *readHandleCtx) InputBodyBytes() []byte {
 	b, ok := c.input.Body.(*[]byte)
 	if !ok {
@@ -480,13 +480,16 @@ func (c *readHandleCtx) InputBodyBytes() []byte {
 	return *b
 }
 
-// Bind when the receiver is []byte type, binds the input body to v.
+// Bind when the raw body binder is []byte type, now binds the input body to v.
 func (c *readHandleCtx) Bind(v interface{}) (string, error) {
 	b := c.InputBodyBytes()
 	if b == nil {
 		return "", nil
 	}
 	codecName, err := socket.Unmarshal(b, v, c.input.Header.Gzip != gzip.NoCompression)
+	if err == nil {
+		c.input.Body = v
+	}
 	return codecName, err
 }
 
