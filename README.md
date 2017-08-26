@@ -7,7 +7,7 @@ It can be used for rpc, micro services, peer-peer, push services, game services 
 
 ![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
 <br>
-<center><i>AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 36829</i></center>
+<center><i>AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 36973</i></center>
 
 ![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/frame_client_ab.png)
 <br>
