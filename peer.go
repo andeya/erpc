@@ -107,6 +107,7 @@ func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
 		sess.Close()
 		return nil, err
 	}
+	sess.startReadAndHandle()
 	p.sessionHub.Set(sess)
 	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
 	return sess, nil
@@ -128,6 +129,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (*Ses
 		sess.Close()
 		return nil, err
 	}
+	sess.startReadAndHandle()
 	p.sessionHub.Set(sess)
 	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
 	return sess, nil
@@ -207,6 +209,7 @@ func (p *Peer) listen(addr string) error {
 			sess.Close()
 			Tracef("accept session(addr: %s, id: %s) error: %s", sess.RemoteIp(), sess.Id(), err.Error())
 		} else {
+			sess.startReadAndHandle()
 			p.sessionHub.Set(sess)
 			Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
 		}

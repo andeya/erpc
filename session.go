@@ -62,7 +62,6 @@ func newSession(peer *Peer, conn net.Conn, id ...string) *Session {
 		readTimeout:  peer.defaultReadTimeout,
 		writeTimeout: peer.defaultWriteTimeout,
 	}
-	Go(s.readAndHandle)
 	return s
 }
 
@@ -235,68 +234,70 @@ func (s *Session) Push(uri string, args interface{}) (err error) {
 	return err
 }
 
-func (s *Session) readAndHandle() {
-	defer func() {
-		if p := recover(); p != nil {
-			Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
-		}
-		s.Close()
-	}()
-
-	var (
-		err         error
-		readTimeout time.Duration
-	)
-
-	// read pull, pull reple or push
-	for s.IsOk() {
-		var ctx = s.peer.getContext(s)
-		atomic.StoreInt32(&s.isReading, 1)
-		err = s.peer.pluginContainer.PreReadHeader(ctx)
-		if err != nil {
-			s.peer.putContext(ctx)
-			atomic.StoreInt32(&s.isReading, 0)
-			s.markDisconnected(err)
-			return
-		}
-		readTimeout = s.ReadTimeout()
-		if readTimeout > 0 {
-			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
-		}
-		err = s.socket.ReadPacket(ctx.input)
-		atomic.StoreInt32(&s.isReading, 0)
-		if err != nil {
-			s.peer.putContext(ctx)
-			if err != io.EOF && err != socket.ErrProactivelyCloseSocket {
-				Debugf("ReadPacket() failed: %s", err.Error())
+func (s *Session) startReadAndHandle() {
+	Go(func() {
+		defer func() {
+			if p := recover(); p != nil {
+				Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
 			}
-			s.markDisconnected(err)
-			return
-		}
-		Go(func() {
-			defer func() {
-				if p := recover(); p != nil {
-					Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
-				}
+			s.Close()
+		}()
+
+		var (
+			err         error
+			readTimeout time.Duration
+		)
+
+		// read pull, pull reple or push
+		for s.IsOk() {
+			var ctx = s.peer.getContext(s)
+			atomic.StoreInt32(&s.isReading, 1)
+			err = s.peer.pluginContainer.PreReadHeader(ctx)
+			if err != nil {
 				s.peer.putContext(ctx)
-			}()
-			switch ctx.input.Header.Type {
-			case TypeReply:
-				// handles pull reply
-				ctx.handleReply()
-
-			case TypePush:
-				//  handles push
-				ctx.handlePush()
-
-			case TypePull:
-				// handles and replies pull
-				ctx.handlePull()
-			default:
-				ctx.handleUnsupported()
+				atomic.StoreInt32(&s.isReading, 0)
+				s.markDisconnected(err)
+				return
 			}
-		})
-	}
+			readTimeout = s.ReadTimeout()
+			if readTimeout > 0 {
+				s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
+			}
+			err = s.socket.ReadPacket(ctx.input)
+			atomic.StoreInt32(&s.isReading, 0)
+			if err != nil {
+				s.peer.putContext(ctx)
+				if err != io.EOF && err != socket.ErrProactivelyCloseSocket {
+					Debugf("ReadPacket() failed: %s", err.Error())
+				}
+				s.markDisconnected(err)
+				return
+			}
+			Go(func() {
+				defer func() {
+					if p := recover(); p != nil {
+						Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+					}
+					s.peer.putContext(ctx)
+				}()
+				switch ctx.input.Header.Type {
+				case TypeReply:
+					// handles pull reply
+					ctx.handleReply()
+
+				case TypePush:
+					//  handles push
+					ctx.handlePush()
+
+				case TypePull:
+					// handles and replies pull
+					ctx.handlePull()
+				default:
+					ctx.handleUnsupported()
+				}
+			})
+		}
+	})
 }
 
 // ErrConnClosed connection is closed error.
