@@ -245,7 +245,7 @@ func (s *session) Pull(uri string, args interface{}, reply interface{}, setting 
 }
 
 // Push sends a packet, but do not receives reply.
-func (s *session) Push(uri string, args interface{}) (err error) {
+func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSetting) (err error) {
 	start := time.Now()
 
 	s.pushSeqLock.Lock()
@@ -265,6 +265,10 @@ func (s *session) Push(uri string, args interface{}) (err error) {
 	output.Body = args
 	output.HeaderCodec = s.peer.defaultHeaderCodec
 	output.BodyCodec = s.peer.defaultBodyCodec
+
+	for _, f := range setting {
+		f(output)
+	}
 
 	defer func() {
 		if p := recover(); p != nil {
