@@ -1,4 +1,4 @@
-// Socket package provides a concise, powerful and high-performance TCP socket.
+// Socket package provides a concise, powerful and high-performance TCP
 //
 // Copyright 2017 HenryLee. All Rights Reserved.
 //
@@ -75,6 +75,20 @@ func GetPacket(bodyGetting func(*Header) interface{}, settings ...PacketSetting)
 	return p
 }
 
+// GetSenderPacket returns a packet for sending.
+func GetSenderPacket(typ int32, uri string, body interface{}, setting ...PacketSetting) *Packet {
+	packet := GetPacket(nil, setting...)
+	packet.Header.Type = typ
+	packet.Header.Uri = uri
+	packet.Body = body
+	return packet
+}
+
+// GetReceiverPacket returns a packet for sending.
+func GetReceiverPacket(bodyGetting func(*Header) interface{}) *Packet {
+	return GetPacket(bodyGetting)
+}
+
 // PutPacket puts a *Packet to packet stack.
 func PutPacket(p *Packet) {
 	packetStack.mu.Lock()
@@ -97,6 +111,20 @@ func NewPacket(bodyGetting func(*Header) interface{}, settings ...PacketSetting)
 		f(p)
 	}
 	return p
+}
+
+// NewSenderPacket returns a packet for sending.
+func NewSenderPacket(typ int32, uri string, body interface{}, setting ...PacketSetting) *Packet {
+	packet := NewPacket(nil, setting...)
+	packet.Header.Type = typ
+	packet.Header.Uri = uri
+	packet.Body = body
+	return packet
+}
+
+// NewReceiverPacket returns a packet for sending.
+func NewReceiverPacket(bodyGetting func(*Header) interface{}) *Packet {
+	return NewPacket(bodyGetting)
 }
 
 // Reset resets itself.
@@ -163,6 +191,14 @@ type PacketSetting func(*Packet)
 func WithHeaderCodec(codecName string) PacketSetting {
 	return func(p *Packet) {
 		p.HeaderCodec = codecName
+	}
+}
+
+// WithStatus sets header status.
+func WithStatus(code int32, text string) PacketSetting {
+	return func(p *Packet) {
+		p.Header.StatusCode = code
+		p.Header.Status = text
 	}
 }
 
@@ -235,4 +271,38 @@ func Unmarshal(b []byte, v interface{}, isGzip bool) (codecName string, err erro
 	}
 
 	return c.Name(), c.NewDecoder(r).Decode(v)
+}
+
+var (
+	defaultHeaderCodec codec.Codec
+	defaultBodyCodec   codec.Codec
+)
+
+func init() {
+	SetDefaultHeaderCodec("json")
+	SetDefaultBodyCodec("json")
+}
+
+// SetDefaultHeaderCodec set the default header codec.
+// Note:
+//  If the codec.Codec named 'codecName' is not registered, it will panic;
+//  It is not safe to call it concurrently.
+func SetDefaultHeaderCodec(codecName string) {
+	c, err := codec.GetByName(codecName)
+	if err != nil {
+		panic(err)
+	}
+	defaultHeaderCodec = c
+}
+
+// SetDefaultBodyCodec set the default header codec.
+// Note:
+//  If the codec.Codec named 'codecName' is not registered, it will panic;
+//  It is not safe to call it concurrently.
+func SetDefaultBodyCodec(codecName string) {
+	c, err := codec.GetByName(codecName)
+	if err != nil {
+		panic(err)
+	}
+	defaultBodyCodec = c
 }

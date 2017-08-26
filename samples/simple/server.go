@@ -10,14 +10,15 @@ func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
-		DefaultReadTimeout:  time.Minute * 3,
-		DefaultWriteTimeout: time.Minute * 3,
-		TlsCertFile:         "",
-		TlsKeyFile:          "",
-		SlowCometDuration:   time.Millisecond * 500,
-		DefaultCodec:        "json",
-		DefaultGzipLevel:    5,
-		PrintBody:           true,
+		DefaultReadTimeout:   time.Minute * 3,
+		DefaultWriteTimeout:  time.Minute * 3,
+		TlsCertFile:          "",
+		TlsKeyFile:           "",
+		SlowCometDuration:    time.Millisecond * 500,
+		DefaultHeaderCodec:   "protobuf",
+		DefaultBodyCodec:     "json",
+		DefaultBodyGzipLevel: 5,
+		PrintBody:            true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",

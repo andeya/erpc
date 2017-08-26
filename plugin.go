@@ -27,10 +27,10 @@ type (
 		PostReg(*Handler) error
 	}
 	PostDialPlugin interface {
-		PostDial(*Session) error
+		PostDial(ForeSession) error
 	}
 	PostAcceptPlugin interface {
-		PostAccept(*Session) error
+		PostAccept(ForeSession) error
 	}
 	PreWritePullPlugin interface {
 		PreWritePull(WriteCtx) error
@@ -184,7 +184,7 @@ func (p *pluginContainer) PostReg(h *Handler) error {
 	return errors.Merge(errs...)
 }
 
-func (p *pluginContainer) PostDial(s *Session) error {
+func (p *pluginContainer) PostDial(s ForeSession) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
 			if err := _plugin.PostDial(s); err != nil {
@@ -196,7 +196,7 @@ func (p *pluginContainer) PostDial(s *Session) error {
 	return nil
 }
 
-func (p *pluginContainer) PostAccept(s *Session) error {
+func (p *pluginContainer) PostAccept(s ForeSession) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
 			if err := _plugin.PostAccept(s); err != nil {

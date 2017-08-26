@@ -32,6 +32,7 @@ const (
 	StatusOK = 200
 
 	StatusBadUri               = 400
+	StatusUnauthorized         = 401
 	StatusNotFound             = 404
 	StatusUnsupportedTx        = 410
 	StatusUnsupportedCodecType = 415
@@ -54,6 +55,7 @@ var statusText = map[int]string{
 	StatusConnClosed:           "Connection Closed",
 	StatusOK:                   "OK",
 	StatusBadUri:               "Bad URI",
+	StatusUnauthorized:         "Unauthorized",
 	StatusNotFound:             "Not Found",
 	StatusUnsupportedTx:        "Unsupported transaction type",
 	StatusUnsupportedCodecType: "Unsupported codec type",

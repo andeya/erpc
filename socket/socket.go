@@ -33,11 +33,6 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// default codec.
-var (
-	DefaultCodec = new(codec.JsonCodec)
-)
-
 type (
 	// Socket is a generic stream-oriented network connection.
 	//
@@ -197,7 +192,7 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 	s.bufWriter.ResetCount()
 
 	if len(packet.HeaderCodec) == 0 {
-		packet.HeaderCodec = DefaultCodec.Name()
+		packet.HeaderCodec = defaultHeaderCodec.Name()
 	}
 
 	// write header
@@ -222,7 +217,7 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 		err = s.writeBytesBody(*bo)
 	default:
 		if len(packet.BodyCodec) == 0 {
-			packet.BodyCodec = DefaultCodec.Name()
+			packet.BodyCodec = defaultBodyCodec.Name()
 		}
 		err = s.writeBody(packet.BodyCodec, int(packet.Header.Gzip), bo)
 	}

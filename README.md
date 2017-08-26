@@ -7,11 +7,11 @@ It can be used for rpc, micro services, peer-peer, push services, game services 
 
 ![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
 <br>
-<center><i>AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 36973</i></center>
+<center><i>AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 37550</i></center>
 
 ![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/frame_client_ab.png)
 <br>
-<center><i>AB Testing 2: [Mac 4CPU 8GB] [single-process single-conn] teleport/socket: QPS 54040</i></center>
+<center><i>AB Testing 2: [Mac 4CPU 8GB] [single-process single-conn] teleport/socket: QPS 55419</i></center>
 
 ![teleport_socket_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/socket_client_ab.png)
 
@@ -123,15 +123,16 @@ type Header struct {
 
 ```go
 var cfg = &tp.PeerConfig{
-	DefaultReadTimeout:  time.Minute * 3,
-	DefaultWriteTimeout: time.Minute * 3,
-	TlsCertFile:         "",
-	TlsKeyFile:          "",
-	SlowCometDuration:   time.Millisecond * 500,
-	DefaultCodec:        "json",
-	DefaultGzipLevel:    5,
-	PrintBody:           true,
-	DefaultDialTimeout:  time.Second * 10,
+	DefaultReadTimeout:   time.Minute * 3,
+	DefaultWriteTimeout:  time.Minute * 3,
+	TlsCertFile:          "",
+	TlsKeyFile:           "",
+	SlowCometDuration:    time.Millisecond * 500,
+	DefaultHeaderCodec:   "protobuf",
+	DefaultBodyCodec:     "json",
+	DefaultBodyGzipLevel: 5,
+	PrintBody:            true,
+	DefaultDialTimeout:   time.Second * 10,
 	ListenAddrs: []string{
 		"0.0.0.0:9090",
 	},
@@ -279,14 +280,15 @@ func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
-		DefaultReadTimeout:       time.Minute * 3,
-		DefaultWriteTimeout:      time.Minute * 3,
-		TlsCertFile:       "",
-		TlsKeyFile:        "",
-		SlowCometDuration: time.Millisecond * 500,
-		DefaultCodec:      "json",
-		DefaultGzipLevel:  5,
-		PrintBody:         true,
+		DefaultReadTimeout:   time.Minute * 3,
+		DefaultWriteTimeout:  time.Minute * 3,
+		TlsCertFile:          "",
+		TlsKeyFile:           "",
+		SlowCometDuration:    time.Millisecond * 500,
+		DefaultHeaderCodec:   "protobuf",
+		DefaultBodyCodec:     "json",
+		DefaultBodyGzipLevel: 5,
+		PrintBody:            true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",
@@ -344,14 +346,15 @@ func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
-		DefaultReadTimeout:  time.Minute * 3,
-		DefaultWriteTimeout: time.Minute * 3,
-		TlsCertFile:         "",
-		TlsKeyFile:          "",
-		SlowCometDuration:   time.Millisecond * 500,
-		DefaultCodec:        "json",
-		DefaultGzipLevel:    5,
-		PrintBody:           false,
+		DefaultReadTimeout:   time.Minute * 3,
+		DefaultWriteTimeout:  time.Minute * 3,
+		TlsCertFile:          "",
+		TlsKeyFile:           "",
+		SlowCometDuration:    time.Millisecond * 500,
+		DefaultHeaderCodec:   "protobuf",
+		DefaultBodyCodec:     "json",
+		DefaultBodyGzipLevel: 5,
+		PrintBody:            false,
 	}
 
 	var peer = tp.NewPeer(cfg)

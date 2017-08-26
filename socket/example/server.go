@@ -38,13 +38,11 @@ func main() {
 				}
 
 				// write response
-				packet.HeaderCodec = "protobuf"
-				packet.BodyCodec = "protobuf"
 				packet.Header.StatusCode = 200
 				packet.Header.Status = "ok"
 
 				pbTest.A = pbTest.A + pbTest.B
-				pbTest.B = pbTest.A - pbTest.B
+				pbTest.B = pbTest.A - pbTest.B*2
 				packet.Body = pbTest
 
 				err = s.WritePacket(packet)

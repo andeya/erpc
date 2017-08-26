@@ -44,7 +44,7 @@ type (
 		PublicLen() int
 		Ip() string
 		Peer() *Peer
-		Session() *Session
+		Session() Session
 	}
 	UnknownPullCtx interface {
 		PullCtx
@@ -63,7 +63,7 @@ type (
 		PublicLen() int
 		Ip() string
 		Peer() *Peer
-		Session() *Session
+		Session() Session
 	}
 	// ReadCtx for reading packet.
 	ReadCtx interface {
@@ -72,26 +72,25 @@ type (
 		PublicLen() int
 		Ip() string
 		Peer() *Peer
-		Session() *Session
+		Session() Session
+	}
+	// readHandleCtx the underlying common instance of PullCtx and PushCtx.
+	readHandleCtx struct {
+		sess            *session
+		input           *socket.Packet
+		output          *socket.Packet
+		apiType         *Handler
+		arg             reflect.Value
+		pullCmd         *PullCmd
+		uri             *url.URL
+		query           url.Values
+		public          goutil.Map
+		start           time.Time
+		cost            time.Duration
+		pluginContainer PluginContainer
+		next            *readHandleCtx
 	}
 )
-
-// readHandleCtx the underlying common instance of PullCtx and PushCtx.
-type readHandleCtx struct {
-	session         *Session
-	input           *socket.Packet
-	output          *socket.Packet
-	apiType         *Handler
-	arg             reflect.Value
-	pullCmd         *PullCmd
-	uri             *url.URL
-	query           url.Values
-	public          goutil.Map
-	start           time.Time
-	cost            time.Duration
-	pluginContainer PluginContainer
-	next            *readHandleCtx
-}
 
 var (
 	_ PullCtx        = new(readHandleCtx)
@@ -115,8 +114,8 @@ func newReadHandleCtx() *readHandleCtx {
 	return c
 }
 
-func (c *readHandleCtx) reInit(s *Session) {
-	c.session = s
+func (c *readHandleCtx) reInit(s *session) {
+	c.sess = s
 	c.public = goutil.RwMap()
 	if s.socket.PublicLen() > 0 {
 		s.socket.Public().Range(func(key, value interface{}) bool {
@@ -127,7 +126,7 @@ func (c *readHandleCtx) reInit(s *Session) {
 }
 
 func (c *readHandleCtx) clean() {
-	c.session = nil
+	c.sess = nil
 	c.apiType = nil
 	c.arg = emptyValue
 	c.pullCmd = nil
@@ -142,12 +141,12 @@ func (c *readHandleCtx) clean() {
 
 // Peer returns the peer.
 func (c *readHandleCtx) Peer() *Peer {
-	return c.session.peer
+	return c.sess.peer
 }
 
 // Session returns the session.
-func (c *readHandleCtx) Session() *Session {
-	return c.session
+func (c *readHandleCtx) Session() Session {
+	return c.sess
 }
 
 // Input returns readed packet.
@@ -195,7 +194,7 @@ func (c *readHandleCtx) SetBodyCodec(codecName string) {
 
 // Ip returns the remote addr.
 func (c *readHandleCtx) Ip() string {
-	return c.session.RemoteIp()
+	return c.sess.RemoteIp()
 }
 
 func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
@@ -206,7 +205,7 @@ func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
 		}
 	}()
 	c.start = time.Now()
-	c.pluginContainer = c.session.peer.pluginContainer
+	c.pluginContainer = c.sess.peer.pluginContainer
 	switch header.Type {
 	case TypeReply:
 		return c.bindReply(header)
@@ -235,7 +234,7 @@ func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
 	}
 
 	var ok bool
-	c.apiType, ok = c.session.pushRouter.get(c.Path())
+	c.apiType, ok = c.sess.pushRouter.get(c.Path())
 	if !ok {
 		return nil
 	}
@@ -260,7 +259,7 @@ func (c *readHandleCtx) handlePush() {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 		c.cost = time.Since(c.start)
-		c.session.runlog(c.cost, c.input, nil)
+		c.sess.runlog(c.cost, c.input, nil)
 	}()
 
 	if c.apiType == nil {
@@ -304,7 +303,7 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 	}
 
 	var ok bool
-	c.apiType, ok = c.session.pullRouter.get(c.Path())
+	c.apiType, ok = c.sess.pullRouter.get(c.Path())
 	if !ok {
 		c.output.Header.StatusCode = StatusNotFound
 		c.output.Header.Status = StatusText(StatusNotFound)
@@ -340,7 +339,7 @@ func (c *readHandleCtx) handlePull() {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 		c.cost = time.Since(c.start)
-		c.session.runlog(c.cost, c.input, c.output)
+		c.sess.runlog(c.cost, c.input, c.output)
 	}()
 	err := c.pluginContainer.PostReadBody(c)
 	if err != nil {
@@ -376,7 +375,7 @@ func (c *readHandleCtx) handlePull() {
 		Errorf("%s", errStr)
 	}
 
-	if err = c.session.write(c.output); err != nil {
+	if err = c.sess.write(c.output); err != nil {
 		c.output.Header.StatusCode = StatusWriteFailed
 		errStr := err.Error()
 		c.output.Header.Status = errStr
@@ -389,12 +388,12 @@ func (c *readHandleCtx) handlePull() {
 }
 
 func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
-	pullCmd, ok := c.session.pullCmdMap.Load(header.Seq)
+	pullCmd, ok := c.sess.pullCmdMap.Load(header.Seq)
 	if !ok {
 		Debugf("bindReply() not found: %#v", header)
 		return nil
 	}
-	c.session.pullCmdMap.Delete(header.Seq)
+	c.sess.pullCmdMap.Delete(header.Seq)
 	c.pullCmd = pullCmd.(*PullCmd)
 	c.public = c.pullCmd.public
 
@@ -423,7 +422,7 @@ func (c *readHandleCtx) handleReply() {
 		}
 		c.pullCmd.done()
 		c.pullCmd.cost = time.Since(c.pullCmd.start)
-		c.session.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
+		c.sess.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
 	}()
 	if c.pullCmd.Xerror != nil {
 		return
@@ -440,7 +439,7 @@ func (c *readHandleCtx) handleUnsupported() {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 		c.cost = time.Since(c.start)
-		c.session.runlog(c.cost, c.input, c.output)
+		c.sess.runlog(c.cost, c.input, c.output)
 	}()
 	err := c.pluginContainer.PostReadBody(c)
 	if err != nil {
@@ -460,7 +459,7 @@ func (c *readHandleCtx) handleUnsupported() {
 		Errorf("%s", err.Error())
 	}
 
-	if err = c.session.write(c.output); err != nil {
+	if err = c.sess.write(c.output); err != nil {
 		c.output.Header.StatusCode = StatusWriteFailed
 		errStr := err.Error()
 		c.output.Header.Status = errStr
@@ -493,7 +492,7 @@ func (c *readHandleCtx) Bind(v interface{}) (string, error) {
 
 // PullCmd the command of the pulling operation's response.
 type PullCmd struct {
-	session  *Session
+	sess     *session
 	output   *socket.Packet
 	reply    interface{}
 	doneChan chan *PullCmd // Strobes when pull is complete.
@@ -507,17 +506,17 @@ var _ WriteCtx = new(PullCmd)
 
 // Peer returns the peer.
 func (c *PullCmd) Peer() *Peer {
-	return c.session.peer
+	return c.sess.peer
 }
 
 // Session returns the session.
-func (c *PullCmd) Session() *Session {
-	return c.session
+func (c *PullCmd) Session() Session {
+	return c.sess
 }
 
 // Ip returns the remote addr.
 func (c *PullCmd) Ip() string {
-	return c.session.RemoteIp()
+	return c.sess.RemoteIp()
 }
 
 // Public returns temporary public data of context.
@@ -542,6 +541,6 @@ func (p *PullCmd) done() {
 	p.doneChan <- p
 	{
 		// free count pull-launch
-		p.session.graceWaitGroup.Done()
+		p.sess.graceWaitGroup.Done()
 	}
 }

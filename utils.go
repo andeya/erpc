@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/goutil/pool"
+
+	"github.com/henrylee2cn/teleport/socket"
 )
 
 var (
@@ -29,6 +31,22 @@ var (
 	_gopool                  *pool.GoPool
 	newGopoolOnce            sync.Once
 )
+
+func init() {
+	Printf("The current process PID: %d", os.Getpid())
+}
+
+// GetSenderPacket returns a packet for sending.
+//  func GetSenderPacket(typ int32, uri string, body interface{}, setting ...socket.PacketSetting) *socket.Packet
+var GetSenderPacket = socket.GetSenderPacket
+
+// GetReceiverPacket returns a packet for sending.
+//  func GetReceiverPacket(bodyGetting func(*socket.Header) interface{}) *socket.Packet
+var GetReceiverPacket = socket.GetReceiverPacket
+
+// PutPacket puts a *socket.Packet to packet stack.
+//  func PutPacket(p *socket.Packet)
+var PutPacket = socket.PutPacket
 
 // Go go func
 func Go(fn func()) {
@@ -44,10 +62,6 @@ func Go(fn func()) {
 			break
 		}
 	}
-}
-
-func init() {
-	Printf("The current process PID: %d", os.Getpid())
 }
 
 func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {

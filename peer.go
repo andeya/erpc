@@ -28,21 +28,22 @@ import (
 
 // Peer peer which is server or client.
 type Peer struct {
-	PullRouter          *Router
-	PushRouter          *Router
-	pluginContainer     PluginContainer
-	sessionHub          *SessionHub
-	closeCh             chan struct{}
-	freeContext         *readHandleCtx
-	ctxLock             sync.Mutex
-	defaultReadTimeout  int64 // time.Duration // readdeadline for underlying net.Conn
-	defaultWriteTimeout int64 // time.Duration // writedeadline for underlying net.Conn
-	tlsConfig           *tls.Config
-	slowCometDuration   time.Duration
-	defaultCodec        string
-	defaultGzipLevel    int32
-	printBody           bool
-	mu                  sync.Mutex
+	PullRouter           *Router
+	PushRouter           *Router
+	pluginContainer      PluginContainer
+	sessHub              *SessionHub
+	closeCh              chan struct{}
+	freeContext          *readHandleCtx
+	ctxLock              sync.Mutex
+	defaultReadTimeout   int64 // time.Duration // readdeadline for underlying net.Conn
+	defaultWriteTimeout  int64 // time.Duration // writedeadline for underlying net.Conn
+	tlsConfig            *tls.Config
+	slowCometDuration    time.Duration
+	defaultHeaderCodec   string
+	defaultBodyCodec     string
+	defaultBodyGzipLevel int32
+	printBody            bool
+	mu                   sync.Mutex
 
 	// for client role
 	defaultDialTimeout time.Duration
@@ -63,38 +64,39 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		Fatalf("%v", err)
 	}
 	var p = &Peer{
-		PullRouter:          newPullRouter(pluginContainer),
-		PushRouter:          newPushRouter(pluginContainer),
-		pluginContainer:     pluginContainer,
-		sessionHub:          newSessionHub(),
-		defaultReadTimeout:  int64(cfg.DefaultReadTimeout),
-		defaultWriteTimeout: int64(cfg.DefaultWriteTimeout),
-		closeCh:             make(chan struct{}),
-		slowCometDuration:   slowCometDuration,
-		defaultDialTimeout:  cfg.DefaultDialTimeout,
-		listenAddrs:         cfg.ListenAddrs,
-		defaultCodec:        cfg.DefaultCodec,
-		defaultGzipLevel:    cfg.DefaultGzipLevel,
-		printBody:           cfg.PrintBody,
+		PullRouter:           newPullRouter(pluginContainer),
+		PushRouter:           newPushRouter(pluginContainer),
+		pluginContainer:      pluginContainer,
+		sessHub:              newSessionHub(),
+		defaultReadTimeout:   int64(cfg.DefaultReadTimeout),
+		defaultWriteTimeout:  int64(cfg.DefaultWriteTimeout),
+		closeCh:              make(chan struct{}),
+		slowCometDuration:    slowCometDuration,
+		defaultDialTimeout:   cfg.DefaultDialTimeout,
+		listenAddrs:          cfg.ListenAddrs,
+		defaultHeaderCodec:   cfg.DefaultHeaderCodec,
+		defaultBodyCodec:     cfg.DefaultBodyCodec,
+		defaultBodyGzipLevel: cfg.DefaultBodyGzipLevel,
+		printBody:            cfg.PrintBody,
 	}
 	addPeer(p)
 	return p
 }
 
 // GetSession gets the session by id.
-func (p *Peer) GetSession(sessionId string) (*Session, bool) {
-	return p.sessionHub.Get(sessionId)
+func (p *Peer) GetSession(sessionId string) (Session, bool) {
+	return p.sessHub.Get(sessionId)
 }
 
 // ServeConn serves the connection and returns a session.
-func (p *Peer) ServeConn(conn net.Conn, id ...string) *Session {
+func (p *Peer) ServeConn(conn net.Conn, id ...string) Session {
 	var session = newSession(p, conn, id...)
-	p.sessionHub.Set(session)
+	p.sessHub.Set(session)
 	return session
 }
 
 // Dial connects with the peer of the destination address.
-func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
+func (p *Peer) Dial(addr string, id ...string) (Session, error) {
 	var conn, err = net.DialTimeout("tcp", addr, p.defaultDialTimeout)
 	if err != nil {
 		return nil, err
@@ -108,14 +110,14 @@ func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
 		return nil, err
 	}
 	sess.startReadAndHandle()
-	p.sessionHub.Set(sess)
+	p.sessHub.Set(sess)
 	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
 	return sess, nil
 }
 
 // DialContext connects with the peer of the destination address,
 // using the provided context.
-func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (*Session, error) {
+func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (Session, error) {
 	var d net.Dialer
 	var conn, err = d.DialContext(ctx, "tcp", addr)
 	if err != nil {
@@ -130,7 +132,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (*Ses
 		return nil, err
 	}
 	sess.startReadAndHandle()
-	p.sessionHub.Set(sess)
+	p.sessHub.Set(sess)
 	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
 	return sess, nil
 }
@@ -175,7 +177,7 @@ func (p *Peer) listen(addr string) error {
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
 		closeCh   = p.closeCh
-		sess      *Session
+		sess      *session
 	)
 	for {
 		rw, e := lis.Accept()
@@ -210,7 +212,7 @@ func (p *Peer) listen(addr string) error {
 			Tracef("accept session(addr: %s, id: %s) error: %s", sess.RemoteIp(), sess.Id(), err.Error())
 		} else {
 			sess.startReadAndHandle()
-			p.sessionHub.Set(sess)
+			p.sessHub.Set(sess)
 			Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
 		}
 	}
@@ -229,7 +231,7 @@ func (p *Peer) Close() (err error) {
 		count int
 		errCh = make(chan error, 10)
 	)
-	p.sessionHub.Range(func(sess *Session) bool {
+	p.sessHub.Range(func(sess *session) bool {
 		count++
 		Go(func() {
 			errCh <- sess.Close()
@@ -243,7 +245,7 @@ func (p *Peer) Close() (err error) {
 	return err
 }
 
-func (p *Peer) getContext(s *Session) *readHandleCtx {
+func (p *Peer) getContext(s *session) *readHandleCtx {
 	p.ctxLock.Lock()
 	{
 		// count get context
@@ -268,7 +270,7 @@ func (p *Peer) putContext(ctx *readHandleCtx) {
 	}()
 	{
 		// count get context
-		ctx.session.graceWaitGroup.Done()
+		ctx.sess.graceWaitGroup.Done()
 	}
 	ctx.clean()
 	ctx.next = p.freeContext
