@@ -102,6 +102,11 @@ var (
 	_ UnknownPushCtx = new(readHandleCtx)
 )
 
+var (
+	emptyValue  = reflect.Value{}
+	emptyMethod = reflect.Method{}
+)
+
 // newReadHandleCtx creates a readHandleCtx for one request/response or push.
 func newReadHandleCtx() *readHandleCtx {
 	c := new(readHandleCtx)
@@ -120,11 +125,6 @@ func (c *readHandleCtx) reInit(s *Session) {
 		})
 	}
 }
-
-var (
-	emptyValue  = reflect.Value{}
-	emptyMethod = reflect.Method{}
-)
 
 func (c *readHandleCtx) clean() {
 	c.session = nil

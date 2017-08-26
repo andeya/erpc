@@ -116,7 +116,7 @@ func (p *Peer) Dial(addr string, id ...string) (*Session, error) {
 // using the provided context.
 func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (*Session, error) {
 	var d net.Dialer
-	var conn, err = d.DialContext(ctx, "tpc", addr)
+	var conn, err = d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
