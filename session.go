@@ -40,7 +40,7 @@ type (
 		IsOk() bool
 		Peer() *Peer
 		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd
-		Push(uri string, args interface{}) (err error)
+		Push(uri string, args interface{}, setting ...socket.PacketSetting) error
 		ReadTimeout() time.Duration
 		RemoteIp() string
 		SetReadTimeout(duration time.Duration)
