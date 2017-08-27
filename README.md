@@ -22,7 +22,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 version | status | branch
 --------|--------|--------
-v2      | beta | [master](https://github.com/henrylee2cn/teleport/tree/master)
+v2      | release | [master](https://github.com/henrylee2cn/teleport/tree/master)
 v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
 
 
