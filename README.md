@@ -1,9 +1,12 @@
-# teleport [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/teleport?style=flat-square)](http://goreportcard.com/report/henrylee2cn/teleport) [![github issues](https://img.shields.io/github/issues/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/teleport) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/tree/master/samples)
+# Teleport [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/teleport?style=flat-square)](http://goreportcard.com/report/henrylee2cn/teleport) [![github issues](https://img.shields.io/github/issues/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/teleport) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/tree/master/samples)
 <!--  [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/releases) -->
 
 Teleport is a versatile, high-performance and flexible TCP socket framework.
 
-It can be used for rpc, micro services, peer-peer, push services, game services and so on.
+It can be used for peer-peer, rpc, gateway, micro services, push services, game services and so on.
+
+[简体中文](https://github.com/henrylee2cn/teleport/blob/master/README_ZH.md)
+
 
 ![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
 <br>
@@ -51,7 +54,7 @@ go get -u github.com/henrylee2cn/teleport
 
 - **Peer:** A communication instance may be a client or a client
 - **Session:** A connection session, with push, pull, reply, close and other methods of operation
-- **readHandleCtx:** Handle the received packets
+- **Context:** Handle the received or send packets
 - **Pull-Launch:** Pull data from the peer
 - **Pull-Handle:** Handle and reply to the pull of peer
 - **Push-Launch:** Push data to the peer
@@ -62,7 +65,7 @@ go get -u github.com/henrylee2cn/teleport
 ### 4.2 Execution level
 
 ```
-Peer -> Session -> Socket -> Conn -> ApiContext
+Peer -> Connection -> Socket -> Session -> Context
 ```
 
 
@@ -167,7 +170,7 @@ func (h *Home) Test(args *[2]int) (int, tp.Xerror) {
 }
 ```
 
-- Define a controller and handler for push request
+- Define controller and handler for push request
 
 ```go
 // Msg controller
@@ -409,3 +412,7 @@ func (p *Push) Test(args *map[string]interface{}) {
 	tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
 }
 ```
+
+## 7. License
+
+Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text
