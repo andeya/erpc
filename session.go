@@ -457,8 +457,7 @@ func (s *session) markDisconnected(err error, isRead bool) {
 
 	s.pullCmdMap.Range(func(_, v interface{}) bool {
 		pullCmd := v.(*PullCmd)
-		pullCmd.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
-		pullCmd.done()
+		pullCmd.cancel()
 		return true
 	})
 }

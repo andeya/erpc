@@ -391,7 +391,6 @@ func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 		Debugf("bindReply() not found: %#v", header)
 		return nil
 	}
-	c.sess.pullCmdMap.Delete(header.Seq)
 	c.pullCmd = pullCmd.(*PullCmd)
 	c.public = c.pullCmd.public
 
@@ -533,11 +532,24 @@ func (c *PullCmd) Output() *socket.Packet {
 	return c.output
 }
 
+func (p *PullCmd) cancel() {
+	defer func() {
+		recover()
+	}()
+	p.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
+	p.doneChan <- p
+	{
+		// free count pull-launch
+		p.sess.graceWaitGroup.Done()
+	}
+}
+
 func (p *PullCmd) done() {
 	defer func() {
 		recover()
 	}()
 	p.doneChan <- p
+	p.sess.pullCmdMap.Delete(p.output.Header.Seq)
 	{
 		// free count pull-launch
 		p.sess.graceWaitGroup.Done()
