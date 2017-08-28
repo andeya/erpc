@@ -40,7 +40,7 @@ go get -u github.com/henrylee2cn/teleport
 - 支持单独定制`Header`和`Body`编码类型，例如`JSON` `Protobuf`
 - `Body`支持gzip压缩
 - `Header`包含状态码及其描述文本
-- 支持推，拉，回复等通信方式
+- 支持推、拉、回复等通信模式
 - 支持插件机制，可以自定义认证、心跳、微服务注册中心、统计信息插件等
 - 无论服务器或客户端，均支持都优雅重启、优雅关闭
 - 支持实现反向代理功能
@@ -53,7 +53,7 @@ go get -u github.com/henrylee2cn/teleport
 
 ### 4.1 名称解释
 
-- **Peer：**通信端点，可能是客户端或客户端
+- **Peer：**通信端点，可以是客户端或客户端
 - **Session：**连接会话，具有推、拉、回复、关闭等操作
 - **Context：**处理收到的或发送的数据包
 - **Pull-Launch：**从对端Peer拉数据
