@@ -306,3 +306,14 @@ func SetDefaultBodyCodec(codecName string) {
 	}
 	defaultBodyCodec = c
 }
+
+// AddCodecToBytes adds codec id to body bytes.
+func AddCodecToBytes(codecId byte, body []byte) []byte {
+	if len(body) == 0 {
+		return body
+	}
+	buf := make([]byte, len(body)+1)
+	buf[0] = codecId
+	copy(buf[1:], body)
+	return buf
+}
