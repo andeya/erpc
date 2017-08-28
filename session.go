@@ -301,6 +301,7 @@ func (s *session) startReadAndHandle() {
 			if p := recover(); p != nil {
 				Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
 			}
+			atomic.StoreInt32(&s.disconnected, 1)
 			s.Close()
 		}()
 
@@ -364,7 +365,22 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	if !s.IsOk() {
 		return ErrConnClosed
 	}
+
+	var (
+		writeTimeout = s.WriteTimeout()
+		now          time.Time
+	)
+	if writeTimeout > 0 {
+		now = time.Now()
+	}
+
 	s.writeLock.Lock()
+
+	if !s.IsOk() {
+		s.writeLock.Unlock()
+		return ErrConnClosed
+	}
+
 	defer func() {
 		if p := recover(); p != nil {
 			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
@@ -374,22 +390,19 @@ func (s *session) write(packet *socket.Packet) (err error) {
 		s.writeLock.Unlock()
 	}()
 
-	if writeTimeout := s.WriteTimeout(); writeTimeout > 0 {
-		s.socket.SetWriteDeadline(time.Now().Add(writeTimeout))
+	if writeTimeout > 0 {
+		s.socket.SetWriteDeadline(now.Add(writeTimeout))
 	}
 	err = s.socket.WritePacket(packet)
-	if err != nil {
-		s.markDisconnected(err, false)
-	}
+	// if err != nil {
+	// 	s.markDisconnected(err, false)
+	// }
 	return err
 }
 
 // IsOk checks if the session is ok.
 func (s *session) IsOk() bool {
-	if atomic.LoadInt32(&s.disconnected) == 1 {
-		return false
-	}
-	return true
+	return atomic.LoadInt32(&s.disconnected) != 1
 }
 
 // Close closes the session.
@@ -397,22 +410,25 @@ func (s *session) Close() error {
 	if atomic.LoadInt32(&s.closed) == 1 {
 		return nil
 	}
-	atomic.StoreInt32(&s.closed, 1)
 
 	s.closeLock.Lock()
+	if atomic.LoadInt32(&s.closed) == 1 {
+		s.closeLock.Unlock()
+		return nil
+	}
+	atomic.StoreInt32(&s.closed, 1)
+
 	defer func() {
 		recover()
 		s.closeLock.Unlock()
 	}()
 
+	s.peer.sessHub.Delete(s.Id())
+
 	// make sure return s.readAndHandle
 	s.socket.SetReadDeadline(deadlineForStopRead)
 
 	s.graceWaitGroup.Wait()
-
-	atomic.StoreInt32(&s.disconnected, 1)
-
-	s.peer.sessHub.Delete(s.Id())
 
 	return s.socket.Close()
 }
