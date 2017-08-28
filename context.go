@@ -377,9 +377,7 @@ func (c *readHandleCtx) handlePull() {
 
 	if err = c.sess.write(c.output); err != nil {
 		c.output.Header.StatusCode = StatusWriteFailed
-		errStr := err.Error()
-		c.output.Header.Status = errStr
-		Warnf("WritePacket: %s", errStr)
+		c.output.Header.Status = StatusText(StatusWriteFailed) + ": " + err.Error()
 	}
 
 	if err = c.pluginContainer.PostWriteReply(c); err != nil {
@@ -461,9 +459,7 @@ func (c *readHandleCtx) handleUnsupported() {
 
 	if err = c.sess.write(c.output); err != nil {
 		c.output.Header.StatusCode = StatusWriteFailed
-		errStr := err.Error()
-		c.output.Header.Status = errStr
-		Warnf("WritePacket: %s", errStr)
+		c.output.Header.Status = StatusText(StatusWriteFailed) + ": " + err.Error()
 	}
 
 	if err = c.pluginContainer.PostWriteReply(c); err != nil {
