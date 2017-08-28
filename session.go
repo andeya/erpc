@@ -225,7 +225,6 @@ func (s *session) GoPull(uri string, args interface{}, reply interface{}, done c
 			return
 		}
 	}
-	s.pullCmdMap.Delete(output.Header.Seq)
 	cmd.Xerror = NewXerror(StatusWriteFailed, err.Error())
 	cmd.done()
 }
