@@ -23,7 +23,6 @@ import (
 
 	"github.com/henrylee2cn/go-logging/color"
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
 	"github.com/json-iterator/go"
 
@@ -80,7 +79,6 @@ type (
 		disconnectLock sync.RWMutex
 		writeLock      sync.Mutex
 		graceWaitGroup sync.WaitGroup
-		isReading      int32
 		readTimeout    int64 // time.Duration
 		writeTimeout   int64 // time.Duration
 	}
@@ -314,28 +312,24 @@ func (s *session) startReadAndHandle() {
 		// read pull, pull reple or push
 		for s.IsOk() {
 			var ctx = s.peer.getContext(s)
-			atomic.StoreInt32(&s.isReading, 1)
 			err = s.peer.pluginContainer.PreReadHeader(ctx)
 			if err != nil {
 				s.peer.putContext(ctx)
-				atomic.StoreInt32(&s.isReading, 0)
-				s.markDisconnected(err)
+				s.markDisconnected(err, true)
 				return
 			}
-			readTimeout = s.ReadTimeout()
-			if readTimeout > 0 {
-				s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout))
+
+			if readTimeout = s.ReadTimeout(); readTimeout > 0 {
+				s.socket.SetReadDeadline(time.Now().Add(readTimeout))
 			}
 			err = s.socket.ReadPacket(ctx.input)
-			atomic.StoreInt32(&s.isReading, 0)
 			if err != nil {
 				s.peer.putContext(ctx)
-				if err != io.EOF && err != socket.ErrProactivelyCloseSocket {
-					Debugf("ReadPacket() failed: %s", err.Error())
-				}
-				s.markDisconnected(err)
+				s.markDisconnected(err, true)
 				return
 			}
+
+			// s.socket.SetReadDeadline(time.Now().Add(time.Second))
 			Go(func() {
 				defer func() {
 					if p := recover(); p != nil {
@@ -379,13 +373,13 @@ func (s *session) write(packet *socket.Packet) (err error) {
 		}
 		s.writeLock.Unlock()
 	}()
-	writeTimeout := s.WriteTimeout()
-	if writeTimeout > 0 {
-		s.socket.SetWriteDeadline(coarsetime.CoarseTimeNow().Add(writeTimeout))
+
+	if writeTimeout := s.WriteTimeout(); writeTimeout > 0 {
+		s.socket.SetWriteDeadline(time.Now().Add(writeTimeout))
 	}
 	err = s.socket.WritePacket(packet)
 	if err != nil {
-		s.markDisconnected(err)
+		s.markDisconnected(err, false)
 	}
 	return err
 }
@@ -411,14 +405,11 @@ func (s *session) Close() error {
 		s.closeLock.Unlock()
 	}()
 
-	// ignore reading context in readAndHandle().
-	if atomic.LoadInt32(&s.isReading) == 1 {
-		s.graceWaitGroup.Done()
-	}
+	// make sure return s.readAndHandle
+	s.socket.SetReadDeadline(deadlineForStopRead)
 
 	s.graceWaitGroup.Wait()
 
-	// make sure return s.readAndHandle
 	atomic.StoreInt32(&s.disconnected, 1)
 
 	s.peer.sessHub.Delete(s.Id())
@@ -426,7 +417,9 @@ func (s *session) Close() error {
 	return s.socket.Close()
 }
 
-func (s *session) markDisconnected(err error) {
+var deadlineForStopRead = time.Time{}.Add(1)
+
+func (s *session) markDisconnected(err error, isRead bool) {
 	if atomic.LoadInt32(&s.closed) == 1 || atomic.LoadInt32(&s.disconnected) == 1 {
 		return
 	}
@@ -438,8 +431,13 @@ func (s *session) markDisconnected(err error) {
 
 	atomic.StoreInt32(&s.disconnected, 1)
 
-	// debug:
-	// Fatalf("markDisconnected: %v", err.Error())
+	if err != io.EOF && err != socket.ErrProactivelyCloseSocket {
+		if isRead {
+			Debugf("disconnected when reading: %s", err.Error())
+		} else {
+			Debugf("disconnected when writing: %s", err.Error())
+		}
+	}
 
 	s.pullCmdMap.Range(func(_, v interface{}) bool {
 		pullCmd := v.(*PullCmd)

@@ -12,8 +12,8 @@ func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
-		DefaultReadTimeout:   time.Minute * 3,
-		DefaultWriteTimeout:  time.Minute * 3,
+		DefaultReadTimeout:   time.Minute * 5,
+		DefaultWriteTimeout:  time.Millisecond * 500,
 		TlsCertFile:          "",
 		TlsKeyFile:           "",
 		SlowCometDuration:    time.Millisecond * 500,

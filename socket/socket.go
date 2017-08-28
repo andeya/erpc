@@ -150,7 +150,7 @@ const (
 var _ net.Conn = Socket(nil)
 
 // ErrProactivelyCloseSocket proactively close the socket error.
-var ErrProactivelyCloseSocket = errors.New("socket: Proactively close the socket")
+var ErrProactivelyCloseSocket = errors.New("socket is closed proactively")
 
 // GetSocket gets a Socket from pool, and reset it.
 func GetSocket(c net.Conn, id ...string) Socket {

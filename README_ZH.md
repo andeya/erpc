@@ -12,7 +12,7 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 ![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
 <br>
 
-*AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 39414*
+*AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 40188*
 ![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/frame_client_ab.png)
 <br>
 
