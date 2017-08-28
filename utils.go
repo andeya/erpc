@@ -25,17 +25,6 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-var (
-	maxGoroutinesAmount      int
-	maxGoroutineIdleDuration time.Duration
-	_gopool                  *pool.GoPool
-	newGopoolOnce            sync.Once
-)
-
-func init() {
-	Printf("The current process PID: %d", os.Getpid())
-}
-
 // GetSenderPacket returns a packet for sending.
 //  func GetSenderPacket(typ int32, uri string, body interface{}, setting ...socket.PacketSetting) *socket.Packet
 var GetSenderPacket = socket.GetSenderPacket
@@ -48,10 +37,30 @@ var GetReceiverPacket = socket.GetReceiverPacket
 //  func PutPacket(p *socket.Packet)
 var PutPacket = socket.PutPacket
 
+func init() {
+	Printf("The current process PID: %d", os.Getpid())
+}
+
+var (
+	_maxGoroutinesAmount      int
+	_maxGoroutineIdleDuration time.Duration
+	_gopool                   *pool.GoPool
+	setGopoolOnce             sync.Once
+)
+
+// SetGopool set or reset go pool config.
+// Note: Make sure to call it before calling NewPeer() and Go()
+func SetGopool(maxGoroutinesAmount int, maxGoroutineIdleDuration time.Duration) {
+	_maxGoroutinesAmount, _maxGoroutineIdleDuration := maxGoroutinesAmount, maxGoroutineIdleDuration
+	_gopool = pool.NewGoPool(_maxGoroutinesAmount, _maxGoroutineIdleDuration)
+}
+
 // Go go func
 func Go(fn func()) {
-	newGopoolOnce.Do(func() {
-		_gopool = pool.NewGoPool(maxGoroutinesAmount, maxGoroutineIdleDuration)
+	setGopoolOnce.Do(func() {
+		if _gopool == nil {
+			SetGopool(_maxGoroutinesAmount, _maxGoroutineIdleDuration)
+		}
 	})
 	var err error
 	for {
