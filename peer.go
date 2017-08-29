@@ -109,7 +109,7 @@ func (p *Peer) Dial(addr string, id ...string) (Session, error) {
 		sess.Close()
 		return nil, err
 	}
-	sess.startReadAndHandle()
+	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
 	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
 	return sess, nil
@@ -131,7 +131,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (Sess
 		sess.Close()
 		return nil, err
 	}
-	sess.startReadAndHandle()
+	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
 	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
 	return sess, nil
@@ -177,7 +177,6 @@ func (p *Peer) listen(addr string) error {
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
 		closeCh   = p.closeCh
-		sess      *session
 	)
 	for {
 		rw, e := lis.Accept()
@@ -206,15 +205,18 @@ func (p *Peer) listen(addr string) error {
 		}
 		tempDelay = 0
 
-		sess = newSession(p, rw)
-		if e = p.pluginContainer.PostAccept(sess); e != nil {
-			sess.Close()
-			Tracef("accept session(addr: %s, id: %s) error: %s", sess.RemoteIp(), sess.Id(), err.Error())
-		} else {
-			sess.startReadAndHandle()
-			p.sessHub.Set(sess)
-			Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
-		}
+		func(sess *session) {
+			Go(func() {
+				if err := p.pluginContainer.PostAccept(sess); err != nil {
+					sess.Close()
+					Tracef("accept session(addr: %s, id: %s) error: %s", sess.RemoteIp(), sess.Id(), err.Error())
+					return
+				}
+				Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
+				p.sessHub.Set(sess)
+				sess.startReadAndHandle()
+			})
+		}(newSession(p, rw))
 	}
 }
 

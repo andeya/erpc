@@ -62,14 +62,8 @@ func Go(fn func()) {
 			SetGopool(_maxGoroutinesAmount, _maxGoroutineIdleDuration)
 		}
 	})
-	var err error
-	for {
-		if err = _gopool.Go(fn); err != nil {
-			Warnf("%s", err.Error())
-			time.Sleep(time.Millisecond * 20)
-		} else {
-			break
-		}
+	if err := _gopool.Go(fn); err != nil {
+		Warnf("%s", err.Error())
 	}
 }
 
