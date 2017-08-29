@@ -475,12 +475,19 @@ func (s *socket) Close() error {
 		return nil
 	}
 	atomic.StoreInt32(&s.curState, activeClose)
+
 	var errs []error
 	if s.Conn != nil {
 		errs = append(errs, s.Conn.Close())
 	}
+
 	s.readMutex.Lock()
 	s.writeMutex.Lock()
+	defer func() {
+		s.readMutex.Unlock()
+		s.writeMutex.Unlock()
+	}()
+
 	if atomic.LoadInt32(&s.curState) == activeClose {
 		return nil
 	}
@@ -496,8 +503,6 @@ func (s *socket) Close() error {
 		s.bufWriter.Reset(nil)
 		socketPool.Put(s)
 	}
-	s.readMutex.Unlock()
-	s.writeMutex.Unlock()
 	return errors.Merge(errs...)
 }
 
