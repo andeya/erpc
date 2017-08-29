@@ -471,6 +471,9 @@ func (s *socket) Reset(netConn net.Conn, id ...string) {
 // Any blocked Read or Write operations will be unblocked and return errors.
 // If it is from 'GetSocket()' function(a pool), return itself to pool.
 func (s *socket) Close() error {
+	if atomic.LoadInt32(&s.curState) == activeClose {
+		return nil
+	}
 	atomic.StoreInt32(&s.curState, activeClose)
 	var errs []error
 	if s.Conn != nil {
@@ -478,15 +481,19 @@ func (s *socket) Close() error {
 	}
 	s.readMutex.Lock()
 	s.writeMutex.Lock()
-	s.Conn = nil
-	s.bufReader.Reset(nil)
-	s.bufWriter.Reset(nil)
+	if atomic.LoadInt32(&s.curState) == activeClose {
+		return nil
+	}
+
 	s.closeGzipReader()
 	for _, gz := range s.gzipWriterMap {
 		errs = append(errs, gz.Close())
 	}
-	s.ctxPublic = nil
 	if s.fromPool {
+		s.Conn = nil
+		s.ctxPublic = nil
+		s.bufReader.Reset(nil)
+		s.bufWriter.Reset(nil)
 		socketPool.Put(s)
 	}
 	s.readMutex.Unlock()
