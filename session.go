@@ -399,7 +399,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 
 // IsOk checks if the session is ok.
 func (s *session) IsOk() bool {
-	return atomic.LoadInt32(&s.disconnected) != 1 || atomic.LoadInt32(&s.closed) != 1
+	return atomic.LoadInt32(&s.disconnected) != 1 && atomic.LoadInt32(&s.closed) != 1
 }
 
 // isDisconnected checks if the session is ok.
