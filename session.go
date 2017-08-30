@@ -309,7 +309,7 @@ func (s *session) startReadAndHandle() {
 	)
 
 	// read pull, pull reple or push
-	for s.IsOk() {
+	for !s.isDisconnected() {
 		var ctx = s.peer.getContext(s)
 		err = s.peer.pluginContainer.PreReadHeader(ctx)
 		if err != nil {
@@ -359,7 +359,7 @@ func (s *session) startReadAndHandle() {
 var ErrConnClosed = errors.New("connection is closed")
 
 func (s *session) write(packet *socket.Packet) (err error) {
-	if !s.IsOk() {
+	if s.isDisconnected() {
 		return ErrConnClosed
 	}
 
@@ -373,7 +373,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 
 	s.writeLock.Lock()
 
-	if !s.IsOk() {
+	if s.isDisconnected() {
 		s.writeLock.Unlock()
 		return ErrConnClosed
 	}
@@ -399,7 +399,12 @@ func (s *session) write(packet *socket.Packet) (err error) {
 
 // IsOk checks if the session is ok.
 func (s *session) IsOk() bool {
-	return atomic.LoadInt32(&s.disconnected) != 1
+	return atomic.LoadInt32(&s.disconnected) != 1 || atomic.LoadInt32(&s.closed) != 1
+}
+
+// isDisconnected checks if the session is ok.
+func (s *session) isDisconnected() bool {
+	return atomic.LoadInt32(&s.disconnected) == 1
 }
 
 // Close closes the session.
