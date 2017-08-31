@@ -251,7 +251,7 @@ func (p *Peer) getContext(s *session) *readHandleCtx {
 	p.ctxLock.Lock()
 	{
 		// count get context
-		s.graceWaitGroup.Add(1)
+		s.graceCtxWaitGroup.Add(1)
 	}
 	ctx := p.freeContext
 	if ctx == nil {
@@ -272,7 +272,7 @@ func (p *Peer) putContext(ctx *readHandleCtx) {
 	}()
 	{
 		// count get context
-		ctx.sess.graceWaitGroup.Done()
+		ctx.sess.graceCtxWaitGroup.Done()
 	}
 	ctx.clean()
 	ctx.next = p.freeContext

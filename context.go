@@ -538,9 +538,10 @@ func (p *PullCmd) cancel() {
 	}()
 	p.Xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
 	p.doneChan <- p
+	p.sess.pullCmdMap.Delete(p.output.Header.Seq)
 	{
 		// free count pull-launch
-		p.sess.graceWaitGroup.Done()
+		p.sess.gracePullCmdWaitGroup.Done()
 	}
 }
 
@@ -552,6 +553,6 @@ func (p *PullCmd) done() {
 	p.sess.pullCmdMap.Delete(p.output.Header.Seq)
 	{
 		// free count pull-launch
-		p.sess.graceWaitGroup.Done()
+		p.sess.gracePullCmdWaitGroup.Done()
 	}
 }

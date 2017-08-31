@@ -64,23 +64,24 @@ type (
 		Receive(packet *socket.Packet) error
 	}
 	session struct {
-		peer           *Peer
-		pullRouter     *Router
-		pushRouter     *Router
-		pushSeq        uint64
-		pushSeqLock    sync.Mutex
-		pullSeq        uint64
-		pullCmdMap     goutil.Map
-		pullSeqLock    sync.Mutex
-		socket         socket.Socket
-		closed         int32 // 0:false, 1:true
-		disconnected   int32 // 0:false, 1:true
-		closeLock      sync.RWMutex
-		disconnectLock sync.RWMutex
-		writeLock      sync.Mutex
-		graceWaitGroup sync.WaitGroup
-		readTimeout    int64 // time.Duration
-		writeTimeout   int64 // time.Duration
+		peer                  *Peer
+		pullRouter            *Router
+		pushRouter            *Router
+		pushSeq               uint64
+		pushSeqLock           sync.Mutex
+		pullSeq               uint64
+		pullCmdMap            goutil.Map
+		pullSeqLock           sync.Mutex
+		socket                socket.Socket
+		closed                int32 // 0:false, 1:true
+		disconnected          int32 // 0:false, 1:true
+		closeLock             sync.RWMutex
+		disconnectLock        sync.RWMutex
+		writeLock             sync.Mutex
+		graceCtxWaitGroup     sync.WaitGroup
+		gracePullCmdWaitGroup sync.WaitGroup
+		readTimeout           int64 // time.Duration
+		writeTimeout          int64 // time.Duration
 	}
 )
 
@@ -199,7 +200,7 @@ func (s *session) GoPull(uri string, args interface{}, reply interface{}, done c
 
 	{
 		// count pull-launch
-		s.graceWaitGroup.Add(1)
+		s.gracePullCmdWaitGroup.Add(1)
 	}
 
 	if s.socket.PublicLen() > 0 {
@@ -309,12 +310,12 @@ func (s *session) startReadAndHandle() {
 	)
 
 	// read pull, pull reple or push
-	for !s.isDisconnected() {
+	for s.IsOk() {
 		var ctx = s.peer.getContext(s)
 		err = s.peer.pluginContainer.PreReadHeader(ctx)
 		if err != nil {
 			s.peer.putContext(ctx)
-			s.markDisconnected(err, true)
+			s.readDisconnected(err)
 			return
 		}
 
@@ -324,11 +325,10 @@ func (s *session) startReadAndHandle() {
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
 			s.peer.putContext(ctx)
-			s.markDisconnected(err, true)
+			s.readDisconnected(err)
 			return
 		}
 
-		// s.socket.SetReadDeadline(time.Now().Add(time.Second))
 		Go(func() {
 			defer func() {
 				if p := recover(); p != nil {
@@ -362,7 +362,6 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	if s.isDisconnected() {
 		return ErrConnClosed
 	}
-
 	var (
 		writeTimeout = s.WriteTimeout()
 		now          time.Time
@@ -391,9 +390,6 @@ func (s *session) write(packet *socket.Packet) (err error) {
 		s.socket.SetWriteDeadline(now.Add(writeTimeout))
 	}
 	err = s.socket.WritePacket(packet)
-	// if err != nil {
-	// 	s.markDisconnected(err, false)
-	// }
 	return err
 }
 
@@ -407,8 +403,13 @@ func (s *session) isDisconnected() bool {
 	return atomic.LoadInt32(&s.disconnected) == 1
 }
 
+var (
+	deadlineForEndlessRead = time.Time{}
+	deadlineForStopRead    = time.Time{}.Add(1)
+)
+
 // Close closes the session.
-func (s *session) Close() error {
+func (s *session) Close() (err error) {
 	if atomic.LoadInt32(&s.closed) == 1 {
 		return nil
 	}
@@ -422,22 +423,32 @@ func (s *session) Close() error {
 
 	defer func() {
 		recover()
+
+		s.graceCtxWaitGroup.Wait()
+		s.gracePullCmdWaitGroup.Wait()
+
+		// make sure return s.readAndHandle
+		s.socket.SetReadDeadline(deadlineForStopRead)
+
+		err = s.socket.Close()
+
 		s.closeLock.Unlock()
 	}()
 
 	s.peer.sessHub.Delete(s.Id())
 
-	// make sure return s.readAndHandle
-	s.socket.SetReadDeadline(deadlineForStopRead)
+	if !s.isDisconnected() {
+		// make sure do not disconnect because of reading timeout.
+		// wait for the subsequent write to complete.
+		s.socket.SetReadDeadline(deadlineForEndlessRead)
+		// make sure skip s.readAndHandle
+		s.graceCtxWaitGroup.Done()
+	}
 
-	s.graceWaitGroup.Wait()
-
-	return s.socket.Close()
+	return
 }
 
-var deadlineForStopRead = time.Time{}.Add(1)
-
-func (s *session) markDisconnected(err error, isRead bool) {
+func (s *session) readDisconnected(err error) {
 	if atomic.LoadInt32(&s.closed) == 1 || atomic.LoadInt32(&s.disconnected) == 1 {
 		return
 	}
@@ -450,12 +461,10 @@ func (s *session) markDisconnected(err error, isRead bool) {
 	atomic.StoreInt32(&s.disconnected, 1)
 
 	if err != io.EOF && err != socket.ErrProactivelyCloseSocket {
-		if isRead {
-			Debugf("disconnected when reading: %s", err.Error())
-		} else {
-			Debugf("disconnected when writing: %s", err.Error())
-		}
+		Debugf("disconnected when reading: %s", err.Error())
 	}
+
+	s.graceCtxWaitGroup.Wait()
 
 	s.pullCmdMap.Range(func(_, v interface{}) bool {
 		pullCmd := v.(*PullCmd)

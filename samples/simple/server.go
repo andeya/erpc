@@ -46,7 +46,6 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, tp.Xe
 		"your_id": h.Query().Get("peer_id"),
 		"a":       1,
 	})
-	// time.Sleep(10e9)
 	return map[string]interface{}{
 		"your_args":   *args,
 		"server_time": time.Now(),
@@ -54,6 +53,7 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, tp.Xe
 }
 
 func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, tp.Xerror) {
+	time.Sleep(1)
 	var v = struct {
 		ConnPort int
 		jsoniter.RawMessage
