@@ -35,7 +35,7 @@ go get -u github.com/henrylee2cn/teleport
 
 - Server and client are peer-to-peer, have the same API method
 - Packet contains both Header and Body two parts
-- Support for customizing head and body coding types separately, e.g `JSON` `Protobuf`
+- Support for customizing head and body coding types separately, e.g `JSON` `Protobuf` `string`
 - Body supports gzip compression
 - Header contains the status code and its description text
 - Support push, pull, reply and other means of communication
