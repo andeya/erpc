@@ -280,11 +280,11 @@ func (c *readHandleCtx) handlePush() {
 }
 
 func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
-	c.output.Header.Seq = c.input.Header.Seq
+	c.output.Header.Seq = header.Seq
 	c.output.Header.Type = TypeReply
-	c.output.Header.Uri = c.input.Header.Uri
+	c.output.Header.Uri = header.Uri
 	c.output.HeaderCodec = c.input.HeaderCodec
-	c.output.Header.Gzip = c.input.Header.Gzip
+	c.output.Header.Gzip = header.Gzip
 
 	err := c.pluginContainer.PostReadHeader(c)
 	if err != nil {
