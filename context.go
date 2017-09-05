@@ -26,25 +26,26 @@ import (
 )
 
 type (
-	// PullCtx request handler context.
-	// For example:
-	//  type HomePull struct{ PullCtx }
-	PullCtx interface {
-		PushCtx
-		SetBodyCodec(string)
-	}
 	// PushCtx push handler context.
 	// For example:
 	//  type HomePush struct{ PushCtx }
 	PushCtx interface {
 		Uri() string
 		Path() string
+		RawQuery() string
 		Query() url.Values
 		Public() goutil.Map
 		PublicLen() int
 		Ip() string
 		Peer() *Peer
 		Session() Session
+	}
+	// PullCtx request handler context.
+	// For example:
+	//  type HomePull struct{ PullCtx }
+	PullCtx interface {
+		PushCtx
+		SetBodyCodec(string)
 	}
 	UnknownPullCtx interface {
 		PullCtx
@@ -179,7 +180,12 @@ func (c *readHandleCtx) Path() string {
 	return c.uri.Path
 }
 
-// Query returns the input packet uri query.
+// RawQuery returns the input packet uri query string.
+func (c *readHandleCtx) RawQuery() string {
+	return c.uri.RawQuery
+}
+
+// Query returns the input packet uri query object.
 func (c *readHandleCtx) Query() url.Values {
 	if c.query == nil {
 		c.query = c.uri.Query()
