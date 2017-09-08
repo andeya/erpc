@@ -19,9 +19,9 @@ const (
 	TypeUndefined int32 = 0
 	TypePull      int32 = 1
 	TypeReply     int32 = 2 // reply to pull
-	TypePush      int32 = 4
-	// TypeAuth      int32 = 5
-	// TypeHeartbeat int32 = 6
+	TypePush      int32 = 3
+	// TypeAuth      int32 = 4
+	// TypeHeartbeat int32 = 5
 )
 
 // Response Header status codes as registered with IANA.
