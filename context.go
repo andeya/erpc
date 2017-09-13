@@ -430,8 +430,9 @@ func (c *readHandleCtx) handleReply() {
 	if c.pullCmd.Xerror != nil {
 		return
 	}
-	err := c.pluginContainer.PostReadBody(c)
-	if err != nil {
+	if c.input.Header.StatusCode != StatusOK {
+		c.pullCmd.Xerror = NewXerror(c.input.Header.StatusCode, c.input.Header.Status)
+	} else if err := c.pluginContainer.PostReadBody(c); err != nil {
 		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
 	}
 }
