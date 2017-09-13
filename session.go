@@ -578,6 +578,7 @@ func (sh *SessionHub) Set(sess *session) {
 	if !loaded {
 		return
 	}
+	sh.sessions.Store(sess.Id(), sess)
 	if oldSess := _sess.(*session); sess != oldSess {
 		oldSess.Close()
 	}

@@ -39,6 +39,7 @@ func (sh *SocketHub) Set(socket Socket) {
 	if !loaded {
 		return
 	}
+	sh.sockets.Store(socket.Id(), socket)
 	if oldSocket := _socket.(Socket); socket != oldSocket {
 		oldSocket.Close()
 	}
