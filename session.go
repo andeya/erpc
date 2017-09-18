@@ -348,6 +348,7 @@ func (s *session) startReadAndHandle() {
 			case TypePull:
 				// handles and replies pull
 				ctx.handlePull()
+
 			default:
 				ctx.handleUnsupported()
 			}
