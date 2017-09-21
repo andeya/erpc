@@ -40,6 +40,12 @@ type (
 		Peer() *Peer
 		Session() Session
 	}
+	UnknownPushCtx interface {
+		PushCtx
+		InputHeader() *socket.Header
+		InputBodyBytes() []byte
+		Bind(v interface{}) (codecName string, err error)
+	}
 	// PullCtx request handler context.
 	// For example:
 	//  type HomePull struct{ PullCtx }
@@ -48,14 +54,8 @@ type (
 		SetBodyCodec(string)
 	}
 	UnknownPullCtx interface {
-		PullCtx
-		InputBodyBytes() []byte
-		Bind(v interface{}) (codecName string, err error)
-	}
-	UnknownPushCtx interface {
-		PushCtx
-		InputBodyBytes() []byte
-		Bind(v interface{}) (codecName string, err error)
+		UnknownPushCtx
+		SetBodyCodec(string)
 	}
 	// WriteCtx for writing packet.
 	WriteCtx interface {
@@ -153,6 +153,11 @@ func (c *readHandleCtx) Session() Session {
 // Input returns readed packet.
 func (c *readHandleCtx) Input() *socket.Packet {
 	return c.input
+}
+
+// InputHeader returns readed packet header.
+func (c *readHandleCtx) InputHeader() *socket.Header {
+	return c.input.Header
 }
 
 // Output returns writed packet.
