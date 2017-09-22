@@ -188,7 +188,6 @@ func (p *pluginContainer) PostDial(s ForeSession) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
 			if err := _plugin.PostDial(s); err != nil {
-				s.Close()
 				return errors.Errorf("PostDialPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}
@@ -200,7 +199,6 @@ func (p *pluginContainer) PostAccept(s ForeSession) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
 			if err := _plugin.PostAccept(s); err != nil {
-				s.Close()
 				return errors.Errorf("PostAcceptPlugin(%s): %s", plugin.Name(), err.Error())
 			}
 		}

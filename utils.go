@@ -56,7 +56,7 @@ func SetGopool(maxGoroutinesAmount int, maxGoroutineIdleDuration time.Duration) 
 }
 
 // Go go func
-func Go(fn func()) {
+func Go(fn func()) bool {
 	setGopoolOnce.Do(func() {
 		if _gopool == nil {
 			SetGopool(_maxGoroutinesAmount, _maxGoroutineIdleDuration)
@@ -64,7 +64,9 @@ func Go(fn func()) {
 	})
 	if err := _gopool.Go(fn); err != nil {
 		Warnf("%s", err.Error())
+		return false
 	}
+	return true
 }
 
 func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {

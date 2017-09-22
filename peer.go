@@ -106,12 +106,13 @@ func (p *Peer) Dial(addr string, id ...string) (Session, error) {
 	}
 	var sess = newSession(p, conn, id...)
 	if err = p.pluginContainer.PostDial(sess); err != nil {
+		Printf("post dial fail (addr: %s, id: %s) ", addr, sess.Id())
 		sess.Close()
 		return nil, err
 	}
 	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
+	Printf("dial ok (addr: %s, id: %s)", addr, sess.Id())
 	return sess, nil
 }
 
@@ -128,12 +129,13 @@ func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (Sess
 	}
 	var sess = newSession(p, conn, id...)
 	if err = p.pluginContainer.PostDial(sess); err != nil {
+		Printf("post dial fail (addr: %s, id: %s) ", addr, sess.Id())
 		sess.Close()
 		return nil, err
 	}
 	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Printf("dial(addr: %s, id: %s) ok", addr, sess.Id())
+	Printf("dial ok (addr: %s, id: %s)", addr, sess.Id())
 	return sess, nil
 }
 
@@ -172,7 +174,7 @@ func (p *Peer) listen(addr string) error {
 	p.listens = append(p.listens, lis)
 	defer lis.Close()
 
-	Printf("listen(addr: %s) ok", addr)
+	Printf("listen ok (addr: %s)", addr)
 
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
@@ -247,9 +249,9 @@ func (p *Peer) Close() (err error) {
 	return err
 }
 
-func (p *Peer) getContext(s *session) *readHandleCtx {
+func (p *Peer) getContext(s *session, withWg bool) *readHandleCtx {
 	p.ctxLock.Lock()
-	{
+	if withWg {
 		// count get context
 		s.graceCtxWaitGroup.Add(1)
 	}
@@ -264,13 +266,13 @@ func (p *Peer) getContext(s *session) *readHandleCtx {
 	return ctx
 }
 
-func (p *Peer) putContext(ctx *readHandleCtx) {
+func (p *Peer) putContext(ctx *readHandleCtx, withWg bool) {
 	p.ctxLock.Lock()
 	defer func() {
 		recover()
 		p.ctxLock.Unlock()
 	}()
-	{
+	if withWg {
 		// count get context
 		ctx.sess.graceCtxWaitGroup.Done()
 	}

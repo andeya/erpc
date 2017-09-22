@@ -247,7 +247,7 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	start := time.Now()
 
 	s.pushSeqLock.Lock()
-	ctx := s.peer.getContext(s)
+	ctx := s.peer.getContext(s, true)
 	output := ctx.output
 	header := output.Header
 	header.Seq = s.pushSeq
@@ -273,7 +273,7 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 		s.runlog(time.Since(ctx.start), nil, output)
-		s.peer.putContext(ctx)
+		s.peer.putContext(ctx, true)
 	}()
 
 	err = s.peer.pluginContainer.PreWritePush(ctx)
@@ -311,10 +311,10 @@ func (s *session) startReadAndHandle() {
 
 	// read pull, pull reple or push
 	for s.IsOk() {
-		var ctx = s.peer.getContext(s)
+		var ctx = s.peer.getContext(s, false)
 		err = s.peer.pluginContainer.PreReadHeader(ctx)
 		if err != nil {
-			s.peer.putContext(ctx)
+			s.peer.putContext(ctx, false)
 			s.readDisconnected(err)
 			return
 		}
@@ -322,19 +322,21 @@ func (s *session) startReadAndHandle() {
 		if readTimeout = s.ReadTimeout(); readTimeout > 0 {
 			s.socket.SetReadDeadline(time.Now().Add(readTimeout))
 		}
+
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
-			s.peer.putContext(ctx)
+			s.peer.putContext(ctx, false)
 			s.readDisconnected(err)
 			return
 		}
 
-		Go(func() {
+		s.graceCtxWaitGroup.Add(1)
+		if !Go(func() {
 			defer func() {
 				if p := recover(); p != nil {
 					Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 				}
-				s.peer.putContext(ctx)
+				s.peer.putContext(ctx, true)
 			}()
 			switch ctx.input.Header.Type {
 			case TypeReply:
@@ -352,7 +354,9 @@ func (s *session) startReadAndHandle() {
 			default:
 				ctx.handleUnsupported()
 			}
-		})
+		}) {
+			s.graceCtxWaitGroup.Done()
+		}
 	}
 }
 
@@ -428,7 +432,7 @@ func (s *session) Close() (err error) {
 		s.graceCtxWaitGroup.Wait()
 		s.gracePullCmdWaitGroup.Wait()
 
-		// make sure return s.readAndHandle
+		// make sure return s.startReadAndHandle
 		s.socket.SetReadDeadline(deadlineForStopRead)
 
 		err = s.socket.Close()
@@ -442,8 +446,6 @@ func (s *session) Close() (err error) {
 		// make sure do not disconnect because of reading timeout.
 		// wait for the subsequent write to complete.
 		s.socket.SetReadDeadline(deadlineForEndlessRead)
-		// make sure skip s.readAndHandle
-		s.graceCtxWaitGroup.Done()
 	}
 
 	return
