@@ -329,6 +329,10 @@ func (s *session) startReadAndHandle() {
 			s.readDisconnected(err)
 			return
 		}
+		if !s.IsOk() {
+			s.peer.putContext(ctx, false)
+			return
+		}
 
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
