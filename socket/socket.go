@@ -355,12 +355,12 @@ func (s *socket) readHeader(header *Header) (int64, string, error) {
 	err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
 
 	if err != nil {
-		return s.bufReader.Count(), getCodecName(codecId), err
+		return s.bufReader.Count(), GetCodecName(codecId), err
 	}
 
 	gd, err := s.getGzipDecoder(codecId)
 	if err != nil {
-		return s.bufReader.Count(), getCodecName(codecId), err
+		return s.bufReader.Count(), GetCodecName(codecId), err
 	}
 	err = gd.Decode(gzip.NoCompression, header)
 	return s.bufReader.Count(), gd.Name(), err
@@ -399,20 +399,20 @@ func (s *socket) readBody(gzipLevel int, body interface{}) (int64, string, error
 			return s.bufReader.Count(), "", err
 		}
 		_, err = io.Copy(ioutil.Discard, s.limitReader)
-		return s.bufReader.Count(), "", err
+		return s.bufReader.Count(), GetCodecNameFromBytes(bo), err
 
 	case *[]byte:
 		*bo, err = ioutil.ReadAll(s.limitReader)
-		return s.bufReader.Count(), "", err
+		return s.bufReader.Count(), GetCodecNameFromBytes(*bo), err
 
 	default:
 		err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
 		if err != nil {
-			return s.bufReader.Count(), getCodecName(codecId), err
+			return s.bufReader.Count(), GetCodecName(codecId), err
 		}
 		gd, err := s.getGzipDecoder(codecId)
 		if err != nil {
-			return s.bufReader.Count(), getCodecName(codecId), err
+			return s.bufReader.Count(), GetCodecName(codecId), err
 		}
 		err = gd.Decode(gzipLevel, body)
 		return s.bufReader.Count(), gd.Name(), err

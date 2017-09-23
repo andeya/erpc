@@ -128,6 +128,9 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 				ctx.output.Header.Status = xerr.Text()
 			} else {
 				ctx.output.Body = body
+				if len(ctx.output.BodyCodec) == 0 {
+					ctx.output.BodyCodec = ctx.input.BodyCodec
+				}
 			}
 		}
 
@@ -139,6 +142,9 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 		}
 		h.unknownHandleFunc = func(ctx *readHandleCtx) {
 			fn(ctx)
+			if len(ctx.output.BodyCodec) == 0 {
+				ctx.output.BodyCodec = ctx.input.BodyCodec
+			}
 		}
 	}
 

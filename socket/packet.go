@@ -216,7 +216,8 @@ func WithBodyGzip(gzipLevel int32) PacketSetting {
 	}
 }
 
-func getCodecId(codecName string) byte {
+// GetCodecId returns codec id.
+func GetCodecId(codecName string) byte {
 	c, err := codec.GetByName(codecName)
 	if err != nil {
 		return codec.NilCodecId
@@ -224,12 +225,21 @@ func getCodecId(codecName string) byte {
 	return c.Id()
 }
 
-func getCodecName(codecId byte) string {
+// GetCodecName returns codec name.
+func GetCodecName(codecId byte) string {
 	c, err := codec.GetById(codecId)
 	if err != nil {
 		return ""
 	}
 	return c.Name()
+}
+
+// GetCodecNameFromBytes returns codec name.
+func GetCodecNameFromBytes(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	return GetCodecName(b[0])
 }
 
 // Unmarshal unmarshals bytes to header or body receiver.
@@ -263,7 +273,7 @@ func Unmarshal(b []byte, v interface{}, isGzip bool) (codecName string, err erro
 	if isGzip {
 		r, err = gzip.NewReader(limitReader)
 		if err != nil {
-			return getCodecName(codecId), err
+			return GetCodecName(codecId), err
 		}
 		defer r.(*gzip.Reader).Close()
 	} else {
