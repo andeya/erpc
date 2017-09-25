@@ -24,6 +24,21 @@ const (
 	// TypeHeartbeat int32 = 5
 )
 
+// TypeText returns the packet type text.
+// If the type is undefined returns 'Undefined'.
+func TypeText(typ int32) string {
+	switch typ {
+	case TypePull:
+		return "PULL"
+	case TypeReply:
+		return "REPLY"
+	case TypePush:
+		return "PUSH"
+	default:
+		return "Undefined"
+	}
+}
+
 // Response Header status codes as registered with IANA.
 const (
 	StatusWriteFailed = 100
