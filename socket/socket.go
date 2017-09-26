@@ -133,7 +133,7 @@ type (
 		gzipWriterMap map[int]*gzip.Writer
 		gzipReader    *gzip.Reader
 		gzipEncodeMap map[string]*GzipEncoder // codecId:GzipEncoder
-		gzipDecodeMap map[byte]*GzipDecoder   // codecId:GzipEncoder
+		gzipDecodeMap map[byte]*GzipDecoder   // codecId:GzipDecoder
 		ctxPublic     goutil.Map
 		writeMutex    sync.Mutex // exclusive writer lock
 		readMutex     sync.Mutex // exclusive read lock
