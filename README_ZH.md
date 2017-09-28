@@ -53,14 +53,14 @@ go get -u github.com/henrylee2cn/teleport
 
 ### 4.1 名称解释
 
-- **Peer：**通信端点，可以是客户端或客户端
-- **Session：**连接会话，具有推、拉、回复、关闭等操作
-- **Context：**处理收到的或发送的数据包
-- **Pull-Launch：**从对端Peer拉数据
-- **Pull-Handle：**处理和回复对端Peer的拉请求
-- **Push-Launch：**将数据推送到对端Peer
-- **Push-Handle：**处理同伴的推送
-- **Router：**Handler注册路由
+- **Peer：** 通信端点，可以是客户端或客户端
+- **Session：** 连接会话，具有推、拉、回复、关闭等操作
+- **Context：** 处理收到的或发送的数据包
+- **Pull-Launch：** 从对端Peer拉数据
+- **Pull-Handle：** 处理和回复对端Peer的拉请求
+- **Push-Launch：** 将数据推送到对端Peer
+- **Push-Handle：** 处理同伴的推送
+- **Router：** Handler注册路由
 
 ### 4.2 执行层次
 
