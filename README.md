@@ -110,7 +110,7 @@ type Header struct {
 	Type int32
 	// Service URI
 	Uri string
-    // Gzip level [-2,9]
+	// Gzip level [-2,9]
 	Gzip int32
 	// As reply, it indicates the service status code
 	StatusCode int32
