@@ -390,16 +390,14 @@ func (s *socket) readBody(gzipLevel int, body interface{}) (int64, string, error
 	// read body
 	switch bo := body.(type) {
 	case nil:
-		_, err = io.Copy(ioutil.Discard, s.limitReader)
-		return s.bufReader.Count(), "", err
+		var codecName string
+		codecName, err = readAll(s.limitReader, make([]byte, 1))
+		return s.bufReader.Count(), codecName, err
 
 	case []byte:
-		_, err = s.limitReader.Read(bo)
-		if err != nil {
-			return s.bufReader.Count(), "", err
-		}
-		_, err = io.Copy(ioutil.Discard, s.limitReader)
-		return s.bufReader.Count(), GetCodecNameFromBytes(bo), err
+		var codecName string
+		codecName, err = readAll(s.limitReader, bo)
+		return s.bufReader.Count(), codecName, err
 
 	case *[]byte:
 		*bo, err = ioutil.ReadAll(s.limitReader)
@@ -417,6 +415,18 @@ func (s *socket) readBody(gzipLevel int, body interface{}) (int64, string, error
 		err = gd.Decode(gzipLevel, body)
 		return s.bufReader.Count(), gd.Name(), err
 	}
+}
+
+func readAll(reader io.Reader, p []byte) (string, error) {
+	perLen := len(p)
+	_, err := reader.Read(p[perLen:])
+	if err == nil {
+		_, err = io.Copy(ioutil.Discard, reader)
+	}
+	if len(p) > perLen {
+		return GetCodecName(p[perLen]), err
+	}
+	return "", err
 }
 
 // Public returns temporary public data of Socket.
