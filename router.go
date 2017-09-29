@@ -126,7 +126,7 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 			if xerr != nil {
 				ctx.output.Header.StatusCode = xerr.Code()
 				ctx.output.Header.Status = xerr.Text()
-			} else {
+			} else if body != nil {
 				ctx.output.Body = body
 				if len(ctx.output.BodyCodec) == 0 {
 					ctx.output.BodyCodec = ctx.input.BodyCodec
@@ -256,13 +256,15 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			ctrl := reflect.New(ctypeElem)
 			pullCtxPtr := ctrl.Pointer() + pullCtxOffset
 			*((*PullCtx)(unsafe.Pointer(pullCtxPtr))) = ctx
-			// ctrl.Elem().FieldByName("PullCtx").Set(reflect.ValueOf(ctx))
 			rets := methodFunc.Call([]reflect.Value{ctrl, argValue})
 			ctx.output.Body = rets[0].Interface()
-			xerr, ok := rets[1].Interface().(Xerror)
-			if ok && xerr != nil {
+			xerr, _ := rets[1].Interface().(Xerror)
+			if xerr != nil {
 				ctx.output.Header.StatusCode = xerr.Code()
 				ctx.output.Header.Status = xerr.Text()
+
+			} else if ctx.output.Body != nil && len(ctx.output.BodyCodec) == 0 {
+				ctx.output.BodyCodec = ctx.input.BodyCodec
 			}
 		}
 

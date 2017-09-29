@@ -372,10 +372,6 @@ func (c *readHandleCtx) handlePull() {
 	}
 
 	// reply pull
-	if len(c.output.BodyCodec) == 0 {
-		c.output.BodyCodec = c.input.BodyCodec
-	}
-
 	if err = c.pluginContainer.PreWriteReply(c); err != nil {
 		errStr := err.Error()
 		c.output.Body = nil

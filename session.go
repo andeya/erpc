@@ -282,6 +282,7 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	}
 	if len(output.BodyCodec) == 0 {
 		switch body := args.(type) {
+		case nil:
 		case []byte:
 			output.BodyCodec = socket.GetCodecNameFromBytes(body)
 		case *[]byte:
