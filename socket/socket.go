@@ -216,14 +216,25 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		packet.Length = s.bufWriter.Count()
 		packet.BodyLength = packet.Length - packet.HeaderLength
 	}()
+
 	// write body
 	switch bo := packet.Body.(type) {
 	case nil:
-		err = binary.Write(s.bufWriter, binary.BigEndian, uint32(0))
+		codecId := GetCodecId(packet.BodyCodec)
+		if codecId == codec.NilCodecId {
+			err = binary.Write(s.bufWriter, binary.BigEndian, uint32(0))
+		} else {
+			err = binary.Write(s.bufWriter, binary.BigEndian, uint32(1))
+			if err == nil {
+				err = binary.Write(s.bufWriter, binary.BigEndian, codecId)
+			}
+		}
+
 	case []byte:
 		err = s.writeBytesBody(bo)
 	case *[]byte:
@@ -405,7 +416,7 @@ func (s *socket) readBody(gzipLevel int, body interface{}) (int64, string, error
 
 	default:
 		err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
-		if err != nil {
+		if bodySize == 1 || err != nil {
 			return s.bufReader.Count(), GetCodecName(codecId), err
 		}
 		gd, err := s.getGzipDecoder(codecId)
