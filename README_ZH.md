@@ -77,10 +77,14 @@ HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
 
 **注意：**
 
-- HeaderLength: uint32, 4 bytes, big endian
-- BodyLength: uint32, 4 bytes, big endian
-- HeaderCodecId: uint8, 1 byte
-- BodyCodecId: uint8, 1 byte
+- `HeaderLength`: uint32, 4 bytes, big endian
+- `HeaderCodecId`: uint8, 1 byte
+- `Header`: header bytes
+- `BodyLength`: uint32, 4 bytes, big endian
+    * 可能为0，表示`Body`为空且不指明`BodyCodecId`
+    * 可能为1，表示`Body`为空但是指明`BodyCodecId`
+- `BodyCodecId`: uint8, 1 byte
+- `Body`: body bytes
 
 ```go
 type Packet struct {

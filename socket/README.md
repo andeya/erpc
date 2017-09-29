@@ -22,10 +22,14 @@ HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
 
 **Notes:**
 
-- HeaderLength: uint32, 4 bytes, big endian
-- BodyLength: uint32, 4 bytes, big endian
-- HeaderCodecId: uint8, 1 byte
-- BodyCodecId: uint8, 1 byte
+- `HeaderLength`: uint32, 4 bytes, big endian
+- `HeaderCodecId`: uint8, 1 byte
+- `Header`: header bytes
+- `BodyLength`: uint32, 4 bytes, big endian
+	* may be 0, meaning that the `Body` is empty and does not indicate the `BodyCodecId`
+	* may be 1, meaning that the `Body` is empty but indicates the `BodyCodecId`
+- `BodyCodecId`: uint8, 1 byte
+- `Body`: body bytes
 
 ```go
 type Packet struct {
@@ -56,7 +60,7 @@ type Header struct {
 	Type int32
 	// Service URI
 	Uri string
-	// Body gizp compression level
+	// Body gzip level [-2,9]
 	Gzip int32
 	// As reply, it indicates the service status code
 	StatusCode int32
