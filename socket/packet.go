@@ -245,11 +245,7 @@ func GetCodecNameFromBytes(b []byte) string {
 	if len(b) == 0 {
 		return ""
 	}
-	codecId := b[0]
-	if codecId == codec.NilCodecId {
-		return ""
-	}
-	return GetCodecName(codecId)
+	return GetCodecName(b[0])
 }
 
 // Unmarshal unmarshals bytes to header or body receiver.
