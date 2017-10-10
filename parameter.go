@@ -49,6 +49,7 @@ const (
 	StatusBadUri               = 400
 	StatusUnauthorized         = 401
 	StatusNotFound             = 404
+	StatusConflict             = 409
 	StatusUnsupportedTx        = 410
 	StatusUnsupportedCodecType = 415
 	StatusFailedPlugin         = 424
@@ -72,6 +73,7 @@ var statusText = map[int]string{
 	StatusBadUri:               "Bad URI",
 	StatusUnauthorized:         "Unauthorized",
 	StatusNotFound:             "Not Found",
+	StatusConflict:             "Conflict",
 	StatusUnsupportedTx:        "Unsupported transaction type",
 	StatusUnsupportedCodecType: "Unsupported codec type",
 	StatusFailedPlugin:         "Failed Plugin",
