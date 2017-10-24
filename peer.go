@@ -208,7 +208,8 @@ func (p *Peer) listen(addr string) error {
 		tempDelay = 0
 
 		func(sess *session) {
-			Go(func() {
+		TRYGO:
+			if !Go(func() {
 				if err := p.pluginContainer.PostAccept(sess); err != nil {
 					sess.Close()
 					Tracef("accept session(addr: %s, id: %s) error: %s", sess.RemoteIp(), sess.Id(), err.Error())
@@ -217,7 +218,10 @@ func (p *Peer) listen(addr string) error {
 				Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
 				p.sessHub.Set(sess)
 				sess.startReadAndHandle()
-			})
+			}) {
+				time.Sleep(time.Second)
+				goto TRYGO
+			}
 		}(newSession(p, rw))
 	}
 }
