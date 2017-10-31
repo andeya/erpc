@@ -241,9 +241,11 @@ func (p *Peer) Close() (err error) {
 	)
 	p.sessHub.Range(func(sess *session) bool {
 		count++
-		Go(func() {
+		if !Go(func() {
 			errCh <- sess.Close()
-		})
+		}) {
+			errCh <- sess.Close()
+		}
 		return true
 	})
 	for i := 0; i < count; i++ {

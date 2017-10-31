@@ -450,10 +450,6 @@ var (
 
 // Close closes the session.
 func (s *session) Close() (err error) {
-	if atomic.LoadInt32(&s.closed) == 1 {
-		return nil
-	}
-
 	s.closeLock.Lock()
 	if atomic.LoadInt32(&s.closed) == 1 {
 		s.closeLock.Unlock()
@@ -472,10 +468,9 @@ func (s *session) Close() (err error) {
 
 		err = s.socket.Close()
 
+		s.peer.sessHub.Delete(s.Id())
 		s.closeLock.Unlock()
 	}()
-
-	s.peer.sessHub.Delete(s.Id())
 
 	if !s.isDisconnected() {
 		// make sure do not disconnect because of reading timeout.
