@@ -25,6 +25,7 @@ import (
 
 	"github.com/henrylee2cn/go-logging/color"
 	"github.com/henrylee2cn/goutil"
+	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
 	"github.com/json-iterator/go"
 
@@ -303,6 +304,8 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	err = s.peer.pluginContainer.PreWritePush(ctx)
 	if err == nil {
 		if err = s.write(output); err == nil {
+			// DEBUG:
+			// Debugf("push: s.write(output) SUCC")
 			err = s.peer.pluginContainer.PostWritePush(ctx)
 		}
 	}
@@ -344,16 +347,20 @@ func (s *session) startReadAndHandle() {
 		}
 
 		if readTimeout = s.ReadTimeout(); readTimeout > 0 {
-			s.socket.SetReadDeadline(time.Now().Add(readTimeout))
+			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout + time.Second - 1))
 		}
 
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil {
 			s.peer.putContext(ctx, false)
+			// DEBUG:
+			// Debugf("s.socket.ReadPacket(ctx.input): err: %v", err)
 			s.readDisconnected(err)
 			return
 		}
 		if !s.IsOk() {
+			// DEBUG:
+			// Debugf("s.socket.ReadPacket(ctx.input): s.IsOk()==false")
 			s.peer.putContext(ctx, false)
 			return
 		}
