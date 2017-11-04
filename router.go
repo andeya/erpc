@@ -49,13 +49,6 @@ type (
 	HandlersMaker func(string, interface{}, PluginContainer) ([]*Handler, error)
 )
 
-// const (
-// 	kindPullHandle uint8 = iota
-// 	kindPushHandle
-// 	kindUnknownPullHandle
-// 	kindUnknownPushHandle
-// )
-
 // Group add handler group.
 func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 	pluginContainer, err := r.pluginContainer.cloneAdd(plugin...)
