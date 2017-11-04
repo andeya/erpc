@@ -39,8 +39,11 @@ func TypeText(typ int32) string {
 	}
 }
 
-// Response Header status codes as registered with IANA.
+// Common response header status as registered with IANA.
+// Note: Recommended custom status code is greater than 1000.
 const (
+	StatusUndefined = 0
+
 	StatusWriteFailed = 100
 	StatusConnClosed  = 101
 
@@ -52,7 +55,7 @@ const (
 	StatusConflict             = 409
 	StatusUnsupportedTx        = 410
 	StatusUnsupportedCodecType = 415
-	StatusFailedPlugin         = 424
+	// StatusFailedPlugin         = 424
 
 	StatusInternalServerError           = 500
 	StatusNotImplemented                = 501
@@ -67,7 +70,8 @@ const (
 )
 
 var statusText = map[int]string{
-	StatusWriteFailed:          "write failed",
+	StatusUndefined:            "Undefined Status",
+	StatusWriteFailed:          "Write Failed",
 	StatusConnClosed:           "Connection Closed",
 	StatusOK:                   "OK",
 	StatusBadUri:               "Bad URI",
@@ -76,7 +80,7 @@ var statusText = map[int]string{
 	StatusConflict:             "Conflict",
 	StatusUnsupportedTx:        "Unsupported transaction type",
 	StatusUnsupportedCodecType: "Unsupported codec type",
-	StatusFailedPlugin:         "Failed Plugin",
+	// StatusFailedPlugin:         "Failed Plugin",
 
 	StatusInternalServerError:           "Internal Server Error",
 	StatusNotImplemented:                "Not Implemented",

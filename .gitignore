@@ -29,5 +29,7 @@ _testmain.go
 
 samples/simple/client
 samples/simple/server
+samples/ab/frame_client_ab
+samples/ab/server
 socket/example/client
 socket/example/server

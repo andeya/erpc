@@ -106,13 +106,12 @@ func (p *Peer) Dial(addr string, id ...string) (Session, error) {
 	}
 	var sess = newSession(p, conn, id...)
 	if err = p.pluginContainer.PostDial(sess); err != nil {
-		Printf("post dial fail (addr: %s, id: %s) ", addr, sess.Id())
 		sess.Close()
 		return nil, err
 	}
 	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Printf("dial ok (addr: %s, id: %s)", addr, sess.Id())
+	Infof("dial ok (addr: %s, id: %s)", addr, sess.Id())
 	return sess, nil
 }
 
@@ -129,13 +128,12 @@ func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (Sess
 	}
 	var sess = newSession(p, conn, id...)
 	if err = p.pluginContainer.PostDial(sess); err != nil {
-		Printf("post dial fail (addr: %s, id: %s) ", addr, sess.Id())
 		sess.Close()
 		return nil, err
 	}
 	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Printf("dial ok (addr: %s, id: %s)", addr, sess.Id())
+	Infof("dial ok (addr: %s, id: %s)", addr, sess.Id())
 	return sess, nil
 }
 
@@ -212,7 +210,6 @@ func (p *Peer) listen(addr string) error {
 			if !Go(func() {
 				if err := p.pluginContainer.PostAccept(sess); err != nil {
 					sess.Close()
-					Tracef("accept session(addr: %s, id: %s) error: %s", sess.RemoteIp(), sess.Id(), err.Error())
 					return
 				}
 				Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())

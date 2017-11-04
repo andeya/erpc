@@ -241,7 +241,7 @@ func (p *AliasPlugin) Name() string {
 }
 
 // PostReadHeader converts the alias of this service.
-func (p *AliasPlugin) PostReadHeader(ctx tp.ReadCtx) error {
+func (p *AliasPlugin) PostReadHeader(ctx tp.ReadCtx) tp.Xerror {
 	var u = ctx.Input().Header.Uri
 	if p.Aliases != nil {
 		if a = p.Aliases[u]; a != "" {

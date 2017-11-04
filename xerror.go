@@ -54,8 +54,16 @@ func (e *xerr) Text() string {
 
 func (e *xerr) Error() string {
 	if len(e.json) == 0 {
-		b, _ := json.Marshal(e)
-		e.json = goutil.BytesToString(b)
+		json.Marshal(e)
 	}
 	return e.json
+}
+
+func (e *xerr) MarshalJSON() ([]byte, error) {
+	if len(e.json) == 0 {
+		b, _ := json.Marshal(*e)
+		e.json = goutil.BytesToString(b)
+		return b, nil
+	}
+	return goutil.StringToBytes(e.json), nil
 }

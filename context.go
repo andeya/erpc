@@ -233,12 +233,11 @@ func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
 }
 
 func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
-	err := c.pluginContainer.PostReadHeader(c)
+	var err error
+	err = c.pluginContainer.PostReadHeader(c)
 	if err != nil {
-		Errorf("%s", err.Error())
 		return nil
 	}
-
 	c.uri, err = url.Parse(header.Uri)
 	if err != nil {
 		return nil
@@ -256,7 +255,6 @@ func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
 
 	err = c.pluginContainer.PreReadBody(c)
 	if err != nil {
-		Errorf("%s", err.Error())
 		return nil
 	}
 
@@ -279,7 +277,6 @@ func (c *readHandleCtx) handlePush() {
 
 	err := c.pluginContainer.PostReadBody(c)
 	if err != nil {
-		Errorf("%s", err.Error())
 		return
 	}
 
@@ -297,15 +294,13 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 	c.output.HeaderCodec = c.input.HeaderCodec
 	c.output.Header.Gzip = header.Gzip
 
-	err := c.pluginContainer.PostReadHeader(c)
-	if err != nil {
-		errStr := err.Error()
-		Errorf("%s", errStr)
-		c.output.Header.StatusCode = StatusFailedPlugin
-		c.output.Header.Status = errStr
+	xerr := c.pluginContainer.PostReadHeader(c)
+	if xerr != nil {
+		c.output.Header.StatusCode = xerr.Code()
+		c.output.Header.Status = xerr.Text()
 		return nil
 	}
-
+	var err error
 	c.uri, err = url.Parse(header.Uri)
 	if err != nil {
 		c.output.Header.StatusCode = StatusBadUri
@@ -329,12 +324,10 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 		c.input.Body = c.arg.Interface()
 	}
 
-	err = c.pluginContainer.PreReadBody(c)
-	if err != nil {
-		errStr := err.Error()
-		Errorf("%s", errStr)
-		c.output.Header.StatusCode = StatusFailedPlugin
-		c.output.Header.Status = errStr
+	xerr = c.pluginContainer.PreReadBody(c)
+	if xerr != nil {
+		c.output.Header.StatusCode = xerr.Code()
+		c.output.Header.Status = xerr.Text()
 		return nil
 	}
 
@@ -352,13 +345,10 @@ func (c *readHandleCtx) handlePull() {
 		c.cost = time.Since(c.start)
 		c.sess.runlog(c.cost, c.input, c.output)
 	}()
-	err := c.pluginContainer.PostReadBody(c)
-	if err != nil {
-		errStr := err.Error()
-		Errorf("%s", errStr)
-		c.output.Header.Status = errStr
-		c.output.Header.StatusCode = StatusFailedPlugin
-		c.output = nil
+	xerr := c.pluginContainer.PostReadBody(c)
+	if xerr != nil {
+		c.output.Header.StatusCode = xerr.Code()
+		c.output.Header.Status = xerr.Text()
 	}
 
 	// handle pull
@@ -372,24 +362,14 @@ func (c *readHandleCtx) handlePull() {
 	}
 
 	// reply pull
-	if err = c.pluginContainer.PreWriteReply(c); err != nil {
-		errStr := err.Error()
-		c.output.Body = nil
-		if statusOK {
-			c.output.Header.StatusCode = StatusFailedPlugin
-			c.output.Header.Status = errStr
-		}
-		Errorf("%s", errStr)
-	}
+	c.pluginContainer.PreWriteReply(c)
 
-	if err = c.sess.write(c.output); err != nil {
+	if err := c.sess.write(c.output); err != nil {
 		c.output.Header.StatusCode = StatusWriteFailed
 		c.output.Header.Status = StatusText(StatusWriteFailed) + ": " + err.Error()
 	}
 
-	if err = c.pluginContainer.PostWriteReply(c); err != nil {
-		Errorf("%s", err.Error())
-	}
+	c.pluginContainer.PostWriteReply(c)
 }
 
 func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
@@ -401,14 +381,14 @@ func (c *readHandleCtx) bindReply(header *socket.Header) interface{} {
 	c.pullCmd = pullCmd.(*PullCmd)
 	c.public = c.pullCmd.public
 
-	err := c.pluginContainer.PostReadHeader(c)
-	if err != nil {
-		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
+	xerr := c.pluginContainer.PostReadHeader(c)
+	if xerr != nil {
+		c.pullCmd.Xerror = xerr
 		return nil
 	}
-	err = c.pluginContainer.PreReadBody(c)
-	if err != nil {
-		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
+	xerr = c.pluginContainer.PreReadBody(c)
+	if xerr != nil {
+		c.pullCmd.Xerror = xerr
 		return nil
 	}
 	return c.pullCmd.reply
@@ -433,8 +413,8 @@ func (c *readHandleCtx) handleReply() {
 	}
 	if c.input.Header.StatusCode != StatusOK {
 		c.pullCmd.Xerror = NewXerror(c.input.Header.StatusCode, c.input.Header.Status)
-	} else if err := c.pluginContainer.PostReadBody(c); err != nil {
-		c.pullCmd.Xerror = NewXerror(StatusFailedPlugin, err.Error())
+	} else if xerr := c.pluginContainer.PostReadBody(c); xerr != nil {
+		c.pullCmd.Xerror = xerr
 	}
 }
 
@@ -446,12 +426,7 @@ func (c *readHandleCtx) handleUnsupported() {
 		c.cost = time.Since(c.start)
 		c.sess.runlog(c.cost, c.input, c.output)
 	}()
-	err := c.pluginContainer.PostReadBody(c)
-	if err != nil {
-		errStr := err.Error()
-		Errorf("%s", errStr)
-	}
-
+	c.pluginContainer.PostReadBody(c)
 	c.output.Header.StatusCode = StatusUnsupportedTx
 	c.output.Header.Status = StatusText(StatusUnsupportedTx)
 	c.output.Body = nil
@@ -460,18 +435,15 @@ func (c *readHandleCtx) handleUnsupported() {
 		c.output.BodyCodec = c.input.BodyCodec
 	}
 
-	if err = c.pluginContainer.PreWriteReply(c); err != nil {
-		Errorf("%s", err.Error())
-	}
+	c.pluginContainer.PreWriteReply(c)
 
-	if err = c.sess.write(c.output); err != nil {
+	err := c.sess.write(c.output)
+	if err != nil {
 		c.output.Header.StatusCode = StatusWriteFailed
 		c.output.Header.Status = StatusText(StatusWriteFailed) + ": " + err.Error()
 	}
 
-	if err = c.pluginContainer.PostWriteReply(c); err != nil {
-		Errorf("%s", err.Error())
-	}
+	c.pluginContainer.PostWriteReply(c)
 }
 
 // InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.

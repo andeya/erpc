@@ -228,14 +228,12 @@ func (s *session) GoPull(uri string, args interface{}, reply interface{}, done c
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 	}()
-
+	var err error
 	s.pullCmdMap.Store(output.Header.Seq, cmd)
-	err := s.peer.pluginContainer.PreWritePull(cmd)
+	err = s.peer.pluginContainer.PreWritePull(cmd)
 	if err == nil {
 		if err = s.write(output); err == nil {
-			if err = s.peer.pluginContainer.PostWritePull(cmd); err != nil {
-				Errorf("%s", err.Error())
-			}
+			s.peer.pluginContainer.PostWritePull(cmd)
 			return
 		}
 	}
@@ -342,7 +340,7 @@ func (s *session) startReadAndHandle() {
 		err = s.peer.pluginContainer.PreReadHeader(ctx)
 		if err != nil {
 			s.peer.putContext(ctx, false)
-			s.readDisconnected(err)
+			s.readDisconnected(nil)
 			return
 		}
 
@@ -493,7 +491,7 @@ func (s *session) readDisconnected(err error) {
 
 	atomic.StoreInt32(&s.disconnected, 1)
 
-	if err != io.EOF && err != socket.ErrProactivelyCloseSocket {
+	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnected when reading: %s", err.Error())
 	}
 

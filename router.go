@@ -91,9 +91,7 @@ func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 		if _, ok := r.handlers[h.name]; ok {
 			Fatalf("There is a %s handler conflict: %s", r.typ, h.name)
 		}
-		if err = pluginContainer.PostReg(h); err != nil {
-			Fatalf("%v", err)
-		}
+		pluginContainer.PostReg(h)
 		r.handlers[h.name] = h
 		Printf("register %s handler: %s", r.typ, h.name)
 	}
