@@ -85,9 +85,12 @@ func (sh *SocketHub) Delete(id string) {
 }
 
 // ChangeId changes the socket id.
+// Note: if the old id is remoteAddr, won't delete the index from socketHub.
 func (sh *SocketHub) ChangeId(newId string, socket Socket) {
 	oldId := socket.Id()
-	socket.ChangeId(newId)
+	socket.SetId(newId)
 	sh.Set(socket)
-	sh.Delete(oldId)
+	if oldId != socket.RemoteAddr().String() {
+		sh.Delete(oldId)
+	}
 }

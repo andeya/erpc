@@ -117,8 +117,8 @@ type (
 		PublicLen() int
 		// Id returns the socket id.
 		Id() string
-		// ChangeId changes the socket id.
-		ChangeId(string)
+		// SetId sets the socket id.
+		SetId(string)
 	}
 	socket struct {
 		net.Conn
@@ -464,8 +464,8 @@ func (s *socket) Id() string {
 	return id
 }
 
-// ChangeId changes the socket id.
-func (s *socket) ChangeId(id string) {
+// SetId sets the socket id.
+func (s *socket) SetId(id string) {
 	s.idMutex.Lock()
 	s.id = id
 	s.idMutex.Unlock()
@@ -479,7 +479,7 @@ func (s *socket) Reset(netConn net.Conn, id ...string) {
 	}
 	s.readMutex.Lock()
 	s.writeMutex.Lock()
-	s.ChangeId(getId(netConn, id))
+	s.SetId(getId(netConn, id))
 	s.Conn = netConn
 	s.bufReader.Reset(netConn)
 	s.bufWriter.Reset(netConn)

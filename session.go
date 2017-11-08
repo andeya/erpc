@@ -35,35 +35,66 @@ import (
 // Session a connection session.
 type (
 	Session interface {
-		ChangeId(newId string)
+		// SetId sets the session id.
+		SetId(newId string)
+		// Close closes the session.
 		Close() error
-		GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting)
+		// Id returns the session id.
 		Id() string
+		// IsOk checks if the session is ok.
 		IsOk() bool
+		// Peer returns the peer.
 		Peer() *Peer
+		// GoPull sends a packet and receives reply asynchronously.
+		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
+		GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting)
+		// Pull sends a packet and receives reply.
+		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
 		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd
+		// Push sends a packet, but do not receives reply.
+		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
 		Push(uri string, args interface{}, setting ...socket.PacketSetting) error
+		// ReadTimeout returns readdeadline for underlying net.Conn.
 		ReadTimeout() time.Duration
+		// RemoteIp returns the remote peer ip.
 		RemoteIp() string
+		// ReadTimeout returns readdeadline for underlying net.Conn.
 		SetReadTimeout(duration time.Duration)
+		// WriteTimeout returns writedeadline for underlying net.Conn.
 		SetWriteTimeout(duration time.Duration)
-		Socket() socket.Socket
+		// Socket returns the Socket.
+		// Socket() socket.Socket
+		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
+		// Public returns temporary public data of session(socket).
 		Public() goutil.Map
+		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
 	}
 	ForeSession interface {
-		ChangeId(newId string)
+		// SetId sets the session id.
+		SetId(newId string)
+		// Close closes the session.
 		Close() error
+		// Id returns the session id.
 		Id() string
+		// IsOk checks if the session is ok.
 		IsOk() bool
+		// Peer returns the peer.
 		Peer() *Peer
+		// RemoteIp returns the remote peer ip.
 		RemoteIp() string
+		// ReadTimeout returns readdeadline for underlying net.Conn.
 		SetReadTimeout(duration time.Duration)
+		// WriteTimeout returns writedeadline for underlying net.Conn.
 		SetWriteTimeout(duration time.Duration)
+		// Public returns temporary public data of session(socket).
 		Public() goutil.Map
+		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
+		// Send sends packet to peer.
 		Send(packet *socket.Packet) error
+		// Receive receives a packet from peer.
 		Receive(packet *socket.Packet) error
 	}
 	session struct {
@@ -112,21 +143,25 @@ func (s *session) Peer() *Peer {
 }
 
 // Socket returns the Socket.
-func (s *session) Socket() socket.Socket {
-	return s.socket
-}
+// func (s *session) Socket() socket.Socket {
+// 	return s.socket
+// }
 
 // Id returns the session id.
 func (s *session) Id() string {
 	return s.socket.Id()
 }
 
-// ChangeId changes the session id.
-func (s *session) ChangeId(newId string) {
+// SetId sets the session id.
+// Note: if the old id is remoteAddr, won't delete the index from sessionHub.
+func (s *session) SetId(newId string) {
 	oldId := s.Id()
-	s.socket.ChangeId(newId)
-	s.peer.sessHub.Set(s)
-	s.peer.sessHub.Delete(oldId)
+	s.socket.SetId(newId)
+	hub := s.peer.sessHub
+	hub.Set(s)
+	if oldId != s.RemoteIp() {
+		hub.Delete(oldId)
+	}
 	Tracef("session changes id: %s -> %s", oldId, newId)
 }
 
