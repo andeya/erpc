@@ -9,16 +9,10 @@
 			"revisionTime": "2017-08-05T07:10:05Z"
 		},
 		{
-			"checksumSHA1": "Z3rLqE/xWEcSO7DtOIShxulCcoc=",
-			"path": "github.com/henrylee2cn/goutil",
-			"revision": "1e9ceda79fd30f7392e722092f12c9183b20af79",
-			"revisionTime": "2017-08-05T10:55:36Z"
-		},
-		{
-			"checksumSHA1": "wLse5xjB4Ga0UXU16yIEjgMDWFI=",
-			"path": "github.com/henrylee2cn/goutil/errors",
-			"revision": "1e9ceda79fd30f7392e722092f12c9183b20af79",
-			"revisionTime": "2017-08-05T10:55:36Z"
+			"checksumSHA1": "9IBgkhnUGUdgdnwnyRY8zS97Jcc=",
+			"path": "github.com/json-iterator/go",
+			"revision": "92772579dd0d6dbbca395ebc5db8b559ebcb1798",
+			"revisionTime": "2017-09-15T14:08:45Z"
 		}
 	],
 	"rootPath": "github.com/henrylee2cn/teleport"
