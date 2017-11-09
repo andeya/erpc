@@ -27,8 +27,6 @@ import (
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
-	"github.com/json-iterator/go"
-
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -628,7 +626,7 @@ func bodyLogBytes(packet *socket.Packet) []byte {
 		}
 		return buf.Bytes()
 	default:
-		b, _ := jsoniter.MarshalIndent(v, "", "  ")
+		b, _ := json.MarshalIndent(v, " ", "  ")
 		return b
 	}
 }

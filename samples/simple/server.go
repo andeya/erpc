@@ -1,9 +1,8 @@
 package main
 
 import (
+	"encoding/json"
 	"time"
-
-	"github.com/json-iterator/go"
 
 	tp "github.com/henrylee2cn/teleport"
 )

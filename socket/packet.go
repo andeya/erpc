@@ -20,12 +20,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"encoding/json"
 	"io"
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
-	json "github.com/json-iterator/go"
-
 	"github.com/henrylee2cn/teleport/codec"
 )
 

@@ -15,7 +15,7 @@
 package tp
 
 import (
-	json "github.com/json-iterator/go"
+	"encoding/json"
 
 	"github.com/henrylee2cn/goutil"
 )
