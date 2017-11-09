@@ -39,7 +39,7 @@ func (s *socket) getGzipEncoder(codecName string) (*GzipEncoder, error) {
 	if err != nil {
 		return nil, err
 	}
-	w := s.cacheWriter
+	w := s.tmpWriter
 	enc := c.NewEncoder(w)
 	g = &GzipEncoder{
 		id:            c.Id(),
