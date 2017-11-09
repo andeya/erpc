@@ -59,11 +59,11 @@ func main() {
 			"/group/home/test_unknown?peer_id=client9091",
 			struct {
 				ConnPort int
-				jsoniter.RawMessage
+				json.RawMessage
 				Bytes []byte
 			}{
 				9091,
-				jsoniter.RawMessage(`{"RawMessage":"test9091"}`),
+				json.RawMessage(`{"RawMessage":"test9091"}`),
 				[]byte("bytes-test"),
 			},
 			&reply,
