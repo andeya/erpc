@@ -11,25 +11,13 @@ A concise, powerful and high-performance TCP connection socket.
 - Header and Body can use different coding types
 - Body supports gzip compression
 - Header contains the status code and its description text
+- Support custom communication protocol
 - Each socket is assigned an id
 - Provides `Socket` hub, `Socket` pool and `*Packet` stack
 
 ## Packet
 
-```
-HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
-```
-
-**Notes:**
-
-- `HeaderLength`: uint32, 4 bytes, big endian
-- `HeaderCodecId`: uint8, 1 byte
-- `Header`: header bytes
-- `BodyLength`: uint32, 4 bytes, big endian
-	* may be 0, meaning that the `Body` is empty and does not indicate the `BodyCodecId`
-	* may be 1, meaning that the `Body` is empty but indicates the `BodyCodecId`
-- `BodyCodecId`: uint8, 1 byte
-- `Body`: body bytes
+The contents of every one packet:
 
 ```go
 type Packet struct {
@@ -50,7 +38,7 @@ type Packet struct {
 }
 ```
 
-## Header
+Among the contents of the header:
 
 ```go
 type Header struct {
@@ -67,6 +55,57 @@ type Header struct {
 	// As reply, it indicates the service status text
 	Status string
 }
+```
+
+## Protocol
+
+The default socket communication protocol:
+
+```
+HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
+```
+
+**Notes:**
+
+- `HeaderLength`: uint32, 4 bytes, big endian
+- `HeaderCodecId`: uint8, 1 byte
+- `Header`: header bytes
+- `BodyLength`: uint32, 4 bytes, big endian
+	* may be 0, meaning that the `Body` is empty and does not indicate the `BodyCodecId`
+	* may be 1, meaning that the `Body` is empty but indicates the `BodyCodecId`
+- `BodyCodecId`: uint8, 1 byte
+- `Body`: body bytes
+
+You can customize your own communication protocol by implementing the interface:
+
+```go
+// Protocol socket communication protocol
+type Protocol interface {
+	// WritePacket writes header and body to the connection.
+	WritePacket(
+		packet *Packet,
+		destWriter *utils.BufioWriter,
+		tmpCodecWriterGetter func(codecName string) (*TmpCodecWriter, error),
+		isActiveClosed func() bool,
+	) error
+
+	// ReadPacket reads header and body from the connection.
+	ReadPacket(
+		packet *Packet,
+		bodyAdapter func() interface{},
+		srcReader *utils.BufioReader,
+		codecReaderGetter func(codecId byte) (*CodecReader, error),
+		isActiveClosed func() bool,
+	) error
+}
+```
+
+Next, you can specify the communication protocol in the following ways:
+
+```go
+func SetDefaultProtocol(Protocol)
+func GetSocket(net.Conn, ...Protocol) Socket
+func NewSocket(net.Conn, ...Protocol) Socket
 ```
 
 ## Demo

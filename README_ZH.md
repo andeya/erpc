@@ -38,6 +38,7 @@ go get -u github.com/henrylee2cn/teleport
 - 服务器和客户端之间对等通信，两者API方法基本一致
 - 底层通信数据包包含`Header`和`Body`两部分
 - 支持单独定制`Header`和`Body`编码类型，例如`JSON` `Protobuf` `string`
+- 支持定制通信协议
 - `Body`支持gzip压缩
 - `Header`包含状态码及其描述文本
 - 支持推、拉、回复等通信模式
@@ -68,30 +69,16 @@ go get -u github.com/henrylee2cn/teleport
 Peer -> Connection -> Socket -> Session -> Context
 ```
 
+### 4.3 包内容
 
-### 4.3 数据包
-
-```
-HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
-```
-
-**注意：**
-
-- `HeaderLength`: uint32, 4 bytes, big endian
-- `HeaderCodecId`: uint8, 1 byte
-- `Header`: header bytes
-- `BodyLength`: uint32, 4 bytes, big endian
-    * 可能为0，表示`Body`为空且不指明`BodyCodecId`
-    * 可能为1，表示`Body`为空但是指明`BodyCodecId`
-- `BodyCodecId`: uint8, 1 byte
-- `Body`: body bytes
+每个数据包的内容如下:
 
 ```go
 type Packet struct {
-    // HeaderCodec header codec name
-    HeaderCodec string `json:"header_codec"`
-    // BodyCodec body codec name
-    BodyCodec string `json:"body_codec"`
+    // HeaderCodec header codec string
+    HeaderCodec string
+    // BodyCodec body codec string
+    BodyCodec string
     // header content
     Header *Header `json:"header"`
     // body content
@@ -105,7 +92,7 @@ type Packet struct {
 }
 ```
 
-### 4.4 头信息
+其中头部内容为:
 
 ```go
 type Header struct {
@@ -123,6 +110,62 @@ type Header struct {
     Status string
 }
 ```
+
+
+### 4.4 通信协议
+
+默认的通信协议：
+
+```
+HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
+```
+
+**注意：**
+
+- `HeaderLength`: uint32, 4 bytes, big endian
+- `HeaderCodecId`: uint8, 1 byte
+- `Header`: header bytes
+- `BodyLength`: uint32, 4 bytes, big endian
+    * 可能为0，表示`Body`为空且不指明`BodyCodecId`
+    * 可能为1，表示`Body`为空但是指明`BodyCodecId`
+- `BodyCodecId`: uint8, 1 byte
+- `Body`: body bytes
+
+
+你可以通过实现接口的方法定制自己的通信协议：
+
+```go
+// Protocol socket communication protocol
+type Protocol interface {
+    // WritePacket writes header and body to the connection.
+    WritePacket(
+        packet *Packet,
+        destWriter *utils.BufioWriter,
+        tmpCodecWriterGetter func(codecName string) (*TmpCodecWriter, error),
+        isActiveClosed func() bool,
+    ) error
+
+    // ReadPacket reads header and body from the connection.
+    ReadPacket(
+        packet *Packet,
+        bodyAdapter func() interface{},
+        srcReader *utils.BufioReader,
+        codecReaderGetter func(codecId byte) (*CodecReader, error),
+        isActiveClosed func() bool,
+    ) error
+}
+```
+
+接着，你可以使用以下任意方式指定自己的通信协议：
+
+```go
+func SetDefaultProtocol(socket.Protocol)
+func (*Peer) ServeConn(conn net.Conn, protocol ...socket.Protocol) Session
+func (*Peer) DialContext(ctx context.Context, addr string, protocol ...socket.Protocol) (Session, error)
+func (*Peer) Dial(addr string, protocol ...socket.Protocol) (Session, error)
+func (*Peer) Listen(protocol ...socket.Protocol) error
+```
+
 
 ## 5. 用法
 
@@ -152,7 +195,7 @@ var peer = tp.NewPeer(cfg)
 peer.Listen()
 
 // It can also be used as a client at the same time
-var sess, err = peer.Dial("127.0.0.1:8080", "peerid-client")
+var sess, err = peer.Dial("127.0.0.1:8080")
 if err != nil {
     tp.Panicf("%v", err)
 }
@@ -368,7 +411,7 @@ func main() {
     peer.PushRouter.Reg(new(Push))
 
     {
-        var sess, err = peer.Dial("127.0.0.1:9090", "simple_server:9090")
+        var sess, err = peer.Dial("127.0.0.1:9090")
         if err != nil {
             tp.Panicf("%v", err)
         }

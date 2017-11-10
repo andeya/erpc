@@ -24,6 +24,7 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
+	"github.com/henrylee2cn/teleport/socket"
 )
 
 // Peer peer which is server or client.
@@ -89,14 +90,14 @@ func (p *Peer) GetSession(sessionId string) (Session, bool) {
 }
 
 // ServeConn serves the connection and returns a session.
-func (p *Peer) ServeConn(conn net.Conn, id ...string) Session {
-	var session = newSession(p, conn, id...)
+func (p *Peer) ServeConn(conn net.Conn, protocol ...socket.Protocol) Session {
+	var session = newSession(p, conn, protocol)
 	p.sessHub.Set(session)
 	return session
 }
 
 // Dial connects with the peer of the destination address.
-func (p *Peer) Dial(addr string, id ...string) (Session, error) {
+func (p *Peer) Dial(addr string, protocol ...socket.Protocol) (Session, error) {
 	var conn, err = net.DialTimeout("tcp", addr, p.defaultDialTimeout)
 	if err != nil {
 		return nil, err
@@ -104,7 +105,7 @@ func (p *Peer) Dial(addr string, id ...string) (Session, error) {
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	var sess = newSession(p, conn, id...)
+	var sess = newSession(p, conn, protocol)
 	if err = p.pluginContainer.PostDial(sess); err != nil {
 		sess.Close()
 		return nil, err
@@ -117,7 +118,7 @@ func (p *Peer) Dial(addr string, id ...string) (Session, error) {
 
 // DialContext connects with the peer of the destination address,
 // using the provided context.
-func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (Session, error) {
+func (p *Peer) DialContext(ctx context.Context, addr string, protocol ...socket.Protocol) (Session, error) {
 	var d net.Dialer
 	var conn, err = d.DialContext(ctx, "tcp", addr)
 	if err != nil {
@@ -126,7 +127,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (Sess
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	var sess = newSession(p, conn, id...)
+	var sess = newSession(p, conn, protocol)
 	if err = p.pluginContainer.PostDial(sess); err != nil {
 		sess.Close()
 		return nil, err
@@ -141,7 +142,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, id ...string) (Sess
 var ErrListenClosed = errors.New("listener is closed")
 
 // Listen turns on the listening service.
-func (p *Peer) Listen() error {
+func (p *Peer) Listen(protocol ...socket.Protocol) error {
 	var (
 		wg    sync.WaitGroup
 		count = len(p.listenAddrs)
@@ -151,7 +152,7 @@ func (p *Peer) Listen() error {
 	for _, addr := range p.listenAddrs {
 		go func(addr string) {
 			defer wg.Done()
-			errCh <- p.listen(addr)
+			errCh <- p.listen(addr, protocol)
 		}(addr)
 	}
 	wg.Wait()
@@ -164,7 +165,7 @@ func (p *Peer) Listen() error {
 	return errs
 }
 
-func (p *Peer) listen(addr string) error {
+func (p *Peer) listen(addr string, protocols []socket.Protocol) error {
 	var lis, err = listen(addr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
@@ -219,7 +220,7 @@ func (p *Peer) listen(addr string) error {
 				time.Sleep(time.Second)
 				goto TRYGO
 			}
-		}(newSession(p, rw))
+		}(newSession(p, rw, protocols))
 	}
 }
 

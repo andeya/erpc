@@ -30,7 +30,7 @@ func main() {
 
 	var peer = tp.NewPeer(cfg)
 
-	var sess, err = peer.Dial("127.0.0.1:9090", "simple_server:9090")
+	var sess, err = peer.Dial("127.0.0.1:9090")
 	if err != nil {
 		tp.Panicf("%v", err)
 	}

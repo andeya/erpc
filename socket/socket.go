@@ -29,9 +29,6 @@ package socket
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/binary"
-	"io"
-	"io/ioutil"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -39,8 +36,6 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
-
-	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/utils"
 )
 
@@ -85,8 +80,6 @@ type (
 		SetWriteDeadline(t time.Time) error
 
 		// WritePacket writes header and body to the connection.
-		// WritePacket can be made to time out and return an Error with Timeout() == true
-		// after a fixed time limit; see SetDeadline and SetWriteDeadline.
 		// Note: must be safe for concurrent use by multiple goroutines.
 		WritePacket(packet *Packet) error
 
@@ -122,28 +115,30 @@ type (
 	}
 	socket struct {
 		net.Conn
-		id          string
-		idMutex     sync.RWMutex
-		bufioWriter *utils.BufioWriter
-		bufioReader *utils.BufioReader
+		id        string
+		idMutex   sync.RWMutex
+		ctxPublic goutil.Map
+		protocol  Protocol
+		curState  int32
+		fromPool  bool
 
-		tmpWriter   *bytes.Buffer
-		limitReader *utils.LimitedReader
+		// about write
+		bufioWriter       *utils.BufioWriter
+		tmpCodecWriterMap map[string]*TmpCodecWriter // codecId:TmpCodecWriter
+		tmpGzipWriterMap  map[int]*gzip.Writer
+		tmpBufferWriter   *bytes.Buffer
+		writeMutex        sync.Mutex // exclusive writer lock
 
-		gzipWriterMap map[int]*gzip.Writer
-		gzipReader    *gzip.Reader
-		gzipEncodeMap map[string]*GzipEncoder // codecId:GzipEncoder
-		gzipDecodeMap map[byte]*GzipDecoder   // codecId:GzipDecoder
-		ctxPublic     goutil.Map
-		writeMutex    sync.Mutex // exclusive writer lock
-		readMutex     sync.Mutex // exclusive read lock
-		curState      int32
-		fromPool      bool
+		// about read
+		bufioReader    *utils.BufioReader
+		codecReaderMap map[byte]*CodecReader // codecId:CodecReader
+		gzipReader     *gzip.Reader
+		readMutex      sync.Mutex // exclusive read lock
 	}
 )
 
 const (
-	idle        int32 = 0
+	normal      int32 = 0
 	activeClose int32 = 1
 )
 
@@ -153,37 +148,39 @@ var _ net.Conn = Socket(nil)
 var ErrProactivelyCloseSocket = errors.New("socket is closed proactively")
 
 // GetSocket gets a Socket from pool, and reset it.
-func GetSocket(c net.Conn, id ...string) Socket {
+func GetSocket(c net.Conn, protocol ...Protocol) Socket {
 	s := socketPool.Get().(*socket)
-	s.Reset(c, id...)
+	s.Reset(c, protocol...)
 	return s
 }
 
 var socketPool = sync.Pool{
 	New: func() interface{} {
-		s := NewSocket(nil)
+		s := newSocket(nil, nil)
 		s.fromPool = true
 		return s
 	},
 }
 
 // NewSocket wraps a net.Conn as a Socket.
-func NewSocket(c net.Conn, id ...string) *socket {
+func NewSocket(c net.Conn, protocol ...Protocol) Socket {
+	return newSocket(c, protocol)
+}
+
+func newSocket(c net.Conn, protocols []Protocol) *socket {
 	bufioWriter := utils.NewBufioWriter(c)
 	bufioReader := utils.NewBufioReader(c)
-	tmpWriter := bytes.NewBuffer(nil)
-	limitReader := utils.LimitReader(bufioReader, 0)
+	tmpBufferWriter := bytes.NewBuffer(nil)
 	var s = &socket{
-		id:            getId(c, id),
-		Conn:          c,
-		bufioWriter:   bufioWriter,
-		bufioReader:   bufioReader,
-		tmpWriter:     tmpWriter,
-		limitReader:   limitReader,
-		gzipWriterMap: make(map[int]*gzip.Writer),
-		gzipReader:    new(gzip.Reader),
-		gzipEncodeMap: make(map[string]*GzipEncoder),
-		gzipDecodeMap: make(map[byte]*GzipDecoder),
+		protocol:          getProtocol(protocols),
+		Conn:              c,
+		bufioWriter:       bufioWriter,
+		tmpBufferWriter:   tmpBufferWriter,
+		bufioReader:       bufioReader,
+		tmpGzipWriterMap:  make(map[int]*gzip.Writer),
+		gzipReader:        new(gzip.Reader),
+		tmpCodecWriterMap: make(map[string]*TmpCodecWriter),
+		codecReaderMap:    make(map[byte]*CodecReader),
 	}
 	return s
 }
@@ -197,115 +194,13 @@ func NewSocket(c net.Conn, id ...string) *socket {
 func (s *socket) WritePacket(packet *Packet) (err error) {
 	s.writeMutex.Lock()
 	defer func() {
-		if err != nil && atomic.LoadInt32(&s.curState) == activeClose {
+		if err != nil && s.isActiveClosed() {
 			err = ErrProactivelyCloseSocket
 		}
 		s.writeMutex.Unlock()
 	}()
 	s.bufioWriter.ResetCount()
-
-	if len(packet.HeaderCodec) == 0 {
-		packet.HeaderCodec = defaultHeaderCodec.Name()
-	}
-
-	// write header
-	err = s.writeHeader(packet.HeaderCodec, packet.Header)
-	packet.HeaderLength = s.bufioWriter.Count()
-	packet.Length = packet.HeaderLength
-	packet.BodyLength = 0
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		packet.Length = s.bufioWriter.Count()
-		packet.BodyLength = packet.Length - packet.HeaderLength
-	}()
-
-	// write body
-	switch bo := packet.Body.(type) {
-	case nil:
-		codecId := GetCodecId(packet.BodyCodec)
-		if codecId == codec.NilCodecId {
-			err = binary.Write(s.bufioWriter, binary.BigEndian, uint32(0))
-		} else {
-			err = binary.Write(s.bufioWriter, binary.BigEndian, uint32(1))
-			if err == nil {
-				err = binary.Write(s.bufioWriter, binary.BigEndian, codecId)
-			}
-		}
-
-	case []byte:
-		err = s.writeBytesBody(bo)
-	case *[]byte:
-		err = s.writeBytesBody(*bo)
-	default:
-		if len(packet.BodyCodec) == 0 {
-			packet.BodyCodec = defaultBodyCodec.Name()
-		}
-		err = s.writeBody(packet.BodyCodec, int(packet.Header.Gzip), bo)
-	}
-	if err != nil {
-		return err
-	}
-	return s.bufioWriter.Flush()
-}
-
-func (s *socket) writeHeader(codecName string, header *Header) error {
-	s.tmpWriter.Reset()
-	tmpGzipEncoder, err := s.getTmpGzipEncoder(codecName)
-	if err != nil {
-		return err
-	}
-	err = binary.Write(s.tmpWriter, binary.BigEndian, tmpGzipEncoder.Id())
-	if err != nil {
-		return err
-	}
-	err = tmpGzipEncoder.Encode(gzip.NoCompression, header)
-	if err != nil {
-		return err
-	}
-	headerSize := uint32(s.tmpWriter.Len())
-	err = binary.Write(s.bufioWriter, binary.BigEndian, headerSize)
-	if err != nil {
-		return err
-	}
-	_, err = s.tmpWriter.WriteTo(s.bufioWriter)
-	return err
-}
-
-func (s *socket) writeBytesBody(body []byte) error {
-	bodySize := uint32(len(body))
-	err := binary.Write(s.bufioWriter, binary.BigEndian, bodySize)
-	if err != nil {
-		return err
-	}
-	_, err = s.bufioWriter.Write(body)
-	return err
-}
-
-func (s *socket) writeBody(codecName string, gzipLevel int, body interface{}) error {
-	s.tmpWriter.Reset()
-	tmpGzipEncoder, err := s.getTmpGzipEncoder(codecName)
-	if err != nil {
-		return err
-	}
-	err = binary.Write(s.tmpWriter, binary.BigEndian, tmpGzipEncoder.Id())
-	if err != nil {
-		return err
-	}
-	err = tmpGzipEncoder.Encode(gzipLevel, body)
-	if err != nil {
-		return err
-	}
-	// write body to socket buffer
-	bodySize := uint32(s.tmpWriter.Len())
-	err = binary.Write(s.bufioWriter, binary.BigEndian, bodySize)
-	if err != nil {
-		return err
-	}
-	_, err = s.tmpWriter.WriteTo(s.bufioWriter)
-	return err
+	return s.protocol.WritePacket(packet, s.bufioWriter, s.getTmpCodecWriter, s.isActiveClosed)
 }
 
 // ReadPacket reads header and body from the connection.
@@ -315,129 +210,7 @@ func (s *socket) writeBody(codecName string, gzipLevel int, body interface{}) er
 func (s *socket) ReadPacket(packet *Packet) error {
 	s.readMutex.Lock()
 	defer s.readMutex.Unlock()
-	var (
-		hErr, bErr error
-		b          interface{}
-	)
-
-	packet.HeaderLength, packet.HeaderCodec, hErr = s.readHeader(packet.Header)
-	if hErr == nil {
-		b = packet.loadBody()
-	} else {
-		if hErr == io.EOF || hErr == io.ErrUnexpectedEOF {
-			packet.Length = packet.HeaderLength
-			packet.BodyLength = 0
-			packet.BodyCodec = ""
-			return hErr
-		} else if atomic.LoadInt32(&s.curState) == activeClose {
-			packet.Length = packet.HeaderLength
-			packet.BodyLength = 0
-			packet.BodyCodec = ""
-			return ErrProactivelyCloseSocket
-		}
-	}
-
-	packet.BodyLength, packet.BodyCodec, bErr = s.readBody(int(packet.Header.Gzip), b)
-	packet.Length = packet.HeaderLength + packet.BodyLength
-	if atomic.LoadInt32(&s.curState) == activeClose {
-		return ErrProactivelyCloseSocket
-	}
-	return bErr
-}
-
-// readHeader reads header from the connection.
-// readHeader can be made to time out and return an Error with Timeout() == true
-// after a fixed time limit; see SetDeadline and SetReadDeadline.
-// Note: must use only one goroutine call.
-func (s *socket) readHeader(header *Header) (int64, string, error) {
-	s.bufioReader.ResetCount()
-	var (
-		headerSize uint32
-		codecId    = codec.NilCodecId
-	)
-
-	err := binary.Read(s.bufioReader, binary.BigEndian, &headerSize)
-	if err != nil {
-		return s.bufioReader.Count(), "", err
-	}
-
-	s.limitReader.ResetLimit(int64(headerSize))
-
-	err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
-
-	if err != nil {
-		return s.bufioReader.Count(), GetCodecName(codecId), err
-	}
-
-	gd, err := s.getGzipDecoder(codecId)
-	if err != nil {
-		return s.bufioReader.Count(), GetCodecName(codecId), err
-	}
-	err = gd.Decode(gzip.NoCompression, header)
-	return s.bufioReader.Count(), gd.Name(), err
-}
-
-// readBody reads body from the connection.
-// readBody can be made to time out and return an Error with Timeout() == true
-// after a fixed time limit; see SetDeadline and SetReadDeadline.
-// Note: must use only one goroutine call, and it must be called after calling the readHeader().
-func (s *socket) readBody(gzipLevel int, body interface{}) (int64, string, error) {
-	s.bufioReader.ResetCount()
-	var (
-		bodySize uint32
-		codecId  = codec.NilCodecId
-	)
-
-	err := binary.Read(s.bufioReader, binary.BigEndian, &bodySize)
-	if err != nil {
-		return s.bufioReader.Count(), "", err
-	}
-	if bodySize == 0 {
-		return s.bufioReader.Count(), "", err
-	}
-
-	s.limitReader.ResetLimit(int64(bodySize))
-
-	// read body
-	switch bo := body.(type) {
-	case nil:
-		var codecName string
-		codecName, err = readAll(s.limitReader, make([]byte, 1))
-		return s.bufioReader.Count(), codecName, err
-
-	case []byte:
-		var codecName string
-		codecName, err = readAll(s.limitReader, bo)
-		return s.bufioReader.Count(), codecName, err
-
-	case *[]byte:
-		*bo, err = ioutil.ReadAll(s.limitReader)
-		return s.bufioReader.Count(), GetCodecNameFromBytes(*bo), err
-
-	default:
-		err = binary.Read(s.limitReader, binary.BigEndian, &codecId)
-		if bodySize == 1 || err != nil {
-			return s.bufioReader.Count(), GetCodecName(codecId), err
-		}
-		gd, err := s.getGzipDecoder(codecId)
-		if err != nil {
-			return s.bufioReader.Count(), GetCodecName(codecId), err
-		}
-		err = gd.Decode(gzipLevel, body)
-		return s.bufioReader.Count(), gd.Name(), err
-	}
-}
-
-func readAll(reader io.Reader, p []byte) (string, error) {
-	perLen := len(p)
-	_, err := reader.Read(p[perLen:])
-	if err == nil {
-		_, err = io.Copy(ioutil.Discard, reader)
-	}
-	if len(p) > perLen {
-		return GetCodecName(p[perLen]), err
-	}
-	return "", err
+	return s.protocol.ReadPacket(packet, packet.bodyAdapter, s.bufioReader, s.getCodecReader, s.isActiveClosed)
 }
 
 // Public returns temporary public data of Socket.
@@ -460,6 +233,9 @@ func (s *socket) PublicLen() int {
 func (s *socket) Id() string {
 	s.idMutex.RLock()
 	id := s.id
+	if len(id) == 0 {
+		id = s.RemoteAddr().String()
+	}
 	s.idMutex.RUnlock()
 	return id
 }
@@ -472,18 +248,19 @@ func (s *socket) SetId(id string) {
 }
 
 // Reset reset net.Conn
-func (s *socket) Reset(netConn net.Conn, id ...string) {
+func (s *socket) Reset(netConn net.Conn, protocol ...Protocol) {
 	atomic.StoreInt32(&s.curState, activeClose)
 	if s.Conn != nil {
 		s.Conn.Close()
 	}
 	s.readMutex.Lock()
 	s.writeMutex.Lock()
-	s.SetId(getId(netConn, id))
+	s.SetId("")
+	s.protocol = getProtocol(protocol)
 	s.Conn = netConn
 	s.bufioReader.Reset(netConn)
 	s.bufioWriter.Reset(netConn)
-	atomic.StoreInt32(&s.curState, idle)
+	atomic.StoreInt32(&s.curState, normal)
 	s.readMutex.Unlock()
 	s.writeMutex.Unlock()
 }
@@ -492,7 +269,7 @@ func (s *socket) Reset(netConn net.Conn, id ...string) {
 // Any blocked Read or Write operations will be unblocked and return errors.
 // If it is from 'GetSocket()' function(a pool), return itself to pool.
 func (s *socket) Close() error {
-	if atomic.LoadInt32(&s.curState) == activeClose {
+	if s.isActiveClosed() {
 		return nil
 	}
 	atomic.StoreInt32(&s.curState, activeClose)
@@ -509,12 +286,12 @@ func (s *socket) Close() error {
 		s.writeMutex.Unlock()
 	}()
 
-	if atomic.LoadInt32(&s.curState) == activeClose {
+	if s.isActiveClosed() {
 		return nil
 	}
 
 	s.closeGzipReader()
-	for _, gz := range s.gzipWriterMap {
+	for _, gz := range s.tmpGzipWriterMap {
 		errs = append(errs, gz.Close())
 	}
 	if s.fromPool {
@@ -527,6 +304,10 @@ func (s *socket) Close() error {
 	return errors.Merge(errs...)
 }
 
+func (s *socket) isActiveClosed() bool {
+	return atomic.LoadInt32(&s.curState) == activeClose
+}
+
 func (s *socket) closeGzipReader() {
 	defer func() {
 		recover()
@@ -534,12 +315,20 @@ func (s *socket) closeGzipReader() {
 	s.gzipReader.Close()
 }
 
-func getId(c net.Conn, ids []string) string {
-	var id string
-	if len(ids) > 0 && len(ids[0]) > 0 {
-		id = ids[0]
-	} else if c != nil {
-		id = c.RemoteAddr().String()
+func getProtocol(protocols []Protocol) Protocol {
+	if len(protocols) > 0 {
+		return protocols[0]
+	} else {
+		return defaultProtocol
 	}
-	return id
 }
+
+// func getId(c net.Conn, ids []string) string {
+// 	var id string
+// 	if len(ids) > 0 && len(ids[0]) > 0 {
+// 		id = ids[0]
+// 	} else if c != nil {
+// 		id = c.RemoteAddr().String()
+// 	}
+// 	return id
+// }

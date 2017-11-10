@@ -36,6 +36,7 @@ go get -u github.com/henrylee2cn/teleport
 - Server and client are peer-to-peer, have the same API method
 - Packet contains both Header and Body two parts
 - Support for customizing head and body coding types separately, e.g `JSON` `Protobuf` `string`
+- Support custom communication protocol
 - Body supports gzip compression
 - Header contains the status code and its description text
 - Support push, pull, reply and other means of communication
@@ -67,30 +68,16 @@ go get -u github.com/henrylee2cn/teleport
 Peer -> Connection -> Socket -> Session -> Context
 ```
 
-
 ### 4.3 Packet
 
-```
-HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
-```
-
-**Notes:**
-
-- `HeaderLength`: uint32, 4 bytes, big endian
-- `HeaderCodecId`: uint8, 1 byte
-- `Header`: header bytes
-- `BodyLength`: uint32, 4 bytes, big endian
-	* may be 0, meaning that the `Body` is empty and does not indicate the `BodyCodecId`
-	* may be 1, meaning that the `Body` is empty but indicates the `BodyCodecId`
-- `BodyCodecId`: uint8, 1 byte
-- `Body`: body bytes
+The contents of every one packet:
 
 ```go
 type Packet struct {
-	// HeaderCodec header codec name
-	HeaderCodec string `json:"header_codec"`
-	// BodyCodec body codec name
-	BodyCodec string `json:"body_codec"`
+	// HeaderCodec header codec string
+	HeaderCodec string
+	// BodyCodec body codec string
+	BodyCodec string
 	// header content
 	Header *Header `json:"header"`
 	// body content
@@ -104,7 +91,7 @@ type Packet struct {
 }
 ```
 
-### 4.4 Header
+Among the contents of the header:
 
 ```go
 type Header struct {
@@ -122,6 +109,60 @@ type Header struct {
 	Status string
 }
 ```
+
+### 4.4 Protocol
+
+The default socket communication protocol:
+
+```
+HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
+```
+
+**Notes:**
+
+- `HeaderLength`: uint32, 4 bytes, big endian
+- `HeaderCodecId`: uint8, 1 byte
+- `Header`: header bytes
+- `BodyLength`: uint32, 4 bytes, big endian
+	* may be 0, meaning that the `Body` is empty and does not indicate the `BodyCodecId`
+	* may be 1, meaning that the `Body` is empty but indicates the `BodyCodecId`
+- `BodyCodecId`: uint8, 1 byte
+- `Body`: body bytes
+
+You can customize your own communication protocol by implementing the interface:
+
+```go
+// Protocol socket communication protocol
+type Protocol interface {
+	// WritePacket writes header and body to the connection.
+	WritePacket(
+		packet *Packet,
+		destWriter *utils.BufioWriter,
+		tmpCodecWriterGetter func(codecName string) (*TmpCodecWriter, error),
+		isActiveClosed func() bool,
+	) error
+
+	// ReadPacket reads header and body from the connection.
+	ReadPacket(
+		packet *Packet,
+		bodyAdapter func() interface{},
+		srcReader *utils.BufioReader,
+		codecReaderGetter func(codecId byte) (*CodecReader, error),
+		isActiveClosed func() bool,
+	) error
+}
+```
+
+Next, you can specify the communication protocol in the following ways:
+
+```go
+func SetDefaultProtocol(socket.Protocol)
+func (*Peer) ServeConn(conn net.Conn, protocol ...socket.Protocol) Session
+func (*Peer) DialContext(ctx context.Context, addr string, protocol ...socket.Protocol) (Session, error)
+func (*Peer) Dial(addr string, protocol ...socket.Protocol) (Session, error)
+func (*Peer) Listen(protocol ...socket.Protocol) error
+```
+
 
 ## 5. Usage
 
@@ -151,7 +192,7 @@ var peer = tp.NewPeer(cfg)
 peer.Listen()
 
 // It can also be used as a client at the same time
-var sess, err = peer.Dial("127.0.0.1:8080", "peerid-client")
+var sess, err = peer.Dial("127.0.0.1:8080")
 if err != nil {
 	tp.Panicf("%v", err)
 }
@@ -367,7 +408,7 @@ func main() {
 	peer.PushRouter.Reg(new(Push))
 
 	{
-		var sess, err = peer.Dial("127.0.0.1:9090", "simple_server:9090")
+		var sess, err = peer.Dial("127.0.0.1:9090")
 		if err != nil {
 			tp.Panicf("%v", err)
 		}
