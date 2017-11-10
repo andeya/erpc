@@ -30,7 +30,7 @@ type GzipEncoder struct {
 	encMaker      func(io.Writer) codec.Encoder
 }
 
-func (s *socket) getGzipEncoder(codecName string) (*GzipEncoder, error) {
+func (s *socket) getTmpGzipEncoder(codecName string) (*GzipEncoder, error) {
 	g, ok := s.gzipEncodeMap[codecName]
 	if ok {
 		return g, nil

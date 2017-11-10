@@ -253,15 +253,15 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 
 func (s *socket) writeHeader(codecName string, header *Header) error {
 	s.tmpWriter.Reset()
-	ge, err := s.getGzipEncoder(codecName)
+	tmpGzipEncoder, err := s.getTmpGzipEncoder(codecName)
 	if err != nil {
 		return err
 	}
-	err = binary.Write(s.tmpWriter, binary.BigEndian, ge.Id())
+	err = binary.Write(s.tmpWriter, binary.BigEndian, tmpGzipEncoder.Id())
 	if err != nil {
 		return err
 	}
-	err = ge.Encode(gzip.NoCompression, header)
+	err = tmpGzipEncoder.Encode(gzip.NoCompression, header)
 	if err != nil {
 		return err
 	}
@@ -286,15 +286,15 @@ func (s *socket) writeBytesBody(body []byte) error {
 
 func (s *socket) writeBody(codecName string, gzipLevel int, body interface{}) error {
 	s.tmpWriter.Reset()
-	ge, err := s.getGzipEncoder(codecName)
+	tmpGzipEncoder, err := s.getTmpGzipEncoder(codecName)
 	if err != nil {
 		return err
 	}
-	err = binary.Write(s.tmpWriter, binary.BigEndian, ge.Id())
+	err = binary.Write(s.tmpWriter, binary.BigEndian, tmpGzipEncoder.Id())
 	if err != nil {
 		return err
 	}
-	err = ge.Encode(gzipLevel, body)
+	err = tmpGzipEncoder.Encode(gzipLevel, body)
 	if err != nil {
 		return err
 	}
