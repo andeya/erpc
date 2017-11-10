@@ -298,6 +298,16 @@ func init() {
 	SetDefaultBodyCodec("json")
 }
 
+// GetDefaultHeaderCodec gets the header default codec.
+func GetDefaultHeaderCodec() codec.Codec {
+	return defaultHeaderCodec
+}
+
+// GetDefaultBodyCodec gets the body default codec.
+func GetDefaultBodyCodec() codec.Codec {
+	return defaultBodyCodec
+}
+
 // SetDefaultHeaderCodec set the default header codec.
 // Note:
 //  If the codec.Codec named 'codecName' is not registered, it will panic;
