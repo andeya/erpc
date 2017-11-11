@@ -151,15 +151,15 @@ func (s *session) Id() string {
 }
 
 // SetId sets the session id.
-// Note: if the old id is remoteAddr, won't delete the index from sessionHub.
 func (s *session) SetId(newId string) {
 	oldId := s.Id()
+	if oldId == newId {
+		return
+	}
 	s.socket.SetId(newId)
 	hub := s.peer.sessHub
 	hub.Set(s)
-	if oldId != s.RemoteIp() {
-		hub.Delete(oldId)
-	}
+	hub.Delete(oldId)
 	Tracef("session changes id: %s -> %s", oldId, newId)
 }
 
