@@ -117,8 +117,9 @@ func newReadHandleCtx() *readHandleCtx {
 
 func (c *readHandleCtx) reInit(s *session) {
 	c.sess = s
-	c.public = goutil.RwMap()
-	if s.socket.PublicLen() > 0 {
+	count := s.socket.PublicLen()
+	c.public = goutil.RwMap(count)
+	if count > 0 {
 		s.socket.Public().Range(func(key, value interface{}) bool {
 			c.public.Store(key, value)
 			return true
