@@ -87,8 +87,8 @@ type Packet struct {
     HeaderLength int64 `json:"header_length"`
     // body length
     BodyLength int64 `json:"body_length"`
-    // HeaderLength + BodyLength
-    Length int64 `json:"length"`
+    // packet size
+    Size int64 `json:"size"`
 }
 ```
 
@@ -152,6 +152,7 @@ type Protocol interface {
         srcReader *utils.BufioReader,
         codecReaderGetter func(codecId byte) (*CodecReader, error),
         isActiveClosed func() bool,
+        checkReadLimit func(int64) error,
     ) error
 }
 ```

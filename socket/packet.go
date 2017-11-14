@@ -21,7 +21,9 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
+	"math"
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
@@ -42,8 +44,8 @@ type Packet struct {
 	HeaderLength int64 `json:"header_length"`
 	// body length
 	BodyLength int64 `json:"body_length"`
-	// HeaderLength + BodyLength
-	Length int64 `json:"length"`
+	// packet size
+	Size int64 `json:"size"`
 	// get body by header
 	// Note:
 	//  only for writing packet;
@@ -137,7 +139,7 @@ func (p *Packet) Reset(bodyGetting func(*Header) interface{}, settings ...Packet
 	p.Body = nil
 	p.HeaderLength = 0
 	p.BodyLength = 0
-	p.Length = 0
+	p.Size = 0
 	p.HeaderCodec = ""
 	p.BodyCodec = ""
 	for _, f := range settings {
@@ -341,4 +343,31 @@ func AddCodecToBytes(codecId byte, body []byte) []byte {
 	buf[0] = codecId
 	copy(buf[1:], body)
 	return buf
+}
+
+var (
+	packetReadLimit    int64 = math.MaxInt64
+	ErrExceedReadLimit       = errors.New("Size of package exceeds limit.")
+)
+
+// GetReadLimit gets the packet size upper limit of reading.
+func GetReadLimit() int64 {
+	return packetReadLimit
+}
+
+// GetPacketReadLimit sets max packet size.
+// If maxSize<=0, set it to max int64.
+func SetReadLimit(maxPacketSize int64) {
+	if maxPacketSize <= 0 {
+		packetReadLimit = math.MaxInt64
+	} else {
+		packetReadLimit = maxPacketSize
+	}
+}
+
+func checkReadLimit(packetSize int64) error {
+	if packetSize > packetReadLimit {
+		return ErrExceedReadLimit
+	}
+	return nil
 }

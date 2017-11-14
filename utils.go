@@ -45,6 +45,15 @@ var SetDefaultProtocol = socket.SetDefaultProtocol
 //  func PutPacket(p *socket.Packet)
 var PutPacket = socket.PutPacket
 
+// GetReadLimit gets the packet size upper limit of reading.
+//  func GetReadLimit() int64
+var GetReadLimit = socket.GetReadLimit
+
+// GetPacketReadLimit sets max packet size.
+// If maxSize<=0, set it to max int64.
+//  func SetReadLimit(maxPacketSize int64)
+var SetReadLimit = socket.SetReadLimit
+
 func init() {
 	Printf("The current process PID: %d", os.Getpid())
 }

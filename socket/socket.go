@@ -200,7 +200,12 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 		s.writeMutex.Unlock()
 	}()
 	s.bufioWriter.ResetCount()
-	return s.protocol.WritePacket(packet, s.bufioWriter, s.getTmpCodecWriter, s.isActiveClosed)
+	return s.protocol.WritePacket(
+		packet,
+		s.bufioWriter,
+		s.getTmpCodecWriter,
+		s.isActiveClosed,
+	)
 }
 
 // ReadPacket reads header and body from the connection.
@@ -210,7 +215,14 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 func (s *socket) ReadPacket(packet *Packet) error {
 	s.readMutex.Lock()
 	defer s.readMutex.Unlock()
-	return s.protocol.ReadPacket(packet, packet.bodyAdapter, s.bufioReader, s.getCodecReader, s.isActiveClosed)
+	return s.protocol.ReadPacket(
+		packet,
+		packet.bodyAdapter,
+		s.bufioReader,
+		s.getCodecReader,
+		s.isActiveClosed,
+		checkReadLimit,
+	)
 }
 
 // Public returns temporary public data of Socket.

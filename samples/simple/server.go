@@ -9,6 +9,7 @@ import (
 
 func main() {
 	go tp.GraceSignal()
+	// tp.SetReadLimit(10)
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
 		DefaultReadTimeout:   time.Minute * 5,

@@ -566,39 +566,39 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 
 	if isPushLaunch(input, output) {
 		if printBody {
-			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\n body[-json]: %s\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length, bodyLogBytes(output))
+			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size, bodyLogBytes(output))
 
 		} else {
-			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length)
+			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size)
 		}
 
 	} else if isPushHandle(input, output) {
 		if printBody {
-			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\n body[-json]: %s\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length, bodyLogBytes(input))
+			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size, bodyLogBytes(input))
 		} else {
-			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length)
+			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size)
 		}
 
 	} else if isPullLaunch(input, output) {
 		if printBody {
-			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\n body[-json]: %s\nRECV:\n status: %s %s\n packet-length: %d\n body[-json]: %s\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length, bodyLogBytes(output), colorCode(input.Header.StatusCode), input.Header.Status, input.Length, bodyLogBytes(input))
+			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n status: %s %s\n size: %d\n body[-json]: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size, bodyLogBytes(output), colorCode(input.Header.StatusCode), input.Header.Status, input.Size, bodyLogBytes(input))
 		} else {
-			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n packet-length: %d\nRECV:\n status: %s %s\n packet-length: %d\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Length, colorCode(input.Header.StatusCode), input.Header.Status, input.Length)
+			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n status: %s %s\n size: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size, colorCode(input.Header.StatusCode), input.Header.Status, input.Size)
 		}
 
 	} else if isPullHandle(input, output) {
 		if printBody {
-			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\n body[-json]: %s\nSEND:\n status: %s %s\n packet-length: %d\n body[-json]: %s\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length, bodyLogBytes(input), colorCode(output.Header.StatusCode), output.Header.Status, output.Length, bodyLogBytes(output))
+			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n status: %s %s\n size: %d\n body[-json]: %s\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size, bodyLogBytes(input), colorCode(output.Header.StatusCode), output.Header.Status, output.Size, bodyLogBytes(output))
 		} else {
-			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n packet-length: %d\nSEND:\n status: %s %s\n packet-length: %d\n"
-			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Length, colorCode(output.Header.StatusCode), output.Header.Status, output.Length)
+			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n status: %s %s\n size: %d\n"
+			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size, colorCode(output.Header.StatusCode), output.Header.Status, output.Size)
 		}
 	}
 }

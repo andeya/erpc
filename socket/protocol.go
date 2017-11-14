@@ -43,6 +43,7 @@ type Protocol interface {
 		srcReader *utils.BufioReader,
 		codecReaderGetter func(codecId byte) (*CodecReader, error),
 		isActiveClosed func() bool,
+		checkReadLimit func(int64) error,
 	) error
 }
 
@@ -87,8 +88,8 @@ func (p protoLee) WritePacket(
 		return err
 	}
 	err = p.writeHeader(destWriter, tmpCodecWriter, packet.Header)
+	packet.Size = destWriter.Count()
 	packet.HeaderLength = destWriter.Count() - lengthSize
-	packet.Length = packet.HeaderLength
 	packet.BodyLength = 0
 	if err != nil {
 		return err
@@ -96,8 +97,8 @@ func (p protoLee) WritePacket(
 
 	// write body
 	defer func() {
-		packet.Length = destWriter.Count() - lengthSize*2
-		packet.BodyLength = packet.Length - packet.HeaderLength
+		packet.Size = destWriter.Count()
+		packet.BodyLength = packet.Size - packet.HeaderLength - lengthSize*2
 	}()
 
 	switch bo := packet.Body.(type) {
@@ -128,6 +129,7 @@ func (p protoLee) WritePacket(
 	if err != nil {
 		return err
 	}
+
 	return destWriter.Flush()
 }
 
@@ -140,8 +142,8 @@ func (protoLee) writeHeader(destWriter *utils.BufioWriter, tmpCodecWriter *TmpCo
 	if err != nil {
 		return err
 	}
-	headerSize := uint32(tmpCodecWriter.Len())
-	err = binary.Write(destWriter, binary.BigEndian, headerSize)
+	headerLength := uint32(tmpCodecWriter.Len())
+	err = binary.Write(destWriter, binary.BigEndian, headerLength)
 	if err != nil {
 		return err
 	}
@@ -150,8 +152,8 @@ func (protoLee) writeHeader(destWriter *utils.BufioWriter, tmpCodecWriter *TmpCo
 }
 
 func (protoLee) writeBytesBody(destWriter *utils.BufioWriter, body []byte) error {
-	bodySize := uint32(len(body))
-	err := binary.Write(destWriter, binary.BigEndian, bodySize)
+	bodyLength := uint32(len(body))
+	err := binary.Write(destWriter, binary.BigEndian, bodyLength)
 	if err != nil {
 		return err
 	}
@@ -169,8 +171,8 @@ func (protoLee) writeBody(destWriter *utils.BufioWriter, tmpCodecWriter *TmpCode
 		return err
 	}
 	// write body to socket buffer
-	bodySize := uint32(tmpCodecWriter.Len())
-	err = binary.Write(destWriter, binary.BigEndian, bodySize)
+	bodyLength := uint32(tmpCodecWriter.Len())
+	err = binary.Write(destWriter, binary.BigEndian, bodyLength)
 	if err != nil {
 		return err
 	}
@@ -188,31 +190,42 @@ func (p protoLee) ReadPacket(
 	srcReader *utils.BufioReader,
 	codecReaderGetter func(codecId byte) (*CodecReader, error),
 	isActiveClosed func() bool,
+	checkReadLimit func(int64) error,
 ) error {
 
 	var (
 		hErr, bErr error
 		b          interface{}
 	)
-	packet.HeaderLength, packet.HeaderCodec, hErr = p.readHeader(srcReader, codecReaderGetter, packet.Header)
+	srcReader.ResetCount()
+	packet.HeaderCodec, hErr = p.readHeader(srcReader, codecReaderGetter, packet.Header, checkReadLimit)
+	packet.Size = srcReader.Count()
+	if srcReader.Count() > lengthSize {
+		packet.HeaderLength = srcReader.Count() - lengthSize
+	}
+
 	if hErr == nil {
 		b = bodyAdapter()
 	} else {
 		if hErr == io.EOF || hErr == io.ErrUnexpectedEOF {
-			packet.Length = packet.HeaderLength
+			packet.Size = packet.HeaderLength
 			packet.BodyLength = 0
 			packet.BodyCodec = ""
 			return hErr
 		} else if isActiveClosed() {
-			packet.Length = packet.HeaderLength
+			packet.Size = packet.HeaderLength
 			packet.BodyLength = 0
 			packet.BodyCodec = ""
 			return ErrProactivelyCloseSocket
 		}
 	}
 
-	packet.BodyLength, packet.BodyCodec, bErr = p.readBody(srcReader, codecReaderGetter, int(packet.Header.Gzip), b)
-	packet.Length = packet.HeaderLength + packet.BodyLength
+	srcReader.ResetCount()
+	packet.BodyCodec, bErr = p.readBody(srcReader, codecReaderGetter, int(packet.Header.Gzip), b, packet.HeaderLength, checkReadLimit)
+	packet.Size += srcReader.Count()
+	if srcReader.Count() > lengthSize {
+		packet.BodyLength = srcReader.Count() - lengthSize
+	}
 	if isActiveClosed() {
 		return ErrProactivelyCloseSocket
 	}
@@ -227,31 +240,37 @@ func (protoLee) readHeader(
 	srcReader *utils.BufioReader,
 	codecReaderGetter func(byte) (*CodecReader, error),
 	header *Header,
-) (int64, string, error) {
+	checkReadLimit func(int64) error,
+) (string, error) {
 
-	srcReader.ResetCount()
 	srcReader.ResetLimit(-1)
 
-	var headerSize uint32
-	err := binary.Read(srcReader, binary.BigEndian, &headerSize)
+	var headerLength uint32
+	err := binary.Read(srcReader, binary.BigEndian, &headerLength)
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 
-	srcReader.ResetLimit(int64(headerSize))
+	// check packet size
+	err = checkReadLimit(int64(headerLength) + lengthSize)
+	if err != nil {
+		return "", err
+	}
+
+	srcReader.ResetLimit(int64(headerLength))
 
 	codecId, err := srcReader.ReadByte()
 	if err != nil {
-		return srcReader.Count() - lengthSize, GetCodecName(codecId), err
+		return GetCodecName(codecId), err
 	}
 
 	codecReader, err := codecReaderGetter(codecId)
 	if err != nil {
-		return srcReader.Count() - lengthSize, GetCodecName(codecId), err
+		return GetCodecName(codecId), err
 	}
 
 	err = codecReader.Decode(gzip.NoCompression, header)
-	return srcReader.Count() - lengthSize, codecReader.Name(), err
+	return codecReader.Name(), err
 }
 
 // readBody reads body from the connection.
@@ -263,53 +282,60 @@ func (protoLee) readBody(
 	codecReaderGetter func(byte) (*CodecReader, error),
 	gzipLevel int,
 	body interface{},
-) (int64, string, error) {
+	headerLength int64,
+	checkReadLimit func(int64) error,
+) (string, error) {
 
-	srcReader.ResetCount()
 	srcReader.ResetLimit(-1)
 
 	var (
-		bodySize uint32
-		codecId  = codec.NilCodecId
+		bodyLength uint32
+		codecId    = codec.NilCodecId
 	)
 
-	err := binary.Read(srcReader, binary.BigEndian, &bodySize)
+	err := binary.Read(srcReader, binary.BigEndian, &bodyLength)
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
-	if bodySize == 0 {
-		return 0, "", err
+	if bodyLength == 0 {
+		return "", err
 	}
 
-	srcReader.ResetLimit(int64(bodySize))
+	// check packet size
+	err = checkReadLimit(headerLength + int64(bodyLength) + lengthSize*2)
+	if err != nil {
+		return "", err
+	}
+
+	srcReader.ResetLimit(int64(bodyLength))
 
 	// read body
 	switch bo := body.(type) {
 	case nil:
 		var codecName string
-		codecName, err = readAll(srcReader, make([]byte, bodySize))
-		return srcReader.Count() - lengthSize, codecName, err
+		codecName, err = readAll(srcReader, make([]byte, bodyLength))
+		return codecName, err
 
 	case []byte:
 		var codecName string
 		codecName, err = readAll(srcReader, bo)
-		return srcReader.Count() - lengthSize, codecName, err
+		return codecName, err
 
 	case *[]byte:
 		*bo, err = ioutil.ReadAll(srcReader)
-		return srcReader.Count() - lengthSize, GetCodecNameFromBytes(*bo), err
+		return GetCodecNameFromBytes(*bo), err
 
 	default:
 		codecId, err = srcReader.ReadByte()
-		if bodySize == 1 || err != nil {
-			return srcReader.Count() - lengthSize, GetCodecName(codecId), err
+		if bodyLength == 1 || err != nil {
+			return GetCodecName(codecId), err
 		}
 		codecReader, err := codecReaderGetter(codecId)
 		if err != nil {
-			return srcReader.Count() - lengthSize, GetCodecName(codecId), err
+			return GetCodecName(codecId), err
 		}
 		err = codecReader.Decode(gzipLevel, body)
-		return srcReader.Count() - lengthSize, codecReader.Name(), err
+		return codecReader.Name(), err
 	}
 }
 

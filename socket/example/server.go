@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	socket.SetReadLimit(512)
 	lis, err := net.Listen("tcp", "0.0.0.0:8000")
 	if err != nil {
 		log.Fatalf("[SVR] listen err: %v", err)
