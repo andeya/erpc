@@ -118,13 +118,3 @@ func (b *BufioReader) Reset(r io.Reader) {
 	b.count = 0
 	b.limit = math.MaxInt64
 }
-
-func (b *BufioReader) WriteTo(w io.Writer) (int64, error) {
-	if b.limit <= 0 {
-		return 0, io.EOF
-	}
-	n, err := b.reader.WriteTo(w)
-	b.count += n
-	b.limit -= n
-	return n, err
-}

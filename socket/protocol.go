@@ -50,6 +50,7 @@ type Protocol interface {
 var (
 	ProtoLee        Protocol = new(protoLee)
 	defaultProtocol Protocol = ProtoLee
+	lengthSize               = int64(binary.Size(uint32(0)))
 )
 
 // GetDefaultProtocol gets the default socket communication protocol
@@ -86,7 +87,7 @@ func (p protoLee) WritePacket(
 		return err
 	}
 	err = p.writeHeader(destWriter, tmpCodecWriter, packet.Header)
-	packet.HeaderLength = destWriter.Count()
+	packet.HeaderLength = destWriter.Count() - lengthSize
 	packet.Length = packet.HeaderLength
 	packet.BodyLength = 0
 	if err != nil {
@@ -95,7 +96,7 @@ func (p protoLee) WritePacket(
 
 	// write body
 	defer func() {
-		packet.Length = destWriter.Count()
+		packet.Length = destWriter.Count() - lengthSize*2
 		packet.BodyLength = packet.Length - packet.HeaderLength
 	}()
 
@@ -107,7 +108,7 @@ func (p protoLee) WritePacket(
 		} else {
 			err = binary.Write(destWriter, binary.BigEndian, uint32(1))
 			if err == nil {
-				err = binary.Write(destWriter, binary.BigEndian, codecId)
+				err = destWriter.WriteByte(codecId)
 			}
 		}
 
@@ -131,7 +132,7 @@ func (p protoLee) WritePacket(
 }
 
 func (protoLee) writeHeader(destWriter *utils.BufioWriter, tmpCodecWriter *TmpCodecWriter, header *Header) error {
-	err := binary.Write(tmpCodecWriter, binary.BigEndian, tmpCodecWriter.Id())
+	err := tmpCodecWriter.WriteByte(tmpCodecWriter.Id())
 	if err != nil {
 		return err
 	}
@@ -159,7 +160,7 @@ func (protoLee) writeBytesBody(destWriter *utils.BufioWriter, body []byte) error
 }
 
 func (protoLee) writeBody(destWriter *utils.BufioWriter, tmpCodecWriter *TmpCodecWriter, gzipLevel int, body interface{}) error {
-	err := binary.Write(tmpCodecWriter, binary.BigEndian, tmpCodecWriter.Id())
+	err := tmpCodecWriter.WriteByte(tmpCodecWriter.Id())
 	if err != nil {
 		return err
 	}
@@ -234,25 +235,23 @@ func (protoLee) readHeader(
 	var headerSize uint32
 	err := binary.Read(srcReader, binary.BigEndian, &headerSize)
 	if err != nil {
-		return srcReader.Count(), "", err
+		return 0, "", err
 	}
 
 	srcReader.ResetLimit(int64(headerSize))
 
-	var codecId = codec.NilCodecId
-
-	err = binary.Read(srcReader, binary.BigEndian, &codecId)
+	codecId, err := srcReader.ReadByte()
 	if err != nil {
-		return srcReader.Count(), GetCodecName(codecId), err
+		return srcReader.Count() - lengthSize, GetCodecName(codecId), err
 	}
 
 	codecReader, err := codecReaderGetter(codecId)
 	if err != nil {
-		return srcReader.Count(), GetCodecName(codecId), err
+		return srcReader.Count() - lengthSize, GetCodecName(codecId), err
 	}
 
 	err = codecReader.Decode(gzip.NoCompression, header)
-	return srcReader.Count(), codecReader.Name(), err
+	return srcReader.Count() - lengthSize, codecReader.Name(), err
 }
 
 // readBody reads body from the connection.
@@ -276,10 +275,10 @@ func (protoLee) readBody(
 
 	err := binary.Read(srcReader, binary.BigEndian, &bodySize)
 	if err != nil {
-		return srcReader.Count(), "", err
+		return 0, "", err
 	}
 	if bodySize == 0 {
-		return srcReader.Count(), "", err
+		return 0, "", err
 	}
 
 	srcReader.ResetLimit(int64(bodySize))
@@ -288,40 +287,37 @@ func (protoLee) readBody(
 	switch bo := body.(type) {
 	case nil:
 		var codecName string
-		codecName, err = readAll(srcReader, make([]byte, 1))
-		return srcReader.Count(), codecName, err
+		codecName, err = readAll(srcReader, make([]byte, bodySize))
+		return srcReader.Count() - lengthSize, codecName, err
 
 	case []byte:
 		var codecName string
 		codecName, err = readAll(srcReader, bo)
-		return srcReader.Count(), codecName, err
+		return srcReader.Count() - lengthSize, codecName, err
 
 	case *[]byte:
 		*bo, err = ioutil.ReadAll(srcReader)
-		return srcReader.Count(), GetCodecNameFromBytes(*bo), err
+		return srcReader.Count() - lengthSize, GetCodecNameFromBytes(*bo), err
 
 	default:
-		err = binary.Read(srcReader, binary.BigEndian, &codecId)
+		codecId, err = srcReader.ReadByte()
 		if bodySize == 1 || err != nil {
-			return srcReader.Count(), GetCodecName(codecId), err
+			return srcReader.Count() - lengthSize, GetCodecName(codecId), err
 		}
 		codecReader, err := codecReaderGetter(codecId)
 		if err != nil {
-			return srcReader.Count(), GetCodecName(codecId), err
+			return srcReader.Count() - lengthSize, GetCodecName(codecId), err
 		}
 		err = codecReader.Decode(gzipLevel, body)
-		return srcReader.Count(), codecReader.Name(), err
+		return srcReader.Count() - lengthSize, codecReader.Name(), err
 	}
 }
 
 func readAll(reader io.Reader, p []byte) (string, error) {
 	perLen := len(p)
-	_, err := reader.Read(p[perLen:])
+	_, err := reader.Read(p[:perLen])
 	if err == nil {
 		_, err = io.Copy(ioutil.Discard, reader)
 	}
-	if len(p) > perLen {
-		return GetCodecName(p[perLen]), err
-	}
-	return "", err
+	return GetCodecNameFromBytes(p), err
 }
