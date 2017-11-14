@@ -47,6 +47,7 @@ go get -u github.com/henrylee2cn/teleport
 - Supports setting slow operation alarm threshold
 - With a connection I/O buffer
 - Use I/O multiplexing technology
+- Support setting the size of the reading packet (if exceed disconnect it)
 
 ## 4. Architecture
 

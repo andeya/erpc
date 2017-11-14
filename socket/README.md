@@ -14,6 +14,7 @@ A concise, powerful and high-performance TCP connection socket.
 - Support custom communication protocol
 - Each socket is assigned an id
 - Provides `Socket` hub, `Socket` pool and `*Packet` stack
+- Support setting the size of the reading packet (if exceed disconnect it)
 
 ## Packet
 
