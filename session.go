@@ -404,22 +404,7 @@ func (s *session) startReadAndHandle() {
 				}
 				s.peer.putContext(ctx, true)
 			}()
-			switch ctx.input.Header.Type {
-			case TypeReply:
-				// handles pull reply
-				ctx.handleReply()
-
-			case TypePush:
-				//  handles push
-				ctx.handlePush()
-
-			case TypePull:
-				// handles and replies pull
-				ctx.handlePull()
-
-			default:
-				ctx.handleUnsupported()
-			}
+			ctx.handle()
 		}) {
 			s.graceCtxWaitGroup.Done()
 		}

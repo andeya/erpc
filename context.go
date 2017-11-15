@@ -209,6 +209,7 @@ func (c *readHandleCtx) Ip() string {
 	return c.sess.RemoteIp()
 }
 
+// Be executed synchronously when reading packet
 func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
 	defer func() {
 		if p := recover(); p != nil {
@@ -230,6 +231,26 @@ func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
 
 	default:
 		return nil
+	}
+}
+
+// Be executed asynchronously after readed packet
+func (c *readHandleCtx) handle() {
+	switch c.input.Header.Type {
+	case TypeReply:
+		// handles pull reply
+		c.handleReply()
+
+	case TypePush:
+		//  handles push
+		c.handlePush()
+
+	case TypePull:
+		// handles and replies pull
+		c.handlePull()
+
+	default:
+		c.handleUnsupported()
 	}
 }
 
@@ -346,19 +367,19 @@ func (c *readHandleCtx) handlePull() {
 		c.cost = time.Since(c.start)
 		c.sess.runlog(c.cost, c.input, c.output)
 	}()
-	xerr := c.pluginContainer.PostReadBody(c)
-	if xerr != nil {
-		c.output.Header.StatusCode = xerr.Code()
-		c.output.Header.Status = xerr.Text()
-	}
 
 	// handle pull
-	var statusOK = c.output.Header.StatusCode == StatusOK
-	if statusOK {
-		if c.apiType.isUnknown {
-			c.apiType.unknownHandleFunc(c)
+	if c.output.Header.StatusCode == StatusOK {
+		xerr := c.pluginContainer.PostReadBody(c)
+		if xerr != nil {
+			c.output.Header.StatusCode = xerr.Code()
+			c.output.Header.Status = xerr.Text()
 		} else {
-			c.apiType.handleFunc(c, c.arg)
+			if c.apiType.isUnknown {
+				c.apiType.unknownHandleFunc(c)
+			} else {
+				c.apiType.handleFunc(c, c.arg)
+			}
 		}
 	}
 
