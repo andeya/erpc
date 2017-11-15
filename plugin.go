@@ -24,42 +24,55 @@ type (
 		Name() string
 	}
 	PostRegPlugin interface {
+		Plugin
 		PostReg(*Handler) Xerror
 	}
 	PostDialPlugin interface {
+		Plugin
 		PostDial(ForeSession) Xerror
 	}
 	PostAcceptPlugin interface {
+		Plugin
 		PostAccept(ForeSession) Xerror
 	}
 	PreWritePullPlugin interface {
+		Plugin
 		PreWritePull(WriteCtx) Xerror
 	}
 	PostWritePullPlugin interface {
+		Plugin
 		PostWritePull(WriteCtx) Xerror
 	}
 	PreWriteReplyPlugin interface {
+		Plugin
 		PreWriteReply(WriteCtx) Xerror
 	}
 	PostWriteReplyPlugin interface {
+		Plugin
 		PostWriteReply(WriteCtx) Xerror
 	}
 	PreWritePushPlugin interface {
+		Plugin
 		PreWritePush(WriteCtx) Xerror
 	}
 	PostWritePushPlugin interface {
+		Plugin
 		PostWritePush(WriteCtx) Xerror
 	}
 	PreReadHeaderPlugin interface {
+		Plugin
 		PreReadHeader(ReadCtx) Xerror
 	}
 	PostReadHeaderPlugin interface {
+		Plugin
 		PostReadHeader(ReadCtx) Xerror
 	}
 	PreReadBodyPlugin interface {
+		Plugin
 		PreReadBody(ReadCtx) Xerror
 	}
 	PostReadBodyPlugin interface {
+		Plugin
 		PostReadBody(ReadCtx) Xerror
 	}
 
@@ -70,21 +83,19 @@ type (
 		GetByName(pluginName string) Plugin
 		GetAll() []Plugin
 
-		PostDialPlugin
-		PostAcceptPlugin
-		PreWritePullPlugin
-		PostWritePullPlugin
-		PreWritePushPlugin
-		PostWritePushPlugin
-		PreReadHeaderPlugin
-		PostReadHeaderPlugin
-
-		PostRegPlugin
-
-		PreWriteReplyPlugin
-		PostWriteReplyPlugin
-		PreReadBodyPlugin
-		PostReadBodyPlugin
+		PostReg(*Handler) Xerror
+		PostDial(ForeSession) Xerror
+		PostAccept(ForeSession) Xerror
+		PreWritePull(WriteCtx) Xerror
+		PostWritePull(WriteCtx) Xerror
+		PreWriteReply(WriteCtx) Xerror
+		PostWriteReply(WriteCtx) Xerror
+		PreWritePush(WriteCtx) Xerror
+		PostWritePush(WriteCtx) Xerror
+		PreReadHeader(ReadCtx) Xerror
+		PostReadHeader(ReadCtx) Xerror
+		PreReadBody(ReadCtx) Xerror
+		PostReadBody(ReadCtx) Xerror
 
 		cloneAdd(...Plugin) (PluginContainer, error)
 	}
