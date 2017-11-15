@@ -254,11 +254,11 @@ func (c *readHandleCtx) handle() {
 		c.output.Header.StatusCode = StatusUnsupportedTx
 		c.output.Header.Status = StatusText(StatusUnsupportedTx)
 		if c.sess.peer.printBody {
-			logformat := "disconnect(%s) due to unsupported type: %d |\nuri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
-			Errorf(logformat, c.Ip(), c.input.Header.Type, c.input.Header.Uri, c.input.Size, bodyLogBytes(c.input))
+			logformat := "disconnect(%s) due to unsupported type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
+			Errorf(logformat, c.Ip(), c.input.Header.Type, c.input.Header.Seq, c.input.Header.Uri, c.input.Size, bodyLogBytes(c.input))
 		} else {
-			logformat := "disconnect(%s) due to unsupported type: %d |\nuri: %-30s |\nRECV:\n size: %d\n"
-			Errorf(logformat, c.Ip(), c.input.Header.Type, c.input.Header.Uri, c.input.Size)
+			logformat := "disconnect(%s) due to unsupported type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n"
+			Errorf(logformat, c.Ip(), c.input.Header.Type, c.input.Header.Seq, c.input.Header.Uri, c.input.Size)
 		}
 		go c.sess.Close()
 	}
