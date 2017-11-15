@@ -270,7 +270,7 @@ func (s *session) GoPull(uri string, args interface{}, reply interface{}, done c
 			return
 		}
 	}
-	cmd.Xerror = NewXerror(StatusWriteFailed, err.Error())
+	cmd.xerror = NewXerror(StatusWriteFailed, err.Error())
 	cmd.done()
 }
 
@@ -510,7 +510,7 @@ func (s *session) readDisconnected(err error) {
 	atomic.StoreInt32(&s.disconnected, 1)
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
-		Debugf("disconnected when reading: %s", err.Error())
+		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
 	}
 
 	s.graceCtxWaitGroup.Wait()
@@ -539,8 +539,6 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 	var (
 		printFunc func(string, ...interface{})
 		slowStr   string
-		logformat string
-		printBody = s.peer.printBody
 	)
 	if costTime < s.peer.slowCometDuration {
 		printFunc = Infof
@@ -549,40 +547,41 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 		slowStr = "(slow)"
 	}
 
-	if isPushLaunch(input, output) {
-		if printBody {
-			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
+	switch {
+	case isPushLaunch(input, output):
+		if s.peer.printBody {
+			logformat := "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size, bodyLogBytes(output))
 
 		} else {
-			logformat = "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n"
+			logformat := "[push-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size)
 		}
 
-	} else if isPushHandle(input, output) {
-		if printBody {
-			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
+	case isPushHandle(input, output):
+		if s.peer.printBody {
+			logformat := "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size, bodyLogBytes(input))
 		} else {
-			logformat = "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n"
+			logformat := "[push-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size)
 		}
 
-	} else if isPullLaunch(input, output) {
-		if printBody {
-			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n status: %s %s\n size: %d\n body[-json]: %s\n"
+	case isPullLaunch(input, output):
+		if s.peer.printBody {
+			logformat := "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n status: %s %s\n size: %d\n body[-json]: %s\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size, bodyLogBytes(output), colorCode(input.Header.StatusCode), input.Header.Status, input.Size, bodyLogBytes(input))
 		} else {
-			logformat = "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n status: %s %s\n size: %d\n"
+			logformat := "[pull-launch] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n status: %s %s\n size: %d\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, output.Header.Uri, output.Size, colorCode(input.Header.StatusCode), input.Header.Status, input.Size)
 		}
 
-	} else if isPullHandle(input, output) {
-		if printBody {
-			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n status: %s %s\n size: %d\n body[-json]: %s\n"
+	case isPullHandle(input, output):
+		if s.peer.printBody {
+			logformat := "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n status: %s %s\n size: %d\n body[-json]: %s\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size, bodyLogBytes(input), colorCode(output.Header.StatusCode), output.Header.Status, output.Size, bodyLogBytes(output))
 		} else {
-			logformat = "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n status: %s %s\n size: %d\n"
+			logformat := "[pull-handle] remote-ip: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n status: %s %s\n size: %d\n"
 			printFunc(logformat, s.RemoteIp(), costTime, slowStr, input.Header.Uri, input.Size, colorCode(output.Header.StatusCode), output.Header.Status, output.Size)
 		}
 	}

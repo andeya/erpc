@@ -42,8 +42,8 @@ func main() {
 			&reply,
 		)
 
-		if pullcmd.Xerror != nil {
-			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+		if pullcmd.Xerror() != nil {
+			tp.Fatalf("pull error: %v", pullcmd.Xerror().Error())
 		}
 		tp.Infof("9090reply: %#v", reply)
 	}
@@ -69,8 +69,8 @@ func main() {
 			&reply,
 		)
 
-		if pullcmd.Xerror != nil {
-			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+		if pullcmd.Xerror() != nil {
+			tp.Fatalf("pull error: %v", pullcmd.Xerror().Error())
 		}
 		tp.Infof("9091reply test_unknown: %#v", reply)
 	}

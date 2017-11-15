@@ -63,17 +63,44 @@ type (
 		Plugin
 		PreReadHeader(ReadCtx) Xerror
 	}
-	PostReadHeaderPlugin interface {
+
+	PostReadPullHeaderPlugin interface {
 		Plugin
-		PostReadHeader(ReadCtx) Xerror
+		PostReadPullHeader(ReadCtx) Xerror
 	}
-	PreReadBodyPlugin interface {
+	PreReadPullBodyPlugin interface {
 		Plugin
-		PreReadBody(ReadCtx) Xerror
+		PreReadPullBody(ReadCtx) Xerror
 	}
-	PostReadBodyPlugin interface {
+	PostReadPullBodyPlugin interface {
 		Plugin
-		PostReadBody(ReadCtx) Xerror
+		PostReadPullBody(ReadCtx) Xerror
+	}
+
+	PostReadPushHeaderPlugin interface {
+		Plugin
+		PostReadPushHeader(ReadCtx) Xerror
+	}
+	PreReadPushBodyPlugin interface {
+		Plugin
+		PreReadPushBody(ReadCtx) Xerror
+	}
+	PostReadPushBodyPlugin interface {
+		Plugin
+		PostReadPushBody(ReadCtx) Xerror
+	}
+
+	PostReadReplyHeaderPlugin interface {
+		Plugin
+		PostReadReplyHeader(ReadCtx) Xerror
+	}
+	PreReadReplyBodyPlugin interface {
+		Plugin
+		PreReadReplyBody(ReadCtx) Xerror
+	}
+	PostReadReplyBodyPlugin interface {
+		Plugin
+		PostReadReplyBody(ReadCtx) Xerror
 	}
 
 	// PluginContainer plugin container that defines base methods to manage plugins.
@@ -93,9 +120,18 @@ type (
 		PreWritePush(WriteCtx) Xerror
 		PostWritePush(WriteCtx) Xerror
 		PreReadHeader(ReadCtx) Xerror
-		PostReadHeader(ReadCtx) Xerror
-		PreReadBody(ReadCtx) Xerror
-		PostReadBody(ReadCtx) Xerror
+
+		PostReadPullHeader(ReadCtx) Xerror
+		PreReadPullBody(ReadCtx) Xerror
+		PostReadPullBody(ReadCtx) Xerror
+
+		PostReadPushHeader(ReadCtx) Xerror
+		PreReadPushBody(ReadCtx) Xerror
+		PostReadPushBody(ReadCtx) Xerror
+
+		PostReadReplyHeader(ReadCtx) Xerror
+		PreReadReplyBody(ReadCtx) Xerror
+		PostReadReplyBody(ReadCtx) Xerror
 
 		cloneAdd(...Plugin) (PluginContainer, error)
 	}
@@ -312,12 +348,12 @@ func (p *pluginContainer) PreReadHeader(ctx ReadCtx) Xerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadHeader(ctx ReadCtx) Xerror {
+func (p *pluginContainer) PostReadPullHeader(ctx ReadCtx) Xerror {
 	var xerr Xerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostReadHeaderPlugin); ok {
-			if xerr = _plugin.PostReadHeader(ctx); xerr != nil {
-				Errorf("%s-PostReadHeaderPlugin(%s)", plugin.Name(), xerr.Error())
+		if _plugin, ok := plugin.(PostReadPullHeaderPlugin); ok {
+			if xerr = _plugin.PostReadPullHeader(ctx); xerr != nil {
+				Errorf("%s-PostReadPullHeaderPlugin(%s)", plugin.Name(), xerr.Error())
 				return xerr
 			}
 		}
@@ -325,12 +361,12 @@ func (p *pluginContainer) PostReadHeader(ctx ReadCtx) Xerror {
 	return nil
 }
 
-func (p *pluginContainer) PreReadBody(ctx ReadCtx) Xerror {
+func (p *pluginContainer) PreReadPullBody(ctx ReadCtx) Xerror {
 	var xerr Xerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PreReadBodyPlugin); ok {
-			if xerr = _plugin.PreReadBody(ctx); xerr != nil {
-				Errorf("%s-PreReadBodyPlugin(%s)", plugin.Name(), xerr.Error())
+		if _plugin, ok := plugin.(PreReadPullBodyPlugin); ok {
+			if xerr = _plugin.PreReadPullBody(ctx); xerr != nil {
+				Errorf("%s-PreReadPullBodyPlugin(%s)", plugin.Name(), xerr.Error())
 				return xerr
 			}
 		}
@@ -338,12 +374,90 @@ func (p *pluginContainer) PreReadBody(ctx ReadCtx) Xerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadBody(ctx ReadCtx) Xerror {
+func (p *pluginContainer) PostReadPullBody(ctx ReadCtx) Xerror {
 	var xerr Xerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostReadBodyPlugin); ok {
-			if xerr = _plugin.PostReadBody(ctx); xerr != nil {
-				Errorf("%s-PostReadBodyPlugin(%s)", plugin.Name(), xerr.Error())
+		if _plugin, ok := plugin.(PostReadPullBodyPlugin); ok {
+			if xerr = _plugin.PostReadPullBody(ctx); xerr != nil {
+				Errorf("%s-PostReadPullBodyPlugin(%s)", plugin.Name(), xerr.Error())
+				return xerr
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PostReadPushHeader(ctx ReadCtx) Xerror {
+	var xerr Xerror
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostReadPushHeaderPlugin); ok {
+			if xerr = _plugin.PostReadPushHeader(ctx); xerr != nil {
+				Errorf("%s-PostReadPushHeaderPlugin(%s)", plugin.Name(), xerr.Error())
+				return xerr
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PreReadPushBody(ctx ReadCtx) Xerror {
+	var xerr Xerror
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreReadPushBodyPlugin); ok {
+			if xerr = _plugin.PreReadPushBody(ctx); xerr != nil {
+				Errorf("%s-PreReadPushBodyPlugin(%s)", plugin.Name(), xerr.Error())
+				return xerr
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PostReadPushBody(ctx ReadCtx) Xerror {
+	var xerr Xerror
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostReadPushBodyPlugin); ok {
+			if xerr = _plugin.PostReadPushBody(ctx); xerr != nil {
+				Errorf("%s-PostReadPushBodyPlugin(%s)", plugin.Name(), xerr.Error())
+				return xerr
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PostReadReplyHeader(ctx ReadCtx) Xerror {
+	var xerr Xerror
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostReadReplyHeaderPlugin); ok {
+			if xerr = _plugin.PostReadReplyHeader(ctx); xerr != nil {
+				Errorf("%s-PostReadReplyHeaderPlugin(%s)", plugin.Name(), xerr.Error())
+				return xerr
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PreReadReplyBody(ctx ReadCtx) Xerror {
+	var xerr Xerror
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreReadReplyBodyPlugin); ok {
+			if xerr = _plugin.PreReadReplyBody(ctx); xerr != nil {
+				Errorf("%s-PreReadReplyBodyPlugin(%s)", plugin.Name(), xerr.Error())
+				return xerr
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) Xerror {
+	var xerr Xerror
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostReadReplyBodyPlugin); ok {
+			if xerr = _plugin.PostReadReplyBody(ctx); xerr != nil {
+				Errorf("%s-PostReadReplyBodyPlugin(%s)", plugin.Name(), xerr.Error())
 				return xerr
 			}
 		}
@@ -364,8 +478,8 @@ func warnInvaildRouterHooks(plugin []Plugin) {
 			Warnf("invalid PostWritePullPlugin in router: %s", p.Name())
 		case PreReadHeaderPlugin:
 			Warnf("invalid PreReadHeaderPlugin in router: %s", p.Name())
-		case PostReadHeaderPlugin:
-			Warnf("invalid PostReadHeaderPlugin in router: %s", p.Name())
+		case PostReadPullHeaderPlugin:
+			Warnf("invalid PostReadPullHeaderPlugin in router: %s", p.Name())
 		case PreWritePushPlugin:
 			Warnf("invalid PreWritePushPlugin in router: %s", p.Name())
 		case PostWritePushPlugin:

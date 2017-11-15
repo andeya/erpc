@@ -57,9 +57,9 @@ func main() {
 					&pb.PbTest{A: 10, B: 2},
 					reply,
 				)
-				if pullcmd.Xerror != nil {
+				if pullcmd.Xerror() != nil {
 					atomic.AddUint32(&failNum, 1)
-					tp.Errorf("pull error: %v", pullcmd.Xerror.Error())
+					tp.Errorf("pull error: %v", pullcmd.Xerror().Error())
 				}
 				count.Done()
 			}()

@@ -283,8 +283,8 @@ func (p *AliasPlugin) Name() string {
 	return "AliasPlugin"
 }
 
-// PostReadHeader converts the alias of this service.
-func (p *AliasPlugin) PostReadHeader(ctx tp.ReadCtx) tp.Xerror {
+// PostReadPullHeader converts the alias of this service.
+func (p *AliasPlugin) PostReadPullHeader(ctx tp.ReadCtx) tp.Xerror {
 	var u = ctx.Input().Header.Uri
 	if p.Aliases != nil {
 		if a = p.Aliases[u]; a != "" {
@@ -422,8 +422,8 @@ func main() {
 			&reply,
 		)
 
-		if pullcmd.Xerror != nil {
-			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+		if pullcmd.Xerror() != nil {
+			tp.Fatalf("pull error: %v", pullcmd.Xerror().Error())
 		}
 		tp.Infof("9090reply: %#v", reply)
 	}
@@ -441,8 +441,8 @@ func main() {
 			&reply,
 		)
 
-		if pullcmd.Xerror != nil {
-			tp.Fatalf("pull error: %v", pullcmd.Xerror.Error())
+		if pullcmd.Xerror() != nil {
+			tp.Fatalf("pull error: %v", pullcmd.Xerror().Error())
 		}
 		tp.Infof("9091reply test_unknown: %#v", reply)
 	}

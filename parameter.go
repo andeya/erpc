@@ -14,7 +14,7 @@
 
 package tp
 
-// Packet Header types
+// Packet types
 const (
 	TypeUndefined int32 = 0
 	TypePull      int32 = 1

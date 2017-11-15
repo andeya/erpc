@@ -39,7 +39,15 @@ type Header struct {
 	Status     string `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
 }
 
-func (m *Header) Reset()                    { *m = Header{} }
+func (m *Header) Reset() {
+	m.Seq = 0
+	m.Type = 0
+	m.Uri = ""
+	m.Gzip = 0
+	m.StatusCode = 0
+	m.Status = ""
+}
+
 func (m *Header) String() string            { return proto.CompactTextString(m) }
 func (*Header) ProtoMessage()               {}
 func (*Header) Descriptor() ([]byte, []int) { return fileDescriptorHeader, []int{0} }

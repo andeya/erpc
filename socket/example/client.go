@@ -21,8 +21,9 @@ func main() {
 	for i := uint64(0); i < 1; i++ {
 		// write request
 		packet.Reset(nil)
+		packet.Header.Type = 0
 		packet.HeaderCodec = "protobuf"
-		// packet.BodyCodec = "protobuf"
+		packet.BodyCodec = "protobuf"
 		packet.Header.Seq = i
 		packet.Header.Uri = "/a/b"
 		packet.Header.Gzip = 5
