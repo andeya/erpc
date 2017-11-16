@@ -32,6 +32,32 @@ import (
 
 // Session a connection session.
 type (
+	PreSession interface {
+		// SetId sets the session id.
+		SetId(newId string)
+		// Close closes the session.
+		Close() error
+		// Id returns the session id.
+		Id() string
+		// IsOk checks if the session is ok.
+		IsOk() bool
+		// Peer returns the peer.
+		Peer() *Peer
+		// RemoteIp returns the remote peer ip.
+		RemoteIp() string
+		// ReadTimeout returns readdeadline for underlying net.Conn.
+		SetReadTimeout(duration time.Duration)
+		// WriteTimeout returns writedeadline for underlying net.Conn.
+		SetWriteTimeout(duration time.Duration)
+		// Public returns temporary public data of session(socket).
+		Public() goutil.Map
+		// PublicLen returns the length of public data of session(socket).
+		PublicLen() int
+		// Send sends packet to peer.
+		Send(packet *socket.Packet) error
+		// Receive receives a packet from peer.
+		Receive(packet *socket.Packet) error
+	}
 	Session interface {
 		// SetId sets the session id.
 		SetId(newId string)
@@ -69,31 +95,17 @@ type (
 		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
 	}
-	ForeSession interface {
-		// SetId sets the session id.
-		SetId(newId string)
-		// Close closes the session.
-		Close() error
+	PostSession interface {
 		// Id returns the session id.
 		Id() string
-		// IsOk checks if the session is ok.
-		IsOk() bool
 		// Peer returns the peer.
 		Peer() *Peer
 		// RemoteIp returns the remote peer ip.
 		RemoteIp() string
-		// ReadTimeout returns readdeadline for underlying net.Conn.
-		SetReadTimeout(duration time.Duration)
-		// WriteTimeout returns writedeadline for underlying net.Conn.
-		SetWriteTimeout(duration time.Duration)
 		// Public returns temporary public data of session(socket).
 		Public() goutil.Map
 		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
-		// Send sends packet to peer.
-		Send(packet *socket.Packet) error
-		// Receive receives a packet from peer.
-		Receive(packet *socket.Packet) error
 	}
 	session struct {
 		peer                  *Peer
@@ -118,8 +130,9 @@ type (
 )
 
 var (
+	_ PreSession  = new(session)
 	_ Session     = new(session)
-	_ ForeSession = new(session)
+	_ PostSession = new(session)
 )
 
 func newSession(peer *Peer, conn net.Conn, protocols []socket.Protocol) *session {
@@ -475,17 +488,14 @@ func (s *session) Close() (err error) {
 
 	defer func() {
 		recover()
-
 		s.graceCtxWaitGroup.Wait()
 		s.gracePullCmdWaitGroup.Wait()
-
 		// make sure return s.startReadAndHandle
 		s.socket.SetReadDeadline(deadlineForStopRead)
-
 		err = s.socket.Close()
-
 		s.peer.sessHub.Delete(s.Id())
 		s.closeLock.Unlock()
+		s.peer.pluginContainer.PostDisconnect(s)
 	}()
 
 	if !s.isDisconnected() {

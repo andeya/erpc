@@ -29,11 +29,11 @@ type (
 	}
 	PostDialPlugin interface {
 		Plugin
-		PostDial(ForeSession) Xerror
+		PostDial(PreSession) Xerror
 	}
 	PostAcceptPlugin interface {
 		Plugin
-		PostAccept(ForeSession) Xerror
+		PostAccept(PreSession) Xerror
 	}
 	PreWritePullPlugin interface {
 		Plugin
@@ -103,6 +103,11 @@ type (
 		PostReadReplyBody(ReadCtx) Xerror
 	}
 
+	PostDisconnectPlugin interface {
+		Plugin
+		PostDisconnect(PostSession) Xerror
+	}
+
 	// PluginContainer plugin container that defines base methods to manage plugins.
 	PluginContainer interface {
 		Add(plugins ...Plugin) error
@@ -111,8 +116,8 @@ type (
 		GetAll() []Plugin
 
 		PostReg(*Handler) Xerror
-		PostDial(ForeSession) Xerror
-		PostAccept(ForeSession) Xerror
+		PostDial(PreSession) Xerror
+		PostAccept(PreSession) Xerror
 		PreWritePull(WriteCtx) Xerror
 		PostWritePull(WriteCtx) Xerror
 		PreWriteReply(WriteCtx) Xerror
@@ -132,6 +137,8 @@ type (
 		PostReadReplyHeader(ReadCtx) Xerror
 		PreReadReplyBody(ReadCtx) Xerror
 		PostReadReplyBody(ReadCtx) Xerror
+
+		PostDisconnect(PostSession) Xerror
 
 		cloneAdd(...Plugin) (PluginContainer, error)
 	}
@@ -231,7 +238,7 @@ func (p *pluginContainer) PostReg(h *Handler) Xerror {
 	return nil
 }
 
-func (p *pluginContainer) PostDial(sess ForeSession) Xerror {
+func (p *pluginContainer) PostDial(sess PreSession) Xerror {
 	var xerr Xerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
@@ -244,7 +251,7 @@ func (p *pluginContainer) PostDial(sess ForeSession) Xerror {
 	return nil
 }
 
-func (p *pluginContainer) PostAccept(sess ForeSession) Xerror {
+func (p *pluginContainer) PostAccept(sess PreSession) Xerror {
 	var xerr Xerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
@@ -458,6 +465,19 @@ func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) Xerror {
 		if _plugin, ok := plugin.(PostReadReplyBodyPlugin); ok {
 			if xerr = _plugin.PostReadReplyBody(ctx); xerr != nil {
 				Errorf("%s-PostReadReplyBodyPlugin(%s)", plugin.Name(), xerr.Error())
+				return xerr
+			}
+		}
+	}
+	return nil
+}
+
+func (p *pluginContainer) PostDisconnect(sess PostSession) Xerror {
+	var xerr Xerror
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostDisconnectPlugin); ok {
+			if xerr = _plugin.PostDisconnect(sess); xerr != nil {
+				Errorf("%s-PostDisconnectPlugin(%s)", plugin.Name(), xerr.Error())
 				return xerr
 			}
 		}

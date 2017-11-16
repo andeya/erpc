@@ -267,11 +267,11 @@ func (s *socket) Reset(netConn net.Conn, protocol ...Protocol) {
 	}
 	s.readMutex.Lock()
 	s.writeMutex.Lock()
-	s.SetId("")
-	s.protocol = getProtocol(protocol)
 	s.Conn = netConn
 	s.bufioReader.Reset(netConn)
 	s.bufioWriter.Reset(netConn)
+	s.SetId("")
+	s.protocol = getProtocol(protocol)
 	atomic.StoreInt32(&s.curState, normal)
 	s.readMutex.Unlock()
 	s.writeMutex.Unlock()
