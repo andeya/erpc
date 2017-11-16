@@ -89,6 +89,11 @@ func (p *Peer) GetSession(sessionId string) (Session, bool) {
 	return p.sessHub.Get(sessionId)
 }
 
+// RangeSession ranges all sessions.
+func (p *Peer) RangeSession(fn func(sess *session) bool) {
+	p.sessHub.Range(fn)
+}
+
 // ServeConn serves the connection and returns a session.
 func (p *Peer) ServeConn(conn net.Conn, protocol ...socket.Protocol) Session {
 	var session = newSession(p, conn, protocol)
