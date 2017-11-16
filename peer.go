@@ -91,8 +91,10 @@ func (p *Peer) GetSession(sessionId string) (Session, bool) {
 
 // RangeSession ranges all sessions.
 // If fn returns false, stop traversing.
-func (p *Peer) RangeSession(fn func(sess *session) bool) {
-	p.sessHub.Range(fn)
+func (p *Peer) RangeSession(fn func(sess Session) bool) {
+	p.sessHub.sessions.Range(func(key, value interface{}) bool {
+		return fn(value.(*session))
+	})
 }
 
 // ServeConn serves the connection and returns a session.
