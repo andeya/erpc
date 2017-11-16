@@ -673,10 +673,10 @@ func (sh *SessionHub) Get(id string) (*session, bool) {
 }
 
 // Range calls f sequentially for each id and *session present in the session hub.
-// If f returns false, range stops the iteration.
-func (sh *SessionHub) Range(f func(*session) bool) {
+// If fn returns false, stop traversing.
+func (sh *SessionHub) Range(fn func(*session) bool) {
 	sh.sessions.Range(func(key, value interface{}) bool {
-		return f(value.(*session))
+		return fn(value.(*session))
 	})
 }
 

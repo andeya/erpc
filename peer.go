@@ -90,6 +90,7 @@ func (p *Peer) GetSession(sessionId string) (Session, bool) {
 }
 
 // RangeSession ranges all sessions.
+// If fn returns false, stop traversing.
 func (p *Peer) RangeSession(fn func(sess *session) bool) {
 	p.sessHub.Range(fn)
 }
