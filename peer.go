@@ -97,6 +97,11 @@ func (p *Peer) RangeSession(fn func(sess Session) bool) {
 	})
 }
 
+// CountSession returns the number of sessions.
+func (p *Peer) CountSession() int {
+	return p.sessHub.sessions.Len()
+}
+
 // ServeConn serves the connection and returns a session.
 func (p *Peer) ServeConn(conn net.Conn, protocol ...socket.Protocol) Session {
 	var session = newSession(p, conn, protocol)
