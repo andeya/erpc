@@ -19,7 +19,7 @@ func main() {
 		DefaultHeaderCodec:   "protobuf",
 		DefaultBodyCodec:     "json",
 		DefaultBodyGzipLevel: 5,
-		PrintBody:            false,
+		PrintBody:            true,
 	}
 
 	var peer = tp.NewPeer(cfg)
