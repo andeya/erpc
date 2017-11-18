@@ -402,7 +402,7 @@ func (s *session) startReadAndHandle() {
 		}
 
 		if readTimeout = s.ReadTimeout(); readTimeout > 0 {
-			s.socket.SetReadDeadline(coarsetime.CoarseTimeNow().Add(readTimeout + time.Second - 1))
+			s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 		}
 
 		err = s.socket.ReadPacket(ctx.input)
@@ -447,7 +447,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 		now          time.Time
 	)
 	if writeTimeout > 0 {
-		now = time.Now()
+		now = coarsetime.CeilingTimeNow()
 	}
 
 	s.writeLock.Lock()

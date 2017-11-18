@@ -527,6 +527,7 @@ func (c *PullCmd) Xerror() Xerror {
 }
 
 // CostTime returns the pulled cost time.
+// If PeerConfig.CountTime=false, always returns 0.
 func (c *PullCmd) CostTime() time.Duration {
 	return c.cost
 }
