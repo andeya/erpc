@@ -86,7 +86,7 @@ type Protocol interface {
 	WritePacket(
 		packet *Packet,
 		destWriter *utils.BufioWriter,
-		tmpCodecWriterGetter func(codecName string) (*TmpCodecWriter, error),
+		codecWriterMaker func(codecName string, w io.Writer) (*CodecWriter, error),
 		isActiveClosed func() bool,
 	) error
 

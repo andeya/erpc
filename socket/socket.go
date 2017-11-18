@@ -27,7 +27,6 @@
 package socket
 
 import (
-	"bytes"
 	"compress/gzip"
 	"net"
 	"sync"
@@ -123,11 +122,10 @@ type (
 		fromPool  bool
 
 		// about write
-		bufioWriter       *utils.BufioWriter
-		tmpCodecWriterMap map[string]*TmpCodecWriter // codecId:TmpCodecWriter
-		tmpGzipWriterMap  map[int]*gzip.Writer
-		tmpBufferWriter   *bytes.Buffer
-		writeMutex        sync.Mutex // exclusive writer lock
+		bufioWriter    *utils.BufioWriter
+		codecWriterMap map[string]*CodecWriter // codecId:CodecWriter
+		gzipWriterMap  map[int]*gzip.Writer
+		writeMutex     sync.Mutex // exclusive writer lock
 
 		// about read
 		bufioReader    *utils.BufioReader
@@ -170,17 +168,15 @@ func NewSocket(c net.Conn, protocol ...Protocol) Socket {
 func newSocket(c net.Conn, protocols []Protocol) *socket {
 	bufioWriter := utils.NewBufioWriter(c)
 	bufioReader := utils.NewBufioReader(c)
-	tmpBufferWriter := bytes.NewBuffer(nil)
 	var s = &socket{
-		protocol:          getProtocol(protocols),
-		Conn:              c,
-		bufioWriter:       bufioWriter,
-		tmpBufferWriter:   tmpBufferWriter,
-		bufioReader:       bufioReader,
-		tmpGzipWriterMap:  make(map[int]*gzip.Writer),
-		gzipReader:        new(gzip.Reader),
-		tmpCodecWriterMap: make(map[string]*TmpCodecWriter),
-		codecReaderMap:    make(map[byte]*CodecReader),
+		protocol:       getProtocol(protocols),
+		Conn:           c,
+		bufioWriter:    bufioWriter,
+		bufioReader:    bufioReader,
+		gzipWriterMap:  make(map[int]*gzip.Writer),
+		gzipReader:     new(gzip.Reader),
+		codecWriterMap: make(map[string]*CodecWriter),
+		codecReaderMap: make(map[byte]*CodecReader),
 	}
 	return s
 }
@@ -203,7 +199,7 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 	return s.protocol.WritePacket(
 		packet,
 		s.bufioWriter,
-		s.getTmpCodecWriter,
+		s.getCodecWriter,
 		s.isActiveClosed,
 	)
 }
@@ -219,7 +215,7 @@ func (s *socket) ReadPacket(packet *Packet) error {
 		packet,
 		packet.bodyAdapter,
 		s.bufioReader,
-		s.getCodecReader,
+		s.makeCodecReader,
 		s.isActiveClosed,
 		checkReadLimit,
 	)
@@ -303,7 +299,7 @@ func (s *socket) Close() error {
 	}
 
 	s.closeGzipReader()
-	for _, gz := range s.tmpGzipWriterMap {
+	for _, gz := range s.gzipWriterMap {
 		errs = append(errs, gz.Close())
 	}
 	if s.fromPool {

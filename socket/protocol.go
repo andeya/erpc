@@ -17,6 +17,7 @@
 package socket
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/binary"
 	"io"
@@ -32,7 +33,7 @@ type Protocol interface {
 	WritePacket(
 		packet *Packet,
 		destWriter *utils.BufioWriter,
-		tmpCodecWriterGetter func(codecName string) (*TmpCodecWriter, error),
+		codecWriterMaker func(codecName string, w io.Writer) (*CodecWriter, error),
 		isActiveClosed func() bool,
 	) error
 
@@ -49,7 +50,7 @@ type Protocol interface {
 
 // default socket communication protocol
 var (
-	ProtoLee        Protocol = new(protoLee)
+	ProtoLee        Protocol = &protoLee{tmpBufferWriter: bytes.NewBuffer(nil)}
 	defaultProtocol Protocol = ProtoLee
 	lengthSize               = int64(binary.Size(uint32(0)))
 )
@@ -64,7 +65,9 @@ func SetDefaultProtocol(protocol Protocol) {
 	defaultProtocol = protocol
 }
 
-type protoLee struct{}
+type protoLee struct {
+	tmpBufferWriter *bytes.Buffer
+}
 
 // WritePacket writes header and body to the connection.
 // WritePacket can be made to time out and return an Error with Timeout() == true
@@ -72,10 +75,10 @@ type protoLee struct{}
 // Note:
 //  For the byte stream type of body, write directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (p protoLee) WritePacket(
+func (p *protoLee) WritePacket(
 	packet *Packet,
 	destWriter *utils.BufioWriter,
-	tmpCodecWriterGetter func(codecName string) (*TmpCodecWriter, error),
+	codecWriterMaker func(codecName string, w io.Writer) (*CodecWriter, error),
 	isActiveClosed func() bool,
 ) error {
 
@@ -83,11 +86,12 @@ func (p protoLee) WritePacket(
 	if len(packet.HeaderCodec) == 0 {
 		packet.HeaderCodec = defaultHeaderCodec.Name()
 	}
-	tmpCodecWriter, err := tmpCodecWriterGetter(packet.HeaderCodec)
+	p.tmpBufferWriter.Reset()
+	codecWriter, err := codecWriterMaker(packet.HeaderCodec, p.tmpBufferWriter)
 	if err != nil {
 		return err
 	}
-	err = p.writeHeader(destWriter, tmpCodecWriter, packet.Header)
+	err = p.writeHeader(destWriter, codecWriter, packet.Header)
 	packet.Size = destWriter.Count()
 	packet.HeaderLength = destWriter.Count() - lengthSize
 	packet.BodyLength = 0
@@ -121,9 +125,10 @@ func (p protoLee) WritePacket(
 		if len(packet.BodyCodec) == 0 {
 			packet.BodyCodec = defaultBodyCodec.Name()
 		}
-		tmpCodecWriter, err = tmpCodecWriterGetter(packet.BodyCodec)
+		p.tmpBufferWriter.Reset()
+		codecWriter, err = codecWriterMaker(packet.BodyCodec, p.tmpBufferWriter)
 		if err == nil {
-			err = p.writeBody(destWriter, tmpCodecWriter, int(packet.Header.Gzip), bo)
+			err = p.writeBody(destWriter, codecWriter, int(packet.Header.Gzip), bo)
 		}
 	}
 	if err != nil {
@@ -133,21 +138,21 @@ func (p protoLee) WritePacket(
 	return destWriter.Flush()
 }
 
-func (protoLee) writeHeader(destWriter *utils.BufioWriter, tmpCodecWriter *TmpCodecWriter, header *Header) error {
-	err := tmpCodecWriter.WriteByte(tmpCodecWriter.Id())
+func (p *protoLee) writeHeader(destWriter *utils.BufioWriter, codecWriter *CodecWriter, header *Header) error {
+	err := p.tmpBufferWriter.WriteByte(codecWriter.Id())
 	if err != nil {
 		return err
 	}
-	err = tmpCodecWriter.Encode(gzip.NoCompression, header)
+	err = codecWriter.Encode(gzip.NoCompression, header)
 	if err != nil {
 		return err
 	}
-	headerLength := uint32(tmpCodecWriter.Len())
+	headerLength := uint32(p.tmpBufferWriter.Len())
 	err = binary.Write(destWriter, binary.BigEndian, headerLength)
 	if err != nil {
 		return err
 	}
-	_, err = tmpCodecWriter.WriteTo(destWriter)
+	_, err = p.tmpBufferWriter.WriteTo(destWriter)
 	return err
 }
 
@@ -161,22 +166,22 @@ func (protoLee) writeBytesBody(destWriter *utils.BufioWriter, body []byte) error
 	return err
 }
 
-func (protoLee) writeBody(destWriter *utils.BufioWriter, tmpCodecWriter *TmpCodecWriter, gzipLevel int, body interface{}) error {
-	err := tmpCodecWriter.WriteByte(tmpCodecWriter.Id())
+func (p *protoLee) writeBody(destWriter *utils.BufioWriter, codecWriter *CodecWriter, gzipLevel int, body interface{}) error {
+	err := p.tmpBufferWriter.WriteByte(codecWriter.Id())
 	if err != nil {
 		return err
 	}
-	err = tmpCodecWriter.Encode(gzipLevel, body)
+	err = codecWriter.Encode(gzipLevel, body)
 	if err != nil {
 		return err
 	}
 	// write body to socket buffer
-	bodyLength := uint32(tmpCodecWriter.Len())
+	bodyLength := uint32(p.tmpBufferWriter.Len())
 	err = binary.Write(destWriter, binary.BigEndian, bodyLength)
 	if err != nil {
 		return err
 	}
-	_, err = tmpCodecWriter.WriteTo(destWriter)
+	_, err = p.tmpBufferWriter.WriteTo(destWriter)
 	return err
 }
 

@@ -15,7 +15,6 @@
 package socket
 
 import (
-	"bytes"
 	"compress/gzip"
 	"io"
 
@@ -23,46 +22,44 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// TmpCodecWriter writer with gzip and encoder
-type TmpCodecWriter struct {
-	*bytes.Buffer
-	id               byte
-	tmpGzipWriterMap map[int]*gzip.Writer
-	encMap           map[int]codec.Encoder
-	encMaker         func(io.Writer) codec.Encoder
+// CodecWriter writer with gzip and encoder
+type CodecWriter struct {
+	io.Writer
+	id            byte
+	gzipWriterMap map[int]*gzip.Writer
+	encMap        map[int]codec.Encoder
+	encMaker      func(io.Writer) codec.Encoder
 }
 
-// Note: reseting the temporary buffer when return the *TmpCodecWriter
-func (s *socket) getTmpCodecWriter(codecName string) (*TmpCodecWriter, error) {
-	w := s.tmpBufferWriter
-	w.Reset()
-	t, ok := s.tmpCodecWriterMap[codecName]
+// Note: reseting the temporary buffer when return the *CodecWriter
+func (s *socket) getCodecWriter(codecName string, w io.Writer) (*CodecWriter, error) {
+	t, ok := s.codecWriterMap[codecName]
 	if ok {
+		t.Writer = w
 		return t, nil
 	}
 	c, err := codec.GetByName(codecName)
 	if err != nil {
 		return nil, err
 	}
-	enc := c.NewEncoder(w)
-	t = &TmpCodecWriter{
-		id:               c.Id(),
-		tmpGzipWriterMap: s.tmpGzipWriterMap,
-		Buffer:           w,
-		encMap:           map[int]codec.Encoder{gzip.NoCompression: enc},
-		encMaker:         c.NewEncoder,
+	t = &CodecWriter{
+		Writer:        w,
+		id:            c.Id(),
+		gzipWriterMap: s.gzipWriterMap,
+		encMaker:      c.NewEncoder,
 	}
-	s.tmpCodecWriterMap[codecName] = t
+	t.encMap = map[int]codec.Encoder{gzip.NoCompression: c.NewEncoder(t)}
+	s.codecWriterMap[codecName] = t
 	return t, nil
 }
 
 // Id returns codec id.
-func (t *TmpCodecWriter) Id() byte {
+func (t *CodecWriter) Id() byte {
 	return t.id
 }
 
 // Encode writes data with gzip and encoder.
-func (t *TmpCodecWriter) Encode(gzipLevel int, v interface{}) error {
+func (t *CodecWriter) Encode(gzipLevel int, v interface{}) error {
 	enc, ok := t.encMap[gzipLevel]
 	if gzipLevel == gzip.NoCompression {
 		return enc.Encode(v)
@@ -70,15 +67,15 @@ func (t *TmpCodecWriter) Encode(gzipLevel int, v interface{}) error {
 	var gz *gzip.Writer
 	var err error
 	if ok {
-		gz = t.tmpGzipWriterMap[gzipLevel]
-		gz.Reset(t.Buffer)
+		gz = t.gzipWriterMap[gzipLevel]
+		gz.Reset(t)
 
 	} else {
-		gz, err = gzip.NewWriterLevel(t.Buffer, gzipLevel)
+		gz, err = gzip.NewWriterLevel(t, gzipLevel)
 		if err != nil {
 			return err
 		}
-		t.tmpGzipWriterMap[gzipLevel] = gz
+		t.gzipWriterMap[gzipLevel] = gz
 		enc = t.encMaker(gz)
 		t.encMap[gzipLevel] = enc
 	}
@@ -97,7 +94,7 @@ type CodecReader struct {
 	gzDec      codec.Decoder
 }
 
-func (s *socket) getCodecReader(codecId byte) (*CodecReader, error) {
+func (s *socket) makeCodecReader(codecId byte) (*CodecReader, error) {
 	r, ok := s.codecReaderMap[codecId]
 	if ok {
 		return r, nil
