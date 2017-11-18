@@ -45,6 +45,8 @@ type (
 		Peer() *Peer
 		// RemoteIp returns the remote peer ip.
 		RemoteIp() string
+		// LocalIp returns the local peer ip.
+		LocalIp() string
 		// ReadTimeout returns readdeadline for underlying net.Conn.
 		SetReadTimeout(duration time.Duration)
 		// WriteTimeout returns writedeadline for underlying net.Conn.
@@ -82,6 +84,8 @@ type (
 		ReadTimeout() time.Duration
 		// RemoteIp returns the remote peer ip.
 		RemoteIp() string
+		// LocalIp returns the local peer ip.
+		LocalIp() string
 		// ReadTimeout returns readdeadline for underlying net.Conn.
 		SetReadTimeout(duration time.Duration)
 		// WriteTimeout returns writedeadline for underlying net.Conn.
@@ -102,6 +106,8 @@ type (
 		Peer() *Peer
 		// RemoteIp returns the remote peer ip.
 		RemoteIp() string
+		// LocalIp returns the local peer ip.
+		LocalIp() string
 		// Public returns temporary public data of session(socket).
 		Public() goutil.Map
 		// PublicLen returns the length of public data of session(socket).
@@ -179,6 +185,11 @@ func (s *session) SetId(newId string) {
 // RemoteIp returns the remote peer ip.
 func (s *session) RemoteIp() string {
 	return s.socket.RemoteAddr().String()
+}
+
+// LocalIp returns the local peer ip.
+func (s *session) LocalIp() string {
+	return s.socket.LocalAddr().String()
 }
 
 // ReadTimeout returns readdeadline for underlying net.Conn.

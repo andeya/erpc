@@ -119,6 +119,7 @@ func (p *Peer) Dial(addr string, protocol ...socket.Protocol) (Session, error) {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
 	var sess = newSession(p, conn, protocol)
+	sess.socket.SetId(sess.LocalIp())
 	if err = p.pluginContainer.PostDial(sess); err != nil {
 		sess.Close()
 		return nil, err
@@ -141,6 +142,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, protocol ...socket.
 		conn = tls.Client(conn, p.tlsConfig)
 	}
 	var sess = newSession(p, conn, protocol)
+	sess.socket.SetId(sess.LocalIp())
 	if err = p.pluginContainer.PostDial(sess); err != nil {
 		sess.Close()
 		return nil, err
