@@ -151,7 +151,7 @@ type Protocol interface {
         packet *Packet,
         bodyAdapter func() interface{},
         srcReader *utils.BufioReader,
-        codecReaderGetter func(codecId byte) (*CodecReader, error),
+        codecReaderMaker func(codecId byte) (*CodecReader, error),
         isActiveClosed func() bool,
         checkReadLimit func(int64) error,
     ) error

@@ -42,7 +42,7 @@ type Protocol interface {
 		packet *Packet,
 		bodyAdapter func() interface{},
 		srcReader *utils.BufioReader,
-		codecReaderGetter func(codecId byte) (*CodecReader, error),
+		codecReaderMaker func(codecId byte) (*CodecReader, error),
 		isActiveClosed func() bool,
 		checkReadLimit func(int64) error,
 	) error
@@ -199,7 +199,7 @@ func (p protoLee) ReadPacket(
 	packet *Packet,
 	bodyAdapter func() interface{},
 	srcReader *utils.BufioReader,
-	codecReaderGetter func(codecId byte) (*CodecReader, error),
+	codecReaderMaker func(codecId byte) (*CodecReader, error),
 	isActiveClosed func() bool,
 	checkReadLimit func(int64) error,
 ) error {
@@ -209,7 +209,7 @@ func (p protoLee) ReadPacket(
 		b          interface{}
 	)
 	srcReader.ResetCount()
-	packet.HeaderCodec, hErr = p.readHeader(srcReader, codecReaderGetter, packet.Header, checkReadLimit)
+	packet.HeaderCodec, hErr = p.readHeader(srcReader, codecReaderMaker, packet.Header, checkReadLimit)
 	packet.Size = srcReader.Count()
 	if srcReader.Count() > lengthSize {
 		packet.HeaderLength = srcReader.Count() - lengthSize
@@ -232,7 +232,7 @@ func (p protoLee) ReadPacket(
 	}
 
 	srcReader.ResetCount()
-	packet.BodyCodec, bErr = p.readBody(srcReader, codecReaderGetter, int(packet.Header.Gzip), b, packet.HeaderLength, checkReadLimit)
+	packet.BodyCodec, bErr = p.readBody(srcReader, codecReaderMaker, int(packet.Header.Gzip), b, packet.HeaderLength, checkReadLimit)
 	packet.Size += srcReader.Count()
 	if srcReader.Count() > lengthSize {
 		packet.BodyLength = srcReader.Count() - lengthSize
@@ -249,7 +249,7 @@ func (p protoLee) ReadPacket(
 // Note: must use only one goroutine call.
 func (protoLee) readHeader(
 	srcReader *utils.BufioReader,
-	codecReaderGetter func(byte) (*CodecReader, error),
+	codecReaderMaker func(byte) (*CodecReader, error),
 	header *Header,
 	checkReadLimit func(int64) error,
 ) (string, error) {
@@ -275,7 +275,7 @@ func (protoLee) readHeader(
 		return GetCodecName(codecId), err
 	}
 
-	codecReader, err := codecReaderGetter(codecId)
+	codecReader, err := codecReaderMaker(codecId)
 	if err != nil {
 		return GetCodecName(codecId), err
 	}
@@ -290,7 +290,7 @@ func (protoLee) readHeader(
 // Note: must use only one goroutine call, and it must be called after calling the readHeader().
 func (protoLee) readBody(
 	srcReader *utils.BufioReader,
-	codecReaderGetter func(byte) (*CodecReader, error),
+	codecReaderMaker func(byte) (*CodecReader, error),
 	gzipLevel int,
 	body interface{},
 	headerLength int64,
@@ -341,7 +341,7 @@ func (protoLee) readBody(
 		if bodyLength == 1 || err != nil {
 			return GetCodecName(codecId), err
 		}
-		codecReader, err := codecReaderGetter(codecId)
+		codecReader, err := codecReaderMaker(codecId)
 		if err != nil {
 			return GetCodecName(codecId), err
 		}
