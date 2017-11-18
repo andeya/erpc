@@ -48,13 +48,6 @@ type Protocol interface {
 	) error
 }
 
-// default socket communication protocol
-var (
-	ProtoLee        Protocol = &protoLee{tmpBufferWriter: bytes.NewBuffer(nil)}
-	defaultProtocol Protocol = ProtoLee
-	lengthSize               = int64(binary.Size(uint32(0)))
-)
-
 // GetDefaultProtocol gets the default socket communication protocol
 func GetDefaultProtocol() Protocol {
 	return defaultProtocol
@@ -64,6 +57,30 @@ func GetDefaultProtocol() Protocol {
 func SetDefaultProtocol(protocol Protocol) {
 	defaultProtocol = protocol
 }
+
+/*
+```
+	HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
+	```
+
+	**Notes:**
+
+	- `HeaderLength`: uint32, 4 bytes, big endian
+	- `HeaderCodecId`: uint8, 1 byte
+	- `Header`: header bytes
+	- `BodyLength`: uint32, 4 bytes, big endian
+		* may be 0, meaning that the `Body` is empty and does not indicate the `BodyCodecId`
+		* may be 1, meaning that the `Body` is empty but indicates the `BodyCodecId`
+	- `BodyCodecId`: uint8, 1 byte
+	- `Body`: body bytes
+*/
+
+// default socket communication protocol
+var (
+	ProtoLee        Protocol = &protoLee{tmpBufferWriter: bytes.NewBuffer(nil)}
+	defaultProtocol Protocol = ProtoLee
+	lengthSize               = int64(binary.Size(uint32(0)))
+)
 
 type protoLee struct {
 	tmpBufferWriter *bytes.Buffer
@@ -83,9 +100,6 @@ func (p *protoLee) WritePacket(
 ) error {
 
 	// write header
-	if len(packet.HeaderCodec) == 0 {
-		packet.HeaderCodec = defaultHeaderCodec.Name()
-	}
 	p.tmpBufferWriter.Reset()
 	codecWriter, err := codecWriterMaker(packet.HeaderCodec, p.tmpBufferWriter)
 	if err != nil {
@@ -107,14 +121,9 @@ func (p *protoLee) WritePacket(
 
 	switch bo := packet.Body.(type) {
 	case nil:
-		codecId := GetCodecId(packet.BodyCodec)
-		if codecId == codec.NilCodecId {
-			err = binary.Write(destWriter, binary.BigEndian, uint32(0))
-		} else {
-			err = binary.Write(destWriter, binary.BigEndian, uint32(1))
-			if err == nil {
-				err = destWriter.WriteByte(codecId)
-			}
+		err = binary.Write(destWriter, binary.BigEndian, uint32(1))
+		if err == nil {
+			err = destWriter.WriteByte(GetCodecId(packet.BodyCodec))
 		}
 
 	case []byte:
@@ -122,9 +131,6 @@ func (p *protoLee) WritePacket(
 	case *[]byte:
 		err = p.writeBytesBody(destWriter, *bo)
 	default:
-		if len(packet.BodyCodec) == 0 {
-			packet.BodyCodec = defaultBodyCodec.Name()
-		}
 		p.tmpBufferWriter.Reset()
 		codecWriter, err = codecWriterMaker(packet.BodyCodec, p.tmpBufferWriter)
 		if err == nil {

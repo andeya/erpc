@@ -189,6 +189,12 @@ func newSocket(c net.Conn, protocols []Protocol) *socket {
 //  Must be safe for concurrent use by multiple goroutines.
 func (s *socket) WritePacket(packet *Packet) (err error) {
 	s.writeMutex.Lock()
+	if len(packet.HeaderCodec) == 0 {
+		packet.HeaderCodec = defaultHeaderCodec.Name()
+	}
+	if len(packet.BodyCodec) == 0 {
+		packet.BodyCodec = defaultBodyCodec.Name()
+	}
 	defer func() {
 		if err != nil && s.isActiveClosed() {
 			err = ErrProactivelyCloseSocket
