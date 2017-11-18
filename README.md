@@ -159,10 +159,10 @@ Next, you can specify the communication protocol in the following ways:
 
 ```go
 func SetDefaultProtocol(socket.Protocol)
-func (*Peer) ServeConn(conn net.Conn, protocol ...socket.Protocol) Session
-func (*Peer) DialContext(ctx context.Context, addr string, protocol ...socket.Protocol) (Session, error)
-func (*Peer) Dial(addr string, protocol ...socket.Protocol) (Session, error)
-func (*Peer) Listen(protocol ...socket.Protocol) error
+func (*Peer) ServeConn(conn net.Conn, protocolFunc ...socket.ProtocolFunc) Session
+func (*Peer) DialContext(ctx context.Context, addr string, protocolFunc ...socket.ProtocolFunc) (Session, error)
+func (*Peer) Dial(addr string, protocolFunc ...socket.ProtocolFunc) (Session, error)
+func (*Peer) Listen(protocolFunc ...socket.ProtocolFunc) error
 ```
 
 

@@ -33,13 +33,13 @@ var GetSenderPacket = socket.GetSenderPacket
 //  func GetReceiverPacket(bodyGetting func(*socket.Header) interface{}) *socket.Packet
 var GetReceiverPacket = socket.GetReceiverPacket
 
-// GetDefaultProtocol gets the default socket communication protocol
-//  func GetDefaultProtocol() Protocol
-var GetDefaultProtocol = socket.GetDefaultProtocol
+// DefaultProtocolFunc gets the default builder of socket communication protocol
+//  func DefaultProtocolFunc() ProtocolFunc
+var DefaultProtocolFunc = socket.DefaultProtocolFunc
 
-// SetDefaultProtocol sets the default socket communication protocol
-//  func SetDefaultProtocol(protocol Protocol)
-var SetDefaultProtocol = socket.SetDefaultProtocol
+// SetDefaultProtocolFunc sets the default builder of socket communication protocol
+//  func SetDefaultProtocolFunc(protocolFunc ProtocolFunc)
+var SetDefaultProtocolFunc = socket.SetDefaultProtocolFunc
 
 // PutPacket puts a *socket.Packet to packet stack.
 //  func PutPacket(p *socket.Packet)

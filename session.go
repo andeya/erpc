@@ -141,12 +141,12 @@ var (
 	_ PostSession = new(session)
 )
 
-func newSession(peer *Peer, conn net.Conn, protocols []socket.Protocol) *session {
+func newSession(peer *Peer, conn net.Conn, protocolFuncs []socket.ProtocolFunc) *session {
 	var s = &session{
 		peer:         peer,
 		pullRouter:   peer.PullRouter,
 		pushRouter:   peer.PushRouter,
-		socket:       socket.NewSocket(conn, protocols...),
+		socket:       socket.NewSocket(conn, protocolFuncs...),
 		pullCmdMap:   goutil.RwMap(),
 		readTimeout:  peer.defaultReadTimeout,
 		writeTimeout: peer.defaultWriteTimeout,

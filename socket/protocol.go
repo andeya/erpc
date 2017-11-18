@@ -27,35 +27,39 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// Protocol socket communication protocol
-type Protocol interface {
-	// WritePacket writes header and body to the connection.
-	WritePacket(
-		packet *Packet,
-		destWriter *utils.BufioWriter,
-		codecWriterMaker func(codecName string, w io.Writer) (*CodecWriter, error),
-		isActiveClosed func() bool,
-	) error
+type (
+	// Protocol socket communication protocol
+	Protocol interface {
+		// WritePacket writes header and body to the connection.
+		WritePacket(
+			packet *Packet,
+			destWriter *utils.BufioWriter,
+			codecWriterMaker func(codecName string, w io.Writer) (*CodecWriter, error),
+			isActiveClosed func() bool,
+		) error
 
-	// ReadPacket reads header and body from the connection.
-	ReadPacket(
-		packet *Packet,
-		bodyAdapter func() interface{},
-		srcReader *utils.BufioReader,
-		codecReaderMaker func(codecId byte) (*CodecReader, error),
-		isActiveClosed func() bool,
-		checkReadLimit func(int64) error,
-	) error
+		// ReadPacket reads header and body from the connection.
+		ReadPacket(
+			packet *Packet,
+			bodyAdapter func() interface{},
+			srcReader *utils.BufioReader,
+			codecReaderMaker func(codecId byte) (*CodecReader, error),
+			isActiveClosed func() bool,
+			checkReadLimit func(int64) error,
+		) error
+	}
+	// ProtocolFunc is builder of socket communication protocol
+	ProtocolFunc func() Protocol
+)
+
+// DefaultProtocolFunc gets the default builder of socket communication protocol
+func DefaultProtocolFunc() ProtocolFunc {
+	return defaultProtocolFunc
 }
 
-// GetDefaultProtocol gets the default socket communication protocol
-func GetDefaultProtocol() Protocol {
-	return defaultProtocol
-}
-
-// SetDefaultProtocol sets the default socket communication protocol
-func SetDefaultProtocol(protocol Protocol) {
-	defaultProtocol = protocol
+// SetDefaultProtocolFunc sets the default builder of socket communication protocol
+func SetDefaultProtocolFunc(protocolFunc ProtocolFunc) {
+	defaultProtocolFunc = protocolFunc
 }
 
 /*
@@ -75,14 +79,13 @@ func SetDefaultProtocol(protocol Protocol) {
 	- `Body`: body bytes
 */
 
-// default socket communication protocol
+// default builder of socket communication protocol
 var (
-	ProtoLee        Protocol = &protoLee{tmpBufferWriter: bytes.NewBuffer(nil)}
-	defaultProtocol Protocol = ProtoLee
-	lengthSize               = int64(binary.Size(uint32(0)))
+	defaultProtocolFunc = func() Protocol { return &ProtoLee{tmpBufferWriter: bytes.NewBuffer(nil)} }
+	lengthSize          = int64(binary.Size(uint32(0)))
 )
 
-type protoLee struct {
+type ProtoLee struct {
 	tmpBufferWriter *bytes.Buffer
 }
 
@@ -92,7 +95,7 @@ type protoLee struct {
 // Note:
 //  For the byte stream type of body, write directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (p *protoLee) WritePacket(
+func (p *ProtoLee) WritePacket(
 	packet *Packet,
 	destWriter *utils.BufioWriter,
 	codecWriterMaker func(codecName string, w io.Writer) (*CodecWriter, error),
@@ -144,7 +147,7 @@ func (p *protoLee) WritePacket(
 	return destWriter.Flush()
 }
 
-func (p *protoLee) writeHeader(destWriter *utils.BufioWriter, codecWriter *CodecWriter, header *Header) error {
+func (p *ProtoLee) writeHeader(destWriter *utils.BufioWriter, codecWriter *CodecWriter, header *Header) error {
 	err := p.tmpBufferWriter.WriteByte(codecWriter.Id())
 	if err != nil {
 		return err
@@ -162,7 +165,7 @@ func (p *protoLee) writeHeader(destWriter *utils.BufioWriter, codecWriter *Codec
 	return err
 }
 
-func (protoLee) writeBytesBody(destWriter *utils.BufioWriter, body []byte) error {
+func (ProtoLee) writeBytesBody(destWriter *utils.BufioWriter, body []byte) error {
 	bodyLength := uint32(len(body))
 	err := binary.Write(destWriter, binary.BigEndian, bodyLength)
 	if err != nil {
@@ -172,7 +175,7 @@ func (protoLee) writeBytesBody(destWriter *utils.BufioWriter, body []byte) error
 	return err
 }
 
-func (p *protoLee) writeBody(destWriter *utils.BufioWriter, codecWriter *CodecWriter, gzipLevel int, body interface{}) error {
+func (p *ProtoLee) writeBody(destWriter *utils.BufioWriter, codecWriter *CodecWriter, gzipLevel int, body interface{}) error {
 	err := p.tmpBufferWriter.WriteByte(codecWriter.Id())
 	if err != nil {
 		return err
@@ -195,7 +198,7 @@ func (p *protoLee) writeBody(destWriter *utils.BufioWriter, codecWriter *CodecWr
 // Note:
 //  For the byte stream type of body, read directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (p protoLee) ReadPacket(
+func (p ProtoLee) ReadPacket(
 	packet *Packet,
 	bodyAdapter func() interface{},
 	srcReader *utils.BufioReader,
@@ -247,7 +250,7 @@ func (p protoLee) ReadPacket(
 // readHeader can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call.
-func (protoLee) readHeader(
+func (ProtoLee) readHeader(
 	srcReader *utils.BufioReader,
 	codecReaderMaker func(byte) (*CodecReader, error),
 	header *Header,
@@ -288,7 +291,7 @@ func (protoLee) readHeader(
 // readBody can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 // Note: must use only one goroutine call, and it must be called after calling the readHeader().
-func (protoLee) readBody(
+func (ProtoLee) readBody(
 	srcReader *utils.BufioReader,
 	codecReaderMaker func(byte) (*CodecReader, error),
 	gzipLevel int,

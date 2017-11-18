@@ -146,9 +146,9 @@ var _ net.Conn = Socket(nil)
 var ErrProactivelyCloseSocket = errors.New("socket is closed proactively")
 
 // GetSocket gets a Socket from pool, and reset it.
-func GetSocket(c net.Conn, protocol ...Protocol) Socket {
+func GetSocket(c net.Conn, protocolFunc ...ProtocolFunc) Socket {
 	s := socketPool.Get().(*socket)
-	s.Reset(c, protocol...)
+	s.Reset(c, protocolFunc...)
 	return s
 }
 
@@ -161,15 +161,15 @@ var socketPool = sync.Pool{
 }
 
 // NewSocket wraps a net.Conn as a Socket.
-func NewSocket(c net.Conn, protocol ...Protocol) Socket {
-	return newSocket(c, protocol)
+func NewSocket(c net.Conn, protocolFunc ...ProtocolFunc) Socket {
+	return newSocket(c, protocolFunc)
 }
 
-func newSocket(c net.Conn, protocols []Protocol) *socket {
+func newSocket(c net.Conn, protocolFuncs []ProtocolFunc) *socket {
 	bufioWriter := utils.NewBufioWriter(c)
 	bufioReader := utils.NewBufioReader(c)
 	var s = &socket{
-		protocol:       getProtocol(protocols),
+		protocol:       getProtocol(protocolFuncs),
 		Conn:           c,
 		bufioWriter:    bufioWriter,
 		bufioReader:    bufioReader,
@@ -262,7 +262,7 @@ func (s *socket) SetId(id string) {
 }
 
 // Reset reset net.Conn
-func (s *socket) Reset(netConn net.Conn, protocol ...Protocol) {
+func (s *socket) Reset(netConn net.Conn, protocolFunc ...ProtocolFunc) {
 	atomic.StoreInt32(&s.curState, activeClose)
 	if s.Conn != nil {
 		s.Conn.Close()
@@ -273,7 +273,7 @@ func (s *socket) Reset(netConn net.Conn, protocol ...Protocol) {
 	s.bufioReader.Reset(netConn)
 	s.bufioWriter.Reset(netConn)
 	s.SetId("")
-	s.protocol = getProtocol(protocol)
+	s.protocol = getProtocol(protocolFunc)
 	atomic.StoreInt32(&s.curState, normal)
 	s.readMutex.Unlock()
 	s.writeMutex.Unlock()
@@ -329,11 +329,11 @@ func (s *socket) closeGzipReader() {
 	s.gzipReader.Close()
 }
 
-func getProtocol(protocols []Protocol) Protocol {
-	if len(protocols) > 0 {
-		return protocols[0]
+func getProtocol(protocolFuncs []ProtocolFunc) Protocol {
+	if len(protocolFuncs) > 0 {
+		return protocolFuncs[0]()
 	} else {
-		return defaultProtocol
+		return defaultProtocolFunc()
 	}
 }
 
