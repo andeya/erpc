@@ -21,6 +21,7 @@ func main() {
 		DefaultBodyCodec:     "json",
 		DefaultBodyGzipLevel: 5,
 		PrintBody:            true,
+		CountTime:            true,
 		ListenAddrs: []string{
 			"0.0.0.0:9090",
 			"0.0.0.0:9091",

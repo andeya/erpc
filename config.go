@@ -36,6 +36,7 @@ type PeerConfig struct {
 	DefaultBodyCodec     string        `yaml:"default_body_codec"      ini:"default_body_codec"      comment:"Default body codec"`
 	DefaultBodyGzipLevel int32         `yaml:"default_body_gzip_level" ini:"default_body_gzip_level" comment:"Default body gzip level"`
 	PrintBody            bool          `yaml:"print_body"              ini:"print_body"              comment:"Is print body or not"`
+	CountTime            bool          `yaml:"count_time"              ini:"count_time"              comment:"Is count cost time or not"`
 	DefaultDialTimeout   time.Duration `yaml:"default_dial_timeout"    ini:"default_dial_timeout"    comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
 	ListenAddrs          []string      `yaml:"listen_addrs"            ini:"listen_addrs"            comment:"Listen addresses; for server role"`
 }

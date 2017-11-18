@@ -44,6 +44,9 @@ type Peer struct {
 	defaultBodyCodec     string
 	defaultBodyGzipLevel int32
 	printBody            bool
+	countTime            bool
+	timeNow              func() time.Time
+	timeSince            func(time.Time) time.Duration
 	mu                   sync.Mutex
 
 	// for client role
@@ -79,7 +82,17 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		defaultBodyCodec:     cfg.DefaultBodyCodec,
 		defaultBodyGzipLevel: cfg.DefaultBodyGzipLevel,
 		printBody:            cfg.PrintBody,
+		countTime:            cfg.CountTime,
 	}
+	if p.countTime {
+		p.timeNow = time.Now
+		p.timeSince = time.Since
+	} else {
+		t0 := time.Time{}
+		p.timeNow = func() time.Time { return t0 }
+		p.timeSince = func(time.Time) time.Duration { return 0 }
+	}
+
 	addPeer(p)
 	return p
 }

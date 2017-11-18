@@ -20,6 +20,7 @@ func main() {
 		DefaultBodyCodec:     "json",
 		DefaultBodyGzipLevel: 5,
 		PrintBody:            true,
+		CountTime:            true,
 	}
 
 	var peer = tp.NewPeer(cfg)

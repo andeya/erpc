@@ -217,7 +217,7 @@ func (c *readHandleCtx) binding(header *socket.Header) (body interface{}) {
 			body = nil
 		}
 	}()
-	c.start = time.Now()
+	c.start = c.Peer().timeNow()
 	c.pluginContainer = c.sess.peer.pluginContainer
 	switch header.Type {
 	case TypeReply:
@@ -299,7 +299,7 @@ func (c *readHandleCtx) handlePush() {
 		if p := recover(); p != nil {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
-		c.cost = time.Since(c.start)
+		c.cost = c.Peer().timeSince(c.start)
 		c.sess.runlog(c.cost, c.input, nil)
 	}()
 
@@ -374,7 +374,7 @@ func (c *readHandleCtx) handlePull() {
 		if p := recover(); p != nil {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
-		c.cost = time.Since(c.start)
+		c.cost = c.Peer().timeSince(c.start)
 		c.sess.runlog(c.cost, c.input, c.output)
 	}()
 
@@ -437,7 +437,7 @@ func (c *readHandleCtx) handleReply() {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 		c.pullCmd.done()
-		c.pullCmd.cost = time.Since(c.pullCmd.start)
+		c.pullCmd.cost = c.Peer().timeSince(c.pullCmd.start)
 		c.sess.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
 	}()
 	if c.pullCmd.xerror != nil {
@@ -524,6 +524,11 @@ func (c *PullCmd) Result() (interface{}, Xerror) {
 // Xerror returns the pull error.
 func (c *PullCmd) Xerror() Xerror {
 	return c.xerror
+}
+
+// CostTime returns the pulled cost time.
+func (c *PullCmd) CostTime() time.Duration {
+	return c.cost
 }
 
 func (p *PullCmd) cancel() {
