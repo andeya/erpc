@@ -117,11 +117,6 @@ func (p *ProtoLee) WritePacket(
 	}
 
 	// write body
-	defer func() {
-		packet.Size = destWriter.Count()
-		packet.BodyLength = packet.Size - packet.HeaderLength - lengthSize*2
-	}()
-
 	switch bo := packet.Body.(type) {
 	case nil:
 		err = binary.Write(destWriter, binary.BigEndian, uint32(1))
@@ -140,11 +135,12 @@ func (p *ProtoLee) WritePacket(
 			err = p.writeBody(destWriter, codecWriter, int(packet.Header.Gzip), bo)
 		}
 	}
-	if err != nil {
-		return err
+	if err == nil {
+		err = destWriter.Flush()
 	}
-
-	return destWriter.Flush()
+	packet.Size = destWriter.Count()
+	packet.BodyLength = packet.Size - packet.HeaderLength - lengthSize*2
+	return err
 }
 
 func (p *ProtoLee) writeHeader(destWriter *utils.BufioWriter, codecWriter *CodecWriter, header *Header) error {

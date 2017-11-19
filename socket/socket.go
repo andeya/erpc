@@ -14,16 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-//
-// Packet protocol:
-//  HeaderLength | HeaderCodecId | Header | BodyLength | BodyCodecId | Body
-//
-// Notes:
-//  HeaderLength: uint32, 4 bytes, big endian
-//  BodyLength: uint32, 4 bytes, big endian
-//  HeaderCodecId: uint8, 1 byte
-//  BodyCodecId: uint8, 1 byte
-//
 package socket
 
 import (
