@@ -59,7 +59,7 @@ func init() {
 }
 
 var (
-	_maxGoroutinesAmount      int
+	_maxGoroutinesAmount      = (1024 * 1024 * 8) / 8 // max memory 8GB (8KB/goroutine)
 	_maxGoroutineIdleDuration time.Duration
 	_gopool                   *pool.GoPool
 	setGopoolOnce             sync.Once
