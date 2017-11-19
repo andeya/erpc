@@ -300,10 +300,7 @@ func (p *Peer) getContext(s *session, withWg bool) *readHandleCtx {
 
 func (p *Peer) putContext(ctx *readHandleCtx, withWg bool) {
 	p.ctxLock.Lock()
-	defer func() {
-		recover()
-		p.ctxLock.Unlock()
-	}()
+	defer p.ctxLock.Unlock()
 	if withWg {
 		// count get context
 		ctx.sess.graceCtxWaitGroup.Done()

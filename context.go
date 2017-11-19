@@ -296,26 +296,18 @@ func (c *readHandleCtx) bindPush(header *socket.Header) interface{} {
 // handlePush handles push.
 func (c *readHandleCtx) handlePush() {
 	defer func() {
-		if p := recover(); p != nil {
-			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
-		}
 		c.cost = c.Peer().timeSince(c.start)
-		c.sess.runlog(c.cost, c.input, nil)
+		c.sess.runlog(c.cost, c.input, nil, typePushHandle)
 	}()
 
-	if c.apiType == nil {
-		return
-	}
-
-	err := c.pluginContainer.PostReadPushBody(c)
-	if err != nil {
-		return
-	}
-
-	if c.apiType.isUnknown {
-		c.apiType.unknownHandleFunc(c)
-	} else {
-		c.apiType.handleFunc(c, c.arg)
+	if c.apiType != nil {
+		if c.pluginContainer.PostReadPushBody(c) == nil {
+			if c.apiType.isUnknown {
+				c.apiType.unknownHandleFunc(c)
+			} else {
+				c.apiType.handleFunc(c, c.arg)
+			}
+		}
 	}
 }
 
@@ -371,11 +363,8 @@ func (c *readHandleCtx) bindPull(header *socket.Header) interface{} {
 // handlePull handles and replies pull.
 func (c *readHandleCtx) handlePull() {
 	defer func() {
-		if p := recover(); p != nil {
-			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
-		}
 		c.cost = c.Peer().timeSince(c.start)
-		c.sess.runlog(c.cost, c.input, c.output)
+		c.sess.runlog(c.cost, c.input, c.output, typePullHandle)
 	}()
 
 	// handle pull
@@ -433,12 +422,9 @@ func (c *readHandleCtx) handleReply() {
 		return
 	}
 	defer func() {
-		if p := recover(); p != nil {
-			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
-		}
 		c.pullCmd.done()
 		c.pullCmd.cost = c.Peer().timeSince(c.pullCmd.start)
-		c.sess.runlog(c.pullCmd.cost, c.input, c.pullCmd.output)
+		c.sess.runlog(c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
 	}()
 	if c.pullCmd.xerror != nil {
 		return
@@ -533,9 +519,6 @@ func (c *PullCmd) CostTime() time.Duration {
 }
 
 func (p *PullCmd) cancel() {
-	defer func() {
-		recover()
-	}()
 	p.xerror = NewXerror(StatusConnClosed, StatusText(StatusConnClosed))
 	p.doneChan <- p
 	p.sess.pullCmdMap.Delete(p.output.Header.Seq)
@@ -546,9 +529,6 @@ func (p *PullCmd) cancel() {
 }
 
 func (p *PullCmd) done() {
-	defer func() {
-		recover()
-	}()
 	p.doneChan <- p
 	p.sess.pullCmdMap.Delete(p.output.Header.Seq)
 	{

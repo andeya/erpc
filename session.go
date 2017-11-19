@@ -17,6 +17,7 @@ package tp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -304,9 +305,6 @@ func (s *session) Pull(uri string, args interface{}, reply interface{}, setting 
 	doneChan := make(chan *PullCmd, 1)
 	s.GoPull(uri, args, reply, doneChan, setting...)
 	pullCmd := <-doneChan
-	defer func() {
-		recover()
-	}()
 	close(doneChan)
 	return pullCmd
 }
@@ -352,7 +350,7 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 		if p := recover(); p != nil {
 			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
-		s.runlog(s.peer.timeSince(ctx.start), nil, output)
+		s.runlog(s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
 		s.peer.putContext(ctx, true)
 	}()
 
@@ -378,18 +376,17 @@ func (s *session) PublicLen() int {
 }
 
 func (s *session) startReadAndHandle() {
-	defer func() {
-		if p := recover(); p != nil {
-			Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
-		}
-		atomic.StoreInt32(&s.disconnected, 1)
-		s.Close()
-	}()
-
 	var (
 		err         error
 		readTimeout time.Duration
 	)
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("%v\n%s", p, goutil.PanicTrace(2))
+		}
+		s.readDisconnected(err)
+		s.Close()
+	}()
 
 	// read pull, pull reple or push
 	for s.IsOk() {
@@ -397,7 +394,7 @@ func (s *session) startReadAndHandle() {
 		err = s.peer.pluginContainer.PreReadHeader(ctx)
 		if err != nil {
 			s.peer.putContext(ctx, false)
-			s.readDisconnected(nil)
+			err = nil
 			return
 		}
 
@@ -410,7 +407,6 @@ func (s *session) startReadAndHandle() {
 			s.peer.putContext(ctx, false)
 			// DEBUG:
 			// Debugf("s.socket.ReadPacket(ctx.input): err: %v", err)
-			s.readDisconnected(err)
 			return
 		}
 		if !s.IsOk() {
@@ -458,9 +454,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	}
 
 	defer func() {
-		if p := recover(); p != nil {
-			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
-		} else if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
+		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
 			err = ErrConnClosed
 		}
 		s.writeLock.Unlock()
@@ -498,7 +492,6 @@ func (s *session) Close() (err error) {
 	atomic.StoreInt32(&s.closed, 1)
 
 	defer func() {
-		recover()
 		s.graceCtxWaitGroup.Wait()
 		s.gracePullCmdWaitGroup.Wait()
 		// make sure return s.startReadAndHandle
@@ -609,20 +602,27 @@ func (sh *SessionHub) Delete(id string) {
 	sh.sessions.Delete(id)
 }
 
-func isPushLaunch(input, output *socket.Packet) bool {
-	return input == nil || (output != nil && output.Header.Type == TypePush)
-}
-func isPushHandle(input, output *socket.Packet) bool {
-	return output == nil || (input != nil && input.Header.Type == TypePush)
-}
-func isPullLaunch(input, output *socket.Packet) bool {
-	return output != nil && output.Header.Type == TypePull
-}
-func isPullHandle(input, output *socket.Packet) bool {
-	return output != nil && output.Header.Type == TypeReply
-}
+const (
+	typePushLaunch int8 = 1
+	typePushHandle int8 = 2
+	typePullLaunch int8 = 3
+	typePullHandle int8 = 4
+)
 
-func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
+// func isPushLaunch(input, output *socket.Packet) bool {
+// 	return input == nil || (output != nil && output.Header.Type == TypePush)
+// }
+// func isPushHandle(input, output *socket.Packet) bool {
+// 	return output == nil || (input != nil && input.Header.Type == TypePush)
+// }
+// func isPullLaunch(input, output *socket.Packet) bool {
+// 	return output != nil && output.Header.Type == TypePull
+// }
+// func isPullHandle(input, output *socket.Packet) bool {
+// 	return output != nil && output.Header.Type == TypeReply
+// }
+
+func (s *session) runlog(costTime time.Duration, input, output *socket.Packet, logType int8) {
 	if s.peer.countTime {
 		var (
 			printFunc func(string, ...interface{})
@@ -635,8 +635,8 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 			slowStr = "(slow)"
 		}
 
-		switch {
-		case isPushLaunch(input, output):
+		switch logType {
+		case typePushLaunch:
 			if s.peer.printBody {
 				logformat := "[push-launch] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
 				printFunc(logformat, s.RemoteIp(), output.Header.Seq, costTime, slowStr, output.Header.Uri, output.Size, bodyLogBytes(output))
@@ -646,7 +646,7 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 				printFunc(logformat, s.RemoteIp(), output.Header.Seq, costTime, slowStr, output.Header.Uri, output.Size)
 			}
 
-		case isPushHandle(input, output):
+		case typePushHandle:
 			if s.peer.printBody {
 				logformat := "[push-handle] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
 				printFunc(logformat, s.RemoteIp(), input.Header.Seq, costTime, slowStr, input.Header.Uri, input.Size, bodyLogBytes(input))
@@ -655,7 +655,7 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 				printFunc(logformat, s.RemoteIp(), input.Header.Seq, costTime, slowStr, input.Header.Uri, input.Size)
 			}
 
-		case isPullLaunch(input, output):
+		case typePullLaunch:
 			if s.peer.printBody {
 				logformat := "[pull-launch] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s %s\n body[-json]: %s\n"
 				printFunc(logformat, s.RemoteIp(), output.Header.Seq, costTime, slowStr, output.Header.Uri, output.Size, bodyLogBytes(output), input.Size, colorCode(input.Header.StatusCode), input.Header.Status, bodyLogBytes(input))
@@ -664,7 +664,7 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 				printFunc(logformat, s.RemoteIp(), output.Header.Seq, costTime, slowStr, output.Header.Uri, output.Size, input.Size, colorCode(input.Header.StatusCode), input.Header.Status)
 			}
 
-		case isPullHandle(input, output):
+		case typePullHandle:
 			if s.peer.printBody {
 				logformat := "[pull-handle] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s %s\n body[-json]: %s\n"
 				printFunc(logformat, s.RemoteIp(), input.Header.Seq, costTime, slowStr, input.Header.Uri, input.Size, bodyLogBytes(input), output.Size, colorCode(output.Header.StatusCode), output.Header.Status, bodyLogBytes(output))
@@ -674,8 +674,8 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 			}
 		}
 	} else {
-		switch {
-		case isPushLaunch(input, output):
+		switch logType {
+		case typePushLaunch:
 			if s.peer.printBody {
 				logformat := "[push-launch] remote-ip: %s | seq: %d | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
 				Infof(logformat, s.RemoteIp(), output.Header.Seq, output.Header.Uri, output.Size, bodyLogBytes(output))
@@ -685,7 +685,7 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 				Infof(logformat, s.RemoteIp(), output.Header.Seq, output.Header.Uri, output.Size)
 			}
 
-		case isPushHandle(input, output):
+		case typePushHandle:
 			if s.peer.printBody {
 				logformat := "[push-handle] remote-ip: %s | seq: %d | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
 				Infof(logformat, s.RemoteIp(), input.Header.Seq, input.Header.Uri, input.Size, bodyLogBytes(input))
@@ -694,7 +694,7 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 				Infof(logformat, s.RemoteIp(), input.Header.Seq, input.Header.Uri, input.Size)
 			}
 
-		case isPullLaunch(input, output):
+		case typePullLaunch:
 			if s.peer.printBody {
 				logformat := "[pull-launch] remote-ip: %s | seq: %d | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s %s\n body[-json]: %s\n"
 				Infof(logformat, s.RemoteIp(), output.Header.Seq, output.Header.Uri, output.Size, bodyLogBytes(output), input.Size, colorCode(input.Header.StatusCode), input.Header.Status, bodyLogBytes(input))
@@ -703,7 +703,7 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet) {
 				Infof(logformat, s.RemoteIp(), output.Header.Seq, output.Header.Uri, output.Size, input.Size, colorCode(input.Header.StatusCode), input.Header.Status)
 			}
 
-		case isPullHandle(input, output):
+		case typePullHandle:
 			if s.peer.printBody {
 				logformat := "[pull-handle] remote-ip: %s | seq: %d | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s %s\n body[-json]: %s\n"
 				Infof(logformat, s.RemoteIp(), input.Header.Seq, input.Header.Uri, input.Size, bodyLogBytes(input), output.Size, colorCode(output.Header.StatusCode), output.Header.Status, bodyLogBytes(output))
