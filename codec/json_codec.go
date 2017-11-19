@@ -18,8 +18,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-
-	"github.com/henrylee2cn/teleport/utils"
 )
 
 func init() {
@@ -78,7 +76,7 @@ func (*JsonCodec) NewDecoder(limitReader io.Reader) Decoder {
 // input and stores it in the value pointed to by v.
 func (p *JsonDecoder) Decode(v interface{}) error {
 	p.buf.Reset()
-	err := utils.ReadAll(p.limitReader, p.buf)
+	_, err := p.buf.ReadFrom(p.limitReader)
 	if err != nil && err != io.ErrUnexpectedEOF {
 		return err
 	}

@@ -20,8 +20,6 @@ import (
 	"io"
 
 	"github.com/gogo/protobuf/proto"
-
-	"github.com/henrylee2cn/teleport/utils"
 )
 
 func init() {
@@ -79,7 +77,7 @@ func (*ProtoCodec) NewDecoder(limitReader io.Reader) Decoder {
 // input and stores it in the value pointed to by v.
 func (p *ProtoDecoder) Decode(v interface{}) error {
 	p.buf.Reset()
-	err := utils.ReadAll(p.limitReader, p.buf)
+	_, err := p.buf.ReadFrom(p.limitReader)
 	if err != nil && err != io.ErrUnexpectedEOF {
 		return err
 	}
