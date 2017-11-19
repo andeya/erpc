@@ -426,7 +426,7 @@ func (s *session) startReadAndHandle() {
 			}()
 			ctx.handle()
 		}) {
-			s.graceCtxWaitGroup.Done()
+			s.peer.putContext(ctx, true)
 		}
 	}
 }
