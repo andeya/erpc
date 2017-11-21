@@ -334,7 +334,7 @@ func (p *pluginContainer) PostWritePush(ctx WriteCtx) Xerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePushPlugin); ok {
 			if xerr = _plugin.PostWritePush(ctx); xerr != nil {
-				Debugf("%s-PostWritePushPlugin(%s)", plugin.Name(), xerr.Error())
+				Errorf("%s-PostWritePushPlugin(%s)", plugin.Name(), xerr.Error())
 				return xerr
 			}
 		}

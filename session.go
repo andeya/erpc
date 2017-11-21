@@ -311,7 +311,7 @@ func (s *session) Pull(uri string, args interface{}, reply interface{}, setting 
 
 // Push sends a packet, but do not receives reply.
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
-func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSetting) (err error) {
+func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSetting) error {
 	start := s.peer.timeNow()
 
 	s.pushSeqLock.Lock()
@@ -348,18 +348,16 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 
 	defer func() {
 		if p := recover(); p != nil {
-			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+			Errorf("panic when pushing:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
-		s.runlog(s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
 		s.peer.putContext(ctx, true)
 	}()
-
+	var err error
 	err = s.peer.pluginContainer.PreWritePush(ctx)
 	if err == nil {
 		if err = s.write(output); err == nil {
-			// DEBUG:
-			// Debugf("push: s.write(output) SUCC")
-			err = s.peer.pluginContainer.PostWritePush(ctx)
+			s.runlog(s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+			s.peer.pluginContainer.PostWritePush(ctx)
 		}
 	}
 	return err
