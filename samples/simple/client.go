@@ -5,6 +5,7 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
@@ -39,6 +40,7 @@ func main() {
 				"bytes":     []byte("bytestest9090"),
 			},
 			&reply,
+			// socket.WithXferPipe('g'),
 		)
 
 		if pullcmd.Rerror() != nil {
@@ -66,6 +68,7 @@ func main() {
 				[]byte("bytes-test"),
 			},
 			&reply,
+			socket.WithXferPipe('g'),
 		)
 
 		if pullcmd.Rerror() != nil {

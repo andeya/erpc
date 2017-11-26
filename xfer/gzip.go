@@ -12,122 +12,80 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build ignore
-
 package xfer
 
 import (
+	"bytes"
 	"compress/gzip"
-	"io"
+	"fmt"
+	"io/ioutil"
+	"sync"
 
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// CodecWriter writer with gzip and encoder
-type CodecWriter struct {
-	io.Writer
-	id            byte
-	gzipWriterMap map[int]*gzip.Writer
-	encMap        map[int]codec.Encoder
-	encMaker      func(io.Writer) codec.Encoder
+func init() {
+	Reg(newGzip('g', 5))
 }
 
-// Note: reseting the temporary buffer when return the *CodecWriter
-func (s *socket) getCodecWriter(bodyCodec byte, w io.Writer) (*CodecWriter, error) {
-	t, ok := s.codecWriterMap[codecId]
-	if ok {
-		t.Writer = w
-		return t, nil
+func newGzip(id byte, level int) *Gzip {
+	if level < gzip.HuffmanOnly || level > gzip.BestCompression {
+		panic(fmt.Sprintf("gzip: invalid compression level: %d", level))
 	}
-	c, err := codec.GetByName(codecId)
+	g := new(Gzip)
+	g.level = level
+	g.id = id
+	g.wPool = sync.Pool{
+		New: func() interface{} {
+			gw, _ := gzip.NewWriterLevel(nil, g.level)
+			return gw
+		},
+	}
+	g.rPool = sync.Pool{
+		New: func() interface{} {
+			return new(gzip.Reader)
+		},
+	}
+	return g
+}
+
+// gzip compression filter
+type Gzip struct {
+	id    byte
+	level int
+	wPool sync.Pool
+	rPool sync.Pool
+}
+
+func (g *Gzip) Id() byte {
+	return g.id
+}
+
+func (g *Gzip) OnPack(src []byte) ([]byte, error) {
+	gw := g.wPool.Get().(*gzip.Writer)
+	defer g.wPool.Put(gw)
+	bb := utils.AcquireByteBuffer()
+	gw.Reset(bb)
+	_, err := gw.Write(src)
+	if err != nil {
+		utils.ReleaseByteBuffer(bb)
+		return nil, err
+	}
+	err = gw.Flush()
+	if err != nil {
+		utils.ReleaseByteBuffer(bb)
+		return nil, err
+	}
+	return bb.Bytes(), nil
+}
+
+func (g *Gzip) OnUnpack(src []byte) ([]byte, error) {
+	gr := g.rPool.Get().(*gzip.Reader)
+	defer g.rPool.Put(gr)
+	err := gr.Reset(bytes.NewReader(src))
 	if err != nil {
 		return nil, err
 	}
-	t = &CodecWriter{
-		Writer:        w,
-		id:            c.Id(),
-		gzipWriterMap: s.gzipWriterMap,
-		encMaker:      c.NewEncoder,
-	}
-	t.encMap = map[int]codec.Encoder{gzip.NoCompression: c.NewEncoder(t)}
-	s.codecWriterMap[codecId] = t
-	return t, nil
-}
-
-// Id returns codec id.
-func (t *CodecWriter) Id() byte {
-	return t.id
-}
-
-// Encode writes data with gzip and encoder.
-func (t *CodecWriter) Encode(gzipLevel int, v interface{}) error {
-	enc, ok := t.encMap[gzipLevel]
-	if gzipLevel == gzip.NoCompression {
-		return enc.Encode(v)
-	}
-	var gz *gzip.Writer
-	var err error
-	if ok {
-		gz = t.gzipWriterMap[gzipLevel]
-		gz.Reset(t)
-
-	} else {
-		gz, err = gzip.NewWriterLevel(t, gzipLevel)
-		if err != nil {
-			return err
-		}
-		t.gzipWriterMap[gzipLevel] = gz
-		enc = t.encMaker(gz)
-		t.encMap[gzipLevel] = enc
-	}
-
-	if err = enc.Encode(v); err != nil {
-		return err
-	}
-	return gz.Flush()
-}
-
-type CodecReader struct {
-	*utils.BufioReader
-	name       string
-	gzipReader *gzip.Reader
-	dec        codec.Decoder
-	gzDec      codec.Decoder
-}
-
-func (s *socket) makeCodecReader(codecId byte) (*CodecReader, error) {
-	r, ok := s.codecReaderMap[codecId]
-	if ok {
-		return r, nil
-	}
-	c, err := codec.GetById(codecId)
-	if err != nil {
-		return nil, err
-	}
-	bufioReader := s.bufioReader
-	gzipReader := s.gzipReader
-	r = &CodecReader{
-		BufioReader: bufioReader,
-		gzipReader:  gzipReader,
-		dec:         c.NewDecoder(bufioReader),
-		gzDec:       c.NewDecoder(gzipReader),
-		name:        c.Name(),
-	}
-	s.codecReaderMap[codecId] = r
-	return r, nil
-}
-
-func (r *CodecReader) Name() string {
-	return r.name
-}
-
-func (r *CodecReader) Decode(gzipLevel int, v interface{}) error {
-	if gzipLevel == gzip.NoCompression {
-		return r.dec.Decode(v)
-	}
-	var err error
-	if err = r.gzipReader.Reset(r.BufioReader); err != nil {
-		return err
-	}
-	return r.gzDec.Decode(v)
+	dest, _ := ioutil.ReadAll(gr)
+	return dest, nil
 }
