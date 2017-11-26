@@ -18,10 +18,12 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
+	"github.com/henrylee2cn/teleport/codec"
 )
 
 // Router the router of pull or push.
@@ -33,7 +35,7 @@ type (
 		pathPrefix      string
 		pluginContainer PluginContainer
 		typ             string
-		fn              HandlersMaker
+		maker           HandlersMaker
 	}
 	// Handler pull or push handler type info
 	Handler struct {
@@ -61,7 +63,7 @@ func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 		unknownApiType:  r.unknownApiType,
 		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
 		pluginContainer: pluginContainer,
-		fn:              r.fn,
+		maker:           r.maker,
 	}
 }
 
@@ -72,7 +74,7 @@ func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 		Fatalf("%v", err)
 	}
 	warnInvaildRouterHooks(plugin)
-	handlers, err := r.fn(
+	handlers, err := r.maker(
 		r.pathPrefix,
 		ctrlStruct,
 		pluginContainer,
@@ -108,19 +110,18 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 	switch r.typ {
 	case "pull":
 		h.name = "unknown_pull_handle"
-		fn, ok := unknownHandler.(func(ctx UnknownPullCtx) (interface{}, Xerror))
+		fn, ok := unknownHandler.(func(ctx UnknownPullCtx) (interface{}, *Rerror))
 		if !ok {
-			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPullCtx) (reply interface{}, xerr Xerror)", h.name)
+			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPullCtx) (reply interface{}, rerr *Rerror)", h.name)
 		}
 		h.unknownHandleFunc = func(ctx *readHandleCtx) {
-			body, xerr := fn(ctx)
-			if xerr != nil {
-				ctx.output.Header.StatusCode = xerr.Code()
-				ctx.output.Header.Status = xerr.Text()
+			body, rerr := fn(ctx)
+			if rerr != nil {
+				rerr.SetToMeta(ctx.output.Meta())
 			} else if body != nil {
-				ctx.output.Body = body
-				if len(ctx.output.BodyCodec) == 0 {
-					ctx.output.BodyCodec = ctx.input.BodyCodec
+				ctx.output.SetBody(body)
+				if ctx.output.BodyCodec() == codec.NilCodecId {
+					ctx.output.SetBodyCodec(ctx.input.BodyCodec())
 				}
 			}
 		}
@@ -133,8 +134,8 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 		}
 		h.unknownHandleFunc = func(ctx *readHandleCtx) {
 			fn(ctx)
-			if len(ctx.output.BodyCodec) == 0 {
-				ctx.output.BodyCodec = ctx.input.BodyCodec
+			if ctx.output.BodyCodec() == codec.NilCodecId {
+				ctx.output.SetBodyCodec(ctx.input.BodyCodec())
 			}
 		}
 	}
@@ -166,7 +167,7 @@ func newPullRouter(pluginContainer PluginContainer) *Router {
 		unknownApiType:  new(*Handler),
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
-		fn:              pullHandlersMaker,
+		maker:           pullHandlersMaker,
 		typ:             "pull",
 	}
 }
@@ -202,12 +203,28 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		pluginContainer = newPluginContainer()
 	}
 
+	type PullCtrlValue struct {
+		ctrl   reflect.Value
+		ctxPtr *PullCtx
+	}
+	var pool = &sync.Pool{
+		New: func() interface{} {
+			ctrl := reflect.New(ctypeElem)
+			pullCtxPtr := ctrl.Pointer() + pullCtxOffset
+			ctxPtr := (*PullCtx)(unsafe.Pointer(pullCtxPtr))
+			return &PullCtrlValue{
+				ctrl:   ctrl,
+				ctxPtr: ctxPtr,
+			}
+		},
+	}
+
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" || isPullCtxMethod(mname) {
+		if method.PkgPath != "" || isPullCtxType(mname) {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
@@ -238,25 +255,24 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		}
 
 		// The return type of the method must be Error.
-		if returnType := mtype.Out(1); returnType.Name() != "Xerror" {
-			return nil, errors.Errorf("register pull handler: %s.%s second reply type %s not teleport.Xerror", ctype.String(), mname, returnType)
+		if returnType := mtype.Out(1); !isRerrorType(returnType.String()) {
+			return nil, errors.Errorf("register pull handler: %s.%s second reply type %s not *tp.Rerror", ctype.String(), mname, returnType)
 		}
 
 		var methodFunc = method.Func
 		var handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
-			ctrl := reflect.New(ctypeElem)
-			pullCtxPtr := ctrl.Pointer() + pullCtxOffset
-			*((*PullCtx)(unsafe.Pointer(pullCtxPtr))) = ctx
-			rets := methodFunc.Call([]reflect.Value{ctrl, argValue})
-			ctx.output.Body = rets[0].Interface()
-			xerr, _ := rets[1].Interface().(Xerror)
-			if xerr != nil {
-				ctx.output.Header.StatusCode = xerr.Code()
-				ctx.output.Header.Status = xerr.Text()
+			obj := pool.Get().(*PullCtrlValue)
+			*obj.ctxPtr = ctx
+			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
+			ctx.output.SetBody(rets[0].Interface())
+			rerr, _ := rets[1].Interface().(*Rerror)
+			if rerr != nil {
+				rerr.SetToMeta(ctx.output.Meta())
 
-			} else if ctx.output.Body != nil && len(ctx.output.BodyCodec) == 0 {
-				ctx.output.BodyCodec = ctx.input.BodyCodec
+			} else if ctx.output.Body() != nil && ctx.output.BodyCodec() == codec.NilCodecId {
+				ctx.output.SetBodyCodec(ctx.input.BodyCodec())
 			}
+			pool.Put(obj)
 		}
 
 		handlers = append(handlers, &Handler{
@@ -278,7 +294,7 @@ func newPushRouter(pluginContainer PluginContainer) *Router {
 		unknownApiType:  new(*Handler),
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
-		fn:              pushHandlersMaker,
+		maker:           pushHandlersMaker,
 		typ:             "push",
 	}
 }
@@ -313,13 +329,28 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
+	type PushCtrlValue struct {
+		ctrl   reflect.Value
+		ctxPtr *PushCtx
+	}
+	var pool = &sync.Pool{
+		New: func() interface{} {
+			ctrl := reflect.New(ctypeElem)
+			pushCtxPtr := ctrl.Pointer() + pushCtxOffset
+			ctxPtr := (*PushCtx)(unsafe.Pointer(pushCtxPtr))
+			return &PushCtrlValue{
+				ctrl:   ctrl,
+				ctxPtr: ctxPtr,
+			}
+		},
+	}
 
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" || isPushCtxMethod(mname) {
+		if method.PkgPath != "" || isPushCtxType(mname) {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
@@ -346,13 +377,11 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 
 		var methodFunc = method.Func
 		var handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
-			ctrl := reflect.New(ctypeElem)
-			pushCtxPtr := ctrl.Pointer() + pushCtxOffset
-			*((*PushCtx)(unsafe.Pointer(pushCtxPtr))) = ctx
-			// ctrl.Elem().FieldByName("PushCtx").Set(reflect.ValueOf(ctx))
-			methodFunc.Call([]reflect.Value{ctrl, argValue})
+			obj := pool.Get().(*PushCtrlValue)
+			*obj.ctxPtr = ctx
+			methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
+			pool.Put(obj)
 		}
-
 		handlers = append(handlers, &Handler{
 			name:            path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
 			handleFunc:      handleFunc,
@@ -363,7 +392,7 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 	return handlers, nil
 }
 
-func isPullCtxMethod(name string) bool {
+func isPullCtxType(name string) bool {
 	ctype := reflect.TypeOf(PullCtx(new(readHandleCtx)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
@@ -373,7 +402,7 @@ func isPullCtxMethod(name string) bool {
 	return false
 }
 
-func isPushCtxMethod(name string) bool {
+func isPushCtxType(name string) bool {
 	ctype := reflect.TypeOf(PushCtx(new(readHandleCtx)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
@@ -381,6 +410,10 @@ func isPushCtxMethod(name string) bool {
 		}
 	}
 	return false
+}
+
+func isRerrorType(s string) bool {
+	return strings.HasPrefix(s, "*") && strings.HasSuffix(s, ".Rerror")
 }
 
 func ctrlStructSnakeName(ctype reflect.Type) string {

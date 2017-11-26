@@ -25,87 +25,87 @@ type (
 	}
 	PostRegPlugin interface {
 		Plugin
-		PostReg(*Handler) Xerror
+		PostReg(*Handler) *Rerror
 	}
 	PostDialPlugin interface {
 		Plugin
-		PostDial(PreSession) Xerror
+		PostDial(PreSession) *Rerror
 	}
 	PostAcceptPlugin interface {
 		Plugin
-		PostAccept(PreSession) Xerror
+		PostAccept(PreSession) *Rerror
 	}
 	PreWritePullPlugin interface {
 		Plugin
-		PreWritePull(WriteCtx) Xerror
+		PreWritePull(WriteCtx) *Rerror
 	}
 	PostWritePullPlugin interface {
 		Plugin
-		PostWritePull(WriteCtx) Xerror
+		PostWritePull(WriteCtx) *Rerror
 	}
 	PreWriteReplyPlugin interface {
 		Plugin
-		PreWriteReply(WriteCtx) Xerror
+		PreWriteReply(WriteCtx) *Rerror
 	}
 	PostWriteReplyPlugin interface {
 		Plugin
-		PostWriteReply(WriteCtx) Xerror
+		PostWriteReply(WriteCtx) *Rerror
 	}
 	PreWritePushPlugin interface {
 		Plugin
-		PreWritePush(WriteCtx) Xerror
+		PreWritePush(WriteCtx) *Rerror
 	}
 	PostWritePushPlugin interface {
 		Plugin
-		PostWritePush(WriteCtx) Xerror
+		PostWritePush(WriteCtx) *Rerror
 	}
 	PreReadHeaderPlugin interface {
 		Plugin
-		PreReadHeader(ReadCtx) Xerror
+		PreReadHeader(ReadCtx) *Rerror
 	}
 
 	PostReadPullHeaderPlugin interface {
 		Plugin
-		PostReadPullHeader(ReadCtx) Xerror
+		PostReadPullHeader(ReadCtx) *Rerror
 	}
 	PreReadPullBodyPlugin interface {
 		Plugin
-		PreReadPullBody(ReadCtx) Xerror
+		PreReadPullBody(ReadCtx) *Rerror
 	}
 	PostReadPullBodyPlugin interface {
 		Plugin
-		PostReadPullBody(ReadCtx) Xerror
+		PostReadPullBody(ReadCtx) *Rerror
 	}
 
 	PostReadPushHeaderPlugin interface {
 		Plugin
-		PostReadPushHeader(ReadCtx) Xerror
+		PostReadPushHeader(ReadCtx) *Rerror
 	}
 	PreReadPushBodyPlugin interface {
 		Plugin
-		PreReadPushBody(ReadCtx) Xerror
+		PreReadPushBody(ReadCtx) *Rerror
 	}
 	PostReadPushBodyPlugin interface {
 		Plugin
-		PostReadPushBody(ReadCtx) Xerror
+		PostReadPushBody(ReadCtx) *Rerror
 	}
 
 	PostReadReplyHeaderPlugin interface {
 		Plugin
-		PostReadReplyHeader(ReadCtx) Xerror
+		PostReadReplyHeader(ReadCtx) *Rerror
 	}
 	PreReadReplyBodyPlugin interface {
 		Plugin
-		PreReadReplyBody(ReadCtx) Xerror
+		PreReadReplyBody(ReadCtx) *Rerror
 	}
 	PostReadReplyBodyPlugin interface {
 		Plugin
-		PostReadReplyBody(ReadCtx) Xerror
+		PostReadReplyBody(ReadCtx) *Rerror
 	}
 
 	PostDisconnectPlugin interface {
 		Plugin
-		PostDisconnect(PostSession) Xerror
+		PostDisconnect(PostSession) *Rerror
 	}
 
 	// PluginContainer plugin container that defines base methods to manage plugins.
@@ -115,30 +115,30 @@ type (
 		GetByName(pluginName string) Plugin
 		GetAll() []Plugin
 
-		PostReg(*Handler) Xerror
-		PostDial(PreSession) Xerror
-		PostAccept(PreSession) Xerror
-		PreWritePull(WriteCtx) Xerror
-		PostWritePull(WriteCtx) Xerror
-		PreWriteReply(WriteCtx) Xerror
-		PostWriteReply(WriteCtx) Xerror
-		PreWritePush(WriteCtx) Xerror
-		PostWritePush(WriteCtx) Xerror
-		PreReadHeader(ReadCtx) Xerror
+		PostReg(*Handler) *Rerror
+		PostDial(PreSession) *Rerror
+		PostAccept(PreSession) *Rerror
+		PreWritePull(WriteCtx) *Rerror
+		PostWritePull(WriteCtx) *Rerror
+		PreWriteReply(WriteCtx) *Rerror
+		PostWriteReply(WriteCtx) *Rerror
+		PreWritePush(WriteCtx) *Rerror
+		PostWritePush(WriteCtx) *Rerror
+		PreReadHeader(ReadCtx) *Rerror
 
-		PostReadPullHeader(ReadCtx) Xerror
-		PreReadPullBody(ReadCtx) Xerror
-		PostReadPullBody(ReadCtx) Xerror
+		PostReadPullHeader(ReadCtx) *Rerror
+		PreReadPullBody(ReadCtx) *Rerror
+		PostReadPullBody(ReadCtx) *Rerror
 
-		PostReadPushHeader(ReadCtx) Xerror
-		PreReadPushBody(ReadCtx) Xerror
-		PostReadPushBody(ReadCtx) Xerror
+		PostReadPushHeader(ReadCtx) *Rerror
+		PreReadPushBody(ReadCtx) *Rerror
+		PostReadPushBody(ReadCtx) *Rerror
 
-		PostReadReplyHeader(ReadCtx) Xerror
-		PreReadReplyBody(ReadCtx) Xerror
-		PostReadReplyBody(ReadCtx) Xerror
+		PostReadReplyHeader(ReadCtx) *Rerror
+		PreReadReplyBody(ReadCtx) *Rerror
+		PostReadReplyBody(ReadCtx) *Rerror
 
-		PostDisconnect(PostSession) Xerror
+		PostDisconnect(PostSession) *Rerror
 
 		cloneAdd(...Plugin) (PluginContainer, error)
 	}
@@ -225,260 +225,260 @@ func (p *pluginContainer) GetAll() []Plugin {
 	return p.plugins
 }
 
-func (p *pluginContainer) PostReg(h *Handler) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostReg(h *Handler) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostRegPlugin); ok {
-			if xerr = _plugin.PostReg(h); xerr != nil {
-				Fatalf("%s-PostRegPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostReg(h); rerr != nil {
+				Fatalf("%s-PostRegPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostDial(sess PreSession) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostDial(sess PreSession) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
-			if xerr = _plugin.PostDial(sess); xerr != nil {
-				Debugf("dial fail (addr: %s, id: %s): %s-PostDialPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostDial(sess); rerr != nil {
+				Debugf("dial fail (addr: %s, id: %s): %s-PostDialPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostAccept(sess PreSession) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostAccept(sess PreSession) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
-			if xerr = _plugin.PostAccept(sess); xerr != nil {
-				Debugf("accept session(addr: %s, id: %s): %s-PostAcceptPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostAccept(sess); rerr != nil {
+				Debugf("accept session(addr: %s, id: %s): %s-PostAcceptPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreWritePull(ctx WriteCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PreWritePull(ctx WriteCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePullPlugin); ok {
-			if xerr = _plugin.PreWritePull(ctx); xerr != nil {
-				Debugf("%s-PreWritePullPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PreWritePull(ctx); rerr != nil {
+				Debugf("%s-PreWritePullPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostWritePull(ctx WriteCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostWritePull(ctx WriteCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePullPlugin); ok {
-			if xerr = _plugin.PostWritePull(ctx); xerr != nil {
-				Errorf("%s-PostWritePullPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostWritePull(ctx); rerr != nil {
+				Errorf("%s-PostWritePullPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreWriteReply(ctx WriteCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PreWriteReply(ctx WriteCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWriteReplyPlugin); ok {
-			if xerr = _plugin.PreWriteReply(ctx); xerr != nil {
-				Errorf("%s-PreWriteReplyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PreWriteReply(ctx); rerr != nil {
+				Errorf("%s-PreWriteReplyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostWriteReply(ctx WriteCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostWriteReply(ctx WriteCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWriteReplyPlugin); ok {
-			if xerr = _plugin.PostWriteReply(ctx); xerr != nil {
-				Errorf("%s-PostWriteReplyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostWriteReply(ctx); rerr != nil {
+				Errorf("%s-PostWriteReplyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreWritePush(ctx WriteCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PreWritePush(ctx WriteCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePushPlugin); ok {
-			if xerr = _plugin.PreWritePush(ctx); xerr != nil {
-				Debugf("%s-PreWritePushPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PreWritePush(ctx); rerr != nil {
+				Debugf("%s-PreWritePushPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostWritePush(ctx WriteCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePushPlugin); ok {
-			if xerr = _plugin.PostWritePush(ctx); xerr != nil {
-				Errorf("%s-PostWritePushPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostWritePush(ctx); rerr != nil {
+				Errorf("%s-PostWritePushPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreReadHeader(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PreReadHeader(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
-			if xerr = _plugin.PreReadHeader(ctx); xerr != nil {
-				Debugf("disconnected when reading: %s-PreReadHeaderPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PreReadHeader(ctx); rerr != nil {
+				Debugf("disconnected when reading: %s-PreReadHeaderPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostReadPullHeader(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostReadPullHeader(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPullHeaderPlugin); ok {
-			if xerr = _plugin.PostReadPullHeader(ctx); xerr != nil {
-				Errorf("%s-PostReadPullHeaderPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostReadPullHeader(ctx); rerr != nil {
+				Errorf("%s-PostReadPullHeaderPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreReadPullBody(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PreReadPullBody(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadPullBodyPlugin); ok {
-			if xerr = _plugin.PreReadPullBody(ctx); xerr != nil {
-				Errorf("%s-PreReadPullBodyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PreReadPullBody(ctx); rerr != nil {
+				Errorf("%s-PreReadPullBodyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostReadPullBody(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostReadPullBody(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPullBodyPlugin); ok {
-			if xerr = _plugin.PostReadPullBody(ctx); xerr != nil {
-				Errorf("%s-PostReadPullBodyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostReadPullBody(ctx); rerr != nil {
+				Errorf("%s-PostReadPullBodyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostReadPushHeader(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostReadPushHeader(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPushHeaderPlugin); ok {
-			if xerr = _plugin.PostReadPushHeader(ctx); xerr != nil {
-				Errorf("%s-PostReadPushHeaderPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostReadPushHeader(ctx); rerr != nil {
+				Errorf("%s-PostReadPushHeaderPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreReadPushBody(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PreReadPushBody(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadPushBodyPlugin); ok {
-			if xerr = _plugin.PreReadPushBody(ctx); xerr != nil {
-				Errorf("%s-PreReadPushBodyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PreReadPushBody(ctx); rerr != nil {
+				Errorf("%s-PreReadPushBodyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostReadPushBody(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostReadPushBody(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPushBodyPlugin); ok {
-			if xerr = _plugin.PostReadPushBody(ctx); xerr != nil {
-				Errorf("%s-PostReadPushBodyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostReadPushBody(ctx); rerr != nil {
+				Errorf("%s-PostReadPushBodyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostReadReplyHeader(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostReadReplyHeader(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadReplyHeaderPlugin); ok {
-			if xerr = _plugin.PostReadReplyHeader(ctx); xerr != nil {
-				Errorf("%s-PostReadReplyHeaderPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostReadReplyHeader(ctx); rerr != nil {
+				Errorf("%s-PostReadReplyHeaderPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PreReadReplyBody(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PreReadReplyBody(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadReplyBodyPlugin); ok {
-			if xerr = _plugin.PreReadReplyBody(ctx); xerr != nil {
-				Errorf("%s-PreReadReplyBodyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PreReadReplyBody(ctx); rerr != nil {
+				Errorf("%s-PreReadReplyBodyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadReplyBodyPlugin); ok {
-			if xerr = _plugin.PostReadReplyBody(ctx); xerr != nil {
-				Errorf("%s-PostReadReplyBodyPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostReadReplyBody(ctx); rerr != nil {
+				Errorf("%s-PostReadReplyBodyPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}
 	return nil
 }
 
-func (p *pluginContainer) PostDisconnect(sess PostSession) Xerror {
-	var xerr Xerror
+func (p *pluginContainer) PostDisconnect(sess PostSession) *Rerror {
+	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDisconnectPlugin); ok {
-			if xerr = _plugin.PostDisconnect(sess); xerr != nil {
-				Errorf("%s-PostDisconnectPlugin(%s)", plugin.Name(), xerr.Error())
-				return xerr
+			if rerr = _plugin.PostDisconnect(sess); rerr != nil {
+				Errorf("%s-PostDisconnectPlugin(%s)", plugin.Name(), rerr.String())
+				return rerr
 			}
 		}
 	}

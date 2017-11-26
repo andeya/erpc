@@ -15,11 +15,15 @@
 package codec
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/gogo/protobuf/proto"
+)
+
+//  protobuf codec id
+const (
+	NAME_PROTOBUF = "protobuf"
+	ID_PROTOBUF   = 'p'
 )
 
 func init() {
@@ -29,59 +33,25 @@ func init() {
 // ProtoCodec protobuf codec
 type ProtoCodec struct{}
 
-// Name returns codec name
-func (p *ProtoCodec) Name() string {
-	return "protobuf"
+// Name returns codec string
+func (ProtoCodec) Name() string {
+	return NAME_PROTOBUF
 }
 
 // Id returns codec id
-func (p *ProtoCodec) Id() byte {
-	return 'p'
+func (ProtoCodec) Id() byte {
+	return ID_PROTOBUF
 }
 
-// ProtoEncoder proto decoder
-type ProtoEncoder struct {
-	writer io.Writer
+// Marshal returns the Protobuf encoding of v.
+func (ProtoCodec) Marshal(v interface{}) ([]byte, error) {
+	return ProtoMarshal(v)
 }
 
-// NewEncoder returns a new protobuf encoder that writes to writer.
-func (*ProtoCodec) NewEncoder(writer io.Writer) Encoder {
-	return &ProtoEncoder{writer}
-}
-
-// Encode writes the Protobuf encoding of v to the writer.
-func (p *ProtoEncoder) Encode(v interface{}) error {
-	b, err := ProtoMarshal(v)
-	if err != nil {
-		return err
-	}
-	_, err = p.writer.Write(b)
-	return err
-}
-
-// ProtoDecoder proto decoder
-type ProtoDecoder struct {
-	limitReader io.Reader
-	buf         *bytes.Buffer
-}
-
-// NewDecoder returns a new protobuf decoder that reads from limit reader.
-func (*ProtoCodec) NewDecoder(limitReader io.Reader) Decoder {
-	return &ProtoDecoder{
-		limitReader: limitReader,
-		buf:         bytes.NewBuffer(make([]byte, 0, bytes.MinRead)),
-	}
-}
-
-// Decode reads the next Protobuf-encoded value from its
-// input and stores it in the value pointed to by v.
-func (p *ProtoDecoder) Decode(v interface{}) error {
-	p.buf.Reset()
-	_, err := p.buf.ReadFrom(p.limitReader)
-	if err != nil && err != io.ErrUnexpectedEOF {
-		return err
-	}
-	return ProtoUnmarshal(p.buf.Bytes(), v)
+// Unmarshal parses the Protobuf-encoded data and stores the result
+// in the value pointed to by v.
+func (ProtoCodec) Unmarshal(data []byte, v interface{}) error {
+	return ProtoUnmarshal(data, v)
 }
 
 var emptyStruct = struct{}{}
@@ -96,9 +66,9 @@ func ProtoMarshal(v interface{}) ([]byte, error) {
 	return nil, fmt.Errorf("%T does not implement proto.Message", v)
 }
 
-func ProtoUnmarshal(b []byte, v interface{}) error {
+func ProtoUnmarshal(data []byte, v interface{}) error {
 	if p, ok := v.(proto.Message); ok {
-		return proto.Unmarshal(b, p)
+		return proto.Unmarshal(data, p)
 	}
 	if v == nil || v == emptyStruct {
 		return nil

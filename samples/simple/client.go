@@ -11,16 +11,14 @@ func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
-		DefaultReadTimeout:   time.Minute * 5,
-		DefaultWriteTimeout:  time.Millisecond * 500,
-		TlsCertFile:          "",
-		TlsKeyFile:           "",
-		SlowCometDuration:    time.Millisecond * 500,
-		DefaultHeaderCodec:   "protobuf",
-		DefaultBodyCodec:     "json",
-		DefaultBodyGzipLevel: 5,
-		PrintBody:            true,
-		CountTime:            true,
+		DefaultReadTimeout:  time.Minute * 5,
+		DefaultWriteTimeout: time.Millisecond * 500,
+		TlsCertFile:         "",
+		TlsKeyFile:          "",
+		SlowCometDuration:   time.Millisecond * 500,
+		DefaultBodyCodec:    "json",
+		PrintBody:           true,
+		CountTime:           true,
 	}
 
 	var peer = tp.NewPeer(cfg)
@@ -30,7 +28,7 @@ func main() {
 	{
 		var sess, err = peer.Dial("127.0.0.1:9090")
 		if err != nil {
-			tp.Panicf("%v", err)
+			tp.Fatalf("%v", err)
 		}
 
 		var reply interface{}
@@ -43,8 +41,8 @@ func main() {
 			&reply,
 		)
 
-		if pullcmd.Xerror() != nil {
-			tp.Fatalf("pull error: %v", pullcmd.Xerror().Error())
+		if pullcmd.Rerror() != nil {
+			tp.Fatalf("pull error: %v", pullcmd.Rerror())
 		}
 		tp.Infof("9090reply: %#v", reply)
 	}
@@ -59,9 +57,9 @@ func main() {
 		var pullcmd = sess.Pull(
 			"/group/home/test_unknown?peer_id=client9091",
 			struct {
-				ConnPort int
-				json.RawMessage
-				Bytes []byte
+				ConnPort   int
+				RawMessage json.RawMessage
+				Bytes      []byte
 			}{
 				9091,
 				json.RawMessage(`{"RawMessage":"test9091"}`),
@@ -70,8 +68,8 @@ func main() {
 			&reply,
 		)
 
-		if pullcmd.Xerror() != nil {
-			tp.Fatalf("pull error: %v", pullcmd.Xerror().Error())
+		if pullcmd.Rerror() != nil {
+			tp.Fatalf("pull error: %v", pullcmd.Rerror())
 		}
 		tp.Infof("9091reply test_unknown: %#v", reply)
 	}

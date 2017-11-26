@@ -19,9 +19,7 @@ func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
-		SlowCometDuration:  time.Millisecond * 500,
-		DefaultHeaderCodec: "protobuf",
-		DefaultBodyCodec:   "protobuf",
+		DefaultBodyCodec: "protobuf",
 	}
 
 	var peer = tp.NewPeer(cfg)
@@ -53,9 +51,9 @@ func main() {
 					&pb.PbTest{A: 10, B: 2},
 					reply,
 				)
-				if pullcmd.Xerror() != nil {
+				if pullcmd.Rerror() != nil {
 					atomic.AddUint32(&failNum, 1)
-					tp.Errorf("pull error: %v", pullcmd.Xerror().Error())
+					tp.Errorf("pull error: %v", pullcmd.Rerror())
 				}
 				count.Done()
 			}()

@@ -15,9 +15,13 @@
 package codec
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
+)
+
+// json codec id
+const (
+	NAME_JSON = "json"
+	ID_JSON   = 'j'
 )
 
 func init() {
@@ -27,58 +31,23 @@ func init() {
 // JsonCodec json codec
 type JsonCodec struct{}
 
-// Name returns codec name
-func (j *JsonCodec) Name() string {
-	return "json"
+// Name returns codec string
+func (JsonCodec) Name() string {
+	return NAME_JSON
 }
 
-//
 // Id returns codec id
-func (j *JsonCodec) Id() byte {
-	return 'j'
+func (JsonCodec) Id() byte {
+	return ID_JSON
 }
 
-// JsonEncoder json decoder
-type JsonEncoder struct {
-	writer io.Writer
+// Marshal returns the JSON encoding of v.
+func (JsonCodec) Marshal(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
 }
 
-// NewEncoder returns a new json encoder that writes to writer.
-func (*JsonCodec) NewEncoder(writer io.Writer) Encoder {
-	return &JsonEncoder{writer}
-}
-
-// Encode writes the json encoding of v to the writer.
-func (p *JsonEncoder) Encode(v interface{}) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	_, err = p.writer.Write(b)
-	return err
-}
-
-// JsonDecoder json decoder
-type JsonDecoder struct {
-	limitReader io.Reader
-	buf         *bytes.Buffer
-}
-
-// NewDecoder returns a new json decoder that reads from limit reader.
-func (*JsonCodec) NewDecoder(limitReader io.Reader) Decoder {
-	return &JsonDecoder{
-		limitReader: limitReader,
-		buf:         bytes.NewBuffer(make([]byte, 0, bytes.MinRead)),
-	}
-}
-
-// Decode reads the next json-encoded value from its
-// input and stores it in the value pointed to by v.
-func (p *JsonDecoder) Decode(v interface{}) error {
-	p.buf.Reset()
-	_, err := p.buf.ReadFrom(p.limitReader)
-	if err != nil && err != io.ErrUnexpectedEOF {
-		return err
-	}
-	return json.Unmarshal(p.buf.Bytes(), v)
+// Unmarshal parses the JSON-encoded data and stores the result
+// in the value pointed to by v.
+func (JsonCodec) Unmarshal(data []byte, v interface{}) error {
+	return json.Unmarshal(data, v)
 }

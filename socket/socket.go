@@ -17,7 +17,7 @@
 package socket
 
 import (
-	"compress/gzip"
+	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -25,7 +25,7 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
-	"github.com/henrylee2cn/teleport/utils"
+	"github.com/henrylee2cn/teleport/codec"
 )
 
 type (
@@ -104,24 +104,13 @@ type (
 	}
 	socket struct {
 		net.Conn
+		protocol  Proto
 		id        string
 		idMutex   sync.RWMutex
 		ctxPublic goutil.Map
-		protocol  Protocol
+		mu        sync.RWMutex
 		curState  int32
 		fromPool  bool
-
-		// about write
-		bufioWriter    *utils.BufioWriter
-		codecWriterMap map[string]*CodecWriter // codecId:CodecWriter
-		gzipWriterMap  map[int]*gzip.Writer
-		writeMutex     sync.Mutex // exclusive writer lock
-
-		// about read
-		bufioReader    *utils.BufioReader
-		codecReaderMap map[byte]*CodecReader // codecId:CodecReader
-		gzipReader     *gzip.Reader
-		readMutex      sync.Mutex // exclusive read lock
 	}
 )
 
@@ -136,9 +125,9 @@ var _ net.Conn = Socket(nil)
 var ErrProactivelyCloseSocket = errors.New("socket is closed proactively")
 
 // GetSocket gets a Socket from pool, and reset it.
-func GetSocket(c net.Conn, protocolFunc ...ProtocolFunc) Socket {
+func GetSocket(c net.Conn, protoFunc ...ProtoFunc) Socket {
 	s := socketPool.Get().(*socket)
-	s.Reset(c, protocolFunc...)
+	s.Reset(c, protoFunc...)
 	return s
 }
 
@@ -151,23 +140,16 @@ var socketPool = sync.Pool{
 }
 
 // NewSocket wraps a net.Conn as a Socket.
-func NewSocket(c net.Conn, protocolFunc ...ProtocolFunc) Socket {
-	return newSocket(c, protocolFunc)
+func NewSocket(c net.Conn, protoFunc ...ProtoFunc) Socket {
+	return newSocket(c, protoFunc)
 }
 
-func newSocket(c net.Conn, protocolFuncs []ProtocolFunc) *socket {
-	bufioWriter := utils.NewBufioWriter(c)
-	bufioReader := utils.NewBufioReader(c)
+func newSocket(c net.Conn, protoFuncs []ProtoFunc) *socket {
 	var s = &socket{
-		protocol:       getProtocol(protocolFuncs),
-		Conn:           c,
-		bufioWriter:    bufioWriter,
-		bufioReader:    bufioReader,
-		gzipWriterMap:  make(map[int]*gzip.Writer),
-		gzipReader:     new(gzip.Reader),
-		codecWriterMap: make(map[string]*CodecWriter),
-		codecReaderMap: make(map[byte]*CodecReader),
+		protocol: getProto(protoFuncs, c),
+		Conn:     c,
 	}
+	s.optimize()
 	return s
 }
 
@@ -177,27 +159,18 @@ func newSocket(c net.Conn, protocolFuncs []ProtocolFunc) *socket {
 // Note:
 //  For the byte stream type of body, write directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (s *socket) WritePacket(packet *Packet) (err error) {
-	s.writeMutex.Lock()
-	if len(packet.HeaderCodec) == 0 {
-		packet.HeaderCodec = defaultHeaderCodec.Name()
+func (s *socket) WritePacket(packet *Packet) error {
+	s.mu.RLock()
+	protocol := s.protocol
+	s.mu.RUnlock()
+	if packet.BodyCodec() == codec.NilCodecId {
+		packet.SetBodyCodec(defaultBodyCodec.Id())
 	}
-	if len(packet.BodyCodec) == 0 {
-		packet.BodyCodec = defaultBodyCodec.Name()
+	err := protocol.Pack(packet)
+	if err != nil && s.isActiveClosed() {
+		err = ErrProactivelyCloseSocket
 	}
-	defer func() {
-		if err != nil && s.isActiveClosed() {
-			err = ErrProactivelyCloseSocket
-		}
-		s.writeMutex.Unlock()
-	}()
-	s.bufioWriter.ResetCount()
-	return s.protocol.WritePacket(
-		packet,
-		s.bufioWriter,
-		s.getCodecWriter,
-		s.isActiveClosed,
-	)
+	return err
 }
 
 // ReadPacket reads header and body from the connection.
@@ -205,16 +178,10 @@ func (s *socket) WritePacket(packet *Packet) (err error) {
 //  For the byte stream type of body, read directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
 func (s *socket) ReadPacket(packet *Packet) error {
-	s.readMutex.Lock()
-	defer s.readMutex.Unlock()
-	return s.protocol.ReadPacket(
-		packet,
-		packet.bodyAdapter,
-		s.bufioReader,
-		s.makeCodecReader,
-		s.isActiveClosed,
-		checkReadLimit,
-	)
+	s.mu.RLock()
+	protocol := s.protocol
+	s.mu.RUnlock()
+	return protocol.Unpack(packet)
 }
 
 // Public returns temporary public data of Socket.
@@ -252,21 +219,18 @@ func (s *socket) SetId(id string) {
 }
 
 // Reset reset net.Conn
-func (s *socket) Reset(netConn net.Conn, protocolFunc ...ProtocolFunc) {
+func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	atomic.StoreInt32(&s.curState, activeClose)
 	if s.Conn != nil {
 		s.Conn.Close()
 	}
-	s.readMutex.Lock()
-	s.writeMutex.Lock()
+	s.mu.Lock()
 	s.Conn = netConn
-	s.bufioReader.Reset(netConn)
-	s.bufioWriter.Reset(netConn)
 	s.SetId("")
-	s.protocol = getProtocol(protocolFunc)
+	s.protocol = getProto(protoFunc, netConn)
 	atomic.StoreInt32(&s.curState, normal)
-	s.readMutex.Unlock()
-	s.writeMutex.Unlock()
+	s.optimize()
+	s.mu.Unlock()
 }
 
 // Close closes the connection socket.
@@ -276,63 +240,101 @@ func (s *socket) Close() error {
 	if s.isActiveClosed() {
 		return nil
 	}
-	atomic.StoreInt32(&s.curState, activeClose)
-
-	var errs []error
-	if s.Conn != nil {
-		errs = append(errs, s.Conn.Close())
-	}
-
-	s.readMutex.Lock()
-	s.writeMutex.Lock()
-	defer func() {
-		s.readMutex.Unlock()
-		s.writeMutex.Unlock()
-	}()
-
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.isActiveClosed() {
 		return nil
 	}
+	atomic.StoreInt32(&s.curState, activeClose)
 
-	s.closeGzipReader()
-	for _, gz := range s.gzipWriterMap {
-		errs = append(errs, gz.Close())
+	var err error
+	if s.Conn != nil {
+		err = s.Conn.Close()
 	}
 	if s.fromPool {
 		s.Conn = nil
 		s.ctxPublic = nil
-		s.bufioReader.Reset(nil)
-		s.bufioWriter.Reset(nil)
+		s.protocol = nil
 		socketPool.Put(s)
 	}
-	return errors.Merge(errs...)
+	return err
 }
 
 func (s *socket) isActiveClosed() bool {
 	return atomic.LoadInt32(&s.curState) == activeClose
 }
 
-func (s *socket) closeGzipReader() {
-	defer func() {
-		recover()
-	}()
-	s.gzipReader.Close()
-}
-
-func getProtocol(protocolFuncs []ProtocolFunc) Protocol {
-	if len(protocolFuncs) > 0 {
-		return protocolFuncs[0]()
-	} else {
-		return defaultProtocolFunc()
+func (s *socket) optimize() {
+	if c, ok := s.Conn.(ifaceSetKeepAlive); ok {
+		c.SetKeepAlive(true)
+		c.SetKeepAlivePeriod(3 * time.Minute)
+	}
+	if c, ok := s.Conn.(ifaceSetBuffer); ok {
+		if tcpReadBuffer >= 0 {
+			c.SetReadBuffer(tcpReadBuffer)
+		}
+		if tcpWriteBuffer >= 0 {
+			c.SetWriteBuffer(tcpWriteBuffer)
+		}
 	}
 }
 
-// func getId(c net.Conn, ids []string) string {
-// 	var id string
-// 	if len(ids) > 0 && len(ids[0]) > 0 {
-// 		id = ids[0]
-// 	} else if c != nil {
-// 		id = c.RemoteAddr().String()
-// 	}
-// 	return id
-// }
+var (
+	tcpWriteBuffer = -1
+	// tcpReadBuffer  = 0
+	tcpReadBuffer = 1024 * 35
+)
+
+type (
+	ifaceSetKeepAlive interface {
+		SetKeepAlive(keepalive bool) error
+		SetKeepAlivePeriod(d time.Duration) error
+	}
+	ifaceSetBuffer interface {
+		// SetReadBuffer sets the size of the operating system's
+		// receive buffer associated with the connection.
+		SetReadBuffer(bytes int) error
+		// SetWriteBuffer sets the size of the operating system's
+		// transmit buffer associated with the connection.
+		SetWriteBuffer(bytes int) error
+	}
+)
+
+// SetReadBuffer sets the size of the operating system's
+// receive buffer associated with the *net.TCP connection.
+// Note: Uses the default value, if bytes=1.
+func SetTCPReadBuffer(bytes int) {
+	tcpReadBuffer = bytes
+	resetFastProtoReadBufioSize()
+}
+
+// SetWriteBuffer sets the size of the operating system's
+// transmit buffer associated with the *net.TCP connection.
+// Note: Uses the default value, if bytes=1.
+func SetTCPWriteBuffer(bytes int) {
+	tcpWriteBuffer = bytes
+}
+
+var fastProtoReadBufioSize int
+
+func init() {
+	resetFastProtoReadBufioSize()
+}
+
+func resetFastProtoReadBufioSize() {
+	if tcpReadBuffer < 0 {
+		fastProtoReadBufioSize = 1024 * 4
+	} else if tcpReadBuffer == 0 {
+		fastProtoReadBufioSize = 1024 * 35
+	} else {
+		fastProtoReadBufioSize = tcpReadBuffer / 2
+	}
+}
+
+func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {
+	if len(protoFuncs) > 0 {
+		return protoFuncs[0](rw)
+	} else {
+		return defaultProtoFunc(rw)
+	}
+}

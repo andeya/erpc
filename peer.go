@@ -23,31 +23,31 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/goutil"
+	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
+	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 )
 
 // Peer peer which is server or client.
 type Peer struct {
-	PullRouter           *Router
-	PushRouter           *Router
-	pluginContainer      PluginContainer
-	sessHub              *SessionHub
-	closeCh              chan struct{}
-	freeContext          *readHandleCtx
-	ctxLock              sync.Mutex
-	defaultReadTimeout   int32 // time.Duration // readdeadline for underlying net.Conn
-	defaultWriteTimeout  int32 // time.Duration // writedeadline for underlying net.Conn
-	tlsConfig            *tls.Config
-	slowCometDuration    time.Duration
-	defaultHeaderCodec   string
-	defaultBodyCodec     string
-	defaultBodyGzipLevel int32
-	printBody            bool
-	countTime            bool
-	timeNow              func() time.Time
-	timeSince            func(time.Time) time.Duration
-	mu                   sync.Mutex
+	PullRouter          *Router
+	PushRouter          *Router
+	pluginContainer     PluginContainer
+	sessHub             *SessionHub
+	closeCh             chan struct{}
+	freeContext         *readHandleCtx
+	ctxLock             sync.Mutex
+	defaultReadTimeout  int32 // time.Duration // readdeadline for underlying net.Conn
+	defaultWriteTimeout int32 // time.Duration // writedeadline for underlying net.Conn
+	tlsConfig           *tls.Config
+	slowCometDuration   time.Duration
+	defaultBodyCodec    byte
+	printBody           bool
+	countTime           bool
+	timeNow             func() time.Time
+	timeSince           func(time.Time) time.Duration
+	mu                  sync.Mutex
 
 	// for client role
 	defaultDialTimeout time.Duration
@@ -68,21 +68,23 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		Fatalf("%v", err)
 	}
 	var p = &Peer{
-		PullRouter:           newPullRouter(pluginContainer),
-		PushRouter:           newPushRouter(pluginContainer),
-		pluginContainer:      pluginContainer,
-		sessHub:              newSessionHub(),
-		defaultReadTimeout:   int32(cfg.DefaultReadTimeout),
-		defaultWriteTimeout:  int32(cfg.DefaultWriteTimeout),
-		closeCh:              make(chan struct{}),
-		slowCometDuration:    slowCometDuration,
-		defaultDialTimeout:   cfg.DefaultDialTimeout,
-		listenAddrs:          cfg.ListenAddrs,
-		defaultHeaderCodec:   cfg.DefaultHeaderCodec,
-		defaultBodyCodec:     cfg.DefaultBodyCodec,
-		defaultBodyGzipLevel: cfg.DefaultBodyGzipLevel,
-		printBody:            cfg.PrintBody,
-		countTime:            cfg.CountTime,
+		PullRouter:          newPullRouter(pluginContainer),
+		PushRouter:          newPushRouter(pluginContainer),
+		pluginContainer:     pluginContainer,
+		sessHub:             newSessionHub(),
+		defaultReadTimeout:  int32(cfg.DefaultReadTimeout),
+		defaultWriteTimeout: int32(cfg.DefaultWriteTimeout),
+		closeCh:             make(chan struct{}),
+		slowCometDuration:   slowCometDuration,
+		defaultDialTimeout:  cfg.DefaultDialTimeout,
+		listenAddrs:         cfg.ListenAddrs,
+		printBody:           cfg.PrintBody,
+		countTime:           cfg.CountTime,
+	}
+	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
+		Fatalf("%v", err)
+	} else {
+		p.defaultBodyCodec = c.Id()
 	}
 	if p.countTime {
 		p.timeNow = time.Now
@@ -116,26 +118,28 @@ func (p *Peer) CountSession() int {
 }
 
 // ServeConn serves the connection and returns a session.
-func (p *Peer) ServeConn(conn net.Conn, protocolFunc ...socket.ProtocolFunc) Session {
-	var session = newSession(p, conn, protocolFunc)
+func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) Session {
+	var session = newSession(p, conn, protoFunc)
 	p.sessHub.Set(session)
 	return session
 }
 
 // Dial connects with the peer of the destination address.
-func (p *Peer) Dial(addr string, protocolFunc ...socket.ProtocolFunc) (Session, error) {
+func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	var conn, err = net.DialTimeout("tcp", addr, p.defaultDialTimeout)
 	if err != nil {
-		return nil, err
+		rerr := rerror_dialFailed.Copy()
+		rerr.Detail = err.Error()
+		return nil, rerr
 	}
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	var sess = newSession(p, conn, protocolFunc)
+	var sess = newSession(p, conn, protoFunc)
 	sess.socket.SetId(sess.LocalIp())
-	if err = p.pluginContainer.PostDial(sess); err != nil {
+	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
 		sess.Close()
-		return nil, err
+		return nil, rerr
 	}
 	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
@@ -145,20 +149,22 @@ func (p *Peer) Dial(addr string, protocolFunc ...socket.ProtocolFunc) (Session, 
 
 // DialContext connects with the peer of the destination address,
 // using the provided context.
-func (p *Peer) DialContext(ctx context.Context, addr string, protocolFunc ...socket.ProtocolFunc) (Session, error) {
+func (p *Peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	var d net.Dialer
 	var conn, err = d.DialContext(ctx, "tcp", addr)
 	if err != nil {
-		return nil, err
+		rerr := rerror_dialFailed.Copy()
+		rerr.Detail = err.Error()
+		return nil, rerr
 	}
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	var sess = newSession(p, conn, protocolFunc)
+	var sess = newSession(p, conn, protoFunc)
 	sess.socket.SetId(sess.LocalIp())
-	if err = p.pluginContainer.PostDial(sess); err != nil {
+	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
 		sess.Close()
-		return nil, err
+		return nil, rerr
 	}
 	Go(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
@@ -170,7 +176,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, protocolFunc ...soc
 var ErrListenClosed = errors.New("listener is closed")
 
 // Listen turns on the listening service.
-func (p *Peer) Listen(protocolFunc ...socket.ProtocolFunc) error {
+func (p *Peer) Listen(protoFunc ...socket.ProtoFunc) error {
 	var (
 		wg    sync.WaitGroup
 		count = len(p.listenAddrs)
@@ -180,7 +186,7 @@ func (p *Peer) Listen(protocolFunc ...socket.ProtocolFunc) error {
 	for _, addr := range p.listenAddrs {
 		go func(addr string) {
 			defer wg.Done()
-			errCh <- p.listen(addr, protocolFunc)
+			errCh <- p.listen(addr, protoFunc)
 		}(addr)
 	}
 	wg.Wait()
@@ -193,7 +199,7 @@ func (p *Peer) Listen(protocolFunc ...socket.ProtocolFunc) error {
 	return errs
 }
 
-func (p *Peer) listen(addr string, protocolFuncs []socket.ProtocolFunc) error {
+func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 	var lis, err = listen(addr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
@@ -204,8 +210,10 @@ func (p *Peer) listen(addr string, protocolFuncs []socket.ProtocolFunc) error {
 	Printf("listen ok (addr: %s)", addr)
 
 	var (
-		tempDelay time.Duration // how long to sleep on accept failure
-		closeCh   = p.closeCh
+		tempDelay           time.Duration // how long to sleep on accept failure
+		closeCh             = p.closeCh
+		defaultReadTimeout  = time.Duration(p.defaultReadTimeout)
+		defaultWriteTimeout = time.Duration(p.defaultWriteTimeout)
 	)
 	for {
 		rw, e := lis.Accept()
@@ -234,9 +242,23 @@ func (p *Peer) listen(addr string, protocolFuncs []socket.ProtocolFunc) error {
 		}
 		tempDelay = 0
 
-		func(sess *session) {
+		func(conn net.Conn) {
 		TRYGO:
 			if !Go(func() {
+				if c, ok := conn.(*tls.Conn); ok {
+					if defaultReadTimeout > 0 {
+						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(defaultReadTimeout))
+					}
+					if defaultWriteTimeout > 0 {
+						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(defaultWriteTimeout))
+					}
+					if err := c.Handshake(); err != nil {
+						Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())
+						return
+					}
+				}
+
+				var sess = newSession(p, conn, protoFuncs)
 				if err := p.pluginContainer.PostAccept(sess); err != nil {
 					sess.Close()
 					return
@@ -248,7 +270,7 @@ func (p *Peer) listen(addr string, protocolFuncs []socket.ProtocolFunc) error {
 				time.Sleep(time.Second)
 				goto TRYGO
 			}
-		}(newSession(p, rw, protocolFuncs))
+		}(rw)
 	}
 }
 

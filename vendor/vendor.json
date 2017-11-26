@@ -7,6 +7,12 @@
 			"path": "github.com/gogo/protobuf/proto",
 			"revision": "15e5f49f11b8f01e78c402755dfdb51088f3b253",
 			"revisionTime": "2017-08-05T07:10:05Z"
+		},
+		{
+			"checksumSHA1": "XtSqPuaUibkydRSIbdWe3cn5ykc=",
+			"path": "github.com/tidwall/gjson",
+			"revision": "67e2a63ac70d273b6bc7589f12f07180bc9fc189",
+			"revisionTime": "2017-11-20T18:50:05Z"
 		}
 	],
 	"rootPath": "github.com/henrylee2cn/teleport"

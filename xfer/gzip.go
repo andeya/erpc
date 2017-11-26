@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package socket
+// +build ignore
+
+package xfer
 
 import (
 	"compress/gzip"
 	"io"
 
-	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/utils"
 )
 
@@ -32,13 +33,13 @@ type CodecWriter struct {
 }
 
 // Note: reseting the temporary buffer when return the *CodecWriter
-func (s *socket) getCodecWriter(codecName string, w io.Writer) (*CodecWriter, error) {
-	t, ok := s.codecWriterMap[codecName]
+func (s *socket) getCodecWriter(bodyCodec byte, w io.Writer) (*CodecWriter, error) {
+	t, ok := s.codecWriterMap[codecId]
 	if ok {
 		t.Writer = w
 		return t, nil
 	}
-	c, err := codec.GetByName(codecName)
+	c, err := codec.GetByName(codecId)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func (s *socket) getCodecWriter(codecName string, w io.Writer) (*CodecWriter, er
 		encMaker:      c.NewEncoder,
 	}
 	t.encMap = map[int]codec.Encoder{gzip.NoCompression: c.NewEncoder(t)}
-	s.codecWriterMap[codecName] = t
+	s.codecWriterMap[codecId] = t
 	return t, nil
 }
 

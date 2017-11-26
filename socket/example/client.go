@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 
 	"github.com/henrylee2cn/teleport/socket/example/pb"
@@ -16,18 +17,16 @@ func main() {
 	}
 	s := socket.GetSocket(conn)
 	defer s.Close()
-	var packet = socket.GetPacket(nil)
+	var packet = socket.GetPacket()
 	defer socket.PutPacket(packet)
 	for i := uint64(0); i < 1; i++ {
 		// write request
-		packet.Reset(nil)
-		packet.Header.Type = 0
-		packet.HeaderCodec = "protobuf"
-		packet.BodyCodec = "protobuf"
-		packet.Header.Seq = i
-		packet.Header.Uri = "/a/b"
-		packet.Header.Gzip = 5
-		packet.Body = &pb.PbTest{A: 10, B: 2}
+		packet.Reset()
+		packet.SetPtype(0)
+		packet.SetBodyCodec(codec.ID_JSON)
+		packet.SetSeq(i)
+		packet.SetUri("/a/b")
+		packet.SetBody(&pb.PbTest{A: 10, B: 2})
 		err = s.WritePacket(packet)
 		if err != nil {
 			log.Printf("[CLI] write request err: %v", err)
@@ -36,9 +35,11 @@ func main() {
 		log.Printf("[CLI] write request: %v", packet)
 
 		// read response
-		packet.Reset(func(_ *socket.Header) interface{} {
-			return new(pb.PbTest)
-		})
+		packet.Reset(socket.WithNewBody(
+			func(seq uint64, ptype byte, uri string) interface{} {
+				return new(pb.PbTest)
+			}),
+		)
 		err = s.ReadPacket(packet)
 		if err != nil {
 			log.Printf("[CLI] read response err: %v", err)

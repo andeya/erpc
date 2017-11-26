@@ -16,7 +16,6 @@ package codec
 
 import (
 	"fmt"
-	"io"
 )
 
 type (
@@ -26,18 +25,11 @@ type (
 		Id() byte
 		// Name returns codec name.
 		Name() string
-		// NewEncoder returns a new encoder that writes to writer.
-		NewEncoder(writer io.Writer) Encoder
-		// NewDecoder returns a new decoder that reads from limit reader.
-		NewDecoder(limitReader io.Reader) Decoder
-	}
-	// Encoder encodes data
-	Encoder interface {
-		Encode(v interface{}) error
-	}
-	// Decoder decodes data
-	Decoder interface {
-		Decode(v interface{}) error
+		// Marshal returns the encoding of v.
+		Marshal(v interface{}) ([]byte, error)
+		// Unmarshal parses the encoded data and stores the result
+		// in the value pointed to by v.
+		Unmarshal(data []byte, v interface{}) error
 	}
 )
 
@@ -50,22 +42,32 @@ var codecMap = struct {
 }
 
 const (
-	NilCodecId byte = 0
+	NilCodecId   byte   = 0
+	NilCodecName string = ""
 )
 
 // Reg registers Codec
 func Reg(codec Codec) {
-	if _, ok := codecMap.nameMap[codec.Name()]; ok {
-		panic("multi-register codec name: " + codec.Name())
-	}
 	if codec.Id() == NilCodecId {
 		panic(fmt.Sprintf("codec id can not be %d", NilCodecId))
+	}
+	if _, ok := codecMap.nameMap[codec.Name()]; ok {
+		panic("multi-register codec name: " + codec.Name())
 	}
 	if _, ok := codecMap.idMap[codec.Id()]; ok {
 		panic(fmt.Sprintf("multi-register codec id: %d", codec.Id()))
 	}
 	codecMap.nameMap[codec.Name()] = codec
 	codecMap.idMap[codec.Id()] = codec
+}
+
+// Get returns Codec
+func Get(id byte) (Codec, error) {
+	codec, ok := codecMap.idMap[id]
+	if !ok {
+		return nil, fmt.Errorf("unsupported codec id: %d", id)
+	}
+	return codec, nil
 }
 
 // GetByName returns Codec
@@ -75,49 +77,4 @@ func GetByName(name string) (Codec, error) {
 		return nil, fmt.Errorf("unsupported codec name: %s", name)
 	}
 	return codec, nil
-}
-
-// GetById returns Codec
-func GetById(id byte) (Codec, error) {
-	codec, ok := codecMap.idMap[id]
-	if !ok {
-		return nil, fmt.Errorf("unsupported codec id: %d", id)
-	}
-	return codec, nil
-}
-
-// NewEncoderByName returns a new encoder that writes to writer.
-func NewEncoderByName(name string, writer io.Writer) (Encoder, error) {
-	codec, err := GetByName(name)
-	if err != nil {
-		return nil, err
-	}
-	return codec.NewEncoder(writer), nil
-}
-
-// NewDecoderByName returns a new decoder that reads from limit reader.
-func NewDecoderByName(name string, limitReader io.Reader) (Decoder, error) {
-	codec, err := GetByName(name)
-	if err != nil {
-		return nil, err
-	}
-	return codec.NewDecoder(limitReader), nil
-}
-
-// NewEncoderById returns a new encoder that writes to writer.
-func NewEncoderById(id byte, writer io.Writer) (Encoder, error) {
-	codec, err := GetById(id)
-	if err != nil {
-		return nil, err
-	}
-	return codec.NewEncoder(writer), nil
-}
-
-// NewDecoderById returns a new decoder that reads from limit reader.
-func NewDecoderById(id byte, limitReader io.Reader) (Decoder, error) {
-	codec, err := GetById(id)
-	if err != nil {
-		return nil, err
-	}
-	return codec.NewDecoder(limitReader), nil
 }

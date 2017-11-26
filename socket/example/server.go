@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	socket.SetReadLimit(512)
+	socket.SetPacketSizeLimit(512)
 	lis, err := net.Listen("tcp", "0.0.0.0:8000")
 	if err != nil {
 		log.Fatalf("[SVR] listen err: %v", err)
@@ -26,10 +26,12 @@ func main() {
 			var pbTest = new(pb.PbTest)
 			for {
 				// read request
-				var packet = socket.GetPacket(func(_ *socket.Header) interface{} {
-					*pbTest = pb.PbTest{}
-					return pbTest
-				})
+				var packet = socket.GetPacket(socket.WithNewBody(
+					func(seq uint64, ptype byte, uri string) interface{} {
+						*pbTest = pb.PbTest{}
+						return pbTest
+					}),
+				)
 				err = s.ReadPacket(packet)
 				if err != nil {
 					log.Printf("[SVR] read request err: %v", err)
@@ -39,12 +41,9 @@ func main() {
 				}
 
 				// write response
-				packet.Header.StatusCode = 200
-				packet.Header.Status = "ok"
-
 				pbTest.A = pbTest.A + pbTest.B
 				pbTest.B = pbTest.A - pbTest.B*2
-				packet.Body = pbTest
+				packet.SetBody(pbTest)
 
 				err = s.WritePacket(packet)
 				if err != nil {

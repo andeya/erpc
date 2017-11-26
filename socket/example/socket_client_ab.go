@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
-
 	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
@@ -35,19 +35,17 @@ func main() {
 		count.Add(group)
 		for i := 0; i < group; i++ {
 			go func(a uint64) {
-				var packet = socket.GetPacket(nil)
+				var packet = socket.GetPacket()
 				defer func() {
 					socket.PutPacket(packet)
 					count.Done()
 				}()
 				// write request
-				packet.Reset(nil)
-				packet.HeaderCodec = "protobuf"
-				packet.BodyCodec = "protobuf"
-				packet.Header.Seq = a
-				packet.Header.Uri = "/a/b"
-				packet.Header.Gzip = 0
-				packet.Body = &pb.PbTest{A: 10, B: 2}
+				packet.Reset()
+				packet.SetBodyCodec(codec.ID_PROTOBUF)
+				packet.SetSeq(a)
+				packet.SetUri("/a/b")
+				packet.SetBody(&pb.PbTest{A: 10, B: 2})
 				err = s.WritePacket(packet)
 				if err != nil {
 					atomic.AddUint32(&failNum, 1)
@@ -56,9 +54,9 @@ func main() {
 				}
 
 				// read response
-				packet.Reset(func(_ *socket.Header) interface{} {
+				packet.Reset(socket.WithNewBody(func(seq uint64, ptype byte, uri string) interface{} {
 					return new(pb.PbTest)
-				})
+				}))
 				err = s.ReadPacket(packet)
 				if err != nil {
 					atomic.AddUint32(&failNum, 1)
