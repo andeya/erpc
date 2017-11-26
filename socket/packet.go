@@ -318,7 +318,7 @@ func (p *Packet) XferPipe() *xfer.XferPipe {
 	return p.xferPipe
 }
 
-// AppendXferPipeFrom appends transfer filter pipe from a *Packet.
+// AppendXferPipeFrom appends transfer filters from a *Packet.
 func (p *Packet) AppendXferPipeFrom(src *Packet) {
 	p.xferPipe.AppendFrom(src.xferPipe)
 }

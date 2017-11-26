@@ -51,7 +51,7 @@ func (x *XferPipe) Append(filterId ...byte) error {
 	return x.check()
 }
 
-// AppendFrom appends transfer filter from a *XferPipe.
+// AppendFrom appends transfer filters from a *XferPipe.
 func (x *XferPipe) AppendFrom(src *XferPipe) {
 	for _, filter := range src.filters {
 		x.filters = append(x.filters, filter)
