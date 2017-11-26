@@ -40,7 +40,7 @@ func main() {
 				"bytes":     []byte("bytestest9090"),
 			},
 			&reply,
-			// socket.WithXferPipe('g'),
+			socket.WithXferPipe('g'),
 		)
 
 		if pullcmd.Rerror() != nil {

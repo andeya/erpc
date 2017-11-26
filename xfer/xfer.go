@@ -51,6 +51,13 @@ func (x *XferPipe) Append(filterId ...byte) error {
 	return x.check()
 }
 
+// AppendFrom appends transfer filter from a *XferPipe.
+func (x *XferPipe) AppendFrom(src *XferPipe) {
+	for _, filter := range src.filters {
+		x.filters = append(x.filters, filter)
+	}
+}
+
 func (x *XferPipe) check() error {
 	if x.Len() > math.MaxUint8 {
 		return ErrXferPipeTooLong
@@ -76,6 +83,16 @@ func (x *XferPipe) Ids() []byte {
 		ids[i] = filter.Id()
 	}
 	return ids
+}
+
+// Range calls f sequentially for each XferFilter present in the XferPipe.
+// If f returns false, range stops the iteration.
+func (x *XferPipe) Range(callback func(idx int, filter XferFilter) bool) {
+	for idx, filter := range x.filters {
+		if !callback(idx, filter) {
+			break
+		}
+	}
 }
 
 // OnPack packs transfer byte stream, from inner-most to outer-most.

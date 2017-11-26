@@ -376,6 +376,9 @@ func (c *readHandleCtx) handlePull() {
 	// set packet type
 	c.output.SetPtype(TypeReply)
 
+	// copy transfer filter pipe
+	c.output.AppendXferPipeFrom(c.input)
+
 	// handle pull
 	if !hasRerror(c.output.Meta()) {
 		rerr := c.pluginContainer.PostReadPullBody(c)

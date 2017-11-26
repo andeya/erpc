@@ -318,6 +318,11 @@ func (p *Packet) XferPipe() *xfer.XferPipe {
 	return p.xferPipe
 }
 
+// AppendXferPipeFrom appends transfer filter pipe from a *Packet.
+func (p *Packet) AppendXferPipeFrom(src *Packet) {
+	p.xferPipe.AppendFrom(src.xferPipe)
+}
+
 // Size returns the size of packet.
 func (p *Packet) Size() uint32 {
 	return p.size
