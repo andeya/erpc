@@ -9,15 +9,15 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 
 官方QQ群：Go-Web 编程 42730308    [![Go-Web 编程群](http://pub.idqqimg.com/wpa/images/group.png)](http://jq.qq.com/?_wv=1027&k=fzi4p1)
 
-![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
+![teleport_server](https://github.com/henrylee2cn/teleport/raw/v2/doc/teleport_server.png)
 <br>
 
 *AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 41358*
-![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/frame_client_ab.png)
+![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/v2/doc/frame_client_ab.png)
 <br>
 
 *AB Testing 2: [Mac 4CPU 8GB] [single-process single-conn] teleport/socket: QPS 55419*
-![teleport_socket_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/socket_client_ab.png)
+![teleport_socket_client_ab_test](https://github.com/henrylee2cn/teleport/raw/v2/doc/socket_client_ab.png)
 
 ## 1. 版本
 
@@ -464,4 +464,4 @@ func (p *Push) Test(args *map[string]interface{}) {
 
 ## 7. 开源协议
 
-Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) 协议发布
+Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/v2/LICENSE) 协议发布

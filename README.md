@@ -4,18 +4,18 @@ Teleport is a versatile, high-performance and flexible TCP socket framework.
 
 It can be used for peer-peer, rpc, gateway, micro services, push services, game services and so on.
 
-[简体中文](https://github.com/henrylee2cn/teleport/blob/master/README_ZH.md)
+[简体中文](https://github.com/henrylee2cn/teleport/blob/v2/README_ZH.md)
 
 
-![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
+![teleport_server](https://github.com/henrylee2cn/teleport/raw/v2/doc/teleport_server.png)
 <br>
 
 *AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 41358*
-![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/frame_client_ab.png)
+![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/v2/doc/frame_client_ab.png)
 <br>
 
 *AB Testing 2: [Mac 4CPU 8GB] [single-process single-conn] teleport/socket: QPS 55419*
-![teleport_socket_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/socket_client_ab.png)
+![teleport_socket_client_ab_test](https://github.com/henrylee2cn/teleport/raw/v2/doc/socket_client_ab.png)
 
 ## 1. Version
 
@@ -461,4 +461,4 @@ func (p *Push) Test(args *map[string]interface{}) {
 
 ## 7. License
 
-Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text
+Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/v2/LICENSE) file for the full license text
