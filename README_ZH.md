@@ -23,7 +23,8 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 
 版本 | 状态 | 分支
 --------|--------|--------
-v2      | release | [master](https://github.com/henrylee2cn/teleport/tree/master)
+v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/master)
+v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2)
 v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
 
 
