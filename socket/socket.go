@@ -279,10 +279,10 @@ func (s *socket) optimize() {
 	}
 }
 
+// use system default value
 var (
 	tcpWriteBuffer = -1
-	// tcpReadBuffer  = 0
-	tcpReadBuffer = 1024 * 35
+	tcpReadBuffer  = -1
 )
 
 type (
