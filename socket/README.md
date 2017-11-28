@@ -30,11 +30,17 @@ darwin amd64 4CPU 8GB
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
-- rpcx
+- contrast rpcx
 
 ![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/develop/doc/rpcx_benchmark.jpg)
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
+
+- torch of teleport-socket
+
+![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.png)
+
+**[svg file](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.svg)**
 
 ## Keyworks
 

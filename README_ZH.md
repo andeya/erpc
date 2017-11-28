@@ -9,15 +9,31 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 
 官方QQ群：Go-Web 编程 42730308    [![Go-Web 编程群](http://pub.idqqimg.com/wpa/images/group.png)](http://jq.qq.com/?_wv=1027&k=fzi4p1)
 
-![teleport_server](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_server.png)
-<br>
+## 通信性能测试
 
-*AB Testing 1: [Mac 4CPU 8GB] [single-process single-conn] teleport: QPS 41358*
-![teleport_frame_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/frame_client_ab.png)
-<br>
+- 测试环境
 
-*AB Testing 2: [Mac 4CPU 8GB] [single-process single-conn] teleport/socket: QPS 55419*
-![teleport_socket_client_ab_test](https://github.com/henrylee2cn/teleport/raw/master/doc/socket_client_ab.png)
+```
+darwin amd64 4CPU 8GB
+```
+
+- teleport-socket
+
+![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_benchmark.png)
+
+**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
+
+- 对比 rpcx
+
+![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/develop/doc/rpcx_benchmark.jpg)
+
+**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
+
+- 火焰图 teleport-socket
+
+![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.png)
+
+**[svg file](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.svg)**
 
 ## 1. 版本
 
