@@ -9,6 +9,10 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 
 官方QQ群：Go-Web 编程 42730308    [![Go-Web 编程群](http://pub.idqqimg.com/wpa/images/group.png)](http://jq.qq.com/?_wv=1027&k=fzi4p1)
 
+
+![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/develop/doc/teleport_architecture.png)
+
+
 ## 通信性能测试
 
 - 测试环境

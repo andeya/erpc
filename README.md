@@ -7,6 +7,9 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 [简体中文](https://github.com/henrylee2cn/teleport/blob/master/README_ZH.md)
 
 
+![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/develop/doc/teleport_architecture.png)
+
+
 ## Benchmark
 
 - Test server configuration
