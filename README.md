@@ -7,7 +7,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 [简体中文](https://github.com/henrylee2cn/teleport/blob/master/README_ZH.md)
 
 
-![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/develop/doc/teleport_architecture.png)
+![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_architecture.png)
 
 
 ## Benchmark
@@ -20,21 +20,21 @@ darwin amd64 4CPU 8GB
 
 - teleport-socket
 
-![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_benchmark.png)
+![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_benchmark.png)
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
 - contrast rpcx
 
-![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/develop/doc/rpcx_benchmark.jpg)
+![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/master/doc/rpcx_benchmark.jpg)
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
 
 - torch of teleport-socket
 
-![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.png)
+![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.svg)**
 
 ## 1. Version
 
