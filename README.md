@@ -73,7 +73,14 @@ go get -u github.com/henrylee2cn/teleport
 
 ### 4.1 Keywords
 
-- **Peer:** A communication instance may be a client or a client
+- **Peer:** A communication instance may be a server or a client
+- **Socket:** Base on the net.Conn package, add custom package protocol, transfer pipelines and other functions
+- **Packet:** The corresponding structure of the data package content element
+- **Proto:** The protocol interface of packet pack/unpack 
+- **Codec:** Serialization interface for `Packet.Body`
+- **XferPipe:** Packet bytes encoding pipeline, such as compression, encryption, calibration and so on
+- **XferFilter:** A interface to handle packet data before transfer
+- **Plugin:** Plugins that cover all aspects of communication
 - **Session:** A connection session, with push, pull, reply, close and other methods of operation
 - **Context:** Handle the received or send packets
 - **Pull-Launch:** Pull data from the peer
@@ -81,12 +88,7 @@ go get -u github.com/henrylee2cn/teleport
 - **Push-Launch:** Push data to the peer
 - **Push-Handle:** Handle the push of peer
 - **Router:** Router that route the response handler by request information(such as a URI)
-- **Packet:** The corresponding structure of the data package content element
-- **Proto:** The protocol interface of packet pack/unpack 
-- **Codec:** Serialization interface for `Packet.Body`
-- **XferPipe:** A series of pipelines to handle packet data before transfer
-- **XferFilter:** A interface to handle packet data before transfer
-- **Plugin:** Plugins that cover all aspects of communication
+
 
 ### 4.2 Execution level
 

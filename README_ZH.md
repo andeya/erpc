@@ -76,19 +76,21 @@ go get -u github.com/henrylee2cn/teleport
 ### 4.1 名称解释
 
 - **Peer：** 通信端点，可以是客户端或客户端
-- **Session：** 连接会话，具有推、拉、回复、关闭等操作
-- **Context：** 处理收到的或发送的数据包
+- **Socket：** 对net.Conn的封装，增加自定义包协议、传输管道等功能
+- **Packet：** 数据包内容元素对应的结构体
+- **Proto：** 数据包封包／解包的协议接口
+- **Codec：** 用于`Packet.Body`的序列化工具
+- **XferPipe：** 数据包字节流的编码处理管道，如压缩、加密、校验等
+- **XferFilter：** 一个在数据包传输前，对数据进行加工的接口
+- **Plugin：** 贯穿于通信各个环节的插件
+- **Session：** 基于Socket封装的连接会话，提供的推、拉、回复、关闭等会话操作
+- **Context：** 连接会话中一次通信（如PULL-REPLY, PUSH）的上下文对象
 - **Pull-Launch：** 从对端Peer拉数据
 - **Pull-Handle：** 处理和回复对端Peer的拉请求
 - **Push-Launch：** 将数据推送到对端Peer
 - **Push-Handle：** 处理同伴的推送
 - **Router：** 通过请求信息（如URI）索引响应函数（Handler）的路由器
-- **Packet：** 数据包内容元素对应的结构体
-- **Proto：** 数据包封包／解包的协议接口
-- **Codec：** 用于`Packet.Body`的序列化工具
-- **XferPipe：** 传输前对数据包数据进行一系列加工的管道
-- **XferFilter：** 一个在数据包传输前，对数据进行加工的接口
-- **Plugin:** 贯穿于通信各个环节的插件
+
 
 ### 4.2 执行层次
 
