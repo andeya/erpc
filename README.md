@@ -18,7 +18,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 darwin amd64 4CPU 8GB
 ```
 
-- teleport-socket
+- teleport/socket
 
 ![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_benchmark.png)
 
@@ -30,7 +30,7 @@ darwin amd64 4CPU 8GB
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
 
-- torch of teleport-socket
+- torch of teleport/socket
 
 ![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.png)
 
@@ -80,12 +80,13 @@ go get -u github.com/henrylee2cn/teleport
 - **Pull-Handle:** Handle and reply to the pull of peer
 - **Push-Launch:** Push data to the peer
 - **Push-Handle:** Handle the push of peer
-- **Router:** Register handlers
-- **Packet:** The corresponding structure of the data package
+- **Router:** Router that route the response handler by request information(such as a URI)
+- **Packet:** The corresponding structure of the data package content element
 - **Proto:** The protocol interface of packet pack/unpack 
 - **Codec:** Serialization interface for `Packet.Body`
 - **XferPipe:** A series of pipelines to handle packet data before transfer
 - **XferFilter:** A interface to handle packet data before transfer
+- **Plugin:** Plugins that cover all aspects of communication
 
 ### 4.2 Execution level
 

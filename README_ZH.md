@@ -21,7 +21,7 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 darwin amd64 4CPU 8GB
 ```
 
-- teleport-socket
+- teleport/socket
 
 ![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_benchmark.png)
 
@@ -33,7 +33,7 @@ darwin amd64 4CPU 8GB
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
 
-- 火焰图 teleport-socket
+- 火焰图 teleport/socket
 
 ![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.png)
 
@@ -82,12 +82,13 @@ go get -u github.com/henrylee2cn/teleport
 - **Pull-Handle：** 处理和回复对端Peer的拉请求
 - **Push-Launch：** 将数据推送到对端Peer
 - **Push-Handle：** 处理同伴的推送
-- **Router：** Handler注册路由
-- **Packet：** 数据包对应的结构体
+- **Router：** 通过请求信息（如URI）索引响应函数（Handler）的路由器
+- **Packet：** 数据包内容元素对应的结构体
 - **Proto：** 数据包封包／解包的协议接口
 - **Codec：** 用于`Packet.Body`的序列化工具
 - **XferPipe：** 传输前对数据包数据进行一系列加工的管道
 - **XferFilter：** 一个在数据包传输前，对数据进行加工的接口
+- **Plugin:** 贯穿于通信各个环节的插件
 
 ### 4.2 执行层次
 
