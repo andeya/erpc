@@ -75,7 +75,7 @@ go get -u github.com/henrylee2cn/teleport
 
 ### 4.1 名称解释
 
-- **Peer：** 通信端点，可以是客户端或客户端
+- **Peer：** 通信端点，可以是服务端或客户端
 - **Socket：** 对net.Conn的封装，增加自定义包协议、传输管道等功能
 - **Packet：** 数据包内容元素对应的结构体
 - **Proto：** 数据包封包／解包的协议接口
