@@ -100,11 +100,16 @@ type (
 		// Note: seq, ptype, uri must be setted already.
 		UnmarshalNewBody(bodyBytes []byte) error
 		// UnmarshalBody unmarshal the encoded data to the existed body.
-		UnmarshalBody(bodyBytes []byte)
+		UnmarshalBody(bodyBytes []byte) error
 	}
 
 	// NewBodyFunc creates a new body by header.
 	NewBodyFunc func(Header) interface{}
+)
+
+var (
+	_ Header = new(Packet)
+	_ Body   = new(Packet)
 )
 
 var packetStack = new(struct {
