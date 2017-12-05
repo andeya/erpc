@@ -39,6 +39,7 @@ type (
 		// Note: Concurrent unsafe!
 		Unpack(*Packet) error
 	}
+	// ProtoFunc function used to create a custom Proto interface.
 	ProtoFunc func(io.ReadWriter) Proto
 )
 
