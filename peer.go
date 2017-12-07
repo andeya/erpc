@@ -38,8 +38,8 @@ type Peer struct {
 	closeCh             chan struct{}
 	freeContext         *readHandleCtx
 	ctxLock             sync.Mutex
-	defaultReadTimeout  int32 // time.Duration // readdeadline for underlying net.Conn
-	defaultWriteTimeout int32 // time.Duration // writedeadline for underlying net.Conn
+	defaultReadTimeout  time.Duration // readdeadline for underlying net.Conn
+	defaultWriteTimeout time.Duration // writedeadline for underlying net.Conn
 	tlsConfig           *tls.Config
 	slowCometDuration   time.Duration
 	defaultBodyCodec    byte
@@ -72,8 +72,8 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		PushRouter:          newPushRouter(pluginContainer),
 		pluginContainer:     pluginContainer,
 		sessHub:             newSessionHub(),
-		defaultReadTimeout:  int32(cfg.DefaultReadTimeout),
-		defaultWriteTimeout: int32(cfg.DefaultWriteTimeout),
+		defaultReadTimeout:  cfg.DefaultReadTimeout,
+		defaultWriteTimeout: cfg.DefaultWriteTimeout,
 		closeCh:             make(chan struct{}),
 		slowCometDuration:   slowCometDuration,
 		defaultDialTimeout:  cfg.DefaultDialTimeout,
@@ -115,13 +115,6 @@ func (p *Peer) RangeSession(fn func(sess Session) bool) {
 // CountSession returns the number of sessions.
 func (p *Peer) CountSession() int {
 	return p.sessHub.sessions.Len()
-}
-
-// ServeConn serves the connection and returns a session.
-func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) Session {
-	var session = newSession(p, conn, protoFunc)
-	p.sessHub.Set(session)
-	return session
 }
 
 // Dial connects with the peer of the destination address.
@@ -210,10 +203,8 @@ func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 	Printf("listen ok (addr: %s)", addr)
 
 	var (
-		tempDelay           time.Duration // how long to sleep on accept failure
-		closeCh             = p.closeCh
-		defaultReadTimeout  = time.Duration(p.defaultReadTimeout)
-		defaultWriteTimeout = time.Duration(p.defaultWriteTimeout)
+		tempDelay time.Duration // how long to sleep on accept failure
+		closeCh   = p.closeCh
 	)
 	for {
 		rw, e := lis.Accept()
@@ -246,20 +237,19 @@ func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 		TRYGO:
 			if !Go(func() {
 				if c, ok := conn.(*tls.Conn); ok {
-					if defaultReadTimeout > 0 {
-						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(defaultReadTimeout))
+					if p.defaultReadTimeout > 0 {
+						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultReadTimeout))
 					}
-					if defaultWriteTimeout > 0 {
-						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(defaultWriteTimeout))
+					if p.defaultWriteTimeout > 0 {
+						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultWriteTimeout))
 					}
 					if err := c.Handshake(); err != nil {
 						Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())
 						return
 					}
 				}
-
 				var sess = newSession(p, conn, protoFuncs)
-				if err := p.pluginContainer.PostAccept(sess); err != nil {
+				if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
 					sess.Close()
 					return
 				}
@@ -272,6 +262,30 @@ func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 			}
 		}(rw)
 	}
+}
+
+// ServeConn serves the connection and returns a session.
+func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
+	if c, ok := conn.(*tls.Conn); ok {
+		if p.defaultReadTimeout > 0 {
+			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultReadTimeout))
+		}
+		if p.defaultWriteTimeout > 0 {
+			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultWriteTimeout))
+		}
+		if err := c.Handshake(); err != nil {
+			return nil, errors.Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())
+		}
+	}
+	var sess = newSession(p, conn, protoFunc)
+	if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
+		sess.Close()
+		return nil, rerr.ToError()
+	}
+	Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
+	p.sessHub.Set(sess)
+	go sess.startReadAndHandle()
+	return sess, nil
 }
 
 // Close closes peer.

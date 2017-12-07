@@ -149,8 +149,8 @@ func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 		pushRouter:   peer.PushRouter,
 		socket:       socket.NewSocket(conn, protoFuncs...),
 		pullCmdMap:   goutil.RwMap(),
-		readTimeout:  peer.defaultReadTimeout,
-		writeTimeout: peer.defaultWriteTimeout,
+		readTimeout:  int32(peer.defaultReadTimeout),
+		writeTimeout: int32(peer.defaultWriteTimeout),
 	}
 	return s
 }
