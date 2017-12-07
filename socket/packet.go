@@ -149,7 +149,7 @@ func PutPacket(p *Packet) {
 //  settings are only for writing to connection.
 func NewPacket(settings ...PacketSetting) *Packet {
 	var p = &Packet{
-		meta:     new(utils.Args),
+		meta:     utils.AcquireArgs(),
 		xferPipe: new(xfer.XferPipe),
 	}
 	p.doSetting(settings...)
@@ -163,7 +163,7 @@ func NewPacket(settings ...PacketSetting) *Packet {
 func (p *Packet) Reset(settings ...PacketSetting) {
 	p.next = nil
 	p.body = nil
-	p.meta.Reset()
+	utils.ReleaseArgs(p.meta)
 	p.xferPipe.Reset()
 	p.newBodyFunc = nil
 	p.seq = 0
