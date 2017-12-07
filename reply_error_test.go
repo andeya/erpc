@@ -3,22 +3,23 @@ package tp
 import (
 	"testing"
 
-	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 func TestRerror(t *testing.T) {
-	reErr := new(Rerror)
-	t.Logf("%v", reErr)
-	reErr.Code = 400
-	reErr.Message = "msg"
-	t.Logf("%v", reErr)
-	reErr.Detail = `"bala...bala..."`
-	t.Logf("%v", reErr)
-	header := new(socket.Header)
-	reErr.SetToMeta(header)
-	t.Logf("%v", header.Meta.String())
-	b := header.Peek(MetaRerrorKey)
+	rerr := new(Rerror)
+	t.Logf("%v", rerr)
+	rerr.Code = 400
+	rerr.Message = "msg"
+	t.Logf("%v", rerr)
+	rerr.Detail = `"bala...bala..."`
+	t.Logf("%v", rerr)
+	meta := new(utils.Args)
+	rerr.SetToMeta(meta)
+	t.Logf("%v", meta.String())
+	b := meta.Peek(MetaRerrorKey)
 	t.Logf("%s", b)
-	newReErr := NewRerrorFromMeta(header)
-	t.Logf("%v", newReErr)
+	newRerr := NewRerrorFromMeta(meta)
+	t.Logf("%v", newRerr)
+	t.Logf("test ToError: %s", newRerr.ToError().Error())
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"strconv"
+	"unsafe"
 
 	"github.com/tidwall/gjson"
 
@@ -116,4 +117,16 @@ func hasRerror(meta *utils.Args) bool {
 
 func getRerrorBytes(meta *utils.Args) []byte {
 	return meta.Peek(MetaRerrorKey)
+}
+
+// ToError converts to error
+func (r *Rerror) ToError() error {
+	b, _ := r.MarshalJSON()
+	return (*errString)(unsafe.Pointer(&b))
+}
+
+type errString string
+
+func (e *errString) Error() string {
+	return *(*string)(unsafe.Pointer(e))
 }
