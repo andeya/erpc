@@ -27,6 +27,45 @@ import (
 )
 
 // Router the router of pull or push.
+//
+// PullController Model:
+//  type Aaa struct {
+//  	tp.PullCtx
+//  }
+//  // XxZz register the route: /aaa/xx_zz
+//  func (x *Aaa) XxZz(args *<T>) (<T>, *tp.Rerror) {
+//  	...
+//  	return r, nil
+//  }
+//  // YyZz register the route: /aaa/yy_zz
+//  func (x *Aaa) YyZz(args *<T>) (<T>, *tp.Rerror) {
+//  	...
+//  	return r, nil
+//  }
+//
+// PushController Model:
+//  type Bbb struct {
+//  	tp.PushCtx
+//  }
+//  // XxZz register the route: /bbb/yy_zz
+//  func (b *Bbb) XxZz(args *<T>) {
+//  	...
+//  	return r, nil
+//  }
+//  // YyZz register the route: /bbb/yy_zz
+//  func (b *Bbb) YyZz(args *<T>) {
+//  	...
+//  	return r, nil
+//  }
+//
+// UnknownPullHandler Type:
+//  func(ctx UnknownPullCtx) (interface{}, *Rerror) {
+//  	...
+//  	return r, nil
+//  }
+//
+// UnknownPushHandler Type:
+//  func(ctx UnknownPushCtx)
 type (
 	Router struct {
 		handlers       map[string]*Handler
