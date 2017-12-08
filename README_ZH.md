@@ -7,7 +7,7 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 
 可用于Peer-Peer对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
 
-官方QQ群：Go网络编程 42730308    [![view Go网络编程群](https://img.shields.io/badge/QQ-Go网络编程群-27a5ea.svg)](http://jq.qq.com/?_wv=1027&k=fzi4p1)
+[![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg)](http://jq.qq.com/?_wv=1027&k=fzi4p1)
 
 
 ![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_architecture.png)
