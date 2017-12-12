@@ -422,7 +422,6 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	}
 
 	s.writeLock.Lock()
-
 	if !s.IsOk() {
 		s.writeLock.Unlock()
 		return ErrConnClosed

@@ -15,11 +15,12 @@ func main() {
 	// go func() {
 	// 	http.ListenAndServe("0.0.0.0:9092", nil)
 	// }()
-	tp.SetRawlogLevel("error")
+	tp.SetRawlogLevel("WARNING")
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
-		DefaultBodyCodec: "protobuf",
+		DefaultBodyCodec:   "protobuf",
+		DefaultDialTimeout: time.Second * 5,
 	}
 
 	var peer = tp.NewPeer(cfg)
@@ -31,7 +32,7 @@ func main() {
 
 	var count sync.WaitGroup
 	t := time.Now()
-	loop := 30
+	loop := 10
 	group := 10000
 	var failNum uint32
 	defer func() {
@@ -45,6 +46,7 @@ func main() {
 		count.Add(group)
 		for i := 0; i < group; i++ {
 			go func() {
+				defer count.Done()
 				var reply = new(pb.PbTest)
 				var pullcmd = sess.Pull(
 					"/group/home/test",
@@ -55,7 +57,6 @@ func main() {
 					atomic.AddUint32(&failNum, 1)
 					tp.Errorf("pull error: %v", pullcmd.Rerror())
 				}
-				count.Done()
 			}()
 		}
 		count.Wait()
