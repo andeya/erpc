@@ -530,17 +530,13 @@ func (p *PullCmd) cancel() {
 	p.rerr = rerror_connClosed.Copy()
 	p.doneChan <- p
 	p.sess.pullCmdMap.Delete(p.output.Seq())
-	{
-		// free count pull-launch
-		p.sess.gracePullCmdWaitGroup.Done()
-	}
+	// free count pull-launch
+	p.sess.gracePullCmdWaitGroup.Done()
 }
 
 func (p *PullCmd) done() {
 	p.doneChan <- p
 	p.sess.pullCmdMap.Delete(p.output.Seq())
-	{
-		// free count pull-launch
-		p.sess.gracePullCmdWaitGroup.Done()
-	}
+	// free count pull-launch
+	p.sess.gracePullCmdWaitGroup.Done()
 }
