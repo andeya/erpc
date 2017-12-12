@@ -377,7 +377,11 @@ func allocArg(h []argsKV) ([]argsKV, *argsKV) {
 }
 
 func releaseArg(h []argsKV) []argsKV {
-	return h[:len(h)-1]
+	n := len(h) - 1
+	if n == -1 {
+		return h
+	}
+	return h[:n]
 }
 
 func hasArg(h []argsKV, key string) bool {
