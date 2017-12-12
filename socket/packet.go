@@ -410,6 +410,23 @@ func WithMeta(meta *utils.Args) PacketSetting {
 		p.meta = meta
 	}
 }
+
+// WithAddMeta adds 'key=value' metadata argument.
+// Multiple values for the same key may be added.
+func WithAddMeta(key, value string) PacketSetting {
+	return func(p *Packet) {
+		p.meta.Add(key, value)
+	}
+}
+
+// WithSetMeta sets 'key=value' metadata argument.
+func WithSetMeta(key, value string) PacketSetting {
+	return func(p *Packet) {
+		p.meta.Set(key, value)
+	}
+}
+
+// WithBodyCodec sets the body codec
 func WithBodyCodec(bodyCodec byte) PacketSetting {
 	return func(p *Packet) {
 		p.bodyCodec = bodyCodec

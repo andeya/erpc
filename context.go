@@ -23,6 +23,7 @@ import (
 
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 type (
@@ -33,6 +34,7 @@ type (
 		Seq() uint64
 		GetBodyCodec() byte
 		GetMeta(key string) []byte
+		CopyMeta() *utils.Args
 		Uri() string
 		Path() string
 		RawQuery() string
@@ -212,6 +214,13 @@ func (c *readHandleCtx) GetMeta(key string) []byte {
 // SetMeta sets the header metadata for reply packet.
 func (c *readHandleCtx) SetMeta(key, value string) {
 	c.output.Meta().Set(key, value)
+}
+
+// CopyMeta returns the input packet metadata copy.
+func (c *readHandleCtx) CopyMeta() *utils.Args {
+	dst := utils.AcquireArgs()
+	c.input.Meta().CopyTo(dst)
+	return dst
 }
 
 // GetBodyCodec gets the body codec type of the input packet.

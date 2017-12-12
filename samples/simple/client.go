@@ -41,6 +41,9 @@ func main() {
 			},
 			&reply,
 			socket.WithXferPipe('g'),
+			socket.WithSetMeta("set", "0"),
+			socket.WithAddMeta("add", "1"),
+			socket.WithAddMeta("add", "2"),
 		)
 
 		if pullcmd.Rerror() != nil {

@@ -45,9 +45,14 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.R
 		"your_id": h.Query().Get("peer_id"),
 		"a":       1,
 	})
+	meta := h.CopyMeta()
+	meta.VisitAll(func(k, v []byte) {
+		tp.Infof("meta: key: %s, value: %s", k, v)
+	})
 	return map[string]interface{}{
 		"your_args":   *args,
 		"server_time": time.Now(),
+		"meta":        meta.String(),
 	}, nil
 }
 
