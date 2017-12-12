@@ -134,7 +134,7 @@ func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerro
 		sess.Close()
 		return nil, rerr
 	}
-	Go(sess.startReadAndHandle)
+	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
 	Infof("dial ok (addr: %s, id: %s)", addr, sess.Id())
 	return sess, nil
@@ -159,7 +159,7 @@ func (p *Peer) DialContext(ctx context.Context, addr string, protoFunc ...socket
 		sess.Close()
 		return nil, rerr
 	}
-	Go(sess.startReadAndHandle)
+	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
 	Infof("dial ok (addr: %s, id: %s)", addr, sess.Id())
 	return sess, nil
@@ -207,7 +207,7 @@ func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 		closeCh   = p.closeCh
 	)
 	for {
-		rw, e := lis.Accept()
+		conn, e := lis.Accept()
 		if e != nil {
 			select {
 			case <-closeCh:
@@ -232,35 +232,28 @@ func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 			return e
 		}
 		tempDelay = 0
-
-		func(conn net.Conn) {
-		TRYGO:
-			if !Go(func() {
-				if c, ok := conn.(*tls.Conn); ok {
-					if p.defaultReadTimeout > 0 {
-						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultReadTimeout))
-					}
-					if p.defaultWriteTimeout > 0 {
-						c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultWriteTimeout))
-					}
-					if err := c.Handshake(); err != nil {
-						Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())
-						return
-					}
+		AnywayGo(func() {
+			if c, ok := conn.(*tls.Conn); ok {
+				if p.defaultReadTimeout > 0 {
+					c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultReadTimeout))
 				}
-				var sess = newSession(p, conn, protoFuncs)
-				if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
-					sess.Close()
+				if p.defaultWriteTimeout > 0 {
+					c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultWriteTimeout))
+				}
+				if err := c.Handshake(); err != nil {
+					Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())
 					return
 				}
-				Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
-				p.sessHub.Set(sess)
-				sess.startReadAndHandle()
-			}) {
-				time.Sleep(time.Second)
-				goto TRYGO
 			}
-		}(rw)
+			var sess = newSession(p, conn, protoFuncs)
+			if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
+				sess.Close()
+				return
+			}
+			Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
+			p.sessHub.Set(sess)
+			sess.startReadAndHandle()
+		})
 	}
 }
 
@@ -283,8 +276,8 @@ func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 		return nil, rerr.ToError()
 	}
 	Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
+	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	go sess.startReadAndHandle()
 	return sess, nil
 }
 

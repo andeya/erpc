@@ -17,7 +17,6 @@ package tp
 import (
 	"crypto/tls"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/henrylee2cn/goutil/pool"
@@ -56,29 +55,35 @@ var SetReadLimit = socket.SetPacketSizeLimit
 var (
 	_maxGoroutinesAmount      = (1024 * 1024 * 8) / 8 // max memory 8GB (8KB/goroutine)
 	_maxGoroutineIdleDuration time.Duration
-	_gopool                   *pool.GoPool
-	setGopoolOnce             sync.Once
+	_gopool                   = pool.NewGoPool(_maxGoroutinesAmount, _maxGoroutineIdleDuration)
 )
 
 // SetGopool set or reset go pool config.
 // Note: Make sure to call it before calling NewPeer() and Go()
 func SetGopool(maxGoroutinesAmount int, maxGoroutineIdleDuration time.Duration) {
 	_maxGoroutinesAmount, _maxGoroutineIdleDuration := maxGoroutinesAmount, maxGoroutineIdleDuration
+	if _gopool != nil {
+		_gopool.Stop()
+	}
 	_gopool = pool.NewGoPool(_maxGoroutinesAmount, _maxGoroutineIdleDuration)
 }
 
-// Go go func
+// Go similar to go func, but return false if insufficient resources.
 func Go(fn func()) bool {
-	setGopoolOnce.Do(func() {
-		if _gopool == nil {
-			SetGopool(_maxGoroutinesAmount, _maxGoroutineIdleDuration)
-		}
-	})
 	if err := _gopool.Go(fn); err != nil {
 		Warnf("%s", err.Error())
 		return false
 	}
 	return true
+}
+
+// AnywayGo similar to go func, but concurrent resources are limited.
+func AnywayGo(fn func()) {
+TRYGO:
+	if !Go(fn) {
+		time.Sleep(time.Second)
+		goto TRYGO
+	}
 }
 
 // SetReadBuffer sets the size of the operating system's
