@@ -72,9 +72,9 @@ type (
 		IsOk() bool
 		// Peer returns the peer.
 		Peer() *Peer
-		// GoPull sends a packet and receives reply asynchronously.
+		// AsyncPull sends a packet and receives reply asynchronously.
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
-		GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting)
+		AsyncPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting)
 		// Pull sends a packet and receives reply.
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
 		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd
@@ -124,10 +124,8 @@ type (
 		pullCmdMap            goutil.Map
 		pullSeqLock           sync.Mutex
 		socket                socket.Socket
-		closed                int32 // 0:false, 1:true
-		disconnected          int32 // 0:false, 1:true
+		status                int32 // 0:ok, 1:active closed, 2:disconnect
 		closeLock             sync.RWMutex
-		disconnectLock        sync.RWMutex
 		writeLock             sync.Mutex
 		graceCtxWaitGroup     sync.WaitGroup
 		gracePullCmdWaitGroup sync.WaitGroup
@@ -223,14 +221,14 @@ func (s *session) Receive(packet *socket.Packet) error {
 	return s.socket.ReadPacket(packet)
 }
 
-// GoPull sends a packet and receives reply asynchronously.
+// AsyncPull sends a packet and receives reply asynchronously.
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
-func (s *session) GoPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting) {
+func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting) {
 	if done == nil && cap(done) == 0 {
 		// It must arrange that done has enough buffer for the number of simultaneous
 		// RPCs that will be using that channel. If the channel
 		// is totally unbuffered, it's best not to run at all.
-		Panicf("*session.GoPull(): done channel is unbuffered")
+		Panicf("*session.AsyncPull(): done channel is unbuffered")
 	}
 	s.pullSeqLock.Lock()
 	seq := s.pullSeq
@@ -258,10 +256,8 @@ func (s *session) GoPull(uri string, args interface{}, reply interface{}, done c
 		public:   goutil.RwMap(),
 	}
 
-	{
-		// count pull-launch
-		s.gracePullCmdWaitGroup.Add(1)
-	}
+	// count pull-launch
+	s.gracePullCmdWaitGroup.Add(1)
 
 	if s.socket.PublicLen() > 0 {
 		s.socket.Public().Range(func(key, value interface{}) bool {
@@ -270,12 +266,14 @@ func (s *session) GoPull(uri string, args interface{}, reply interface{}, done c
 		})
 	}
 
+	s.pullCmdMap.Store(output.Seq(), cmd)
+
 	defer func() {
 		if p := recover(); p != nil {
 			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 		}
 	}()
-	s.pullCmdMap.Store(output.Seq(), cmd)
+
 	cmd.rerr = s.peer.pluginContainer.PreWritePull(cmd)
 	if cmd.rerr != nil {
 		cmd.done()
@@ -294,7 +292,7 @@ func (s *session) GoPull(uri string, args interface{}, reply interface{}, done c
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
 func (s *session) Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd {
 	doneChan := make(chan *PullCmd, 1)
-	s.GoPull(uri, args, reply, doneChan, setting...)
+	s.AsyncPull(uri, args, reply, doneChan, setting...)
 	pullCmd := <-doneChan
 	close(doneChan)
 	return pullCmd
@@ -365,7 +363,6 @@ func (s *session) startReadAndHandle() {
 			err = fmt.Errorf("%v\n%s", p, goutil.PanicTrace(2))
 		}
 		s.readDisconnected(err)
-		s.Close()
 	}()
 
 	// read pull, pull reple or push
@@ -413,7 +410,7 @@ func (s *session) startReadAndHandle() {
 var ErrConnClosed = errors.New("connection is closed")
 
 func (s *session) write(packet *socket.Packet) (err error) {
-	if s.isDisconnected() {
+	if !s.IsOk() {
 		return ErrConnClosed
 	}
 	var (
@@ -426,7 +423,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 
 	s.writeLock.Lock()
 
-	if s.isDisconnected() {
+	if !s.IsOk() {
 		s.writeLock.Unlock()
 		return ErrConnClosed
 	}
@@ -435,6 +432,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 		s.writeLock.Unlock()
 		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
 			err = ErrConnClosed
+			// s.Close()
 		}
 	}()
 
@@ -445,14 +443,37 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	return err
 }
 
+const (
+	statusOk            int32 = 0
+	statusActiveClosed  int32 = 1
+	statusPassiveClosed int32 = 2
+)
+
 // IsOk checks if the session is ok.
 func (s *session) IsOk() bool {
-	return atomic.LoadInt32(&s.disconnected) != 1 && atomic.LoadInt32(&s.closed) != 1
+	return atomic.LoadInt32(&s.status) == statusOk
 }
 
-// isDisconnected checks if the session is ok.
-func (s *session) isDisconnected() bool {
-	return atomic.LoadInt32(&s.disconnected) == 1
+// IsActiveClosed returns whether the connection has been closed, and is actively closed.
+func (s *session) IsActiveClosed() bool {
+	return atomic.LoadInt32(&s.status) == statusActiveClosed
+}
+
+func (s *session) activelyClose() {
+	atomic.StoreInt32(&s.status, statusActiveClosed)
+}
+
+// IsPassiveClosed returns whether the connection has been closed, and is passively closed.
+func (s *session) IsPassiveClosed() bool {
+	return atomic.LoadInt32(&s.status) == statusPassiveClosed
+}
+
+func (s *session) passivelyClose() {
+	atomic.StoreInt32(&s.status, statusPassiveClosed)
+}
+
+func (s *session) getStatus() int32 {
+	return atomic.LoadInt32(&s.status)
 }
 
 var (
@@ -461,45 +482,38 @@ var (
 )
 
 // Close closes the session.
-func (s *session) Close() (err error) {
+func (s *session) Close() error {
 	s.closeLock.Lock()
-	if atomic.LoadInt32(&s.closed) == 1 {
-		s.closeLock.Unlock()
+	defer s.closeLock.Unlock()
+
+	status := s.getStatus()
+	if status != statusOk {
 		return nil
 	}
-	atomic.StoreInt32(&s.closed, 1)
+	// Notice actively closed
+	s.activelyClose()
 
-	defer func() {
-		s.graceCtxWaitGroup.Wait()
-		s.gracePullCmdWaitGroup.Wait()
-		// make sure return s.startReadAndHandle
-		s.socket.SetReadDeadline(deadlineForStopRead)
-		err = s.socket.Close()
-		s.peer.sessHub.Delete(s.Id())
-		s.closeLock.Unlock()
-		s.peer.pluginContainer.PostDisconnect(s)
-	}()
-
-	if !s.isDisconnected() {
+	if status != statusPassiveClosed {
 		// make sure do not disconnect because of reading timeout.
 		// wait for the subsequent write to complete.
 		s.socket.SetReadDeadline(deadlineForEndlessRead)
 	}
 
-	return
+	return s.closeLocked()
 }
 
 func (s *session) readDisconnected(err error) {
-	if atomic.LoadInt32(&s.closed) == 1 || atomic.LoadInt32(&s.disconnected) == 1 {
-		return
-	}
-	s.disconnectLock.Lock()
-	defer s.disconnectLock.Unlock()
-	if atomic.LoadInt32(&s.closed) == 1 || atomic.LoadInt32(&s.disconnected) == 1 {
-		return
-	}
+	s.closeLock.Lock()
+	defer s.closeLock.Unlock()
 
-	atomic.StoreInt32(&s.disconnected, 1)
+	status := s.getStatus()
+	if status == statusPassiveClosed {
+		return
+	}
+	// Notice passively closed
+	if status == statusOk {
+		s.passivelyClose()
+	}
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
@@ -512,6 +526,22 @@ func (s *session) readDisconnected(err error) {
 		pullCmd.cancel()
 		return true
 	})
+
+	if status == statusActiveClosed {
+		return
+	}
+	s.closeLocked()
+}
+
+func (s *session) closeLocked() error {
+	s.graceCtxWaitGroup.Wait()
+	s.gracePullCmdWaitGroup.Wait()
+	// make sure return s.startReadAndHandle
+	s.socket.SetReadDeadline(deadlineForStopRead)
+	err := s.socket.Close()
+	s.peer.sessHub.Delete(s.Id())
+	s.peer.pluginContainer.PostDisconnect(s)
+	return err
 }
 
 // SessionHub sessions hub
