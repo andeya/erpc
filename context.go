@@ -211,16 +211,16 @@ func (c *readHandleCtx) GetMeta(key string) []byte {
 	return c.input.Meta().Peek(key)
 }
 
-// SetMeta sets the header metadata for reply packet.
-func (c *readHandleCtx) SetMeta(key, value string) {
-	c.output.Meta().Set(key, value)
-}
-
 // CopyMeta returns the input packet metadata copy.
 func (c *readHandleCtx) CopyMeta() *utils.Args {
 	dst := utils.AcquireArgs()
 	c.input.Meta().CopyTo(dst)
 	return dst
+}
+
+// SetMeta sets the header metadata for reply packet.
+func (c *readHandleCtx) SetMeta(key, value string) {
+	c.output.Meta().Set(key, value)
 }
 
 // GetBodyCodec gets the body codec type of the input packet.
