@@ -73,8 +73,6 @@ type (
 		SetUri(string)
 		// Meta returns the metadata
 		Meta() *utils.Args
-		// SetMeta sets the metadata
-		SetMeta(*utils.Args)
 	}
 	// packet body interface
 	Body interface {
@@ -149,7 +147,7 @@ func PutPacket(p *Packet) {
 //  settings are only for writing to connection.
 func NewPacket(settings ...PacketSetting) *Packet {
 	var p = &Packet{
-		meta:     utils.AcquireArgs(),
+		meta:     new(utils.Args),
 		xferPipe: new(xfer.XferPipe),
 	}
 	p.doSetting(settings...)
@@ -163,7 +161,7 @@ func NewPacket(settings ...PacketSetting) *Packet {
 func (p *Packet) Reset(settings ...PacketSetting) {
 	p.next = nil
 	p.body = nil
-	utils.ReleaseArgs(p.meta)
+	p.meta.Reset()
 	p.xferPipe.Reset()
 	p.newBodyFunc = nil
 	p.seq = 0
@@ -212,14 +210,10 @@ func (p *Packet) SetUri(uri string) {
 	p.uri = uri
 }
 
-// Meta returns the metadata
+// Meta returns the metadata.
+// When the package is reset, it will be reset.
 func (p *Packet) Meta() *utils.Args {
 	return p.meta
-}
-
-// SetMeta sets the metadata
-func (p *Packet) SetMeta(meta *utils.Args) {
-	p.meta = meta
 }
 
 // BodyCodec returns the body codec type id
@@ -401,13 +395,6 @@ func WithPtype(ptype byte) PacketSetting {
 func WithUri(uri string) PacketSetting {
 	return func(p *Packet) {
 		p.uri = uri
-	}
-}
-
-// WithMeta sets the metadata
-func WithMeta(meta *utils.Args) PacketSetting {
-	return func(p *Packet) {
-		p.meta = meta
 	}
 }
 
