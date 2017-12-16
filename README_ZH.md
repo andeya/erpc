@@ -13,7 +13,7 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 ![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_architecture.png)
 
 
-## 通信性能测试
+## 性能测试
 
 **测试用例**
 
