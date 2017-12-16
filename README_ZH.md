@@ -52,18 +52,6 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
-- 对比 rpcx
-
-并发client|平均值(ms)|中位数(ms)|最大值(ms)|最小值(ms)|吞吐率(TPS)
--------------|-------------|-------------|-------------|-------------|-------------
-100|0|0|50|0|109217
-500|5|4|50|0|88113
-1000|11|10|1040|0|87535
-2000|23|29|3080|0|80886
-5000|59|72|7111|0|78412
-
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
-
 - CPU火焰图 teleport/socket
 
 ![tp_socket_cpu_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.png)
