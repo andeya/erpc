@@ -12,27 +12,46 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 ## Benchmark
 
-- Test server configuration
+**Test Case**
 
-```
-darwin amd64 4CPU 8GB
-```
+- A server and a client process, running on the same machine
+- CPU:    Intel Xeon E312xx (Sandy Bridge) 16 cores 2.53GHz
+- Memory: 16G
+- OS:     Linux 2.6.32-696.16.1.el6.centos.plus.x86_64, CentOS 6.4
+- Go:     1.9.2
+- Message size: 581 bytes
+- Message codec: protobuf
+- Sent total 1000000 messages
 
-- teleport/socket
+**Test Results**
 
-![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_benchmark.png)
+- teleport
+
+client concurrency|mean(ms)|median(ms)|max(ms)|min(ms)|throughput(TPS)
+-------------|-------------|-------------|-------------|-------------|-------------
+100|1|0|16|0|75505
+500|9|11|97|0|52192
+1000|19|24|187|0|50040
+2000|39|54|409|0|42551
+5000|96|128|1148|0|46367
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
-- contrast rpcx
+- teleport/socket
 
-![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/master/doc/rpcx_benchmark.jpg)
+client concurrency|mean(ms)|median(ms)|max(ms)|min(ms)|throughput(TPS)
+-------------|-------------|-------------|-------------|-------------|-------------
+100|0|0|14|0|225682
+500|2|1|24|0|212630
+1000|4|3|51|0|180733
+2000|8|6|64|0|183351
+5000|21|18|651|0|133886
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
+**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
-- torch of teleport/socket
+- CPU torch of teleport/socket
 
-![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.png)
+![tp_socket_cpu_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.png)
 
 **[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.svg)**
 
