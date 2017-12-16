@@ -38,8 +38,6 @@ Teleport是一个通用、高效、灵活的TCP Socket框架。
 2000|39|54|409|0|42551
 5000|96|128|1148|0|46367
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
-
 - teleport/socket
 
 并发client|平均值(ms)|中位数(ms)|最大值(ms)|最小值(ms)|吞吐率(TPS)

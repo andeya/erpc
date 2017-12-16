@@ -35,8 +35,6 @@ client concurrency|mean(ms)|median(ms)|max(ms)|min(ms)|throughput(TPS)
 2000|39|54|409|0|42551
 5000|96|128|1148|0|46367
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
-
 - teleport/socket
 
 client concurrency|mean(ms)|median(ms)|max(ms)|min(ms)|throughput(TPS)
