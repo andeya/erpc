@@ -40,8 +40,8 @@ type (
 		Close() error
 		// Id returns the session id.
 		Id() string
-		// IsOk checks if the session is ok.
-		IsOk() bool
+		// Health checks if the session is ok.
+		Health() bool
 		// Peer returns the peer.
 		Peer() *Peer
 		// RemoteIp returns the remote peer ip.
@@ -68,8 +68,8 @@ type (
 		Close() error
 		// Id returns the session id.
 		Id() string
-		// IsOk checks if the session is ok.
-		IsOk() bool
+		// Health checks if the session is ok.
+		Health() bool
 		// Peer returns the peer.
 		Peer() *Peer
 		// AsyncPull sends a packet and receives reply asynchronously.
@@ -366,7 +366,7 @@ func (s *session) startReadAndHandle() {
 	}()
 
 	// read pull, pull reple or push
-	for s.IsOk() {
+	for s.Health() {
 		var ctx = s.peer.getContext(s, false)
 		if s.peer.pluginContainer.PreReadHeader(ctx) != nil {
 			s.peer.putContext(ctx, false)
@@ -384,9 +384,9 @@ func (s *session) startReadAndHandle() {
 			// Debugf("s.socket.ReadPacket(ctx.input): err: %v", err)
 			return
 		}
-		if !s.IsOk() {
+		if !s.Health() {
 			// DEBUG:
-			// Debugf("s.socket.ReadPacket(ctx.input): s.IsOk()==false")
+			// Debugf("s.socket.ReadPacket(ctx.input): s.Health()==false")
 			s.peer.putContext(ctx, false)
 			return
 		}
@@ -410,7 +410,7 @@ func (s *session) startReadAndHandle() {
 var ErrConnClosed = errors.New("connection is closed")
 
 func (s *session) write(packet *socket.Packet) (err error) {
-	if !s.IsOk() {
+	if !s.Health() {
 		return ErrConnClosed
 	}
 	var (
@@ -422,7 +422,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	}
 
 	s.writeLock.Lock()
-	if !s.IsOk() {
+	if !s.Health() {
 		s.writeLock.Unlock()
 		return ErrConnClosed
 	}
@@ -448,8 +448,8 @@ const (
 	statusPassiveClosed int32 = 2
 )
 
-// IsOk checks if the session is ok.
-func (s *session) IsOk() bool {
+// Health checks if the session is ok.
+func (s *session) Health() bool {
 	return atomic.LoadInt32(&s.status) == statusOk
 }
 
