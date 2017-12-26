@@ -470,16 +470,12 @@ func (s *session) activelyClosing() {
 	atomic.StoreInt32(&s.status, statusActiveClosing)
 }
 
-func (s *session) isActivelyClosing() bool {
-	return atomic.LoadInt32(&s.status) == statusActiveClosing
-}
-
 // IsPassiveClosed returns whether the connection has been closed, and is passively closed.
 func (s *session) IsPassiveClosed() bool {
 	return atomic.LoadInt32(&s.status) == statusPassiveClosed
 }
 
-func (s *session) passivelyClose() {
+func (s *session) passivelyClosed() {
 	atomic.StoreInt32(&s.status, statusPassiveClosed)
 }
 
@@ -519,7 +515,7 @@ func (s *session) readDisconnected(err error) {
 		return
 	}
 	// Notice passively closed
-	s.passivelyClose()
+	s.passivelyClosed()
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
