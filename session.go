@@ -482,10 +482,13 @@ var (
 
 // Close closes the session.
 func (s *session) Close() error {
+	status := s.getStatus()
+	if status != statusOk {
+		return nil
+	}
 	s.closeLock.Lock()
 	defer s.closeLock.Unlock()
-
-	status := s.getStatus()
+	status = s.getStatus()
 	if status != statusOk {
 		return nil
 	}
@@ -502,13 +505,17 @@ func (s *session) Close() error {
 }
 
 func (s *session) readDisconnected(err error) {
-	s.closeLock.Lock()
-	defer s.closeLock.Unlock()
-
 	status := s.getStatus()
 	if status == statusPassiveClosed {
 		return
 	}
+	s.closeLock.Lock()
+	defer s.closeLock.Unlock()
+	status = s.getStatus()
+	if status == statusPassiveClosed {
+		return
+	}
+
 	// Notice passively closed
 	if status == statusOk {
 		s.passivelyClose()
