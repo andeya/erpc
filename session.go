@@ -366,7 +366,7 @@ func (s *session) startReadAndHandle() {
 	}()
 
 	// read pull, pull reple or push
-	for s.Health() {
+	for s.goonRead() {
 		var ctx = s.peer.getContext(s, false)
 		if s.peer.pluginContainer.PreReadHeader(ctx) != nil {
 			s.peer.putContext(ctx, false)
@@ -384,9 +384,9 @@ func (s *session) startReadAndHandle() {
 			// Debugf("s.socket.ReadPacket(ctx.input): err: %v", err)
 			return
 		}
-		if !s.Health() {
+		if !s.goonRead() {
 			// DEBUG:
-			// Debugf("s.socket.ReadPacket(ctx.input): s.Health()==false")
+			// Debugf("s.socket.ReadPacket(ctx.input): s.goonRead()==false")
 			s.peer.putContext(ctx, false)
 			return
 		}
@@ -410,9 +410,6 @@ func (s *session) startReadAndHandle() {
 var ErrConnClosed = errors.New("connection is closed")
 
 func (s *session) write(packet *socket.Packet) (err error) {
-	if !s.Health() {
-		return ErrConnClosed
-	}
 	var (
 		writeTimeout = s.WriteTimeout()
 		now          time.Time
@@ -422,16 +419,17 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	}
 
 	s.writeLock.Lock()
-	if !s.Health() {
-		s.writeLock.Unlock()
-		return ErrConnClosed
+	if status := s.getStatus(); status != statusOk {
+		if !(status == statusActiveClosing && packet.Ptype() == TypeReply) {
+			s.writeLock.Unlock()
+			return ErrConnClosed
+		}
 	}
 
 	defer func() {
 		s.writeLock.Unlock()
 		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
 			err = ErrConnClosed
-			// s.Close()
 		}
 	}()
 
@@ -444,8 +442,9 @@ func (s *session) write(packet *socket.Packet) (err error) {
 
 const (
 	statusOk            int32 = 0
-	statusActiveClosed  int32 = 1
-	statusPassiveClosed int32 = 2
+	statusActiveClosing int32 = 1
+	statusActiveClosed  int32 = 2
+	statusPassiveClosed int32 = 3
 )
 
 // Health checks if the session is ok.
@@ -453,13 +452,26 @@ func (s *session) Health() bool {
 	return atomic.LoadInt32(&s.status) == statusOk
 }
 
+func (s *session) goonRead() bool {
+	status := atomic.LoadInt32(&s.status)
+	return status == statusOk || status == statusActiveClosing
+}
+
 // IsActiveClosed returns whether the connection has been closed, and is actively closed.
 func (s *session) IsActiveClosed() bool {
 	return atomic.LoadInt32(&s.status) == statusActiveClosed
 }
 
-func (s *session) activelyClose() {
+func (s *session) activelyClosed() {
 	atomic.StoreInt32(&s.status, statusActiveClosed)
+}
+
+func (s *session) activelyClosing() {
+	atomic.StoreInt32(&s.status, statusActiveClosing)
+}
+
+func (s *session) isActivelyClosing() bool {
+	return atomic.LoadInt32(&s.status) == statusActiveClosing
 }
 
 // IsPassiveClosed returns whether the connection has been closed, and is passively closed.
@@ -475,11 +487,6 @@ func (s *session) getStatus() int32 {
 	return atomic.LoadInt32(&s.status)
 }
 
-var (
-	deadlineForEndlessRead = time.Time{}
-	deadlineForStopRead    = time.Time{}.Add(1)
-)
-
 // Close closes the session.
 func (s *session) Close() error {
 	s.closeLock.Lock()
@@ -489,12 +496,14 @@ func (s *session) Close() error {
 		return nil
 	}
 
+	s.activelyClosing()
+
 	s.graceCtxWaitGroup.Wait()
 	s.gracePullCmdWaitGroup.Wait()
 
 	// Notice actively closed
 	if !s.IsPassiveClosed() {
-		s.activelyClose()
+		s.activelyClosed()
 	}
 
 	err := s.socket.Close()
@@ -506,11 +515,10 @@ func (s *session) Close() error {
 
 func (s *session) readDisconnected(err error) {
 	status := s.getStatus()
-	// Notice passively closed
-	if status != statusOk {
+	if status == statusActiveClosed {
 		return
 	}
-
+	// Notice passively closed
 	s.passivelyClose()
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
@@ -524,7 +532,7 @@ func (s *session) readDisconnected(err error) {
 		return true
 	})
 
-	if status == statusActiveClosed {
+	if status == statusActiveClosing {
 		return
 	}
 
@@ -605,19 +613,6 @@ const (
 	typePullLaunch int8 = 3
 	typePullHandle int8 = 4
 )
-
-// func isPushLaunch(input, output *socket.Packet) bool {
-// 	return input == nil || (output != nil && output.Ptype() == TypePush)
-// }
-// func isPushHandle(input, output *socket.Packet) bool {
-// 	return output == nil || (input != nil && input.Ptype() == TypePush)
-// }
-// func isPullLaunch(input, output *socket.Packet) bool {
-// 	return output != nil && output.Ptype() == TypePull
-// }
-// func isPullHandle(input, output *socket.Packet) bool {
-// 	return output != nil && output.Ptype() == TypeReply
-// }
 
 func (s *session) runlog(costTime time.Duration, input, output *socket.Packet, logType int8) {
 	if s.peer.countTime {

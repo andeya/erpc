@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "encoding/json"
+	"encoding/json"
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
@@ -52,33 +52,33 @@ func main() {
 		tp.Infof("9090reply: %#v", reply)
 	}
 
-	// {
-	// 	var sess, err = peer.Dial("127.0.0.1:9091")
-	// 	if err != nil {
-	// 		tp.Panicf("%v", err)
-	// 	}
+	{
+		var sess, err = peer.Dial("127.0.0.1:9091")
+		if err != nil {
+			tp.Panicf("%v", err)
+		}
 
-	// 	var reply interface{}
-	// 	var pullcmd = sess.Pull(
-	// 		"/group/home/test_unknown?peer_id=client9091",
-	// 		struct {
-	// 			ConnPort   int
-	// 			RawMessage json.RawMessage
-	// 			Bytes      []byte
-	// 		}{
-	// 			9091,
-	// 			json.RawMessage(`{"RawMessage":"test9091"}`),
-	// 			[]byte("bytes-test"),
-	// 		},
-	// 		&reply,
-	// 		socket.WithXferPipe('g'),
-	// 	)
+		var reply interface{}
+		var pullcmd = sess.Pull(
+			"/group/home/test_unknown?peer_id=client9091",
+			struct {
+				ConnPort   int
+				RawMessage json.RawMessage
+				Bytes      []byte
+			}{
+				9091,
+				json.RawMessage(`{"RawMessage":"test9091"}`),
+				[]byte("bytes-test"),
+			},
+			&reply,
+			socket.WithXferPipe('g'),
+		)
 
-	// 	if pullcmd.Rerror() != nil {
-	// 		tp.Fatalf("pull error: %v", pullcmd.Rerror())
-	// 	}
-	// 	tp.Infof("9091reply test_unknown: %#v", reply)
-	// }
+		if pullcmd.Rerror() != nil {
+			tp.Fatalf("pull error: %v", pullcmd.Rerror())
+		}
+		tp.Infof("9091reply test_unknown: %#v", reply)
+	}
 }
 
 // Push controller

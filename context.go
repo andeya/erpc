@@ -536,16 +536,16 @@ func (c *PullCmd) CostTime() time.Duration {
 }
 
 func (p *PullCmd) cancel() {
+	p.sess.pullCmdMap.Delete(p.output.Seq())
 	p.rerr = rerror_connClosed.Copy()
 	p.doneChan <- p
-	p.sess.pullCmdMap.Delete(p.output.Seq())
 	// free count pull-launch
 	p.sess.gracePullCmdWaitGroup.Done()
 }
 
 func (p *PullCmd) done() {
-	p.doneChan <- p
 	p.sess.pullCmdMap.Delete(p.output.Seq())
+	p.doneChan <- p
 	// free count pull-launch
 	p.sess.gracePullCmdWaitGroup.Done()
 }
