@@ -482,51 +482,42 @@ var (
 
 // Close closes the session.
 func (s *session) Close() error {
+	s.closeLock.Lock()
+	defer s.closeLock.Unlock()
 	status := s.getStatus()
 	if status != statusOk {
 		return nil
 	}
-	s.closeLock.Lock()
-	defer s.closeLock.Unlock()
-	status = s.getStatus()
-	if status != statusOk {
-		return nil
-	}
+
+	s.graceCtxWaitGroup.Wait()
+	s.gracePullCmdWaitGroup.Wait()
+
 	// Notice actively closed
-	s.activelyClose()
-
-	if status != statusPassiveClosed {
-		// make sure do not disconnect because of reading timeout.
-		// wait for the subsequent write to complete.
-		s.socket.SetReadDeadline(deadlineForEndlessRead)
+	if !s.IsPassiveClosed() {
+		s.activelyClose()
 	}
 
-	return s.closeLocked()
+	err := s.socket.Close()
+	s.peer.sessHub.Delete(s.Id())
+
+	s.peer.pluginContainer.PostDisconnect(s)
+	return err
 }
 
 func (s *session) readDisconnected(err error) {
 	status := s.getStatus()
-	if status == statusPassiveClosed {
-		return
-	}
-	s.closeLock.Lock()
-	defer s.closeLock.Unlock()
-	status = s.getStatus()
-	if status == statusPassiveClosed {
+	// Notice passively closed
+	if status != statusOk {
 		return
 	}
 
-	// Notice passively closed
-	if status == statusOk {
-		s.passivelyClose()
-	}
+	s.passivelyClose()
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
 	}
 
 	s.graceCtxWaitGroup.Wait()
-
 	s.pullCmdMap.Range(func(_, v interface{}) bool {
 		pullCmd := v.(*PullCmd)
 		pullCmd.cancel()
@@ -536,18 +527,10 @@ func (s *session) readDisconnected(err error) {
 	if status == statusActiveClosed {
 		return
 	}
-	s.closeLocked()
-}
 
-func (s *session) closeLocked() error {
-	s.graceCtxWaitGroup.Wait()
-	s.gracePullCmdWaitGroup.Wait()
-	// make sure return s.startReadAndHandle
-	s.socket.SetReadDeadline(deadlineForStopRead)
-	err := s.socket.Close()
+	s.socket.Close()
 	s.peer.sessHub.Delete(s.Id())
 	s.peer.pluginContainer.PostDisconnect(s)
-	return err
 }
 
 // SessionHub sessions hub

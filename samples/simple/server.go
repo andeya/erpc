@@ -49,6 +49,7 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.R
 	meta.VisitAll(func(k, v []byte) {
 		tp.Infof("meta: key: %s, value: %s", k, v)
 	})
+	time.Sleep(5e9)
 	return map[string]interface{}{
 		"your_args":   *args,
 		"server_time": time.Now(),
