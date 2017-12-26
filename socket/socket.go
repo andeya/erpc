@@ -101,6 +101,8 @@ type (
 		Id() string
 		// SetId sets the socket id.
 		SetId(string)
+		// Reset reset net.Conn and ProtoFunc.
+		Reset(netConn net.Conn, protoFunc ...ProtoFunc)
 	}
 	socket struct {
 		net.Conn
@@ -218,7 +220,7 @@ func (s *socket) SetId(id string) {
 	s.idMutex.Unlock()
 }
 
-// Reset reset net.Conn
+// Reset reset net.Conn and ProtoFunc.
 func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	atomic.StoreInt32(&s.curState, activeClose)
 	if s.Conn != nil {
