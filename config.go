@@ -36,6 +36,7 @@ type PeerConfig struct {
 	PrintBody           bool          `yaml:"print_body"              ini:"print_body"              comment:"Is print body or not"`
 	CountTime           bool          `yaml:"count_time"              ini:"count_time"              comment:"Is count cost time or not"`
 	DefaultDialTimeout  time.Duration `yaml:"default_dial_timeout"    ini:"default_dial_timeout"    comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
+	RedialTimes         int32         `yaml:"redial_times"            ini:"redial_times"            comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; for client role"`
 	ListenAddrs         []string      `yaml:"listen_addrs"            ini:"listen_addrs"            comment:"Listen addresses; for server role"`
 }
 

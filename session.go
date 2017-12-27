@@ -57,8 +57,10 @@ type (
 		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
 		// Send sends packet to peer.
+		// Note: does not support automatic redial after disconnection.
 		Send(packet *socket.Packet) error
 		// Receive receives a packet from peer.
+		// Note: does not support automatic redial after disconnection.
 		Receive(packet *socket.Packet) error
 	}
 	Session interface {
@@ -76,10 +78,14 @@ type (
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
 		AsyncPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting)
 		// Pull sends a packet and receives reply.
-		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
+		// Note:
+		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd
 		// Push sends a packet, but do not receives reply.
-		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
+		// Note:
+		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 		Push(uri string, args interface{}, setting ...socket.PacketSetting) *Rerror
 		// ReadTimeout returns readdeadline for underlying net.Conn.
 		ReadTimeout() time.Duration
@@ -131,6 +137,9 @@ type (
 		gracePullCmdWaitGroup sync.WaitGroup
 		readTimeout           int32 // time.Duration
 		writeTimeout          int32 // time.Duration
+		// only for client role
+		redialForClientFunc func() bool
+		redialLock          sync.Mutex
 	}
 )
 
@@ -146,7 +155,7 @@ func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 		pullRouter:   peer.PullRouter,
 		pushRouter:   peer.PushRouter,
 		socket:       socket.NewSocket(conn, protoFuncs...),
-		pullCmdMap:   goutil.RwMap(),
+		pullCmdMap:   goutil.AtomicMap(),
 		readTimeout:  int32(peer.defaultReadTimeout),
 		writeTimeout: int32(peer.defaultWriteTimeout),
 	}
@@ -212,17 +221,21 @@ func (s *session) SetWriteTimeout(duration time.Duration) {
 }
 
 // Send sends packet to peer.
+// Note: does not support automatic redial after disconnection.
 func (s *session) Send(packet *socket.Packet) error {
 	return s.socket.WritePacket(packet)
 }
 
 // Receive receives a packet from peer.
+// Note: does not support automatic redial after disconnection.
 func (s *session) Receive(packet *socket.Packet) error {
 	return s.socket.ReadPacket(packet)
 }
 
 // AsyncPull sends a packet and receives reply asynchronously.
-// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
+// Note:
+// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting) {
 	if done == nil && cap(done) == 0 {
 		// It must arrange that done has enough buffer for the number of simultaneous
@@ -266,7 +279,7 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		})
 	}
 
-	s.pullCmdMap.Store(output.Seq(), cmd)
+	s.pullCmdMap.Store(seq, cmd)
 
 	defer func() {
 		if p := recover(); p != nil {
@@ -279,17 +292,33 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		cmd.done()
 		return
 	}
-	if err := s.write(output); err != nil {
+
+	var err error
+W:
+	if err = s.write(output); err != nil {
+		if err == ErrConnClosed && s.redialForClient() {
+			s.pullCmdMap.Delete(seq)
+			s.pullSeqLock.Lock()
+			seq = s.pullSeq
+			s.pullSeq++
+			s.pullSeqLock.Unlock()
+			output.SetSeq(seq)
+			s.pullCmdMap.Store(seq, cmd)
+			goto W
+		}
 		cmd.rerr = rerror_writeFailed.Copy()
 		cmd.rerr.Detail = err.Error()
 		cmd.done()
 		return
 	}
+
 	s.peer.pluginContainer.PostWritePull(cmd)
 }
 
 // Pull sends a packet and receives reply.
-// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
+// Note:
+// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd {
 	doneChan := make(chan *PullCmd, 1)
 	s.AsyncPull(uri, args, reply, doneChan, setting...)
@@ -299,19 +328,20 @@ func (s *session) Pull(uri string, args interface{}, reply interface{}, setting 
 }
 
 // Push sends a packet, but do not receives reply.
-// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
+// Note:
+// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSetting) *Rerror {
-	start := s.peer.timeNow()
+	ctx := s.peer.getContext(s, true)
+	ctx.start = s.peer.timeNow()
+	output := ctx.output
 
 	s.pushSeqLock.Lock()
-	ctx := s.peer.getContext(s, true)
-	output := ctx.output
-	output.SetSeq(s.pushSeq)
+	seq := s.pushSeq
 	s.pushSeq++
 	s.pushSeqLock.Unlock()
 
-	ctx.start = start
-
+	output.SetSeq(seq)
 	output.SetPtype(TypePush)
 	output.SetUri(uri)
 	output.SetBody(args)
@@ -333,11 +363,22 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	if rerr != nil {
 		return rerr
 	}
-	if err := s.write(output); err != nil {
+
+	var err error
+W:
+	if err = s.write(output); err != nil {
+		if err == ErrConnClosed && s.redialForClient() {
+			s.pushSeqLock.Lock()
+			output.SetSeq(s.pushSeq)
+			s.pushSeq++
+			s.pushSeqLock.Unlock()
+			goto W
+		}
 		rerr = rerror_writeFailed.Copy()
 		rerr.Detail = err.Error()
 		return rerr
 	}
+
 	s.runlog(s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
 	s.peer.pluginContainer.PostWritePush(ctx)
 	return nil
@@ -430,6 +471,12 @@ func (s *session) write(packet *socket.Packet) (err error) {
 		s.writeLock.Unlock()
 		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
 			err = ErrConnClosed
+			// Wait for the status to change
+		W:
+			if s.Health() {
+				time.Sleep(time.Millisecond)
+				goto W
+			}
 		}
 	}()
 
@@ -520,13 +567,15 @@ func (s *session) readDisconnected(err error) {
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
 	}
-
 	s.graceCtxWaitGroup.Wait()
-	s.pullCmdMap.Range(func(_, v interface{}) bool {
-		pullCmd := v.(*PullCmd)
-		pullCmd.cancel()
-		return true
-	})
+
+	if s.redialForClientFunc == nil || status == statusActiveClosing {
+		s.pullCmdMap.Range(func(_, v interface{}) bool {
+			pullCmd := v.(*PullCmd)
+			pullCmd.cancel()
+			return true
+		})
+	}
 
 	if status == statusActiveClosing {
 		return
@@ -535,6 +584,27 @@ func (s *session) readDisconnected(err error) {
 	s.socket.Close()
 	s.peer.sessHub.Delete(s.Id())
 	s.peer.pluginContainer.PostDisconnect(s)
+
+	if !s.redialForClient() {
+		s.pullCmdMap.Range(func(_, v interface{}) bool {
+			pullCmd := v.(*PullCmd)
+			pullCmd.cancel()
+			return true
+		})
+	}
+}
+
+func (s *session) redialForClient() bool {
+	if s.redialForClientFunc == nil {
+		return false
+	}
+	s.redialLock.Lock()
+	defer s.redialLock.Unlock()
+	status := s.getStatus()
+	if status == statusOk || status == statusActiveClosed || status == statusActiveClosing {
+		return true
+	}
+	return s.redialForClientFunc()
 }
 
 // SessionHub sessions hub

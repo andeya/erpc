@@ -20,6 +20,7 @@ func main() {
 		DefaultBodyCodec:    "json",
 		PrintBody:           true,
 		CountTime:           true,
+		RedialTimes:         3,
 	}
 
 	var peer = tp.NewPeer(cfg)
@@ -33,21 +34,25 @@ func main() {
 		}
 
 		var reply interface{}
-		var pullcmd = sess.Pull(
-			"/group/home/test?peer_id=client9090",
-			map[string]interface{}{
-				"conn_port": 9090,
-				"bytes":     []byte("bytestest9090"),
-			},
-			&reply,
-			socket.WithXferPipe('g'),
-			socket.WithSetMeta("set", "0"),
-			socket.WithAddMeta("add", "1"),
-			socket.WithAddMeta("add", "2"),
-		)
-
-		if pullcmd.Rerror() != nil {
-			tp.Fatalf("pull error: %v", pullcmd.Rerror())
+		for {
+			var pullcmd = sess.Pull(
+				"/group/home/test?peer_id=client9090",
+				map[string]interface{}{
+					"conn_port": 9090,
+					"bytes":     []byte("bytestest9090"),
+				},
+				&reply,
+				socket.WithXferPipe('g'),
+				socket.WithSetMeta("set", "0"),
+				socket.WithAddMeta("add", "1"),
+				socket.WithAddMeta("add", "2"),
+			)
+			if pullcmd.Rerror() != nil {
+				tp.Errorf("pull error: %v", pullcmd.Rerror())
+				time.Sleep(time.Second * 2)
+			} else {
+				break
+			}
 		}
 		tp.Infof("9090reply: %#v", reply)
 	}

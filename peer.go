@@ -20,6 +20,7 @@ import (
 	"math"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/henrylee2cn/goutil"
@@ -49,10 +50,11 @@ type Peer struct {
 	timeSince           func(time.Time) time.Duration
 	mu                  sync.Mutex
 
-	// for client role
+	// only for client role
 	defaultDialTimeout time.Duration
+	redialTimes        int32
 
-	// for server role
+	// only for server role
 	listenAddrs []string
 	listens     []net.Listener
 }
@@ -80,6 +82,7 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		listenAddrs:         cfg.ListenAddrs,
 		printBody:           cfg.PrintBody,
 		countTime:           cfg.CountTime,
+		redialTimes:         cfg.RedialTimes,
 	}
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
 		Fatalf("%v", err)
@@ -119,16 +122,46 @@ func (p *Peer) CountSession() int {
 
 // Dial connects with the peer of the destination address.
 func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
-	var conn, err = net.DialTimeout("tcp", addr, p.defaultDialTimeout)
-	if err != nil {
+	return p.newSessionForClient(func() (net.Conn, error) {
+		return net.DialTimeout("tcp", addr, p.defaultDialTimeout)
+	}, addr, protoFunc)
+}
+
+// DialContext connects with the peer of the destination address,
+// using the provided context.
+func (p *Peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
+	return p.newSessionForClient(func() (net.Conn, error) {
+		var d net.Dialer
+		return d.DialContext(ctx, "tcp", addr)
+	}, addr, protoFunc)
+}
+
+func (p *Peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) (*session, *Rerror) {
+	var conn, dialErr = dialFunc()
+	if dialErr != nil {
 		rerr := rerror_dialFailed.Copy()
-		rerr.Detail = err.Error()
+		rerr.Detail = dialErr.Error()
 		return nil, rerr
 	}
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	var sess = newSession(p, conn, protoFunc)
+	var sess = newSession(p, conn, protoFuncs)
+	if p.redialTimes > 0 {
+		sess.redialForClientFunc = func() bool {
+			var err error
+			for i := p.redialTimes; i > 0; i-- {
+				err = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
+				if err == nil {
+					return true
+				}
+			}
+			if err != nil {
+				Errorf("redial fail (addr: %s, id: %s): %s", addr, sess.Id(), err.Error())
+			}
+			return false
+		}
+	}
 	sess.socket.SetId(sess.LocalIp())
 	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
 		sess.Close()
@@ -140,29 +173,31 @@ func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerro
 	return sess, nil
 }
 
-// DialContext connects with the peer of the destination address,
-// using the provided context.
-func (p *Peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
-	var d net.Dialer
-	var conn, err = d.DialContext(ctx, "tcp", addr)
-	if err != nil {
-		rerr := rerror_dialFailed.Copy()
-		rerr.Detail = err.Error()
-		return nil, rerr
+func (p *Peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) error {
+	var conn, dialErr = dialFunc()
+	if dialErr != nil {
+		return dialErr
 	}
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	var sess = newSession(p, conn, protoFunc)
-	sess.socket.SetId(sess.LocalIp())
+	oldIp := sess.LocalIp()
+	oldId := sess.Id()
+	sess.socket.Reset(conn, protoFuncs...)
+	if oldIp == oldId {
+		sess.socket.SetId(sess.LocalIp())
+	} else {
+		sess.socket.SetId(oldId)
+	}
 	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
 		sess.Close()
-		return nil, rerr
+		return rerr.ToError()
 	}
+	atomic.StoreInt32(&sess.status, statusOk)
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("dial ok (addr: %s, id: %s)", addr, sess.Id())
-	return sess, nil
+	Infof("redial ok (addr: %s, id: %s)", addr, sess.Id())
+	return nil
 }
 
 // ErrListenClosed listener is closed error.
