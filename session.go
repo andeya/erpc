@@ -471,11 +471,13 @@ func (s *session) write(packet *socket.Packet) (err error) {
 		s.writeLock.Unlock()
 		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
 			err = ErrConnClosed
-			// Wait for the status to change
-		W:
-			if s.Health() {
-				time.Sleep(time.Millisecond)
-				goto W
+			if s.redialForClientFunc != nil {
+				// Wait for the status to change
+			W:
+				if s.Health() {
+					time.Sleep(time.Millisecond)
+					goto W
+				}
 			}
 		}
 	}()

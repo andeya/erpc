@@ -32,6 +32,7 @@ func main() {
 		if err != nil {
 			tp.Fatalf("%v", err)
 		}
+		sess.SetId("testId")
 
 		var reply interface{}
 		for {
