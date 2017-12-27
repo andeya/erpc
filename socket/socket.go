@@ -268,28 +268,29 @@ func (s *socket) isActiveClosed() bool {
 
 func (s *socket) optimize() {
 	if c, ok := s.Conn.(ifaceSetKeepAlive); ok {
-		c.SetKeepAlive(true)
-		c.SetKeepAlivePeriod(3 * time.Minute)
+		if changeKeepAlive {
+			c.SetKeepAlive(keepAlive)
+		}
+		if keepAlive && keepAlivePeriod >= 0 {
+			c.SetKeepAlivePeriod(keepAlivePeriod)
+		}
 	}
 	if c, ok := s.Conn.(ifaceSetBuffer); ok {
-		if tcpReadBuffer >= 0 {
-			c.SetReadBuffer(tcpReadBuffer)
+		if readBuffer >= 0 {
+			c.SetReadBuffer(readBuffer)
 		}
-		if tcpWriteBuffer >= 0 {
-			c.SetWriteBuffer(tcpWriteBuffer)
+		if writeBuffer >= 0 {
+			c.SetWriteBuffer(writeBuffer)
 		}
 	}
 }
 
-// use system default value
-var (
-	tcpWriteBuffer = -1
-	tcpReadBuffer  = -1
-)
-
 type (
 	ifaceSetKeepAlive interface {
+		// SetKeepAlive sets whether the operating system should send
+		// keepalive messages on the connection.
 		SetKeepAlive(keepalive bool) error
+		// SetKeepAlivePeriod sets period between keep alives.
 		SetKeepAlivePeriod(d time.Duration) error
 	}
 	ifaceSetBuffer interface {
@@ -302,19 +303,42 @@ type (
 	}
 )
 
+// Connection related system configuration
+var (
+	writeBuffer     int           = -1
+	readBuffer      int           = -1
+	changeKeepAlive bool          = false
+	keepAlive       bool          = false
+	keepAlivePeriod time.Duration = -1
+)
+
+// SetKeepAlive sets whether the operating system should send
+// keepalive messages on the connection.
+// Note: If have not called the function, the system defaults are used.
+func SetKeepAlive(keepalive bool) {
+	changeKeepAlive = true
+	keepAlive = keepalive
+}
+
+// SetKeepAlivePeriod sets period between keep alives.
+// Note: if d=-1, don't change the system default value.
+func SetKeepAlivePeriod(d time.Duration) {
+	keepAlivePeriod = d
+}
+
 // SetReadBuffer sets the size of the operating system's
-// receive buffer associated with the *net.TCP connection.
-// Note: Uses the default value, if bytes=1.
-func SetTCPReadBuffer(bytes int) {
-	tcpReadBuffer = bytes
+// receive buffer associated with the connection.
+// Note: if bytes=-1, don't change the system default value.
+func SetReadBuffer(bytes int) {
+	readBuffer = bytes
 	resetFastProtoReadBufioSize()
 }
 
 // SetWriteBuffer sets the size of the operating system's
-// transmit buffer associated with the *net.TCP connection.
-// Note: Uses the default value, if bytes=1.
-func SetTCPWriteBuffer(bytes int) {
-	tcpWriteBuffer = bytes
+// transmit buffer associated with the connection.
+// Note: if bytes=-1, don't change the system default value.
+func SetWriteBuffer(bytes int) {
+	writeBuffer = bytes
 }
 
 var fastProtoReadBufioSize int
@@ -324,12 +348,12 @@ func init() {
 }
 
 func resetFastProtoReadBufioSize() {
-	if tcpReadBuffer < 0 {
+	if readBuffer < 0 {
 		fastProtoReadBufioSize = 1024 * 4
-	} else if tcpReadBuffer == 0 {
+	} else if readBuffer == 0 {
 		fastProtoReadBufioSize = 1024 * 35
 	} else {
-		fastProtoReadBufioSize = tcpReadBuffer / 2
+		fastProtoReadBufioSize = readBuffer / 2
 	}
 }
 

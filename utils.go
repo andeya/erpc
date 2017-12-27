@@ -52,6 +52,29 @@ var GetReadLimit = socket.PacketSizeLimit
 //  func SetPacketSizeLimit(maxPacketSize uint32)
 var SetReadLimit = socket.SetPacketSizeLimit
 
+// SetSocketKeepAlive sets whether the operating system should send
+// keepalive messages on the connection.
+// Note: If have not called the function, the system defaults are used.
+//  func SetSocketKeepAlive(keepalive bool)
+var SetSocketKeepAlive = socket.SetKeepAlive
+
+// SetSocketKeepAlivePeriod sets period between keep alives.
+// Note: if d=-1, don't change the system default value.
+//  func SetSocketKeepAlivePeriod(d time.Duration)
+var SetSocketKeepAlivePeriod = socket.SetKeepAlivePeriod
+
+// SetSocketReadBuffer sets the size of the operating system's
+// receive buffer associated with the connection.
+// Note: if bytes=-1, don't change the system default value.
+//  func SetReadBuffer(bytes int)
+var SetSocketReadBuffer = socket.SetReadBuffer
+
+// SetSocketWriteBuffer sets the size of the operating system's
+// transmit buffer associated with the connection.
+// Note: Uses the default value, if bytes=1.
+//  func SetWriteBuffer(bytes int)
+var SetSocketWriteBuffer = socket.SetWriteBuffer
+
 var (
 	_maxGoroutinesAmount      = (1024 * 1024 * 8) / 8 // max memory 8GB (8KB/goroutine)
 	_maxGoroutineIdleDuration time.Duration
@@ -85,18 +108,6 @@ TRYGO:
 		goto TRYGO
 	}
 }
-
-// SetReadBuffer sets the size of the operating system's
-// receive buffer associated with the *net.TCP connection.
-// Note: Uses the default value, if bytes=1.
-//  func SetTCPReadBuffer(bytes int)
-var SetTCPReadBuffer = socket.SetTCPReadBuffer
-
-// SetWriteBuffer sets the size of the operating system's
-// transmit buffer associated with the *net.TCP connection.
-// Note: Uses the default value, if bytes=1.
-//  func SetTCPWriteBuffer(bytes int)
-var SetTCPWriteBuffer = socket.SetTCPWriteBuffer
 
 func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	var tlsConfig *tls.Config

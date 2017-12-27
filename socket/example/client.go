@@ -36,7 +36,7 @@ func main() {
 
 		// read response
 		packet.Reset(socket.WithNewBody(
-			func(seq uint64, ptype byte, uri string) interface{} {
+			func(header socket.Header) interface{} {
 				return new(pb.PbTest)
 			}),
 		)
