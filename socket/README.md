@@ -168,7 +168,7 @@ func main() {
 			for {
 				// read request
 				var packet = socket.GetPacket(socket.WithNewBody(
-					func(seq uint64, ptype byte, uri string) interface{} {
+					func(header socket.Header) interface{} {
 						*pbTest = pb.PbTest{}
 						return pbTest
 					}),
@@ -240,7 +240,7 @@ func main() {
 
 		// read response
 		packet.Reset(socket.WithNewBody(
-			func(seq uint64, ptype byte, uri string) interface{} {
+			func(header socket.Header) interface{} {
 				return new(pb.PbTest)
 			}),
 		)
