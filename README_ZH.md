@@ -87,6 +87,7 @@ go get -u github.com/henrylee2cn/teleport
 - 端点间通信使用I/O多路复用技术
 - 支持设置读取包的大小限制（如果超出则断开连接）
 - 提供Hander的上下文
+- 客户端的Session支持断线后自动重连
 
 ## 4. 架构
 

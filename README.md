@@ -85,6 +85,7 @@ go get -u github.com/henrylee2cn/teleport
 - Use I/O multiplexing technology
 - Support setting the size of the reading packet (if exceed disconnect it)
 - Provide the context of the handler
+- Client session support automatically redials after disconnection
 
 ## 4. Architecture
 
