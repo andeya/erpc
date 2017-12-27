@@ -308,7 +308,7 @@ var (
 	writeBuffer     int           = -1
 	readBuffer      int           = -1
 	changeKeepAlive bool          = false
-	keepAlive       bool          = false
+	keepAlive       bool          = true
 	keepAlivePeriod time.Duration = -1
 )
 
