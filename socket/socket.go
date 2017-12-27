@@ -271,7 +271,7 @@ func (s *socket) optimize() {
 		if changeKeepAlive {
 			c.SetKeepAlive(keepAlive)
 		}
-		if keepAlive && keepAlivePeriod >= 0 {
+		if keepAlivePeriod >= 0 && keepAlive {
 			c.SetKeepAlivePeriod(keepAlivePeriod)
 		}
 	}
