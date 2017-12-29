@@ -3,7 +3,7 @@
 
 ## 概述
 
-Teleport是一个通用、高效、灵活的TCP Socket框架。
+Teleport是一个通用、高效、灵活的Socket框架。
 
 可用于Peer-Peer对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
 

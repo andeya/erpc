@@ -1,6 +1,6 @@
 # Socket
 
-A concise, powerful and high-performance TCP connection socket.
+A concise, powerful and high-performance connection socket.
 
 ## Feature
 
