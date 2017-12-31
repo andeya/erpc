@@ -308,7 +308,7 @@ func (c *readHandleCtx) bindPush(uri string) interface{} {
 	}
 
 	c.pluginContainer = c.apiType.pluginContainer
-	c.arg = reflect.New(c.apiType.argElem)
+	c.arg = c.apiType.NewArgValue()
 	c.input.SetBody(c.arg.Interface())
 
 	if c.pluginContainer.PreReadPushBody(c) != nil {
@@ -362,7 +362,7 @@ func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
 	if c.apiType.isUnknown {
 		c.input.SetBody(new([]byte))
 	} else {
-		c.arg = reflect.New(c.apiType.argElem)
+		c.arg = c.apiType.NewArgValue()
 		c.input.SetBody(c.arg.Interface())
 	}
 

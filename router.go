@@ -471,6 +471,11 @@ func (h *Handler) ArgElemType() reflect.Type {
 	return h.argElem
 }
 
+// NewArgValue creates a new arg elem value.
+func (h *Handler) NewArgValue() reflect.Value {
+	return reflect.New(h.argElem)
+}
+
 // ReplyType returns the handler reply type
 func (h *Handler) ReplyType() reflect.Type {
 	return h.reply
