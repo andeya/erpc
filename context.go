@@ -67,8 +67,8 @@ type (
 		SetBodyCodec(byte)
 		// SetMeta sets the header metadata for reply packet.
 		SetMeta(key, value string)
-		// SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
-		SetRerrorMeta(rerr *Rerror)
+		// // SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
+		// SetRerrorMeta(rerr *Rerror)
 		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
 	}
@@ -256,13 +256,13 @@ func (c *readHandleCtx) SetMeta(key, value string) {
 	c.output.Meta().Set(key, value)
 }
 
-// SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
-func (c *readHandleCtx) SetRerrorMeta(rerr *Rerror) {
-	if rerr == nil {
-		return
-	}
-	rerr.SetToMeta(c.output.Meta())
-}
+// // SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
+// func (c *readHandleCtx) SetRerrorMeta(rerr *Rerror) {
+// 	if rerr == nil {
+// 		return
+// 	}
+// 	rerr.SetToMeta(c.output.Meta())
+// }
 
 // GetBodyCodec gets the body codec type of the input packet.
 func (c *readHandleCtx) GetBodyCodec() byte {
