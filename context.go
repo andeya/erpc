@@ -49,14 +49,9 @@ type (
 	// ReadCtx context method set for reading packet.
 	ReadCtx interface {
 		BackgroundCtx
+		readedHeaderCtx
 		// Input returns readed packet.
 		Input() *socket.Packet
-		// Path returns the input packet uri path.
-		Path() string
-		// RawQuery returns the input packet uri query string.
-		RawQuery() string
-		// Query returns the input packet uri query object.
-		Query() url.Values
 	}
 	readedHeaderCtx interface {
 		// Seq returns the input packet sequence.
