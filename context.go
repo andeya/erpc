@@ -86,7 +86,7 @@ type (
 		sess            *session
 		input           *socket.Packet
 		output          *socket.Packet
-		apiType         *Handler
+		handler         *Handler
 		arg             reflect.Value
 		pullCmd         *PullCmd
 		uri             *url.URL
@@ -136,7 +136,7 @@ func (c *readHandleCtx) reInit(s *session) {
 
 func (c *readHandleCtx) clean() {
 	c.sess = nil
-	c.apiType = nil
+	c.handler = nil
 	c.arg = emptyValue
 	c.pullCmd = nil
 	c.public = nil
@@ -302,13 +302,13 @@ func (c *readHandleCtx) bindPush(uri string) interface{} {
 	}
 
 	var ok bool
-	c.apiType, ok = c.sess.pushRouter.get(c.Path())
+	c.handler, ok = c.sess.pushRouter.get(c.Path())
 	if !ok {
 		return nil
 	}
 
-	c.pluginContainer = c.apiType.pluginContainer
-	c.arg = c.apiType.NewArgValue()
+	c.pluginContainer = c.handler.pluginContainer
+	c.arg = c.handler.NewArgValue()
 	c.input.SetBody(c.arg.Interface())
 
 	if c.pluginContainer.PreReadPushBody(c) != nil {
@@ -325,12 +325,12 @@ func (c *readHandleCtx) handlePush() {
 		c.sess.runlog(c.cost, c.input, nil, typePushHandle)
 	}()
 
-	if c.apiType != nil {
+	if c.handler != nil {
 		if c.pluginContainer.PostReadPushBody(c) == nil {
-			if c.apiType.isUnknown {
-				c.apiType.unknownHandleFunc(c)
+			if c.handler.isUnknown {
+				c.handler.unknownHandleFunc(c)
 			} else {
-				c.apiType.handleFunc(c, c.arg)
+				c.handler.handleFunc(c, c.arg)
 			}
 		}
 	}
@@ -352,17 +352,17 @@ func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
 	}
 
 	var ok bool
-	c.apiType, ok = c.sess.pullRouter.get(c.Path())
+	c.handler, ok = c.sess.pullRouter.get(c.Path())
 	if !ok {
 		notFound_metaSetting.Inject(c.output.Meta())
 		return nil
 	}
 
-	c.pluginContainer = c.apiType.pluginContainer
-	if c.apiType.isUnknown {
+	c.pluginContainer = c.handler.pluginContainer
+	if c.handler.isUnknown {
 		c.input.SetBody(new([]byte))
 	} else {
-		c.arg = c.apiType.NewArgValue()
+		c.arg = c.handler.NewArgValue()
 		c.input.SetBody(c.arg.Interface())
 	}
 
@@ -394,10 +394,10 @@ func (c *readHandleCtx) handlePull() {
 		if rerr != nil {
 			rerr.SetToMeta(c.output.Meta())
 		} else {
-			if c.apiType.isUnknown {
-				c.apiType.unknownHandleFunc(c)
+			if c.handler.isUnknown {
+				c.handler.unknownHandleFunc(c)
 			} else {
-				c.apiType.handleFunc(c, c.arg)
+				c.handler.handleFunc(c, c.arg)
 			}
 		}
 	}

@@ -69,7 +69,7 @@ import (
 type (
 	Router struct {
 		handlers       map[string]*Handler
-		unknownApiType **Handler
+		unknownHandler **Handler
 		// only for register router
 		pathPrefix      string
 		pluginContainer PluginContainer
@@ -99,7 +99,7 @@ func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 	warnInvaildRouterHooks(plugin)
 	return &Router{
 		handlers:        r.handlers,
-		unknownApiType:  r.unknownApiType,
+		unknownHandler:  r.unknownHandler,
 		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
 		pluginContainer: pluginContainer,
 		maker:           r.maker,
@@ -179,12 +179,12 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 		}
 	}
 
-	if *r.unknownApiType == nil {
+	if *r.unknownHandler == nil {
 		Printf("set %s handler", h.name)
 	} else {
 		Warnf("covered %s handler", h.name)
 	}
-	r.unknownApiType = &h
+	r.unknownHandler = &h
 }
 
 func (r *Router) get(uriPath string) (*Handler, bool) {
@@ -192,7 +192,7 @@ func (r *Router) get(uriPath string) (*Handler, bool) {
 	if ok {
 		return t, true
 	}
-	if unknown := *r.unknownApiType; unknown != nil {
+	if unknown := *r.unknownHandler; unknown != nil {
 		return unknown, true
 	}
 	return nil, false
@@ -203,7 +203,7 @@ func (r *Router) get(uriPath string) (*Handler, bool) {
 func newPullRouter(pluginContainer PluginContainer) *Router {
 	return &Router{
 		handlers:        make(map[string]*Handler),
-		unknownApiType:  new(*Handler),
+		unknownHandler:  new(*Handler),
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
 		maker:           pullHandlersMaker,
@@ -330,7 +330,7 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 func newPushRouter(pluginContainer PluginContainer) *Router {
 	return &Router{
 		handlers:        make(map[string]*Handler),
-		unknownApiType:  new(*Handler),
+		unknownHandler:  new(*Handler),
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
 		maker:           pushHandlersMaker,
