@@ -61,9 +61,8 @@ type (
 	}
 	PreReadHeaderPlugin interface {
 		Plugin
-		PreReadHeader(ReadCtx) *Rerror
+		PreReadHeader(BackgroundCtx) *Rerror
 	}
-
 	PostReadPullHeaderPlugin interface {
 		Plugin
 		PostReadPullHeader(ReadCtx) *Rerror
@@ -76,7 +75,6 @@ type (
 		Plugin
 		PostReadPullBody(ReadCtx) *Rerror
 	}
-
 	PostReadPushHeaderPlugin interface {
 		Plugin
 		PostReadPushHeader(ReadCtx) *Rerror
@@ -89,7 +87,6 @@ type (
 		Plugin
 		PostReadPushBody(ReadCtx) *Rerror
 	}
-
 	PostReadReplyHeaderPlugin interface {
 		Plugin
 		PostReadReplyHeader(ReadCtx) *Rerror
@@ -102,7 +99,6 @@ type (
 		Plugin
 		PostReadReplyBody(ReadCtx) *Rerror
 	}
-
 	PostDisconnectPlugin interface {
 		Plugin
 		PostDisconnect(PostSession) *Rerror
@@ -124,7 +120,7 @@ type (
 		PostWriteReply(WriteCtx) *Rerror
 		PreWritePush(WriteCtx) *Rerror
 		PostWritePush(WriteCtx) *Rerror
-		PreReadHeader(ReadCtx) *Rerror
+		PreReadHeader(BackgroundCtx) *Rerror
 
 		PostReadPullHeader(ReadCtx) *Rerror
 		PreReadPullBody(ReadCtx) *Rerror
@@ -342,7 +338,7 @@ func (p *pluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreReadHeader(ctx ReadCtx) *Rerror {
+func (p *pluginContainer) PreReadHeader(ctx BackgroundCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {

@@ -27,14 +27,40 @@ import (
 )
 
 type (
-	// PushCtx push handler context.
-	// For example:
-	//  type HomePush struct{ PushCtx }
-	PushCtx interface {
+	// BackgroundCtx common context method set.
+	BackgroundCtx interface {
+		// Peer returns the peer.
+		Peer() *Peer
+		// Session returns the session.
+		Session() Session
+		// Ip returns the remote addr.
+		Ip() string
+		// Public returns temporary public data of context.
+		Public() goutil.Map
+		// PublicLen returns the length of public data of context.
+		PublicLen() int
+	}
+	// WriteCtx context method set for writing packet.
+	WriteCtx interface {
+		BackgroundCtx
+		// Output returns writed packet.
+		Output() *socket.Packet
+	}
+	// ReadCtx context method set for reading packet.
+	ReadCtx interface {
+		BackgroundCtx
+		// Input returns readed packet.
+		Input() *socket.Packet
+		// Path returns the input packet uri path.
+		Path() string
+		// RawQuery returns the input packet uri query string.
+		RawQuery() string
+		// Query returns the input packet uri query object.
+		Query() url.Values
+	}
+	readedHeaderCtx interface {
 		// Seq returns the input packet sequence.
 		Seq() uint64
-		// GetBodyCodec gets the body codec type of the input packet.
-		GetBodyCodec() byte
 		// GetMeta gets the header metadata for the input packet.
 		GetMeta(key string) []byte
 		// CopyMeta returns the input packet metadata copy.
@@ -47,73 +73,64 @@ type (
 		RawQuery() string
 		// Query returns the input packet uri query object.
 		Query() url.Values
-		// Public returns temporary public data of context.
-		Public() goutil.Map
-		// PublicLen returns the length of public data of context.
-		PublicLen() int
-		// Ip returns the remote addr.
-		Ip() string
-		// Peer returns the peer.
-		Peer() *Peer
-		// Session returns the session.
-		Session() Session
 	}
-	// PullCtx request handler context.
+	// PushCtx context method set for handling the pushed packet.
+	// For example:
+	//  type HomePush struct{ PushCtx }
+	PushCtx interface {
+		BackgroundCtx
+		readedHeaderCtx
+		// GetBodyCodec gets the body codec type of the input packet.
+		GetBodyCodec() byte
+	}
+	// PullCtx context method set for handling the pulled packet.
 	// For example:
 	//  type HomePull struct{ PullCtx }
 	PullCtx interface {
-		PushCtx
+		BackgroundCtx
+		readedHeaderCtx
+		// Input returns readed packet.
+		Input() *socket.Packet
+		// GetBodyCodec gets the body codec type of the input packet.
+		GetBodyCodec() byte
+		// Output returns writed packet.
+		Output() *socket.Packet
 		// SetBodyCodec sets the body codec for reply packet.
 		SetBodyCodec(byte)
 		// SetMeta sets the header metadata for reply packet.
 		SetMeta(key, value string)
-		// // SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
-		// SetRerrorMeta(rerr *Rerror)
 		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
 	}
+	// UnknownPushCtx context method set for handling the unknown pushed packet.
 	UnknownPushCtx interface {
-		PushCtx
+		BackgroundCtx
+		readedHeaderCtx
+		// GetBodyCodec gets the body codec type of the input packet.
+		GetBodyCodec() byte
 		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
 		InputBodyBytes() []byte
 		// Bind when the raw body binder is []byte type, now binds the input body to v.
 		Bind(v interface{}) (bodyCodec byte, err error)
 	}
+	// UnknownPullCtx context method set for handling the unknown pulled packet.
 	UnknownPullCtx interface {
-		UnknownPushCtx
+		BackgroundCtx
+		readedHeaderCtx
+		// GetBodyCodec gets the body codec type of the input packet.
+		GetBodyCodec() byte
+		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
+		InputBodyBytes() []byte
+		// Bind when the raw body binder is []byte type, now binds the input body to v.
+		Bind(v interface{}) (bodyCodec byte, err error)
+		// SetBodyCodec sets the body codec for reply packet.
+		SetBodyCodec(byte)
+		// SetMeta sets the header metadata for reply packet.
+		SetMeta(key, value string)
 		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
 	}
-	// WriteCtx for writing packet.
-	WriteCtx interface {
-		// Output returns writed packet.
-		Output() *socket.Packet
-		// Public returns temporary public data of context.
-		Public() goutil.Map
-		// PublicLen returns the length of public data of context.
-		PublicLen() int
-		// Ip returns the remote addr.
-		Ip() string
-		// Peer returns the peer.
-		Peer() *Peer
-		// Session returns the session.
-		Session() Session
-	}
-	// ReadCtx for reading packet.
-	ReadCtx interface {
-		// Input returns readed packet.
-		Input() *socket.Packet
-		// Public returns temporary public data of context.
-		Public() goutil.Map
-		// PublicLen returns the length of public data of context.
-		PublicLen() int
-		// Ip returns the remote addr.
-		Ip() string
-		// Peer returns the peer.
-		Peer() *Peer
-		// Session returns the session.
-		Session() Session
-	}
+
 	// readHandleCtx the underlying common instance of PullCtx and PushCtx.
 	readHandleCtx struct {
 		sess            *session
@@ -133,12 +150,13 @@ type (
 )
 
 var (
-	_ PullCtx        = new(readHandleCtx)
-	_ PushCtx        = new(readHandleCtx)
+	_ BackgroundCtx  = new(readHandleCtx)
 	_ WriteCtx       = new(readHandleCtx)
 	_ ReadCtx        = new(readHandleCtx)
-	_ UnknownPullCtx = new(readHandleCtx)
+	_ PushCtx        = new(readHandleCtx)
+	_ PullCtx        = new(readHandleCtx)
 	_ UnknownPushCtx = new(readHandleCtx)
+	_ UnknownPullCtx = new(readHandleCtx)
 )
 
 var (
