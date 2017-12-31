@@ -31,18 +31,31 @@ type (
 	// For example:
 	//  type HomePush struct{ PushCtx }
 	PushCtx interface {
+		// Seq returns the input packet sequence.
 		Seq() uint64
+		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
+		// GetMeta gets the header metadata for the input packet.
 		GetMeta(key string) []byte
+		// CopyMeta returns the input packet metadata copy.
 		CopyMeta() *utils.Args
+		// Uri returns the input packet uri.
 		Uri() string
+		// Path returns the input packet uri path.
 		Path() string
+		// RawQuery returns the input packet uri query string.
 		RawQuery() string
+		// Query returns the input packet uri query object.
 		Query() url.Values
+		// Public returns temporary public data of context.
 		Public() goutil.Map
+		// PublicLen returns the length of public data of context.
 		PublicLen() int
+		// Ip returns the remote addr.
 		Ip() string
+		// Peer returns the peer.
 		Peer() *Peer
+		// Session returns the session.
 		Session() Session
 	}
 	// PullCtx request handler context.
@@ -50,35 +63,55 @@ type (
 	//  type HomePull struct{ PullCtx }
 	PullCtx interface {
 		PushCtx
+		// SetBodyCodec sets the body codec for reply packet.
 		SetBodyCodec(byte)
+		// SetMeta sets the header metadata for reply packet.
 		SetMeta(key, value string)
+		// SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
+		SetRerrorMeta(rerr *Rerror)
+		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
 	}
 	UnknownPushCtx interface {
 		PushCtx
+		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
 		InputBodyBytes() []byte
+		// Bind when the raw body binder is []byte type, now binds the input body to v.
 		Bind(v interface{}) (bodyCodec byte, err error)
 	}
 	UnknownPullCtx interface {
 		UnknownPushCtx
+		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
 	}
 	// WriteCtx for writing packet.
 	WriteCtx interface {
+		// Output returns writed packet.
 		Output() *socket.Packet
+		// Public returns temporary public data of context.
 		Public() goutil.Map
+		// PublicLen returns the length of public data of context.
 		PublicLen() int
+		// Ip returns the remote addr.
 		Ip() string
+		// Peer returns the peer.
 		Peer() *Peer
+		// Session returns the session.
 		Session() Session
 	}
 	// ReadCtx for reading packet.
 	ReadCtx interface {
+		// Input returns readed packet.
 		Input() *socket.Packet
+		// Public returns temporary public data of context.
 		Public() goutil.Map
+		// PublicLen returns the length of public data of context.
 		PublicLen() int
+		// Ip returns the remote addr.
 		Ip() string
+		// Peer returns the peer.
 		Peer() *Peer
+		// Session returns the session.
 		Session() Session
 	}
 	// readHandleCtx the underlying common instance of PullCtx and PushCtx.
@@ -221,6 +254,14 @@ func (c *readHandleCtx) CopyMeta() *utils.Args {
 // SetMeta sets the header metadata for reply packet.
 func (c *readHandleCtx) SetMeta(key, value string) {
 	c.output.Meta().Set(key, value)
+}
+
+// SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
+func (c *readHandleCtx) SetRerrorMeta(rerr *Rerror) {
+	if rerr == nil {
+		return
+	}
+	rerr.SetToMeta(c.output.Meta())
 }
 
 // GetBodyCodec gets the body codec type of the input packet.
