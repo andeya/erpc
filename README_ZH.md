@@ -198,17 +198,17 @@ func (*Peer) Listen(protoFunc ...socket.ProtoFunc) error
 - 创建一个Peer端点，服务端或客户端
 
 ```go
-var peer = tp.NewPeer(&tp.PeerConfig{
+// Start a server
+var peer1 = tp.NewPeer(&tp.PeerConfig{
     ListenAddress: "0.0.0.0:9090", // for server role
 })
-
-// It can be used as a server
-peer.Listen()
+peer1.Listen()
 
 ...
 
-// It can also be used as a client at the same time
-var sess, err = peer.Dial("127.0.0.1:8080")
+// Start a client at the same time
+var peer2 = tp.NewPeer(&tp.PeerConfig{})
+var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
 - 定义处理拉取请求的控制器（命名空间）及其操作

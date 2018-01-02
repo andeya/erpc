@@ -198,17 +198,17 @@ func (*Peer) Listen(protoFunc ...socket.ProtoFunc) error
 - Create a server or client peer
 
 ```go
-var peer = tp.NewPeer(&tp.PeerConfig{
+// Start a server
+var peer1 = tp.NewPeer(&tp.PeerConfig{
     ListenAddress: "0.0.0.0:9090", // for server role
 })
+peer1.Listen()
 
 ...
 
-// It can be used as a server
-peer.Listen()
-
-// It can also be used as a client at the same time
-var sess, err = peer.Dial("127.0.0.1:8080")
+// Start a client at the same time
+var peer2 = tp.NewPeer(&tp.PeerConfig{})
+var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
 - Define a controller and handler for pull request
