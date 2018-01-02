@@ -206,7 +206,7 @@ peer1.Listen()
 
 ...
 
-// Start a client at the same time
+// Start a client
 var peer2 = tp.NewPeer(&tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
