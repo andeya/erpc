@@ -18,9 +18,7 @@ func main() {
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var cfg = &tp.PeerConfig{
 		DefaultBodyCodec: "protobuf",
-		ListenAddrs: []string{
-			"0.0.0.0:9090",
-		},
+		ListenAddress:    "0.0.0.0:9090",
 	}
 	var peer = tp.NewPeer(cfg)
 	{

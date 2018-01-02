@@ -17,8 +17,9 @@ package tp
 import (
 	"context"
 	"crypto/tls"
-	"math"
+	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,23 +51,25 @@ type Peer struct {
 	timeSince           func(time.Time) time.Duration
 	mu                  sync.Mutex
 
+	network string
+
 	// only for client role
 	defaultDialTimeout time.Duration
 	redialTimes        int32
 
 	// only for server role
-	listenAddrs []string
-	listens     []net.Listener
+	listenAddr string
+	listen     net.Listener
 }
 
 // NewPeer creates a new peer.
 func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
-	var slowCometDuration time.Duration = math.MaxInt64
-	if cfg.SlowCometDuration > 0 {
-		slowCometDuration = cfg.SlowCometDuration
+	err := cfg.check()
+	if err != nil {
+		Fatalf("%v", err)
 	}
 	var pluginContainer = newPluginContainer()
-	if err := pluginContainer.Add(plugin...); err != nil {
+	if err = pluginContainer.Add(plugin...); err != nil {
 		Fatalf("%v", err)
 	}
 	var p = &Peer{
@@ -77,9 +80,10 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		defaultReadTimeout:  cfg.DefaultReadTimeout,
 		defaultWriteTimeout: cfg.DefaultWriteTimeout,
 		closeCh:             make(chan struct{}),
-		slowCometDuration:   slowCometDuration,
+		slowCometDuration:   cfg.slowCometDuration,
 		defaultDialTimeout:  cfg.DefaultDialTimeout,
-		listenAddrs:         cfg.ListenAddrs,
+		network:             cfg.Network,
+		listenAddr:          cfg.ListenAddress,
 		printBody:           cfg.PrintBody,
 		countTime:           cfg.CountTime,
 		redialTimes:         cfg.RedialTimes,
@@ -123,7 +127,7 @@ func (p *Peer) CountSession() int {
 // Dial connects with the peer of the destination address.
 func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
-		return net.DialTimeout("tcp", addr, p.defaultDialTimeout)
+		return net.DialTimeout(p.network, addr, p.defaultDialTimeout)
 	}, addr, protoFunc)
 }
 
@@ -132,7 +136,7 @@ func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerro
 func (p *Peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
 		var d net.Dialer
-		return d.DialContext(ctx, "tcp", addr)
+		return d.DialContext(ctx, p.network, addr)
 	}, addr, protoFunc)
 }
 
@@ -157,7 +161,7 @@ func (p *Peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 				}
 			}
 			if err != nil {
-				Errorf("redial fail (addr: %s, id: %s): %s", addr, sess.Id(), err.Error())
+				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, addr, sess.Id(), err.Error())
 			}
 			return false
 		}
@@ -169,7 +173,7 @@ func (p *Peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	}
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("dial ok (addr: %s, id: %s)", addr, sess.Id())
+	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.Id())
 	return sess, nil
 }
 
@@ -196,7 +200,7 @@ func (p *Peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	atomic.StoreInt32(&sess.status, statusOk)
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("redial ok (addr: %s, id: %s)", addr, sess.Id())
+	Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.Id())
 	return nil
 }
 
@@ -205,37 +209,16 @@ var ErrListenClosed = errors.New("listener is closed")
 
 // Listen turns on the listening service.
 func (p *Peer) Listen(protoFunc ...socket.ProtoFunc) error {
-	var (
-		wg    sync.WaitGroup
-		count = len(p.listenAddrs)
-		errCh = make(chan error, count)
-	)
-	wg.Add(count)
-	for _, addr := range p.listenAddrs {
-		go func(addr string) {
-			defer wg.Done()
-			errCh <- p.listen(addr, protoFunc)
-		}(addr)
-	}
-	wg.Wait()
-	close(errCh)
-	var errs error
-	for err := range errCh {
-		e := err
-		errs = errors.Append(errs, e)
-	}
-	return errs
-}
-
-func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
-	var lis, err = listen(addr, p.tlsConfig)
+	lis, err := listen(p.network, p.listenAddr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
 	}
-	p.listens = append(p.listens, lis)
 	defer lis.Close()
+	p.listen = lis
 
-	Printf("listen ok (addr: %s)", addr)
+	network := lis.Addr().Network()
+	addr := lis.Addr().String()
+	Printf("listen ok (network:%s, addr:%s)", network, addr)
 
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
@@ -280,12 +263,12 @@ func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 					return
 				}
 			}
-			var sess = newSession(p, conn, protoFuncs)
+			var sess = newSession(p, conn, protoFunc)
 			if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
 				sess.Close()
 				return
 			}
-			Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
+			Tracef("accept session(network:%s, addr:%s) ok", network, sess.RemoteIp(), sess.Id())
 			p.sessHub.Set(sess)
 			sess.startReadAndHandle()
 		})
@@ -294,6 +277,10 @@ func (p *Peer) listen(addr string, protoFuncs []socket.ProtoFunc) error {
 
 // ServeConn serves the connection and returns a session.
 func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
+	network := conn.LocalAddr().Network()
+	if strings.Contains(network, "udp") {
+		return nil, fmt.Errorf("Invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
+	}
 	if c, ok := conn.(*tls.Conn); ok {
 		if p.defaultReadTimeout > 0 {
 			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultReadTimeout))
@@ -310,9 +297,9 @@ func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 		sess.Close()
 		return nil, rerr.ToError()
 	}
-	Tracef("accept session(addr: %s, id: %s) ok", sess.RemoteIp(), sess.Id())
-	AnywayGo(sess.startReadAndHandle)
+	Tracef("accept session(network:%s, addr:%s) ok", network, sess.RemoteIp(), sess.Id())
 	p.sessHub.Set(sess)
+	AnywayGo(sess.startReadAndHandle)
 	return sess, nil
 }
 

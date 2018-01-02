@@ -20,10 +20,7 @@ func main() {
 		DefaultBodyCodec:    "json",
 		PrintBody:           true,
 		CountTime:           true,
-		ListenAddrs: []string{
-			"0.0.0.0:9090",
-			"0.0.0.0:9091",
-		},
+		ListenAddress:       "0.0.0.0:9090",
 	}
 	var peer = tp.NewPeer(cfg)
 	{
@@ -43,7 +40,6 @@ type Home struct {
 func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
 	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": h.Query().Get("peer_id"),
-		"a":       1,
 	})
 	meta := h.CopyMeta()
 	meta.VisitAll(func(k, v []byte) {
@@ -60,7 +56,6 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.R
 func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 	time.Sleep(1)
 	var v = struct {
-		ConnPort   int
 		RawMessage json.RawMessage
 		Bytes      []byte
 	}{}
@@ -68,8 +63,15 @@ func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 	if err != nil {
 		return nil, tp.NewRerror(1001, "bind error", err.Error())
 	}
-	tp.Debugf("UnknownPullHandle: codec: %d, conn_port: %d, RawMessage: %s, bytes: %s",
-		codecId, v.ConnPort, v.RawMessage, v.Bytes,
+	tp.Debugf("UnknownPullHandle: codec: %d, RawMessage: %s, bytes: %s",
+		codecId, v.RawMessage, v.Bytes,
 	)
-	return []string{"a", "aa", "aaa"}, nil
+	ctx.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
+		"your_id": ctx.Query().Get("peer_id"),
+	})
+	return map[string]interface{}{
+		"your_args":   v,
+		"server_time": time.Now(),
+		"meta":        ctx.CopyMeta().String(),
+	}, nil
 }

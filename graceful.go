@@ -113,8 +113,8 @@ func Reboot(timeout ...time.Duration) {
 	graceful.Reboot(timeout...)
 }
 
-func listen(laddr string, tlsConfig *tls.Config) (net.Listener, error) {
-	lis, err := inherit_net.Listen("tcp", laddr)
+func listen(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
+	lis, err := inherit_net.Listen(network, laddr)
 	if err != nil {
 		return nil, err
 	}

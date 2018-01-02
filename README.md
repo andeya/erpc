@@ -86,6 +86,7 @@ go get -u github.com/henrylee2cn/teleport
 - Support setting the size of the reading packet (if exceed disconnect it)
 - Provide the context of the handler
 - Client session support automatically redials after disconnection
+- Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and so on
 
 ## 4. Architecture
 
@@ -107,14 +108,7 @@ go get -u github.com/henrylee2cn/teleport
 - **Push-Handle:** Handle the push of peer
 - **Router:** Router that route the response handler by request information(such as a URI)
 
-
-### 4.2 Execution level
-
-```
-Peer -> Connection -> Socket -> Session -> Context
-```
-
-### 4.3 Packet
+### 4.2 Packet
 
 The contents of every one packet:
 
@@ -168,7 +162,7 @@ type (
 )
 ```
 
-### 4.4 Protocol
+### 4.3 Protocol
 
 You can customize your own communication protocol by implementing the interface:
 
@@ -204,31 +198,17 @@ func (*Peer) Listen(protoFunc ...socket.ProtoFunc) error
 - Create a server or client peer
 
 ```go
-var cfg = &tp.PeerConfig{
-	DefaultReadTimeout:  time.Minute * 5,
-	DefaultWriteTimeout: time.Millisecond * 500,
-	TlsCertFile:         "",
-	TlsKeyFile:          "",
-	SlowCometDuration:   time.Millisecond * 500,
-	DefaultBodyCodec:     "json",
-	PrintBody:           true,
-	CountTime:           true,
-	ListenAddrs: []string{
-		"0.0.0.0:9090",
-	},
-}
+var peer = tp.NewPeer(&tp.PeerConfig{
+    ListenAddress: "0.0.0.0:9090", // for server role
+})
 
-
-var peer = tp.NewPeer(cfg)
+...
 
 // It can be used as a server
 peer.Listen()
 
-// Also, it can also be used as a client at the same time
+// It can also be used as a client at the same time
 var sess, err = peer.Dial("127.0.0.1:8080")
-if err != nil {
-	tp.Panicf("%v", err)
-}
 ```
 
 - Define a controller and handler for pull request
@@ -362,18 +342,11 @@ func main() {
     // tp.SetReadLimit(10)
     tp.SetShutdown(time.Second*20, nil, nil)
     var cfg = &tp.PeerConfig{
-        DefaultReadTimeout:  time.Minute * 5,
-        DefaultWriteTimeout: time.Millisecond * 500,
-        TlsCertFile:         "",
-        TlsKeyFile:          "",
         SlowCometDuration:   time.Millisecond * 500,
         DefaultBodyCodec:    "json",
         PrintBody:           true,
         CountTime:           true,
-        ListenAddrs: []string{
-            "0.0.0.0:9090",
-            "0.0.0.0:9091",
-        },
+        ListenAddress:       "0.0.0.0:9090",
     }
     var peer = tp.NewPeer(cfg)
     {
@@ -393,18 +366,22 @@ type Home struct {
 func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
     h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
         "your_id": h.Query().Get("peer_id"),
-        "a":       1,
     })
+    meta := h.CopyMeta()
+    meta.VisitAll(func(k, v []byte) {
+        tp.Infof("meta: key: %s, value: %s", k, v)
+    })
+    time.Sleep(5e9)
     return map[string]interface{}{
         "your_args":   *args,
         "server_time": time.Now(),
+        "meta":        meta.String(),
     }, nil
 }
 
 func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
     time.Sleep(1)
     var v = struct {
-        ConnPort   int
         RawMessage json.RawMessage
         Bytes      []byte
     }{}
@@ -412,10 +389,17 @@ func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
     if err != nil {
         return nil, tp.NewRerror(1001, "bind error", err.Error())
     }
-    tp.Debugf("UnknownPullHandle: codec: %d, conn_port: %d, RawMessage: %s, bytes: %s",
-        codecId, v.ConnPort, v.RawMessage, v.Bytes,
+    tp.Debugf("UnknownPullHandle: codec: %d, RawMessage: %s, bytes: %s",
+        codecId, v.RawMessage, v.Bytes,
     )
-    return []string{"a", "aa", "aaa"}, nil
+    ctx.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
+        "your_id": ctx.Query().Get("peer_id"),
+    })
+    return map[string]interface{}{
+        "your_args":   v,
+        "server_time": time.Now(),
+        "meta":        ctx.CopyMeta().String(),
+    }, nil
 }
 ```
 
@@ -429,74 +413,69 @@ import (
     "time"
 
     tp "github.com/henrylee2cn/teleport"
+    "github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
     go tp.GraceSignal()
     tp.SetShutdown(time.Second*20, nil, nil)
     var cfg = &tp.PeerConfig{
-        DefaultReadTimeout:  time.Minute * 5,
-        DefaultWriteTimeout: time.Millisecond * 500,
-        TlsCertFile:         "",
-        TlsKeyFile:          "",
         SlowCometDuration:   time.Millisecond * 500,
         DefaultBodyCodec:    "json",
         PrintBody:           true,
         CountTime:           true,
+        RedialTimes:         3,
     }
 
     var peer = tp.NewPeer(cfg)
     defer peer.Close()
     peer.PushRouter.Reg(new(Push))
 
-    {
-        var sess, err = peer.Dial("127.0.0.1:9090")
-        if err != nil {
-            tp.Fatalf("%v", err)
-        }
+    var sess, err = peer.Dial("127.0.0.1:9090")
+    if err != nil {
+        tp.Fatalf("%v", err)
+    }
+    sess.SetId("testId")
 
-        var reply interface{}
+    var reply interface{}
+    for {
         var pullcmd = sess.Pull(
-            "/group/home/test?peer_id=client9090",
+            "/group/home/test?peer_id=call-1",
             map[string]interface{}{
-                "conn_port": 9090,
-                "bytes":     []byte("bytestest9090"),
+                "bytes": []byte("test bytes"),
             },
             &reply,
+            socket.WithXferPipe('g'),
+            socket.WithSetMeta("set", "0"),
+            socket.WithAddMeta("add", "1"),
+            socket.WithAddMeta("add", "2"),
         )
-
         if pullcmd.Rerror() != nil {
-            tp.Fatalf("pull error: %v", pullcmd.Rerror())
+            tp.Errorf("pull error: %v", pullcmd.Rerror())
+            time.Sleep(time.Second * 2)
+        } else {
+            break
         }
-        tp.Infof("9090reply: %#v", reply)
     }
+    tp.Infof("test: %#v", reply)
 
-    {
-        var sess, err = peer.Dial("127.0.0.1:9091")
-        if err != nil {
-            tp.Panicf("%v", err)
-        }
+    var pullcmd = sess.Pull(
+        "/group/home/test_unknown?peer_id=call-2",
+        struct {
+            RawMessage json.RawMessage
+            Bytes      []byte
+        }{
+            json.RawMessage(`{"RawMessage":"test_unknown"}`),
+            []byte("test bytes"),
+        },
+        &reply,
+        socket.WithXferPipe('g'),
+    )
 
-        var reply interface{}
-        var pullcmd = sess.Pull(
-            "/group/home/test_unknown?peer_id=client9091",
-            struct {
-                ConnPort   int
-                RawMessage json.RawMessage
-                Bytes      []byte
-            }{
-                9091,
-                json.RawMessage(`{"RawMessage":"test9091"}`),
-                []byte("bytes-test"),
-            },
-            &reply,
-        )
-
-        if pullcmd.Rerror() != nil {
-            tp.Fatalf("pull error: %v", pullcmd.Rerror())
-        }
-        tp.Infof("9091reply test_unknown: %#v", reply)
+    if pullcmd.Rerror() != nil {
+        tp.Fatalf("pull error: %v", pullcmd.Rerror())
     }
+    tp.Infof("test_unknown: %#v", reply)
 }
 
 // Push controller
