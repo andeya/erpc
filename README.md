@@ -199,7 +199,7 @@ func (*Peer) Listen(protoFunc ...socket.ProtoFunc) error
 
 ```go
 // Start a server
-var peer1 = tp.NewPeer(&tp.PeerConfig{
+var peer1 = tp.NewPeer(tp.PeerConfig{
     ListenAddress: "0.0.0.0:9090", // for server role
 })
 peer1.Listen()
@@ -207,7 +207,7 @@ peer1.Listen()
 ...
 
 // Start a client
-var peer2 = tp.NewPeer(&tp.PeerConfig{})
+var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
@@ -341,18 +341,14 @@ func main() {
     go tp.GraceSignal()
     // tp.SetReadLimit(10)
     tp.SetShutdown(time.Second*20, nil, nil)
-    var cfg = &tp.PeerConfig{
-        SlowCometDuration:   time.Millisecond * 500,
-        DefaultBodyCodec:    "json",
-        PrintBody:           true,
-        CountTime:           true,
-        ListenAddress:       "0.0.0.0:9090",
-    }
-    var peer = tp.NewPeer(cfg)
-    {
-        group := peer.PullRouter.Group("group")
-        group.Reg(new(Home))
-    }
+    var peer = tp.NewPeer(tp.PeerConfig{
+        SlowCometDuration: time.Millisecond * 500,
+        PrintBody:         true,
+        CountTime:         true,
+        ListenAddress:     "0.0.0.0:9090",
+    })
+    group := peer.PullRouter.Group("group")
+    group.Reg(new(Home))
     peer.PullRouter.SetUnknown(UnknownPullHandle)
     peer.Listen()
 }
@@ -419,15 +415,13 @@ import (
 func main() {
     go tp.GraceSignal()
     tp.SetShutdown(time.Second*20, nil, nil)
-    var cfg = &tp.PeerConfig{
-        SlowCometDuration:   time.Millisecond * 500,
-        DefaultBodyCodec:    "json",
-        PrintBody:           true,
-        CountTime:           true,
-        RedialTimes:         3,
-    }
-
-    var peer = tp.NewPeer(cfg)
+    var peer = tp.NewPeer(tp.PeerConfig{
+        SlowCometDuration: time.Millisecond * 500,
+        // DefaultBodyCodec:    "json",
+        PrintBody:   true,
+        CountTime:   true,
+        RedialTimes: 3,
+    })
     defer peer.Close()
     peer.PushRouter.Reg(new(Push))
 

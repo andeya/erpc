@@ -18,12 +18,10 @@ func main() {
 	tp.SetRawlogLevel("WARNING")
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &tp.PeerConfig{
+	var peer = tp.NewPeer(tp.PeerConfig{
 		DefaultBodyCodec:   "protobuf",
 		DefaultDialTimeout: time.Second * 5,
-	}
-
-	var peer = tp.NewPeer(cfg)
+	})
 
 	var sess, err = peer.Dial("127.0.0.1:9090")
 	if err != nil {

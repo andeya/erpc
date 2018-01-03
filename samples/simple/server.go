@@ -11,22 +11,14 @@ func main() {
 	go tp.GraceSignal()
 	// tp.SetReadLimit(10)
 	tp.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &tp.PeerConfig{
-		DefaultReadTimeout:  time.Minute * 5,
-		DefaultWriteTimeout: time.Millisecond * 500,
-		TlsCertFile:         "",
-		TlsKeyFile:          "",
-		SlowCometDuration:   time.Millisecond * 500,
-		DefaultBodyCodec:    "json",
-		PrintBody:           true,
-		CountTime:           true,
-		ListenAddress:       "0.0.0.0:9090",
-	}
-	var peer = tp.NewPeer(cfg)
-	{
-		group := peer.PullRouter.Group("group")
-		group.Reg(new(Home))
-	}
+	var peer = tp.NewPeer(tp.PeerConfig{
+		SlowCometDuration: time.Millisecond * 500,
+		PrintBody:         true,
+		CountTime:         true,
+		ListenAddress:     "0.0.0.0:9090",
+	})
+	group := peer.PullRouter.Group("group")
+	group.Reg(new(Home))
 	peer.PullRouter.SetUnknown(UnknownPullHandle)
 	peer.Listen()
 }

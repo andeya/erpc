@@ -63,7 +63,7 @@ type Peer struct {
 }
 
 // NewPeer creates a new peer.
-func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
+func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 	err := cfg.check()
 	if err != nil {
 		Fatalf("%v", err)

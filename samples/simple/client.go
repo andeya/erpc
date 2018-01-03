@@ -11,19 +11,13 @@ import (
 func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &tp.PeerConfig{
-		DefaultReadTimeout:  time.Minute * 5,
-		DefaultWriteTimeout: time.Millisecond * 500,
-		TlsCertFile:         "",
-		TlsKeyFile:          "",
-		SlowCometDuration:   time.Millisecond * 500,
+	var peer = tp.NewPeer(tp.PeerConfig{
+		SlowCometDuration: time.Millisecond * 500,
 		// DefaultBodyCodec:    "json",
 		PrintBody:   true,
 		CountTime:   true,
 		RedialTimes: 3,
-	}
-
-	var peer = tp.NewPeer(cfg)
+	})
 	defer peer.Close()
 	peer.PushRouter.Reg(new(Push))
 

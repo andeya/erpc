@@ -16,11 +16,10 @@ func main() {
 	tp.SetRawlogLevel("WARNING")
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
-	var cfg = &tp.PeerConfig{
+	var peer = tp.NewPeer(tp.PeerConfig{
 		DefaultBodyCodec: "protobuf",
 		ListenAddress:    "0.0.0.0:9090",
-	}
-	var peer = tp.NewPeer(cfg)
+	})
 	{
 		group := peer.PullRouter.Group("group")
 		group.Reg(new(Home))
