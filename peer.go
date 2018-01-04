@@ -279,7 +279,7 @@ func (p *Peer) Listen(protoFunc ...socket.ProtoFunc) error {
 func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
 	network := conn.LocalAddr().Network()
 	if strings.Contains(network, "udp") {
-		return nil, fmt.Errorf("Invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
+		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
 	}
 	if c, ok := conn.(*tls.Conn); ok {
 		if p.defaultReadTimeout > 0 {
