@@ -487,7 +487,7 @@ func (p *Push) Test(args *map[string]interface{}) {
 
 ### 插件
 
-name|import|description
+package|import|description
 ----|------|-----------
 [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
 
