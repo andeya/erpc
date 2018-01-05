@@ -46,6 +46,7 @@ type PeerConfig struct {
 
 var _ cfgo.Config = new(PeerConfig)
 
+// Reload Bi-directionally synchronizes config between YAML file and memory.
 func (p *PeerConfig) Reload(bind cfgo.BindFunc) error {
 	err := bind()
 	if err != nil {
