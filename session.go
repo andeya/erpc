@@ -33,47 +33,28 @@ import (
 
 // Session a connection session.
 type (
-	PreSession interface {
-		// SetId sets the session id.
-		SetId(newId string)
-		// Close closes the session.
-		Close() error
+	BaseSession interface {
 		// Id returns the session id.
 		Id() string
-		// Health checks if the session is ok.
-		Health() bool
 		// Peer returns the peer.
 		Peer() *Peer
-		// RemoteIp returns the remote peer ip.
-		RemoteIp() string
 		// LocalIp returns the local peer ip.
 		LocalIp() string
-		// ReadTimeout returns readdeadline for underlying net.Conn.
-		SetReadTimeout(duration time.Duration)
-		// WriteTimeout returns writedeadline for underlying net.Conn.
-		SetWriteTimeout(duration time.Duration)
+		// RemoteIp returns the remote peer ip.
+		RemoteIp() string
 		// Public returns temporary public data of session(socket).
 		Public() goutil.Map
 		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
-		// Send sends packet to peer.
-		// Note: does not support automatic redial after disconnection.
-		Send(packet *socket.Packet) error
-		// Receive receives a packet from peer.
-		// Note: does not support automatic redial after disconnection.
-		Receive(packet *socket.Packet) error
 	}
 	Session interface {
+		BaseSession
 		// SetId sets the session id.
 		SetId(newId string)
 		// Close closes the session.
 		Close() error
-		// Id returns the session id.
-		Id() string
 		// Health checks if the session is ok.
 		Health() bool
-		// Peer returns the peer.
-		Peer() *Peer
 		// AsyncPull sends a packet and receives reply asynchronously.
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
 		AsyncPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting)
@@ -89,46 +70,21 @@ type (
 		Push(uri string, args interface{}, setting ...socket.PacketSetting) *Rerror
 		// ReadTimeout returns readdeadline for underlying net.Conn.
 		ReadTimeout() time.Duration
-		// RemoteIp returns the remote peer ip.
-		RemoteIp() string
-		// LocalIp returns the local peer ip.
-		LocalIp() string
 		// ReadTimeout returns readdeadline for underlying net.Conn.
 		SetReadTimeout(duration time.Duration)
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		SetWriteTimeout(duration time.Duration)
-		// Socket returns the Socket.
-		// Socket() socket.Socket
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
-		// Public returns temporary public data of session(socket).
-		Public() goutil.Map
-		// PublicLen returns the length of public data of session(socket).
-		PublicLen() int
 	}
-	PostSession interface {
-		// Id returns the session id.
-		Id() string
-		// Peer returns the peer.
-		Peer() *Peer
-		// RemoteIp returns the remote peer ip.
-		RemoteIp() string
-		// LocalIp returns the local peer ip.
-		LocalIp() string
-		// Public returns temporary public data of session(socket).
-		Public() goutil.Map
-		// PublicLen returns the length of public data of session(socket).
-		PublicLen() int
-	}
+
 	session struct {
 		peer                  *Peer
 		pullRouter            *Router
 		pushRouter            *Router
-		pushSeq               uint64
-		pushSeqLock           sync.Mutex
-		pullSeq               uint64
+		seq                   uint64
+		seqLock               sync.Mutex
 		pullCmdMap            goutil.Map
-		pullSeqLock           sync.Mutex
 		socket                socket.Socket
 		status                int32 // 0:ok, 1:active closed, 2:disconnect
 		closeLock             sync.RWMutex
@@ -144,9 +100,8 @@ type (
 )
 
 var (
-	_ PreSession  = new(session)
+	_ BaseSession = new(session)
 	_ Session     = new(session)
-	_ PostSession = new(session)
 )
 
 func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
@@ -166,11 +121,6 @@ func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 func (s *session) Peer() *Peer {
 	return s.peer
 }
-
-// Socket returns the Socket.
-// func (s *session) Socket() socket.Socket {
-// 	return s.socket
-// }
 
 // Id returns the session id.
 func (s *session) Id() string {
@@ -220,16 +170,10 @@ func (s *session) SetWriteTimeout(duration time.Duration) {
 	atomic.StoreInt32(&s.writeTimeout, int32(duration))
 }
 
-// Send sends packet to peer.
-// Note: does not support automatic redial after disconnection.
-func (s *session) Send(packet *socket.Packet) error {
-	return s.socket.WritePacket(packet)
-}
-
 // Receive receives a packet from peer.
 // Note: does not support automatic redial after disconnection.
-func (s *session) Receive(packet *socket.Packet) error {
-	return s.socket.ReadPacket(packet)
+func (s *session) Receive(input *socket.Packet) error {
+	return s.socket.ReadPacket(input)
 }
 
 // AsyncPull sends a packet and receives reply asynchronously.
@@ -243,10 +187,10 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		// is totally unbuffered, it's best not to run at all.
 		Panicf("*session.AsyncPull(): done channel is unbuffered")
 	}
-	s.pullSeqLock.Lock()
-	seq := s.pullSeq
-	s.pullSeq++
-	s.pullSeqLock.Unlock()
+	s.seqLock.Lock()
+	seq := s.seq
+	s.seq++
+	s.seqLock.Unlock()
 	output := socket.NewPacket(
 		socket.WithSeq(seq),
 		socket.WithPtype(TypePull),
@@ -298,10 +242,10 @@ W:
 	if err = s.write(output); err != nil {
 		if err == ErrConnClosed && s.redialForClient() {
 			s.pullCmdMap.Delete(seq)
-			s.pullSeqLock.Lock()
-			seq = s.pullSeq
-			s.pullSeq++
-			s.pullSeqLock.Unlock()
+			s.seqLock.Lock()
+			seq = s.seq
+			s.seq++
+			s.seqLock.Unlock()
 			output.SetSeq(seq)
 			s.pullCmdMap.Store(seq, cmd)
 			goto W
@@ -336,10 +280,10 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
 
-	s.pushSeqLock.Lock()
-	seq := s.pushSeq
-	s.pushSeq++
-	s.pushSeqLock.Unlock()
+	s.seqLock.Lock()
+	seq := s.seq
+	s.seq++
+	s.seqLock.Unlock()
 
 	output.SetSeq(seq)
 	output.SetPtype(TypePush)
@@ -368,10 +312,10 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 W:
 	if err = s.write(output); err != nil {
 		if err == ErrConnClosed && s.redialForClient() {
-			s.pushSeqLock.Lock()
-			output.SetSeq(s.pushSeq)
-			s.pushSeq++
-			s.pushSeqLock.Unlock()
+			s.seqLock.Lock()
+			output.SetSeq(s.seq)
+			s.seq++
+			s.seqLock.Unlock()
 			goto W
 		}
 		rerr = rerror_writeFailed.Copy()

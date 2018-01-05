@@ -27,8 +27,8 @@ import (
 )
 
 type (
-	// BackgroundCtx common context method set.
-	BackgroundCtx interface {
+	// BaseCtx common context method set.
+	BaseCtx interface {
 		// Peer returns the peer.
 		Peer() *Peer
 		// Session returns the session.
@@ -39,16 +39,18 @@ type (
 		Public() goutil.Map
 		// PublicLen returns the length of public data of context.
 		PublicLen() int
+		// Rerror returns the handle error.
+		Rerror() *Rerror
 	}
 	// WriteCtx context method set for writing packet.
 	WriteCtx interface {
-		BackgroundCtx
+		BaseCtx
 		// Output returns writed packet.
 		Output() *socket.Packet
 	}
 	// ReadCtx context method set for reading packet.
 	ReadCtx interface {
-		BackgroundCtx
+		BaseCtx
 		readedHeaderCtx
 		// Input returns readed packet.
 		Input() *socket.Packet
@@ -73,7 +75,7 @@ type (
 	// For example:
 	//  type HomePush struct{ PushCtx }
 	PushCtx interface {
-		BackgroundCtx
+		BaseCtx
 		readedHeaderCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
@@ -82,7 +84,7 @@ type (
 	// For example:
 	//  type HomePull struct{ PullCtx }
 	PullCtx interface {
-		BackgroundCtx
+		BaseCtx
 		readedHeaderCtx
 		// Input returns readed packet.
 		Input() *socket.Packet
@@ -99,7 +101,7 @@ type (
 	}
 	// UnknownPushCtx context method set for handling the unknown pushed packet.
 	UnknownPushCtx interface {
-		BackgroundCtx
+		BaseCtx
 		readedHeaderCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
@@ -110,7 +112,7 @@ type (
 	}
 	// UnknownPullCtx context method set for handling the unknown pulled packet.
 	UnknownPullCtx interface {
-		BackgroundCtx
+		BaseCtx
 		readedHeaderCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
@@ -140,12 +142,13 @@ type (
 		start           time.Time
 		cost            time.Duration
 		pluginContainer PluginContainer
+		handleErr       *Rerror
 		next            *readHandleCtx
 	}
 )
 
 var (
-	_ BackgroundCtx  = new(readHandleCtx)
+	_ BaseCtx        = new(readHandleCtx)
 	_ WriteCtx       = new(readHandleCtx)
 	_ ReadCtx        = new(readHandleCtx)
 	_ PushCtx        = new(readHandleCtx)
@@ -190,6 +193,7 @@ func (c *readHandleCtx) clean() {
 	c.query = nil
 	c.cost = 0
 	c.pluginContainer = nil
+	c.handleErr = nil
 	c.input.Reset(socket.WithNewBody(c.binding))
 	c.output.Reset()
 }
@@ -269,14 +273,6 @@ func (c *readHandleCtx) SetMeta(key, value string) {
 	c.output.Meta().Set(key, value)
 }
 
-// // SetRerrorMeta sets the rerror to 'X-Reply-Error' metadata.
-// func (c *readHandleCtx) SetRerrorMeta(rerr *Rerror) {
-// 	if rerr == nil {
-// 		return
-// 	}
-// 	rerr.SetToMeta(c.output.Meta())
-// }
-
 // GetBodyCodec gets the body codec type of the input packet.
 func (c *readHandleCtx) GetBodyCodec() byte {
 	return c.input.BodyCodec()
@@ -346,26 +342,30 @@ func (c *readHandleCtx) handle() {
 }
 
 func (c *readHandleCtx) bindPush(uri string) interface{} {
-	if c.pluginContainer.PostReadPushHeader(c) != nil {
+	c.handleErr = c.pluginContainer.PostReadPushHeader(c)
+	if c.handleErr != nil {
 		return nil
 	}
 	var err error
 	c.uri, err = url.Parse(uri)
 	if err != nil {
+		c.handleErr = rerror_badPacket.Copy()
+		c.handleErr.Detail = err.Error()
 		return nil
 	}
 
 	var ok bool
 	c.handler, ok = c.sess.pushRouter.get(c.Path())
 	if !ok {
+		c.handleErr = rerror_notFound
 		return nil
 	}
 
 	c.pluginContainer = c.handler.pluginContainer
 	c.arg = c.handler.NewArgValue()
 	c.input.SetBody(c.arg.Interface())
-
-	if c.pluginContainer.PreReadPushBody(c) != nil {
+	c.handleErr = c.pluginContainer.PreReadPushBody(c)
+	if c.handleErr != nil {
 		return nil
 	}
 
@@ -379,7 +379,7 @@ func (c *readHandleCtx) handlePush() {
 		c.sess.runlog(c.cost, c.input, nil, typePushHandle)
 	}()
 
-	if c.handler != nil {
+	if c.handleErr == nil && c.handler != nil {
 		if c.pluginContainer.PostReadPushBody(c) == nil {
 			if c.handler.isUnknown {
 				c.handler.unknownHandleFunc(c)
@@ -388,6 +388,9 @@ func (c *readHandleCtx) handlePush() {
 			}
 		}
 	}
+	if c.handleErr != nil {
+		Warnf("%s", c.handleErr.String())
+	}
 }
 
 func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
@@ -395,19 +398,25 @@ func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
 	c.output.SetUri(uri)
 	rerr := c.pluginContainer.PostReadPullHeader(c)
 	if rerr != nil {
+		c.handleErr = rerr
 		rerr.SetToMeta(c.output.Meta())
 		return nil
 	}
 	var err error
 	c.uri, err = url.Parse(uri)
 	if err != nil {
-		badPacket_metaSetting.Inject(c.output.Meta(), err.Error())
+		errStr := err.Error()
+		rerr = rerror_badPacket.Copy()
+		rerr.Detail = errStr
+		c.handleErr = rerr
+		badPacket_metaSetting.Inject(c.output.Meta(), errStr)
 		return nil
 	}
 
 	var ok bool
 	c.handler, ok = c.sess.pullRouter.get(c.Path())
 	if !ok {
+		c.handleErr = rerror_notFound
 		notFound_metaSetting.Inject(c.output.Meta())
 		return nil
 	}
@@ -422,6 +431,9 @@ func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
 
 	rerr = c.pluginContainer.PreReadPullBody(c)
 	if rerr != nil {
+		if c.handleErr == nil {
+			c.handleErr = rerr
+		}
 		rerr.SetToMeta(c.output.Meta())
 		return nil
 	}
@@ -442,11 +454,15 @@ func (c *readHandleCtx) handlePull() {
 	// copy transfer filter pipe
 	c.output.AppendXferPipeFrom(c.input)
 
+	if c.handleErr == nil {
+		c.handleErr = NewRerrorFromMeta(c.output.Meta())
+	}
+
 	// handle pull
-	if !hasRerror(c.output.Meta()) {
-		rerr := c.pluginContainer.PostReadPullBody(c)
-		if rerr != nil {
-			rerr.SetToMeta(c.output.Meta())
+	if c.handleErr == nil {
+		c.handleErr = c.pluginContainer.PostReadPullBody(c)
+		if c.handleErr != nil {
+			c.handleErr.SetToMeta(c.output.Meta())
 		} else {
 			if c.handler.isUnknown {
 				c.handler.unknownHandleFunc(c)
@@ -457,19 +473,30 @@ func (c *readHandleCtx) handlePull() {
 	}
 
 	// reply pull
-	c.pluginContainer.PreWriteReply(c)
-
+	rerr := c.pluginContainer.PreWriteReply(c)
+	if rerr == nil {
+		c.handleErr = rerr
+	}
 	if err := c.sess.write(c.output); err != nil {
-		writeFailed_metaSetting.Inject(c.output.Meta(), err.Error())
+		errStr := err.Error()
+		if c.handleErr == nil {
+			rerr = rerror_writeFailed.Copy()
+			rerr.Detail = errStr
+			c.handleErr = rerr
+		}
+		writeFailed_metaSetting.Inject(c.output.Meta(), errStr)
 	}
 
-	c.pluginContainer.PostWriteReply(c)
+	rerr = c.pluginContainer.PostWriteReply(c)
+	if c.handleErr == nil {
+		c.handleErr = rerr
+	}
 }
 
 func (c *readHandleCtx) bindReply(seq uint64, uri string) interface{} {
 	pullCmd, ok := c.sess.pullCmdMap.Load(seq)
 	if !ok {
-		Debugf("bindReply() not found: %v", c.input)
+		Warnf("not found pull cmd: %v", c.input)
 		return nil
 	}
 	c.pullCmd = pullCmd.(*PullCmd)
@@ -491,10 +518,10 @@ func (c *readHandleCtx) bindReply(seq uint64, uri string) interface{} {
 // handleReply handles pull reply.
 func (c *readHandleCtx) handleReply() {
 	if c.pullCmd == nil {
-		Debugf("c.pullCmd == nil:\npacket:%v\n", c.input)
 		return
 	}
 	defer func() {
+		c.handleErr = c.pullCmd.rerr
 		c.pullCmd.done()
 		c.pullCmd.cost = c.Peer().timeSince(c.pullCmd.start)
 		c.sess.runlog(c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
@@ -507,6 +534,11 @@ func (c *readHandleCtx) handleReply() {
 		rerr = c.pluginContainer.PostReadReplyBody(c)
 	}
 	c.pullCmd.rerr = rerr
+}
+
+// Rerror returns the handle error.
+func (c *readHandleCtx) Rerror() *Rerror {
+	return c.handleErr
 }
 
 // InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.

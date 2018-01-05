@@ -29,11 +29,11 @@ type (
 	}
 	PostDialPlugin interface {
 		Plugin
-		PostDial(PreSession) *Rerror
+		PostDial(Session) *Rerror
 	}
 	PostAcceptPlugin interface {
 		Plugin
-		PostAccept(PreSession) *Rerror
+		PostAccept(Session) *Rerror
 	}
 	PreWritePullPlugin interface {
 		Plugin
@@ -61,7 +61,7 @@ type (
 	}
 	PreReadHeaderPlugin interface {
 		Plugin
-		PreReadHeader(BackgroundCtx) *Rerror
+		PreReadHeader(BaseCtx) *Rerror
 	}
 	PostReadPullHeaderPlugin interface {
 		Plugin
@@ -101,7 +101,7 @@ type (
 	}
 	PostDisconnectPlugin interface {
 		Plugin
-		PostDisconnect(PostSession) *Rerror
+		PostDisconnect(BaseSession) *Rerror
 	}
 
 	// PluginContainer plugin container that defines base methods to manage plugins.
@@ -112,15 +112,15 @@ type (
 		GetAll() []Plugin
 
 		PostReg(*Handler) *Rerror
-		PostDial(PreSession) *Rerror
-		PostAccept(PreSession) *Rerror
+		PostDial(Session) *Rerror
+		PostAccept(Session) *Rerror
 		PreWritePull(WriteCtx) *Rerror
 		PostWritePull(WriteCtx) *Rerror
 		PreWriteReply(WriteCtx) *Rerror
 		PostWriteReply(WriteCtx) *Rerror
 		PreWritePush(WriteCtx) *Rerror
 		PostWritePush(WriteCtx) *Rerror
-		PreReadHeader(BackgroundCtx) *Rerror
+		PreReadHeader(BaseCtx) *Rerror
 
 		PostReadPullHeader(ReadCtx) *Rerror
 		PreReadPullBody(ReadCtx) *Rerror
@@ -134,7 +134,7 @@ type (
 		PreReadReplyBody(ReadCtx) *Rerror
 		PostReadReplyBody(ReadCtx) *Rerror
 
-		PostDisconnect(PostSession) *Rerror
+		PostDisconnect(BaseSession) *Rerror
 
 		cloneAdd(...Plugin) (PluginContainer, error)
 	}
@@ -234,7 +234,7 @@ func (p *pluginContainer) PostReg(h *Handler) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostDial(sess PreSession) *Rerror {
+func (p *pluginContainer) PostDial(sess Session) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
@@ -247,7 +247,7 @@ func (p *pluginContainer) PostDial(sess PreSession) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostAccept(sess PreSession) *Rerror {
+func (p *pluginContainer) PostAccept(sess Session) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
@@ -338,7 +338,7 @@ func (p *pluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreReadHeader(ctx BackgroundCtx) *Rerror {
+func (p *pluginContainer) PreReadHeader(ctx BaseCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
@@ -468,7 +468,7 @@ func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostDisconnect(sess PostSession) *Rerror {
+func (p *pluginContainer) PostDisconnect(sess BaseSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDisconnectPlugin); ok {

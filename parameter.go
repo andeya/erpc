@@ -28,8 +28,6 @@ const (
 	TypePull      byte = 1
 	TypeReply     byte = 2 // reply to pull
 	TypePush      byte = 3
-	// TypeAuth      byte = 4
-	// TypeHeartbeat byte = 5
 )
 
 // TypeText returns the packet type text.
@@ -77,15 +75,17 @@ var (
 	rerror_dialFailed  = NewRerror(CodeDialFailed, "Dial Failed", "")
 	rerror_connClosed  = NewRerror(CodeConnClosed, "Connection Closed", "")
 	rerror_writeFailed = NewRerror(CodeWriteFailed, "Write Failed", "")
+	rerror_badPacket   = NewRerror(CodeBadPacket, "Bad Packet", "")
+	rerror_notFound    = NewRerror(CodeNotFound, "Not Found", "")
 )
 
 var (
 	// methodNotAllowed_metaSetting = metaSetting(NewRerror(405, "Type Not Allowed", "").String())
 	connClosed_metaSetting     = metaSetting(rerror_connClosed.String())
-	notFound_metaSetting       = metaSetting(NewRerror(CodeNotFound, "Not Found", "").String())
+	notFound_metaSetting       = metaSetting(rerror_notFound.String())
 	writeFailed_metaSetting    = metaSetting(rerror_writeFailed.String())
 	notImplemented_metaSetting = metaSetting(NewRerror(CodeNotImplemented, "Not Implemented", "").String())
-	badPacket_metaSetting      = metaSetting(NewRerror(CodeBadPacket, "Bad Packet", "").String())
+	badPacket_metaSetting      = metaSetting(rerror_badPacket.String())
 )
 
 type metaSetting string

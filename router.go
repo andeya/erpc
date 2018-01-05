@@ -28,44 +28,44 @@ import (
 
 // Router the router of pull or push.
 //
-// PullController Model:
-//  type Aaa struct {
-//  	tp.PullCtx
+// PullController Model Demo:
+//  type XxxPullController struct {
+//      tp.PullCtx
 //  }
 //  // XxZz register the route: /aaa/xx_zz
-//  func (x *Aaa) XxZz(args *<T>) (<T>, *tp.Rerror) {
-//  	...
-//  	return r, nil
+//  func (x *XxxPullController) XxZz(args *<T>) (<T>, *tp.Rerror) {
+//      ...
+//      return r, nil
 //  }
 //  // YyZz register the route: /aaa/yy_zz
-//  func (x *Aaa) YyZz(args *<T>) (<T>, *tp.Rerror) {
-//  	...
-//  	return r, nil
+//  func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
+//      ...
+//      return r, nil
 //  }
 //
-// PushController Model:
-//  type Bbb struct {
-//  	tp.PushCtx
+// PushController Model Demo:
+//  type XxxPushController struct {
+//      tp.PushCtx
 //  }
 //  // XxZz register the route: /bbb/yy_zz
-//  func (b *Bbb) XxZz(args *<T>) {
-//  	...
-//  	return r, nil
+//  func (b *XxxPushController) XxZz(args *<T>) *tp.Rerror {
+//      ...
+//      return r, nil
 //  }
 //  // YyZz register the route: /bbb/yy_zz
-//  func (b *Bbb) YyZz(args *<T>) {
-//  	...
-//  	return r, nil
+//  func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
+//      ...
+//      return r, nil
 //  }
 //
-// UnknownPullHandler Type:
-//  func(ctx UnknownPullCtx) (interface{}, *Rerror) {
-//  	...
-//  	return r, nil
+// UnknownPullHandler Type Demo:
+//  func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+//      ...
+//      return r, nil
 //  }
 //
-// UnknownPushHandler Type:
-//  func(ctx UnknownPushCtx)
+// UnknownPushHandler Type Demo:
+//  func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror
 type (
 	Router struct {
 		handlers       map[string]*Handler
@@ -156,6 +156,7 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 		h.unknownHandleFunc = func(ctx *readHandleCtx) {
 			body, rerr := fn(ctx)
 			if rerr != nil {
+				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
 			} else if body != nil {
 				ctx.output.SetBody(body)
@@ -167,15 +168,12 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 
 	case "push":
 		h.name = "unknown_push_handle"
-		fn, ok := unknownHandler.(func(ctx UnknownPushCtx))
+		fn, ok := unknownHandler.(func(ctx UnknownPushCtx) *Rerror)
 		if !ok {
-			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPushCtx)", h.name)
+			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPushCtx) *Rerror", h.name)
 		}
 		h.unknownHandleFunc = func(ctx *readHandleCtx) {
-			fn(ctx)
-			if ctx.output.BodyCodec() == codec.NilCodecId {
-				ctx.output.SetBodyCodec(ctx.input.BodyCodec())
-			}
+			ctx.handleErr = fn(ctx)
 		}
 	}
 
@@ -306,8 +304,8 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			ctx.output.SetBody(rets[0].Interface())
 			rerr, _ := rets[1].Interface().(*Rerror)
 			if rerr != nil {
+				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
-
 			} else if ctx.output.Body() != nil && ctx.output.BodyCodec() == codec.NilCodecId {
 				ctx.output.SetBodyCodec(ctx.input.BodyCodec())
 			}
@@ -410,15 +408,21 @@ func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			return nil, errors.Errorf("register push handler: %s.%s args type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 		// Method does not need out argument.
-		if mtype.NumOut() != 0 {
-			return nil, errors.Errorf("register push handler: %s.%s does not need out argument, but have %d", ctype.String(), mname, mtype.NumOut())
+		if mtype.NumOut() != 1 {
+			return nil, errors.Errorf("register push handler: %s.%s needs one out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
+		}
+
+		// The return type of the method must be Error.
+		if returnType := mtype.Out(0); !isRerrorType(returnType.String()) {
+			return nil, errors.Errorf("register push handler: %s.%s reply type %s not *tp.Rerror", ctype.String(), mname, returnType)
 		}
 
 		var methodFunc = method.Func
 		var handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
 			obj := pool.Get().(*PushCtrlValue)
 			*obj.ctxPtr = ctx
-			methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
+			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
+			ctx.handleErr, _ = rets[0].Interface().(*Rerror)
 			pool.Put(obj)
 		}
 		handlers = append(handlers, &Handler{

@@ -195,7 +195,7 @@ func (*Peer) Listen(protoFunc ...socket.ProtoFunc) error
 
 ## 5. Usage
 
-- Create a server or client peer
+- Peer(server or client) Demo
 
 ```go
 // Start a server
@@ -211,66 +211,58 @@ var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
-- Define a controller and handler for pull request
+- PullController Model Demo
 
 ```go
-// Home controller
-type Home struct {
-	tp.PullCtx
+type XxxPullController struct {
+    tp.PullCtx
 }
-
-// Test handler
-func (h *Home) Test(args *[2]int) (int, *tp.Rerror) {
-	a := (*args)[0]
-	b := (*args)[1]
-	return a + b, nil
+// XxZz register the route: /aaa/xx_zz
+func (x *XxxPullController) XxZz(args *<T>) (<T>, *tp.Rerror) {
+    ...
+    return r, nil
+}
+// YyZz register the route: /aaa/yy_zz
+func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
+    ...
+    return r, nil
 }
 ```
 
-- Define controller and handler for push request
+- PushController Model Demo
 
 ```go
-// Msg controller
-type Msg struct {
-	tp.PushCtx
+type XxxPushController struct {
+    tp.PushCtx
 }
-
-// Test handler
-func (m *Msg) Test(args *map[string]interface{}) {
-	tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", m.Ip(), args, m.Query())
+// XxZz register the route: /bbb/yy_zz
+func (b *XxxPushController) XxZz(args *<T>) *tp.Rerror {
+    ...
+    return r, nil
+}
+// YyZz register the route: /bbb/yy_zz
+func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
+    ...
+    return r, nil
 }
 ```
 
-- Define a handler for unknown pull request
+- UnknownPullHandler Type Demo
 
 ```go
-func UnknownPullHandle(ctx tp.UnknownPullCtx, body *[]byte) (interface{}, *tp.Rerror) {
-	var v interface{}
-	codecId, err := ctx.Unmarshal(*body, &v, true)
-	if err != nil {
-		return nil, tp.New*Rerror(0, err.Error())
-	}
-	tp.Infof("receive unknown pull:\n codec: %s\n content: %#v", codecId, v)
-	return "this is reply string for unknown pull", nil
-}
-
-```
-
-- Define a handler for unknown push request
-
-```go
-func UnknownPushHandle(ctx tp.UnknownPushCtx, body *[]byte) {
-	var v interface{}
-	codecId, err := ctx.Unmarshal(*body, &v, true)
-	if err != nil {
-		tp.Errorf("%v", err)
-	} else {
-		tp.Infof("receive unknown push:\n codec: %s\n content: %#v", codecId, v)
-	}
+func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+    ...
+    return r, nil
 }
 ```
 
-- Define a plugin
+- UnknownPushHandler Type Demo
+
+```go
+func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror
+```
+
+- Plugin Demo
 
 ```go
 // AliasPlugin can be used to set aliases for pull or push services
@@ -323,7 +315,7 @@ aliasesPlugin.Alias("/alias", "/origin")
 }
 ```
 
-## 6. Demo
+## 6. Complete Demo
 
 ### server.go
 
@@ -478,8 +470,9 @@ type Push struct {
 }
 
 // Test handler
-func (p *Push) Test(args *map[string]interface{}) {
+func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
     tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+    return nil
 }
 ```
 
@@ -500,7 +493,7 @@ project|description
 [pholcus](https://github.com/henrylee2cn/pholcus)|Pholcus is a distributed, high concurrency and powerful web crawler software
 [ants](https://github.com/henrylee2cn/ants)|Ants is a set of microservices-system based on Teleport framework and similar to lightweight service mesh
 
-## 9. Business users
+## 9. Business Users
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;

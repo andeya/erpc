@@ -74,6 +74,7 @@ type Push struct {
 }
 
 // Test handler
-func (p *Push) Test(args *map[string]interface{}) {
+func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
 	tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+	return nil
 }

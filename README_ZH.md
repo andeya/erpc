@@ -195,7 +195,7 @@ func (*Peer) Listen(protoFunc ...socket.ProtoFunc) error
 
 ## 5. 用法
 
-- 创建一个Peer端点，服务端或客户端
+- Peer端点（服务端或客户端）示例
 
 ```go
 // Start a server
@@ -211,66 +211,59 @@ var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
-- 定义处理拉取请求的控制器（命名空间）及其操作
+
+- PullController模板示例
 
 ```go
-// Home controller
-type Home struct {
+type XxxPullController struct {
     tp.PullCtx
 }
-
-// Test handler
-func (h *Home) Test(args *[2]int) (int, *tp.Rerror) {
-    a := (*args)[0]
-    b := (*args)[1]
-    return a + b, nil
+// XxZz register the route: /aaa/xx_zz
+func (x *XxxPullController) XxZz(args *<T>) (<T>, *tp.Rerror) {
+    ...
+    return r, nil
+}
+// YyZz register the route: /aaa/yy_zz
+func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
+    ...
+    return r, nil
 }
 ```
 
-- 定义处理推送请求的控制器（命名空间）及其操作
+- PushController模板示例
 
 ```go
-// Msg controller
-type Msg struct {
+type XxxPushController struct {
     tp.PushCtx
 }
-
-// Test handler
-func (m *Msg) Test(args *map[string]interface{}) {
-    tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", m.Ip(), args, m.Query())
+// XxZz register the route: /bbb/yy_zz
+func (b *XxxPushController) XxZz(args *<T>) *tp.Rerror {
+    ...
+    return r, nil
+}
+// YyZz register the route: /bbb/yy_zz
+func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
+    ...
+    return r, nil
 }
 ```
 
-- 定义处理未知拉取请求的操作
+- UnknownPullHandler模板示例
 
 ```go
-func UnknownPullHandle(ctx tp.UnknownPullCtx, body *[]byte) (interface{}, *tp.Rerror) {
-    var v interface{}
-    codecId, err := ctx.Unmarshal(*body, &v, true)
-    if err != nil {
-        return nil, tp.New*Rerror(0, err.Error())
-    }
-    tp.Infof("receive unknown pull:\n codec: %s\n content: %#v", codecId, v)
-    return "this is reply string for unknown pull", nil
+func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+    ...
+    return r, nil
 }
-
 ```
 
-- 定义处理未知推送请求的操作
+- UnknownPushHandler模板示例
 
 ```go
-func UnknownPushHandle(ctx tp.UnknownPushCtx, body *[]byte) {
-    var v interface{}
-    codecId, err := ctx.Unmarshal(*body, &v, true)
-    if err != nil {
-        tp.Errorf("%v", err)
-    } else {
-        tp.Infof("receive unknown push:\n codec: %s\n content: %#v", codecId, v)
-    }
-}
+func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror
 ```
 
-- 定义插件
+- 插件示例
 
 ```go
 // AliasPlugin can be used to set aliases for pull or push services
@@ -306,24 +299,24 @@ func (p *AliasPlugin) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
 }
 ```
 
-- 注册以上操作和插件到路由
+- 注册以上操作和插件示例到路由
 
 ```go
 aliasesPlugin := NewAliasPlugin()
 aliasesPlugin.Alias("/alias", "/origin")
 {
     pullGroup := peer.PullRouter.Group("pull", aliasesPlugin)
-    pullGroup.Reg(new(Home))
-    peer.PullRouter.SetUnknown(UnknownPullHandle)
+    pullGroup.Reg(new(XxxPullController))
+    peer.PullRouter.SetUnknown(XxxUnknownPullHandle)
 }
 {
     pushGroup := peer.PushRouter.Group("push")
-    pushGroup.Reg(new(Msg), aliasesPlugin)
-    peer.PushRouter.SetUnknown(UnknownPushHandle)
+    pushGroup.Reg(new(XxxPushController), aliasesPlugin)
+    peer.PushRouter.SetUnknown(XxxUnknownPushHandle)
 }
 ```
 
-## 6. 示例
+## 6. 完整示例
 
 ### server.go
 
@@ -478,8 +471,9 @@ type Push struct {
 }
 
 // Test handler
-func (p *Push) Test(args *map[string]interface{}) {
+func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
     tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+    return nil
 }
 ```
 
