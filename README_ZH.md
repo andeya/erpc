@@ -483,6 +483,16 @@ func (p *Push) Test(args *map[string]interface{}) {
 }
 ```
 
-## 7. 开源协议
+## 7. 扩展包
+
+### 插件
+
+name|import|description
+----|------|-----------
+[binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
+
+[扩展库](https://github.com/henrylee2cn/tp-ext)
+
+## 8. 开源协议
 
 Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) 协议发布
