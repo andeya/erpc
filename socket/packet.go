@@ -268,15 +268,15 @@ func (p *Packet) UnmarshalNewBody(bodyBytes []byte) error {
 		p.body = nil
 		return nil
 	}
-	c, err := codec.Get(p.bodyCodec)
-	if err != nil {
-		return err
-	}
 	p.body = p.newBodyFunc(p)
 	switch body := p.body.(type) {
 	default:
 		if len(bodyBytes) == 0 {
 			return nil
+		}
+		c, err := codec.Get(p.bodyCodec)
+		if err != nil {
+			return err
 		}
 		return c.Unmarshal(bodyBytes, p.body)
 	case nil:
