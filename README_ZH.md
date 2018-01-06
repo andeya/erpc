@@ -307,16 +307,14 @@ func (p *AliasPlugin) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
 ```go
 aliasesPlugin := NewAliasPlugin()
 aliasesPlugin.Alias("/alias", "/origin")
-{
-    pullGroup := peer.PullRouter.Group("pull", aliasesPlugin)
-    pullGroup.Reg(new(XxxPullController))
-    peer.PullRouter.SetUnknown(XxxUnknownPullHandle)
-}
-{
-    pushGroup := peer.PushRouter.Group("push")
-    pushGroup.Reg(new(XxxPushController), aliasesPlugin)
-    peer.PushRouter.SetUnknown(XxxUnknownPushHandle)
-}
+
+pullGroup := peer.PullRouter.Group("pull", aliasesPlugin)
+pullGroup.Reg(new(XxxPullController))
+peer.PullRouter.SetUnknown(XxxUnknownPullHandler)
+
+pushGroup := peer.PushRouter.Group("push")
+pushGroup.Reg(new(XxxPushController), aliasesPlugin)
+peer.PushRouter.SetUnknown(XxxUnknownPushHandler)
 ```
 
 ## 6. 完整示例
