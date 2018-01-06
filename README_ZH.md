@@ -486,6 +486,12 @@ package|import|description
 ----|------|-----------
 [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
 
+### 其他
+
+package|import|description
+----|------|-----------
+[heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/sundry-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/sundry-heartbeat"`|A generic timing heartbeat package
+
 [扩展库](https://github.com/henrylee2cn/tp-ext)
 
 ## 8. 基于Teleport的项目
