@@ -260,7 +260,10 @@ func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 - UnknownPushHandler模板示例
 
 ```go
-func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror
+func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
+    ...
+    return nil
+}
 ```
 
 - 插件示例

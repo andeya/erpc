@@ -259,7 +259,10 @@ func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 - UnknownPushHandler Type Demo
 
 ```go
-func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror
+func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
+    ...
+    return nil
+}
 ```
 
 - Plugin Demo

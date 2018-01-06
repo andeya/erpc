@@ -29,11 +29,11 @@ type (
 	}
 	PostDialPlugin interface {
 		Plugin
-		PostDial(Session) *Rerror
+		PostDial(PreSession) *Rerror
 	}
 	PostAcceptPlugin interface {
 		Plugin
-		PostAccept(Session) *Rerror
+		PostAccept(PreSession) *Rerror
 	}
 	PreWritePullPlugin interface {
 		Plugin
@@ -101,7 +101,7 @@ type (
 	}
 	PostDisconnectPlugin interface {
 		Plugin
-		PostDisconnect(BaseSession) *Rerror
+		PostDisconnect(PostSession) *Rerror
 	}
 
 	// PluginContainer plugin container that defines base methods to manage plugins.
@@ -112,8 +112,8 @@ type (
 		GetAll() []Plugin
 
 		PostReg(*Handler) *Rerror
-		PostDial(Session) *Rerror
-		PostAccept(Session) *Rerror
+		PostDial(PreSession) *Rerror
+		PostAccept(PreSession) *Rerror
 		PreWritePull(WriteCtx) *Rerror
 		PostWritePull(WriteCtx) *Rerror
 		PreWriteReply(WriteCtx) *Rerror
@@ -134,7 +134,7 @@ type (
 		PreReadReplyBody(ReadCtx) *Rerror
 		PostReadReplyBody(ReadCtx) *Rerror
 
-		PostDisconnect(BaseSession) *Rerror
+		PostDisconnect(PostSession) *Rerror
 
 		cloneAdd(...Plugin) (PluginContainer, error)
 	}
@@ -234,7 +234,7 @@ func (p *pluginContainer) PostReg(h *Handler) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostDial(sess Session) *Rerror {
+func (p *pluginContainer) PostDial(sess PreSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
@@ -247,7 +247,7 @@ func (p *pluginContainer) PostDial(sess Session) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostAccept(sess Session) *Rerror {
+func (p *pluginContainer) PostAccept(sess PreSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
@@ -468,7 +468,7 @@ func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostDisconnect(sess BaseSession) *Rerror {
+func (p *pluginContainer) PostDisconnect(sess PostSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDisconnectPlugin); ok {

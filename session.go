@@ -33,22 +33,27 @@ import (
 
 // Session a connection session.
 type (
-	BaseSession interface {
-		// Id returns the session id.
-		Id() string
-		// Peer returns the peer.
-		Peer() *Peer
-		// LocalIp returns the local peer ip.
-		LocalIp() string
-		// RemoteIp returns the remote peer ip.
-		RemoteIp() string
-		// Public returns temporary public data of session(socket).
-		Public() goutil.Map
-		// PublicLen returns the length of public data of session(socket).
-		PublicLen() int
+	PreSession interface {
+		PostSession
+		// SetId sets the session id.
+		SetId(newId string)
+		// Send sends packet to peer, before the formal connection.
+		// Note: does not support automatic redial after disconnection.
+		Send(output *socket.Packet) *Rerror
+		// Receive receives a packet from peer, before the formal connection.
+		// Note: does not support automatic redial after disconnection.
+		Receive(input *socket.Packet) *Rerror
+		// ReadTimeout returns readdeadline for underlying net.Conn.
+		ReadTimeout() time.Duration
+		// ReadTimeout returns readdeadline for underlying net.Conn.
+		SetReadTimeout(duration time.Duration)
+		// WriteTimeout returns writedeadline for underlying net.Conn.
+		SetWriteTimeout(duration time.Duration)
+		// WriteTimeout returns writedeadline for underlying net.Conn.
+		WriteTimeout() time.Duration
 	}
 	Session interface {
-		BaseSession
+		PostSession
 		// SetId sets the session id.
 		SetId(newId string)
 		// Close closes the session.
@@ -77,6 +82,20 @@ type (
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
 	}
+	PostSession interface {
+		// Id returns the session id.
+		Id() string
+		// Peer returns the peer.
+		Peer() *Peer
+		// LocalIp returns the local peer ip.
+		LocalIp() string
+		// RemoteIp returns the remote peer ip.
+		RemoteIp() string
+		// Public returns temporary public data of session(socket).
+		Public() goutil.Map
+		// PublicLen returns the length of public data of session(socket).
+		PublicLen() int
+	}
 
 	session struct {
 		peer                  *Peer
@@ -100,8 +119,9 @@ type (
 )
 
 var (
-	_ BaseSession = new(session)
+	_ PreSession  = new(session)
 	_ Session     = new(session)
+	_ PostSession = new(session)
 )
 
 func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
@@ -170,10 +190,30 @@ func (s *session) SetWriteTimeout(duration time.Duration) {
 	atomic.StoreInt32(&s.writeTimeout, int32(duration))
 }
 
-// Receive receives a packet from peer.
+// Send sends packet to peer, before the formal connection.
 // Note: does not support automatic redial after disconnection.
-func (s *session) Receive(input *socket.Packet) error {
-	return s.socket.ReadPacket(input)
+func (s *session) Send(output *socket.Packet) *Rerror {
+	err := s.socket.WritePacket(output)
+	if err != nil {
+		rerr := rerror_connClosed.Copy()
+		rerr.Detail = err.Error()
+		return rerr
+	}
+	return nil
+}
+
+// Receive receives a packet from peer, before the formal connection.
+// Note: does not support automatic redial after disconnection.
+func (s *session) Receive(input *socket.Packet) *Rerror {
+	if readTimeout := s.ReadTimeout(); readTimeout > 0 {
+		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
+	}
+	if err := s.socket.ReadPacket(input); err != nil {
+		rerr := rerror_connClosed.Copy()
+		rerr.Detail = err.Error()
+		return rerr
+	}
+	return nil
 }
 
 // AsyncPull sends a packet and receives reply asynchronously.
@@ -357,25 +397,16 @@ func (s *session) startReadAndHandle() {
 			s.peer.putContext(ctx, false)
 			return
 		}
-
 		if readTimeout = s.ReadTimeout(); readTimeout > 0 {
 			s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 		}
-
 		err = s.socket.ReadPacket(ctx.input)
-		if err != nil {
+		if err != nil || !s.goonRead() {
 			s.peer.putContext(ctx, false)
 			// DEBUG:
 			// Debugf("s.socket.ReadPacket(ctx.input): err: %v", err)
 			return
 		}
-		if !s.goonRead() {
-			// DEBUG:
-			// Debugf("s.socket.ReadPacket(ctx.input): s.goonRead()==false")
-			s.peer.putContext(ctx, false)
-			return
-		}
-
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
 			defer func() {

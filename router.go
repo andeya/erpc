@@ -65,7 +65,10 @@ import (
 //  }
 //
 // UnknownPushHandler Type Demo:
-//  func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror
+//  func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
+//      ...
+//      return nil
+//  }
 type (
 	Router struct {
 		handlers       map[string]*Handler
