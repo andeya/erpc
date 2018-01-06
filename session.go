@@ -38,7 +38,9 @@ type (
 		// SetId sets the session id.
 		SetId(newId string)
 		// Send sends packet to peer, before the formal connection.
-		// Note: does not support automatic redial after disconnection.
+		// Note:
+		// the external setting seq is invalid, the internal will be forced to set;
+		// does not support automatic redial after disconnection.
 		Send(output *socket.Packet) *Rerror
 		// Receive receives a packet from peer, before the formal connection.
 		// Note: does not support automatic redial after disconnection.
@@ -191,8 +193,14 @@ func (s *session) SetWriteTimeout(duration time.Duration) {
 }
 
 // Send sends packet to peer, before the formal connection.
-// Note: does not support automatic redial after disconnection.
+// Note:
+// the external setting seq is invalid, the internal will be forced to set;
+// does not support automatic redial after disconnection.
 func (s *session) Send(output *socket.Packet) *Rerror {
+	s.seqLock.Lock()
+	output.SetSeq(s.seq)
+	s.seq++
+	s.seqLock.Unlock()
 	err := s.socket.WritePacket(output)
 	if err != nil {
 		rerr := rerror_connClosed.Copy()
