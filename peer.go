@@ -268,7 +268,7 @@ func (p *Peer) Listen(protoFunc ...socket.ProtoFunc) error {
 				sess.Close()
 				return
 			}
-			Tracef("accept session(network:%s, addr:%s) ok", network, sess.RemoteIp(), sess.Id())
+			Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteIp(), sess.Id())
 			p.sessHub.Set(sess)
 			sess.startReadAndHandle()
 		})
@@ -297,7 +297,7 @@ func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 		sess.Close()
 		return nil, rerr.ToError()
 	}
-	Tracef("accept session(network:%s, addr:%s) ok", network, sess.RemoteIp(), sess.Id())
+	Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteIp(), sess.Id())
 	p.sessHub.Set(sess)
 	AnywayGo(sess.startReadAndHandle)
 	return sess, nil

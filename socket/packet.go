@@ -264,9 +264,6 @@ func (p *Packet) MarshalBody() ([]byte, error) {
 // UnmarshalNewBody unmarshal the encoded data to a new body.
 // Note: seq, ptype, uri must be setted already.
 func (p *Packet) UnmarshalNewBody(bodyBytes []byte) error {
-	if len(bodyBytes) == 0 {
-		return nil
-	}
 	if p.newBodyFunc == nil {
 		p.body = nil
 		return nil
@@ -278,6 +275,9 @@ func (p *Packet) UnmarshalNewBody(bodyBytes []byte) error {
 	p.body = p.newBodyFunc(p)
 	switch body := p.body.(type) {
 	default:
+		if len(bodyBytes) == 0 {
+			return nil
+		}
 		return c.Unmarshal(bodyBytes, p.body)
 	case nil:
 		return nil
