@@ -16,6 +16,7 @@ package tp
 
 import (
 	"log"
+	"sync"
 
 	"github.com/henrylee2cn/go-logging"
 	"github.com/henrylee2cn/go-logging/color"
@@ -24,6 +25,10 @@ import (
 
 // Logger interface
 type Logger interface {
+	// Level returns the logger's level.
+	Level() string
+	// SetLevel sets the logger's level.
+	SetLevel(level string)
 	// // Print formats using the default formats for its operands and writes to standard output.
 	// // Spaces are added between operands when neither is a string.
 	// // It returns the number of bytes written and any write error encountered.
@@ -96,33 +101,55 @@ var (
 )
 
 func init() {
-	setRawlogger()
+	SetLogger(newDefaultlogger(__loglevel__))
 }
 
-func setRawlogger() {
+func newDefaultlogger(level string) Logger {
+	l := &Log{
+		level: level,
+	}
+	l.newSet()
+	return l
+}
+
+type Log struct {
+	*logging.Logger
+	level string
+	mu    sync.RWMutex
+}
+
+func (l *Log) newSet() {
 	var consoleLogBackend = &logging.LogBackend{
 		Logger: log.New(color.NewColorableStdout(), "", 0),
 		Color:  true,
 	}
 	consoleFormat := logging.MustStringFormatter("[%{time:2006/01/02 15:04:05.000}] %{color:bold}[%{level:.4s}]%{color:reset} %{message}<%{longfile}>")
 	consoleBackendLevel := logging.AddModuleLevel(logging.NewBackendFormatter(consoleLogBackend, consoleFormat))
-	level, err := logging.LogLevel(__loglevel__)
+	level, err := logging.LogLevel(l.level)
 	if err != nil {
 		panic(err)
 	}
 	consoleBackendLevel.SetLevel(level, "")
-	logger := logging.NewLogger("teleport")
-	logger.SetBackend(consoleBackendLevel)
-	logger.ExtraCalldepth++
-
-	SetLogger(logger)
+	l.Logger = logging.NewLogger("teleport")
+	l.Logger.SetBackend(consoleBackendLevel)
+	l.Logger.ExtraCalldepth++
 }
 
-// SetRawlogLevel sets the default logger's level.
+// Level returns the logger's level.
 // Note: Concurrent is not safe!
-func SetRawlogLevel(level string) {
-	__loglevel__ = level
-	setRawlogger()
+func (l *Log) Level() string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.level
+}
+
+// SetLevel sets the logger's level.
+// Note: Concurrent is not safe!
+func (l *Log) SetLevel(level string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.level = level
+	l.newSet()
 }
 
 // SetLogger sets global logger.
@@ -133,6 +160,11 @@ func SetLogger(logger Logger) {
 	}
 	globalLogger = logger
 	graceful.SetLog(logger)
+}
+
+// SetLoggerLevel sets the logger's level.
+func SetLoggerLevel(level string) {
+	globalLogger.SetLevel(level)
 }
 
 // Printf formats according to a format specifier and writes to standard output.
