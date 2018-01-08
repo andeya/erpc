@@ -33,23 +33,22 @@ import (
 
 // Peer peer which is server or client.
 type Peer struct {
-	PullRouter          *Router
-	PushRouter          *Router
-	pluginContainer     *PluginContainer
-	sessHub             *SessionHub
-	closeCh             chan struct{}
-	freeContext         *readHandleCtx
-	ctxLock             sync.Mutex
-	defaultReadTimeout  time.Duration // readdeadline for underlying net.Conn
-	defaultWriteTimeout time.Duration // writedeadline for underlying net.Conn
-	tlsConfig           *tls.Config
-	slowCometDuration   time.Duration
-	defaultBodyCodec    byte
-	printBody           bool
-	countTime           bool
-	timeNow             func() time.Time
-	timeSince           func(time.Time) time.Duration
-	mu                  sync.Mutex
+	PullRouter, PushRouter *RootRouter
+	pluginContainer        *PluginContainer
+	sessHub                *SessionHub
+	closeCh                chan struct{}
+	freeContext            *readHandleCtx
+	ctxLock                sync.Mutex
+	defaultReadTimeout     time.Duration // readdeadline for underlying net.Conn
+	defaultWriteTimeout    time.Duration // writedeadline for underlying net.Conn
+	tlsConfig              *tls.Config
+	slowCometDuration      time.Duration
+	defaultBodyCodec       byte
+	printBody              bool
+	countTime              bool
+	timeNow                func() time.Time
+	timeSince              func(time.Time) time.Duration
+	mu                     sync.Mutex
 
 	network string
 
@@ -72,8 +71,8 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 	}
 
 	var p = &Peer{
-		PullRouter:          newPullRouter(pluginContainer),
-		PushRouter:          newPushRouter(pluginContainer),
+		PullRouter:          &RootRouter{newPullRouter(pluginContainer)},
+		PushRouter:          &RootRouter{newPushRouter(pluginContainer)},
 		pluginContainer:     pluginContainer,
 		sessHub:             newSessionHub(),
 		defaultReadTimeout:  cfg.DefaultReadTimeout,

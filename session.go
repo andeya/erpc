@@ -100,20 +100,19 @@ type (
 	}
 
 	session struct {
-		peer                  *Peer
-		pullRouter            *Router
-		pushRouter            *Router
-		seq                   uint64
-		seqLock               sync.Mutex
-		pullCmdMap            goutil.Map
-		socket                socket.Socket
-		status                int32 // 0:ok, 1:active closed, 2:disconnect
-		closeLock             sync.RWMutex
-		writeLock             sync.Mutex
-		graceCtxWaitGroup     sync.WaitGroup
-		gracepullCmdWaitGroup sync.WaitGroup
-		readTimeout           int32 // time.Duration
-		writeTimeout          int32 // time.Duration
+		peer                           *Peer
+		getPullHandler, getPushHandler func(uriPath string) (*Handler, bool)
+		seq                            uint64
+		seqLock                        sync.Mutex
+		pullCmdMap                     goutil.Map
+		socket                         socket.Socket
+		status                         int32 // 0:ok, 1:active closed, 2:disconnect
+		closeLock                      sync.RWMutex
+		writeLock                      sync.Mutex
+		graceCtxWaitGroup              sync.WaitGroup
+		gracepullCmdWaitGroup          sync.WaitGroup
+		readTimeout                    int32 // time.Duration
+		writeTimeout                   int32 // time.Duration
 		// only for client role
 		redialForClientFunc func() bool
 		redialLock          sync.Mutex
@@ -128,13 +127,13 @@ var (
 
 func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
 	var s = &session{
-		peer:         peer,
-		pullRouter:   peer.PullRouter,
-		pushRouter:   peer.PushRouter,
-		socket:       socket.NewSocket(conn, protoFuncs...),
-		pullCmdMap:   goutil.AtomicMap(),
-		readTimeout:  int32(peer.defaultReadTimeout),
-		writeTimeout: int32(peer.defaultWriteTimeout),
+		peer:           peer,
+		getPullHandler: peer.PullRouter.router.get,
+		getPushHandler: peer.PushRouter.router.get,
+		socket:         socket.NewSocket(conn, protoFuncs...),
+		pullCmdMap:     goutil.AtomicMap(),
+		readTimeout:    int32(peer.defaultReadTimeout),
+		writeTimeout:   int32(peer.defaultWriteTimeout),
 	}
 	return s
 }

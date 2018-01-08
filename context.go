@@ -355,7 +355,7 @@ func (c *readHandleCtx) bindPush(uri string) interface{} {
 	}
 
 	var ok bool
-	c.handler, ok = c.sess.pushRouter.get(c.Path())
+	c.handler, ok = c.sess.getPushHandler(c.Path())
 	if !ok {
 		c.handleErr = rerror_notFound
 		return nil
@@ -414,7 +414,7 @@ func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
 	}
 
 	var ok bool
-	c.handler, ok = c.sess.pullRouter.get(c.Path())
+	c.handler, ok = c.sess.getPullHandler(c.Path())
 	if !ok {
 		c.handleErr = rerror_notFound
 		notFound_metaSetting.Inject(c.output.Meta())

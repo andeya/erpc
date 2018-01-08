@@ -128,9 +128,9 @@ func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 	}
 }
 
-// SetUnknown sets the default handler,
-// which is called when no handler for pull or push is found.
-func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
+// setUnknown sets the default handler,
+// which is called when no handler for PULL or PUSH is found.
+func (r *Router) setUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
 	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
 	warnInvaildHandlerHooks(plugin)
 
@@ -142,10 +142,10 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 
 	switch r.typ {
 	case "pull":
-		h.name = "unknown_pull_handle"
-		fn, ok := unknownHandler.(func(ctx UnknownPullCtx) (interface{}, *Rerror))
+		h.name = "unknown_pull"
+		fn, ok := unknownHandleFunc.(func(UnknownPullCtx) (interface{}, *Rerror))
 		if !ok {
-			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPullCtx) (reply interface{}, rerr *Rerror)", h.name)
+			Fatalf("SetUnknown: %s handler needs type:\n func(ctx UnknownPullCtx) (reply interface{}, rerr *Rerror)", h.name)
 		}
 		h.unknownHandleFunc = func(ctx *readHandleCtx) {
 			body, rerr := fn(ctx)
@@ -161,10 +161,10 @@ func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
 		}
 
 	case "push":
-		h.name = "unknown_push_handle"
-		fn, ok := unknownHandler.(func(ctx UnknownPushCtx) *Rerror)
+		h.name = "unknown_push"
+		fn, ok := unknownHandleFunc.(func(ctx UnknownPushCtx) *Rerror)
 		if !ok {
-			Fatalf("*Router.SetUnknown(): %s handler needs type:\n func(ctx UnknownPushCtx) *Rerror", h.name)
+			Fatalf("SetUnknown: %s handler needs type:\n func(ctx UnknownPushCtx) *Rerror", h.name)
 		}
 		h.unknownHandleFunc = func(ctx *readHandleCtx) {
 			ctx.handleErr = fn(ctx)
@@ -487,4 +487,25 @@ func (h *Handler) IsPush() bool {
 // IsPull checks if it is pull handler or not.
 func (h *Handler) IsPull() bool {
 	return !h.IsPush()
+}
+
+// RootRouter the router root
+type RootRouter struct {
+	router *Router
+}
+
+// Group add handler group.
+func (r *RootRouter) Group(pathPrefix string, plugin ...Plugin) *Router {
+	return r.router.Group(pathPrefix, plugin...)
+}
+
+// Reg registers handler.
+func (r *RootRouter) Reg(ctrlStruct interface{}, plugin ...Plugin) {
+	r.router.Reg(ctrlStruct, plugin...)
+}
+
+// setUnknown sets the default handler,
+// which is called when no handler for PULL or PUSH is found.
+func (r *RootRouter) SetUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
+	r.router.setUnknown(unknownHandleFunc, plugin...)
 }
