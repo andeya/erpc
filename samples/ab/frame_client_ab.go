@@ -15,7 +15,7 @@ func main() {
 	// go func() {
 	// 	http.ListenAndServe("0.0.0.0:9092", nil)
 	// }()
-	tp.SetRawlogLevel("WARNING")
+	tp.SetLoggerLevel("WARNING")
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var peer = tp.NewPeer(tp.PeerConfig{
