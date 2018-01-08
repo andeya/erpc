@@ -442,31 +442,6 @@ func WithXferPipe(filterId ...byte) PacketSetting {
 }
 
 var (
-	defaultBodyCodec codec.Codec
-)
-
-func init() {
-	SetDefaultBodyCodec(codec.ID_JSON)
-}
-
-// GetDefaultBodyCodec gets the body default codec.
-func GetDefaultBodyCodec() codec.Codec {
-	return defaultBodyCodec
-}
-
-// SetDefaultBodyCodec set the default header codec.
-// Note:
-//  If the codec.Codec named 'codecId' is not registered, it will panic;
-//  It is not safe to call it concurrently.
-func SetDefaultBodyCodec(codecId byte) {
-	c, err := codec.Get(codecId)
-	if err != nil {
-		panic(err)
-	}
-	defaultBodyCodec = c
-}
-
-var (
 	packetSizeLimit uint32 = math.MaxUint32
 	// ErrExceedPacketSizeLimit error
 	ErrExceedPacketSizeLimit = errors.New("Size of package exceeds limit.")

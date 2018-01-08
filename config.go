@@ -20,8 +20,6 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/cfgo"
-
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // PeerConfig peer config
@@ -71,12 +69,4 @@ func (p *PeerConfig) check() error {
 		p.DefaultBodyCodec = "json"
 	}
 	return nil
-}
-
-// SetDefaultBodyCodec set the default header codec.
-// Note:
-//  If the codec.Codec named 'codecId' is not registered, it will panic;
-//  It is not safe to call it concurrently.
-func SetGlobalBodyCodec(codecId byte) {
-	socket.SetDefaultBodyCodec(codecId)
 }

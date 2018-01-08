@@ -25,7 +25,6 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
-	"github.com/henrylee2cn/teleport/codec"
 )
 
 type (
@@ -165,9 +164,6 @@ func (s *socket) WritePacket(packet *Packet) error {
 	s.mu.RLock()
 	protocol := s.protocol
 	s.mu.RUnlock()
-	if packet.BodyCodec() == codec.NilCodecId {
-		packet.SetBodyCodec(defaultBodyCodec.Id())
-	}
 	err := protocol.Pack(packet)
 	if err != nil && s.isActiveClosed() {
 		err = ErrProactivelyCloseSocket

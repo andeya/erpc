@@ -201,6 +201,9 @@ func (s *session) Send(output *socket.Packet) *Rerror {
 	output.SetSeq(s.seq)
 	s.seq++
 	s.seqLock.Unlock()
+	if output.BodyCodec() == codec.NilCodecId {
+		output.SetBodyCodec(s.peer.defaultBodyCodec)
+	}
 	err := s.socket.WritePacket(output)
 	if err != nil {
 		rerr := rerror_connClosed.Copy()
