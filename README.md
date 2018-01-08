@@ -484,12 +484,7 @@ func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
 package|import|description
 ----|------|-----------
 [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
-
-### Sundry
-
-package|import|description
-----|------|-----------
-[heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/sundry-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/sundry-heartbeat"`|A generic timing heartbeat package
+[heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"`|A generic timing heartbeat plugin
 
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
 
