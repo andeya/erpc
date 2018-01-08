@@ -578,7 +578,7 @@ type (
 		Output() *socket.Packet
 		// Result returns the pull result.
 		Result() (interface{}, *Rerror)
-		// *Rerror returns the pull error.
+		// Rerror returns the pull error.
 		Rerror() *Rerror
 		// CostTime returns the pulled cost time.
 		// If PeerConfig.CountTime=false, always returns 0.
@@ -633,7 +633,7 @@ func (c *pullCmd) Result() (interface{}, *Rerror) {
 	return c.reply, c.rerr
 }
 
-// *Rerror returns the pull error.
+// Rerror returns the pull error.
 func (c *pullCmd) Rerror() *Rerror {
 	return c.rerr
 }
