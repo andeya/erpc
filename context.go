@@ -135,7 +135,7 @@ type (
 		output          *socket.Packet
 		handler         *Handler
 		arg             reflect.Value
-		pullCmd         *PullCmd
+		pullCmd         *pullCmd
 		uri             *url.URL
 		query           url.Values
 		public          goutil.Map
@@ -494,12 +494,12 @@ func (c *readHandleCtx) handlePull() {
 }
 
 func (c *readHandleCtx) bindReply(seq uint64, uri string) interface{} {
-	pullCmd, ok := c.sess.pullCmdMap.Load(seq)
+	_pullCmd, ok := c.sess.pullCmdMap.Load(seq)
 	if !ok {
 		Warnf("not found pull cmd: %v", c.input)
 		return nil
 	}
-	c.pullCmd = pullCmd.(*PullCmd)
+	c.pullCmd = _pullCmd.(*pullCmd)
 	c.public = c.pullCmd.public
 
 	rerr := c.pluginContainer.PostReadReplyHeader(c)
@@ -561,77 +561,100 @@ func (c *readHandleCtx) Bind(v interface{}) (byte, error) {
 	return c.input.BodyCodec(), err
 }
 
-// PullCmd the command of the pulling operation's response.
-type PullCmd struct {
-	sess     *session
-	output   *socket.Packet
-	reply    interface{}
-	rerr     *Rerror
-	doneChan chan *PullCmd // Strobes when pull is complete.
-	start    time.Time
-	cost     time.Duration
-	public   goutil.Map
-}
+type (
+	// PullCmd the command of the pulling operation's response.
+	PullCmd interface {
+		// Peer returns the peer.
+		Peer() *Peer
+		// Session returns the session.
+		Session() Session
+		// Ip returns the remote addr.
+		Ip() string
+		// Public returns temporary public data of context.
+		Public() goutil.Map
+		// PublicLen returns the length of public data of context.
+		PublicLen() int
+		// Output returns writed packet.
+		Output() *socket.Packet
+		// Result returns the pull result.
+		Result() (interface{}, *Rerror)
+		// *Rerror returns the pull error.
+		Rerror() *Rerror
+		// CostTime returns the pulled cost time.
+		// If PeerConfig.CountTime=false, always returns 0.
+		CostTime() time.Duration
+	}
+	pullCmd struct {
+		sess     *session
+		output   *socket.Packet
+		reply    interface{}
+		rerr     *Rerror
+		doneChan chan PullCmd // Strobes when pull is complete.
+		start    time.Time
+		cost     time.Duration
+		public   goutil.Map
+	}
+)
 
-var _ WriteCtx = new(PullCmd)
+var _ WriteCtx = PullCmd(nil)
 
 // Peer returns the peer.
-func (c *PullCmd) Peer() *Peer {
+func (c *pullCmd) Peer() *Peer {
 	return c.sess.peer
 }
 
 // Session returns the session.
-func (c *PullCmd) Session() Session {
+func (c *pullCmd) Session() Session {
 	return c.sess
 }
 
 // Ip returns the remote addr.
-func (c *PullCmd) Ip() string {
+func (c *pullCmd) Ip() string {
 	return c.sess.RemoteIp()
 }
 
 // Public returns temporary public data of context.
-func (c *PullCmd) Public() goutil.Map {
+func (c *pullCmd) Public() goutil.Map {
 	return c.public
 }
 
 // PublicLen returns the length of public data of context.
-func (c *PullCmd) PublicLen() int {
+func (c *pullCmd) PublicLen() int {
 	return c.public.Len()
 }
 
 // Output returns writed packet.
-func (c *PullCmd) Output() *socket.Packet {
+func (c *pullCmd) Output() *socket.Packet {
 	return c.output
 }
 
 // Result returns the pull result.
-func (c *PullCmd) Result() (interface{}, *Rerror) {
+func (c *pullCmd) Result() (interface{}, *Rerror) {
 	return c.reply, c.rerr
 }
 
 // *Rerror returns the pull error.
-func (c *PullCmd) Rerror() *Rerror {
+func (c *pullCmd) Rerror() *Rerror {
 	return c.rerr
 }
 
 // CostTime returns the pulled cost time.
 // If PeerConfig.CountTime=false, always returns 0.
-func (c *PullCmd) CostTime() time.Duration {
+func (c *pullCmd) CostTime() time.Duration {
 	return c.cost
 }
 
-func (p *PullCmd) cancel() {
+func (p *pullCmd) cancel() {
 	p.sess.pullCmdMap.Delete(p.output.Seq())
 	p.rerr = rerror_connClosed
 	p.doneChan <- p
 	// free count pull-launch
-	p.sess.gracePullCmdWaitGroup.Done()
+	p.sess.gracepullCmdWaitGroup.Done()
 }
 
-func (p *PullCmd) done() {
+func (p *pullCmd) done() {
 	p.sess.pullCmdMap.Delete(p.output.Seq())
 	p.doneChan <- p
 	// free count pull-launch
-	p.sess.gracePullCmdWaitGroup.Done()
+	p.sess.gracepullCmdWaitGroup.Done()
 }

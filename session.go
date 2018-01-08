@@ -64,12 +64,12 @@ type (
 		Health() bool
 		// AsyncPull sends a packet and receives reply asynchronously.
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
-		AsyncPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting)
+		AsyncPull(uri string, args interface{}, reply interface{}, done chan PullCmd, setting ...socket.PacketSetting)
 		// Pull sends a packet and receives reply.
 		// Note:
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd
+		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) PullCmd
 		// Push sends a packet, but do not receives reply.
 		// Note:
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
@@ -111,7 +111,7 @@ type (
 		closeLock             sync.RWMutex
 		writeLock             sync.Mutex
 		graceCtxWaitGroup     sync.WaitGroup
-		gracePullCmdWaitGroup sync.WaitGroup
+		gracepullCmdWaitGroup sync.WaitGroup
 		readTimeout           int32 // time.Duration
 		writeTimeout          int32 // time.Duration
 		// only for client role
@@ -231,7 +231,7 @@ func (s *session) Receive(input *socket.Packet) *Rerror {
 // Note:
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan *PullCmd, setting ...socket.PacketSetting) {
+func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan PullCmd, setting ...socket.PacketSetting) {
 	if done == nil && cap(done) == 0 {
 		// It must arrange that done has enough buffer for the number of simultaneous
 		// RPCs that will be using that channel. If the channel
@@ -255,7 +255,7 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
 
-	cmd := &PullCmd{
+	cmd := &pullCmd{
 		sess:     s,
 		output:   output,
 		reply:    reply,
@@ -265,7 +265,7 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 	}
 
 	// count pull-launch
-	s.gracePullCmdWaitGroup.Add(1)
+	s.gracepullCmdWaitGroup.Add(1)
 
 	if s.socket.PublicLen() > 0 {
 		s.socket.Public().Range(func(key, value interface{}) bool {
@@ -314,8 +314,8 @@ W:
 // Note:
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) *PullCmd {
-	doneChan := make(chan *PullCmd, 1)
+func (s *session) Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) PullCmd {
+	doneChan := make(chan PullCmd, 1)
 	s.AsyncPull(uri, args, reply, doneChan, setting...)
 	pullCmd := <-doneChan
 	close(doneChan)
@@ -530,7 +530,7 @@ func (s *session) Close() error {
 	s.activelyClosing()
 
 	s.graceCtxWaitGroup.Wait()
-	s.gracePullCmdWaitGroup.Wait()
+	s.gracepullCmdWaitGroup.Wait()
 
 	// Notice actively closed
 	if !s.IsPassiveClosed() {
@@ -559,7 +559,7 @@ func (s *session) readDisconnected(err error) {
 
 	if s.redialForClientFunc == nil || status == statusActiveClosing {
 		s.pullCmdMap.Range(func(_, v interface{}) bool {
-			pullCmd := v.(*PullCmd)
+			pullCmd := v.(*pullCmd)
 			pullCmd.cancel()
 			return true
 		})
@@ -575,7 +575,7 @@ func (s *session) readDisconnected(err error) {
 
 	if !s.redialForClient() {
 		s.pullCmdMap.Range(func(_, v interface{}) bool {
-			pullCmd := v.(*PullCmd)
+			pullCmd := v.(*pullCmd)
 			pullCmd.cancel()
 			return true
 		})
