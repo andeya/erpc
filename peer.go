@@ -35,7 +35,7 @@ import (
 type Peer struct {
 	PullRouter          *Router
 	PushRouter          *Router
-	pluginContainer     PluginContainer
+	pluginContainer     *PluginContainer
 	sessHub             *SessionHub
 	closeCh             chan struct{}
 	freeContext         *readHandleCtx
@@ -64,14 +64,13 @@ type Peer struct {
 
 // NewPeer creates a new peer.
 func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
-	err := cfg.check()
-	if err != nil {
+	pluginContainer := newPluginContainer()
+	pluginContainer.AppendRight(plugin...)
+	pluginContainer.PreNewPeer(&cfg)
+	if err := cfg.check(); err != nil {
 		Fatalf("%v", err)
 	}
-	var pluginContainer = newPluginContainer()
-	if err = pluginContainer.Add(plugin...); err != nil {
-		Fatalf("%v", err)
-	}
+
 	var p = &Peer{
 		PullRouter:          newPullRouter(pluginContainer),
 		PushRouter:          newPushRouter(pluginContainer),
@@ -103,6 +102,7 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 	}
 
 	addPeer(p)
+	p.pluginContainer.PostNewPeer(p)
 	return p
 }
 

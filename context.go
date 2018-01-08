@@ -141,7 +141,7 @@ type (
 		public          goutil.Map
 		start           time.Time
 		cost            time.Duration
-		pluginContainer PluginContainer
+		pluginContainer *PluginContainer
 		handleErr       *Rerror
 		next            *readHandleCtx
 	}

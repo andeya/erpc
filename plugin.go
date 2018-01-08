@@ -18,170 +18,184 @@ import (
 	"github.com/henrylee2cn/goutil/errors"
 )
 
-// Interfaces about plugin.
 type (
+	// Plugin plugin background
 	Plugin interface {
 		Name() string
 	}
+	// PreNewPeerPlugin is executed before creating peer.
+	PreNewPeerPlugin interface {
+		Plugin
+		PreNewPeer(*PeerConfig, *PluginContainer) error
+	}
+	// PostNewPeerPlugin is executed after creating peer.
+	PostNewPeerPlugin interface {
+		Plugin
+		PostNewPeer(*Peer) error
+	}
+	// PostRegPlugin is executed before registering handler.
 	PostRegPlugin interface {
 		Plugin
-		PostReg(*Handler) *Rerror
+		PostReg(*Handler) error
 	}
+	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
 		Plugin
 		PostDial(PreSession) *Rerror
 	}
+	// PostAcceptPlugin is executed after accepting connection.
 	PostAcceptPlugin interface {
 		Plugin
 		PostAccept(PreSession) *Rerror
 	}
+	// PreWritePullPlugin is executed before writing PULL packet.
 	PreWritePullPlugin interface {
 		Plugin
 		PreWritePull(WriteCtx) *Rerror
 	}
+	// PostWritePullPlugin is executed after writing PULL packet.
 	PostWritePullPlugin interface {
 		Plugin
 		PostWritePull(WriteCtx) *Rerror
 	}
+	// PreWriteReplyPlugin is executed before writing REPLY packet.
 	PreWriteReplyPlugin interface {
 		Plugin
 		PreWriteReply(WriteCtx) *Rerror
 	}
+	// PostWriteReplyPlugin is executed after writing REPLY packet.
 	PostWriteReplyPlugin interface {
 		Plugin
 		PostWriteReply(WriteCtx) *Rerror
 	}
+	// PreWritePushPlugin is executed before writing PUSH packet.
 	PreWritePushPlugin interface {
 		Plugin
 		PreWritePush(WriteCtx) *Rerror
 	}
+	// PostWritePushPlugin is executed after writing PUSH packet.
 	PostWritePushPlugin interface {
 		Plugin
 		PostWritePush(WriteCtx) *Rerror
 	}
+	// PreReadHeaderPlugin is executed before reading packet header.
 	PreReadHeaderPlugin interface {
 		Plugin
 		PreReadHeader(BaseCtx) *Rerror
 	}
+	// PostReadPullHeaderPlugin is executed after reading PULL packet header.
 	PostReadPullHeaderPlugin interface {
 		Plugin
 		PostReadPullHeader(ReadCtx) *Rerror
 	}
+	// PreReadPullBodyPlugin is executed before reading PULL packet body.
 	PreReadPullBodyPlugin interface {
 		Plugin
 		PreReadPullBody(ReadCtx) *Rerror
 	}
+	// PostReadPullBodyPlugin is executed after reading PULL packet body.
 	PostReadPullBodyPlugin interface {
 		Plugin
 		PostReadPullBody(ReadCtx) *Rerror
 	}
+	// PostReadPushHeaderPlugin is executed after reading PUSH packet header.
 	PostReadPushHeaderPlugin interface {
 		Plugin
 		PostReadPushHeader(ReadCtx) *Rerror
 	}
+	// PreReadPushBodyPlugin is executed before reading PUSH packet body.
 	PreReadPushBodyPlugin interface {
 		Plugin
 		PreReadPushBody(ReadCtx) *Rerror
 	}
+	// PostReadPushBodyPlugin is executed after reading PUSH packet body.
 	PostReadPushBodyPlugin interface {
 		Plugin
 		PostReadPushBody(ReadCtx) *Rerror
 	}
+	// PostReadReplyHeaderPlugin is executed after reading REPLY packet header.
 	PostReadReplyHeaderPlugin interface {
 		Plugin
 		PostReadReplyHeader(ReadCtx) *Rerror
 	}
+	// PreReadReplyBodyPlugin is executed before reading REPLY packet body.
 	PreReadReplyBodyPlugin interface {
 		Plugin
 		PreReadReplyBody(ReadCtx) *Rerror
 	}
+	// PostReadReplyBodyPlugin is executed after reading REPLY packet body.
 	PostReadReplyBodyPlugin interface {
 		Plugin
 		PostReadReplyBody(ReadCtx) *Rerror
 	}
+	// PostDisconnectPlugin is executed after disconnectingy.
 	PostDisconnectPlugin interface {
 		Plugin
 		PostDisconnect(PostSession) *Rerror
 	}
-
-	// PluginContainer plugin container that defines base methods to manage plugins.
-	PluginContainer interface {
-		Add(plugins ...Plugin) error
-		Remove(pluginName string) error
-		GetByName(pluginName string) Plugin
-		GetAll() []Plugin
-
-		PostReg(*Handler) *Rerror
-		PostDial(PreSession) *Rerror
-		PostAccept(PreSession) *Rerror
-		PreWritePull(WriteCtx) *Rerror
-		PostWritePull(WriteCtx) *Rerror
-		PreWriteReply(WriteCtx) *Rerror
-		PostWriteReply(WriteCtx) *Rerror
-		PreWritePush(WriteCtx) *Rerror
-		PostWritePush(WriteCtx) *Rerror
-		PreReadHeader(BaseCtx) *Rerror
-
-		PostReadPullHeader(ReadCtx) *Rerror
-		PreReadPullBody(ReadCtx) *Rerror
-		PostReadPullBody(ReadCtx) *Rerror
-
-		PostReadPushHeader(ReadCtx) *Rerror
-		PreReadPushBody(ReadCtx) *Rerror
-		PostReadPushBody(ReadCtx) *Rerror
-
-		PostReadReplyHeader(ReadCtx) *Rerror
-		PreReadReplyBody(ReadCtx) *Rerror
-		PostReadReplyBody(ReadCtx) *Rerror
-
-		PostDisconnect(PostSession) *Rerror
-
-		cloneAdd(...Plugin) (PluginContainer, error)
-	}
 )
 
 // newPluginContainer new a plugin container.
-func newPluginContainer() PluginContainer {
-	return new(pluginContainer)
+func newPluginContainer() *PluginContainer {
+	return new(PluginContainer)
 }
 
-type pluginContainer struct {
+// PluginContainer plugins container.
+type PluginContainer struct {
 	plugins []Plugin
 }
 
-func (p *pluginContainer) cloneAdd(plugins ...Plugin) (PluginContainer, error) {
-	clone := newPluginContainer()
-	err := clone.Add(p.GetAll()...)
-	if err != nil {
-		return nil, err
+// AppendLeft appends plugins on the left side of the pluginContainer.
+func (p *PluginContainer) AppendLeft(plugins ...Plugin) {
+	if plugins == nil {
+		plugins = make([]Plugin, 0)
 	}
-	err = clone.Add(plugins...)
-	if err != nil {
-		return nil, err
+	if p.plugins == nil {
+		p.plugins = make([]Plugin, 0)
 	}
-	return clone, nil
+	for _, plugin := range p.plugins {
+		if plugin == nil {
+			Fatalf("plugin cannot be nil!")
+			return
+		}
+		pName := plugin.Name()
+		if len(pName) == 0 && p.GetByName(pName) != nil {
+			Fatalf("repeat add plugin: %s", pName)
+			return
+		}
+		plugins = append(plugins, plugin)
+	}
+	p.plugins = plugins
 }
 
-// Add adds a plugin.
-func (p *pluginContainer) Add(plugins ...Plugin) error {
+// AppendRight appends plugins on the right side of the pluginContainer.
+func (p *PluginContainer) AppendRight(plugins ...Plugin) {
 	if p.plugins == nil {
 		p.plugins = make([]Plugin, 0)
 	}
 	for _, plugin := range plugins {
 		if plugin == nil {
-			return errors.New("plugin cannot be nil!")
+			Fatalf("plugin cannot be nil!")
+			return
 		}
 		pName := plugin.Name()
 		if len(pName) == 0 && p.GetByName(pName) != nil {
-			return errors.Errorf("repeat add plugin: %s", pName)
+			Fatalf("repeat add plugin: %s", pName)
+			return
 		}
 		p.plugins = append(p.plugins, plugin)
 	}
-	return nil
+}
+
+func (p *PluginContainer) cloneAppendRight(plugins ...Plugin) *PluginContainer {
+	clone := newPluginContainer()
+	clone.AppendRight(p.GetAll()...)
+	clone.AppendRight(plugins...)
+	return clone
 }
 
 // Remove removes a plugin by it's name.
-func (p *pluginContainer) Remove(pluginName string) error {
+func (p *PluginContainer) Remove(pluginName string) error {
 	if p.plugins == nil {
 		return errors.New("no plugins are registed yet!")
 	}
@@ -203,8 +217,8 @@ func (p *pluginContainer) Remove(pluginName string) error {
 	return nil
 }
 
-// GetByName returns a plugin instance by it's name
-func (p *pluginContainer) GetByName(pluginName string) Plugin {
+// GetByName returns a plugin instance by it's name.
+func (p *PluginContainer) GetByName(pluginName string) Plugin {
 	if p.plugins == nil {
 		return nil
 	}
@@ -216,25 +230,52 @@ func (p *pluginContainer) GetByName(pluginName string) Plugin {
 	return nil
 }
 
-// GetAll returns all activated plugins
-func (p *pluginContainer) GetAll() []Plugin {
+// GetAll returns all activated plugins.
+func (p *PluginContainer) GetAll() []Plugin {
 	return p.plugins
 }
 
-func (p *pluginContainer) PostReg(h *Handler) *Rerror {
-	var rerr *Rerror
+// PreNewPeer executes the defined plugins before creating peer.
+func (p *PluginContainer) PreNewPeer(peerConfig *PeerConfig) {
+	var err error
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostRegPlugin); ok {
-			if rerr = _plugin.PostReg(h); rerr != nil {
-				Fatalf("%s-PostRegPlugin(%s)", plugin.Name(), rerr.String())
-				return rerr
+		if _plugin, ok := plugin.(PreNewPeerPlugin); ok {
+			if err = _plugin.PreNewPeer(peerConfig, p); err != nil {
+				Fatalf("%s-PreNewPeerPlugin(%s)", plugin.Name(), err.Error())
+				return
 			}
 		}
 	}
-	return nil
 }
 
-func (p *pluginContainer) PostDial(sess PreSession) *Rerror {
+// PostNewPeer executes the defined plugins after creating peer.
+func (p *PluginContainer) PostNewPeer(peer *Peer) {
+	var err error
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostNewPeerPlugin); ok {
+			if err = _plugin.PostNewPeer(peer); err != nil {
+				Fatalf("%s-PostNewPeerPlugin(%s)", plugin.Name(), err.Error())
+				return
+			}
+		}
+	}
+}
+
+// PostReg executes the defined plugins before registering handler.
+func (p *PluginContainer) PostReg(h *Handler) {
+	var err error
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostRegPlugin); ok {
+			if err = _plugin.PostReg(h); err != nil {
+				Fatalf("%s-PostRegPlugin(%s)", plugin.Name(), err.Error())
+				return
+			}
+		}
+	}
+}
+
+// PostDial executes the defined plugins after dialing.
+func (p *PluginContainer) PostDial(sess PreSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
@@ -247,7 +288,8 @@ func (p *pluginContainer) PostDial(sess PreSession) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostAccept(sess PreSession) *Rerror {
+// PostAccept executes the defined plugins after accepting connection.
+func (p *PluginContainer) PostAccept(sess PreSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
@@ -260,7 +302,8 @@ func (p *pluginContainer) PostAccept(sess PreSession) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreWritePull(ctx WriteCtx) *Rerror {
+// PreWritePull executes the defined plugins before writing PULL packet.
+func (p *PluginContainer) PreWritePull(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePullPlugin); ok {
@@ -273,7 +316,8 @@ func (p *pluginContainer) PreWritePull(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostWritePull(ctx WriteCtx) *Rerror {
+// PostWritePull executes the defined plugins after writing PULL packet.
+func (p *PluginContainer) PostWritePull(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePullPlugin); ok {
@@ -286,7 +330,8 @@ func (p *pluginContainer) PostWritePull(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreWriteReply(ctx WriteCtx) *Rerror {
+// PreWriteReply executes the defined plugins before writing REPLY packet.
+func (p *PluginContainer) PreWriteReply(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWriteReplyPlugin); ok {
@@ -299,7 +344,8 @@ func (p *pluginContainer) PreWriteReply(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostWriteReply(ctx WriteCtx) *Rerror {
+// PostWriteReply executes the defined plugins after writing REPLY packet.
+func (p *PluginContainer) PostWriteReply(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWriteReplyPlugin); ok {
@@ -312,7 +358,8 @@ func (p *pluginContainer) PostWriteReply(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreWritePush(ctx WriteCtx) *Rerror {
+// PreWritePush executes the defined plugins before writing PUSH packet.
+func (p *PluginContainer) PreWritePush(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePushPlugin); ok {
@@ -325,7 +372,8 @@ func (p *pluginContainer) PreWritePush(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
+// PostWritePush executes the defined plugins after writing PUSH packet.
+func (p *PluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePushPlugin); ok {
@@ -338,7 +386,8 @@ func (p *pluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreReadHeader(ctx BaseCtx) *Rerror {
+// PreReadHeader executes the defined plugins before reading packet header.
+func (p *PluginContainer) PreReadHeader(ctx BaseCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
@@ -351,7 +400,8 @@ func (p *pluginContainer) PreReadHeader(ctx BaseCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadPullHeader(ctx ReadCtx) *Rerror {
+// PostReadPullHeader executes the defined plugins after reading PULL packet header.
+func (p *PluginContainer) PostReadPullHeader(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPullHeaderPlugin); ok {
@@ -364,7 +414,8 @@ func (p *pluginContainer) PostReadPullHeader(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreReadPullBody(ctx ReadCtx) *Rerror {
+// PreReadPullBody executes the defined plugins before reading PULL packet body.
+func (p *PluginContainer) PreReadPullBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadPullBodyPlugin); ok {
@@ -377,7 +428,8 @@ func (p *pluginContainer) PreReadPullBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadPullBody(ctx ReadCtx) *Rerror {
+// PostReadPullBody executes the defined plugins after reading PULL packet body.
+func (p *PluginContainer) PostReadPullBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPullBodyPlugin); ok {
@@ -390,7 +442,8 @@ func (p *pluginContainer) PostReadPullBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadPushHeader(ctx ReadCtx) *Rerror {
+// PostReadPushHeader executes the defined plugins after reading PUSH packet header.
+func (p *PluginContainer) PostReadPushHeader(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPushHeaderPlugin); ok {
@@ -403,7 +456,8 @@ func (p *pluginContainer) PostReadPushHeader(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreReadPushBody(ctx ReadCtx) *Rerror {
+// PreReadPushBody executes the defined plugins before reading PUSH packet body.
+func (p *PluginContainer) PreReadPushBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadPushBodyPlugin); ok {
@@ -416,7 +470,8 @@ func (p *pluginContainer) PreReadPushBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadPushBody(ctx ReadCtx) *Rerror {
+// PostReadPushBody executes the defined plugins after reading PUSH packet body.
+func (p *PluginContainer) PostReadPushBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPushBodyPlugin); ok {
@@ -429,7 +484,8 @@ func (p *pluginContainer) PostReadPushBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadReplyHeader(ctx ReadCtx) *Rerror {
+// PostReadReplyHeader executes the defined plugins after reading REPLY packet header.
+func (p *PluginContainer) PostReadReplyHeader(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadReplyHeaderPlugin); ok {
@@ -442,7 +498,8 @@ func (p *pluginContainer) PostReadReplyHeader(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PreReadReplyBody(ctx ReadCtx) *Rerror {
+// PreReadReplyBody executes the defined plugins before reading REPLY packet body.
+func (p *PluginContainer) PreReadReplyBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadReplyBodyPlugin); ok {
@@ -455,7 +512,8 @@ func (p *pluginContainer) PreReadReplyBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
+// PostReadReplyBody executes the defined plugins after reading REPLY packet body.
+func (p *PluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadReplyBodyPlugin); ok {
@@ -468,7 +526,8 @@ func (p *pluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-func (p *pluginContainer) PostDisconnect(sess PostSession) *Rerror {
+// PostDisconnect executes the defined plugins after disconnectingy.
+func (p *PluginContainer) PostDisconnect(sess PostSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDisconnectPlugin); ok {
@@ -481,9 +540,13 @@ func (p *pluginContainer) PostDisconnect(sess PostSession) *Rerror {
 	return nil
 }
 
-func warnInvaildRouterHooks(plugin []Plugin) {
+func warnInvaildHandlerHooks(plugin []Plugin) {
 	for _, p := range plugin {
 		switch p.(type) {
+		case PreNewPeerPlugin:
+			Warnf("invalid PreNewPeerPlugin in router: %s", p.Name())
+		case PostNewPeerPlugin:
+			Warnf("invalid PostNewPeerPlugin in router: %s", p.Name())
 		case PostDialPlugin:
 			Warnf("invalid PostDialPlugin in router: %s", p.Name())
 		case PostAcceptPlugin:

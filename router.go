@@ -75,7 +75,7 @@ type (
 		unknownHandler **Handler
 		// only for register router
 		pathPrefix      string
-		pluginContainer PluginContainer
+		pluginContainer *PluginContainer
 		typ             string
 		maker           HandlersMaker
 	}
@@ -87,19 +87,16 @@ type (
 		reply             reflect.Type // only for pull handler doc
 		handleFunc        func(*readHandleCtx, reflect.Value)
 		unknownHandleFunc func(*readHandleCtx)
-		pluginContainer   PluginContainer
+		pluginContainer   *PluginContainer
 	}
 	// HandlersMaker makes []*Handler
-	HandlersMaker func(string, interface{}, PluginContainer) ([]*Handler, error)
+	HandlersMaker func(string, interface{}, *PluginContainer) ([]*Handler, error)
 )
 
 // Group add handler group.
 func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
-	pluginContainer, err := r.pluginContainer.cloneAdd(plugin...)
-	if err != nil {
-		Fatalf("%v", err)
-	}
-	warnInvaildRouterHooks(plugin)
+	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
+	warnInvaildHandlerHooks(plugin)
 	return &Router{
 		handlers:        r.handlers,
 		unknownHandler:  r.unknownHandler,
@@ -111,11 +108,8 @@ func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 
 // Reg registers handler.
 func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
-	pluginContainer, err := r.pluginContainer.cloneAdd(plugin...)
-	if err != nil {
-		Fatalf("%v", err)
-	}
-	warnInvaildRouterHooks(plugin)
+	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
+	warnInvaildHandlerHooks(plugin)
 	handlers, err := r.maker(
 		r.pathPrefix,
 		ctrlStruct,
@@ -137,11 +131,8 @@ func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 // SetUnknown sets the default handler,
 // which is called when no handler for pull or push is found.
 func (r *Router) SetUnknown(unknownHandler interface{}, plugin ...Plugin) {
-	pluginContainer, err := r.pluginContainer.cloneAdd(plugin...)
-	if err != nil {
-		Fatalf("%v", err)
-	}
-	warnInvaildRouterHooks(plugin)
+	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
+	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
 		isUnknown:       true,
@@ -201,7 +192,7 @@ func (r *Router) get(uriPath string) (*Handler, bool) {
 
 // newPullRouter creates pull packet router.
 // Note: ctrlStruct needs to implement PullCtx interface.
-func newPullRouter(pluginContainer PluginContainer) *Router {
+func newPullRouter(pluginContainer *PluginContainer) *Router {
 	return &Router{
 		handlers:        make(map[string]*Handler),
 		unknownHandler:  new(*Handler),
@@ -213,7 +204,7 @@ func newPullRouter(pluginContainer PluginContainer) *Router {
 }
 
 // Note: ctrlStruct needs to implement PullCtx interface.
-func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
+func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype    = reflect.TypeOf(ctrlStruct)
 		handlers = make([]*Handler, 0, 1)
@@ -328,7 +319,7 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 
 // newPushRouter creates push packet router.
 // Note: ctrlStruct needs to implement PushCtx interface.
-func newPushRouter(pluginContainer PluginContainer) *Router {
+func newPushRouter(pluginContainer *PluginContainer) *Router {
 	return &Router{
 		handlers:        make(map[string]*Handler),
 		unknownHandler:  new(*Handler),
@@ -340,7 +331,7 @@ func newPushRouter(pluginContainer PluginContainer) *Router {
 }
 
 // Note: ctrlStruct needs to implement PushCtx interface.
-func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer PluginContainer) ([]*Handler, error) {
+func pushHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype    = reflect.TypeOf(ctrlStruct)
 		handlers = make([]*Handler, 0, 1)
