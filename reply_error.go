@@ -61,6 +61,9 @@ func NewRerrorFromMeta(meta *utils.Args) *Rerror {
 
 // String prints error info.
 func (r *Rerror) String() string {
+	if r == nil {
+		return "<nil>"
+	}
 	b, _ := r.MarshalJSON()
 	return goutil.BytesToString(b)
 }

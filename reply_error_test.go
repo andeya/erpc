@@ -1,6 +1,7 @@
 package tp
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/henrylee2cn/teleport/utils"
@@ -21,5 +22,15 @@ func TestRerror(t *testing.T) {
 	t.Logf("%s", b)
 	newRerr := NewRerrorFromMeta(meta)
 	t.Logf("%v", newRerr)
-	t.Logf("test ToError: %s", newRerr.ToError().Error())
+	err := newRerr.ToError()
+	t.Logf("test ToError 1: %v", err)
+	newRerr = ToRerror(err)
+	t.Logf("test ToRerror 1: %s", newRerr)
+	newRerr = nil
+	err = newRerr.ToError()
+	t.Logf("test ToError 2: %v", err)
+	newRerr = ToRerror(nil)
+	t.Logf("test ToRerror 2: %s", newRerr)
+	newRerr = ToRerror(errors.New("text error"))
+	t.Logf("test ToRerror 3: %s", newRerr)
 }
