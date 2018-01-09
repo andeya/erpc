@@ -64,10 +64,12 @@ type (
 		CopyMeta() *utils.Args
 		// Uri returns the input packet uri.
 		Uri() string
+		// ChangeUri changes the input packet uri.
+		ChangeUri(string)
+		// Url returns the input packet uri object.
+		Url() *url.URL
 		// Path returns the input packet uri path.
 		Path() string
-		// RawQuery returns the input packet uri query string.
-		RawQuery() string
 		// Query returns the input packet uri query object.
 		Query() url.Values
 	}
@@ -136,8 +138,6 @@ type (
 		handler         *Handler
 		arg             reflect.Value
 		pullCmd         *pullCmd
-		uri             *url.URL
-		query           url.Values
 		public          goutil.Map
 		start           time.Time
 		cost            time.Duration
@@ -189,8 +189,6 @@ func (c *readHandleCtx) clean() {
 	c.arg = emptyValue
 	c.pullCmd = nil
 	c.public = nil
-	c.uri = nil
-	c.query = nil
 	c.cost = 0
 	c.pluginContainer = nil
 	c.handleErr = nil
@@ -233,27 +231,29 @@ func (c *readHandleCtx) Seq() uint64 {
 	return c.input.Seq()
 }
 
-// Uri returns the input packet uri.
+// Uri returns the input packet uri string.
 func (c *readHandleCtx) Uri() string {
 	return c.input.Uri()
 }
 
-// Path returns the input packet uri path.
-func (c *readHandleCtx) Path() string {
-	return c.uri.Path
+// ChangeUri changes the input packet uri.
+func (c *readHandleCtx) ChangeUri(uri string) {
+	c.input.SetUri(uri)
 }
 
-// RawQuery returns the input packet uri query string.
-func (c *readHandleCtx) RawQuery() string {
-	return c.uri.RawQuery
+// Url returns the input packet uri object.
+func (c *readHandleCtx) Url() *url.URL {
+	return c.input.Url()
+}
+
+// Path returns the input packet uri path.
+func (c *readHandleCtx) Path() string {
+	return c.input.Url().Path
 }
 
 // Query returns the input packet uri query object.
 func (c *readHandleCtx) Query() url.Values {
-	if c.query == nil {
-		c.query = c.uri.Query()
-	}
-	return c.query
+	return c.input.Url().Query()
 }
 
 // GetMeta gets the header metadata for the input packet.
@@ -299,13 +299,13 @@ func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
 	c.pluginContainer = c.sess.peer.pluginContainer
 	switch header.Ptype() {
 	case TypeReply:
-		return c.bindReply(header.Seq(), header.Uri())
+		return c.bindReply(header)
 
 	case TypePush:
-		return c.bindPush(header.Uri())
+		return c.bindPush(header)
 
 	case TypePull:
-		return c.bindPull(header.Seq(), header.Uri())
+		return c.bindPull(header)
 
 	default:
 		return nil
@@ -341,21 +341,21 @@ func (c *readHandleCtx) handle() {
 	}
 }
 
-func (c *readHandleCtx) bindPush(uri string) interface{} {
+func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
 	c.handleErr = c.pluginContainer.PostReadPushHeader(c)
 	if c.handleErr != nil {
 		return nil
 	}
-	var err error
-	c.uri, err = url.Parse(uri)
-	if err != nil {
+
+	u := header.Url()
+	if len(u.Path) == 0 {
 		c.handleErr = rerror_badPacket.Copy()
-		c.handleErr.Detail = err.Error()
+		c.handleErr.Detail = "invalid URI for packet"
 		return nil
 	}
 
 	var ok bool
-	c.handler, ok = c.sess.getPushHandler(c.Path())
+	c.handler, ok = c.sess.getPushHandler(u.Path)
 	if !ok {
 		c.handleErr = rerror_notFound
 		return nil
@@ -393,28 +393,26 @@ func (c *readHandleCtx) handlePush() {
 	}
 }
 
-func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
-	c.output.SetSeq(seq)
-	c.output.SetUri(uri)
-	rerr := c.pluginContainer.PostReadPullHeader(c)
-	if rerr != nil {
-		c.handleErr = rerr
-		rerr.SetToMeta(c.output.Meta())
+func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
+	c.output.SetSeq(header.Seq())
+	c.output.SetUri(header.Uri())
+
+	c.handleErr = c.pluginContainer.PostReadPullHeader(c)
+	if c.handleErr != nil {
+		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
-	var err error
-	c.uri, err = url.Parse(uri)
-	if err != nil {
-		errStr := err.Error()
-		rerr = rerror_badPacket.Copy()
-		rerr.Detail = errStr
-		c.handleErr = rerr
-		badPacket_metaSetting.Inject(c.output.Meta(), errStr)
+
+	u := header.Url()
+	if len(u.Path) == 0 {
+		c.handleErr = rerror_badPacket.Copy()
+		c.handleErr.Detail = "invalid URI for packet"
+		badPacket_metaSetting.Inject(c.output.Meta(), c.handleErr.Detail)
 		return nil
 	}
 
 	var ok bool
-	c.handler, ok = c.sess.getPullHandler(c.Path())
+	c.handler, ok = c.sess.getPullHandler(u.Path)
 	if !ok {
 		c.handleErr = rerror_notFound
 		notFound_metaSetting.Inject(c.output.Meta())
@@ -429,12 +427,9 @@ func (c *readHandleCtx) bindPull(seq uint64, uri string) interface{} {
 		c.input.SetBody(c.arg.Interface())
 	}
 
-	rerr = c.pluginContainer.PreReadPullBody(c)
-	if rerr != nil {
-		if c.handleErr == nil {
-			c.handleErr = rerr
-		}
-		rerr.SetToMeta(c.output.Meta())
+	c.handleErr = c.pluginContainer.PreReadPullBody(c)
+	if c.handleErr != nil {
+		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
@@ -493,8 +488,8 @@ func (c *readHandleCtx) handlePull() {
 	}
 }
 
-func (c *readHandleCtx) bindReply(seq uint64, uri string) interface{} {
-	_pullCmd, ok := c.sess.pullCmdMap.Load(seq)
+func (c *readHandleCtx) bindReply(header socket.Header) interface{} {
+	_pullCmd, ok := c.sess.pullCmdMap.Load(header.Seq())
 	if !ok {
 		Warnf("not found pull cmd: %v", c.input)
 		return nil

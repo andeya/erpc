@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/url"
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
@@ -39,6 +40,8 @@ type (
 		ptype byte
 		// URL string
 		uri string
+		// URL object
+		url *url.URL
 		// metadata
 		meta *utils.Args
 		// body codec type
@@ -67,10 +70,12 @@ type (
 		Ptype() byte
 		// Ptype sets the packet type
 		SetPtype(byte)
-		// Uri returns the URL string string
+		// Uri returns the URL string
 		Uri() string
 		// SetUri sets the packet URL string
 		SetUri(string)
+		// Url returns the URL object
+		Url() *url.URL
 		// Meta returns the metadata
 		Meta() *utils.Args
 	}
@@ -167,6 +172,7 @@ func (p *Packet) Reset(settings ...PacketSetting) {
 	p.seq = 0
 	p.ptype = 0
 	p.uri = ""
+	p.url = nil
 	p.size = 0
 	p.bodyCodec = codec.NilCodecId
 	p.doSetting(settings...)
@@ -200,14 +206,26 @@ func (p *Packet) SetPtype(ptype byte) {
 	p.ptype = ptype
 }
 
-// Uri returns the URL string string
+// Uri returns the URL string
 func (p *Packet) Uri() string {
 	return p.uri
+}
+
+// Url returns the URL object
+func (p *Packet) Url() *url.URL {
+	if p.url == nil {
+		p.url, _ = url.Parse(p.uri)
+		if p.url == nil {
+			p.url = new(url.URL)
+		}
+	}
+	return p.url
 }
 
 // SetUri sets the packet URL string
 func (p *Packet) SetUri(uri string) {
 	p.uri = uri
+	p.url = nil
 }
 
 // Meta returns the metadata.
