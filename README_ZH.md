@@ -419,15 +419,15 @@ func main() {
     defer peer.Close()
     peer.PushRouter.Reg(new(Push))
 
-    var sess, err = peer.Dial("127.0.0.1:9090")
-    if err != nil {
-        tp.Fatalf("%v", err)
+    var sess, rerr = peer.Dial("127.0.0.1:9090")
+    if rerr != nil {
+        tp.Fatalf("%v", rerr)
     }
     sess.SetId("testId")
 
     var reply interface{}
     for {
-        var pullcmd = sess.Pull(
+        if rerr = sess.Pull(
             "/group/home/test?peer_id=call-1",
             map[string]interface{}{
                 "bytes": []byte("test bytes"),
@@ -437,9 +437,8 @@ func main() {
             socket.WithSetMeta("set", "0"),
             socket.WithAddMeta("add", "1"),
             socket.WithAddMeta("add", "2"),
-        )
-        if pullcmd.Rerror() != nil {
-            tp.Errorf("pull error: %v", pullcmd.Rerror())
+        ).Rerror(); rerr != nil {
+            tp.Errorf("pull error: %v", rerr)
             time.Sleep(time.Second * 2)
         } else {
             break
@@ -447,7 +446,7 @@ func main() {
     }
     tp.Infof("test: %#v", reply)
 
-    var pullcmd = sess.Pull(
+    rerr = sess.Pull(
         "/group/home/test_unknown?peer_id=call-2",
         struct {
             RawMessage json.RawMessage
@@ -458,10 +457,9 @@ func main() {
         },
         &reply,
         socket.WithXferPipe('g'),
-    )
-
-    if pullcmd.Rerror() != nil {
-        tp.Fatalf("pull error: %v", pullcmd.Rerror())
+    ).Rerror()
+    if rerr != nil {
+        tp.Fatalf("pull error: %v", rerr)
     }
     tp.Infof("test_unknown: %#v", reply)
 }

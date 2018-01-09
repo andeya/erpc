@@ -121,12 +121,33 @@ func getRerrorBytes(meta *utils.Args) []byte {
 
 // ToError converts to error
 func (r *Rerror) ToError() error {
-	b, _ := r.MarshalJSON()
-	return (*errString)(unsafe.Pointer(&b))
+	if r == nil {
+		return nil
+	}
+	return (*rerror)(unsafe.Pointer(r))
 }
 
-type errString string
+// ToRerror converts error to *Rerror
+func ToRerror(err error) *Rerror {
+	if err == nil {
+		return nil
+	}
+	r, ok := err.(*rerror)
+	if ok {
+		return r.toRerror()
+	}
+	rerr := rerror_unknownError.Copy()
+	rerr.Detail = err.Error()
+	return rerr
+}
 
-func (e *errString) Error() string {
-	return *(*string)(unsafe.Pointer(e))
+type rerror Rerror
+
+func (r *rerror) Error() string {
+	b, _ := r.toRerror().MarshalJSON()
+	return goutil.BytesToString(b)
+}
+
+func (r *rerror) toRerror() *Rerror {
+	return (*Rerror)(unsafe.Pointer(r))
 }

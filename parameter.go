@@ -48,6 +48,7 @@ func TypeText(typ byte) string {
 // Internal Framework Rerror code.
 // Note: Recommended custom code is greater than 1000.
 const (
+	CodeUnknownError   = -1
 	CodeDialFailed     = 105
 	CodeConnClosed     = 102
 	CodeWriteFailed    = 104
@@ -72,11 +73,12 @@ const (
 
 // Internal Framework Rerror string.
 var (
-	rerror_dialFailed  = NewRerror(CodeDialFailed, "Dial Failed", "")
-	rerror_connClosed  = NewRerror(CodeConnClosed, "Connection Closed", "")
-	rerror_writeFailed = NewRerror(CodeWriteFailed, "Write Failed", "")
-	rerror_badPacket   = NewRerror(CodeBadPacket, "Bad Packet", "")
-	rerror_notFound    = NewRerror(CodeNotFound, "Not Found", "")
+	rerror_unknownError = NewRerror(-1, "Unknown error", "")
+	rerror_dialFailed   = NewRerror(CodeDialFailed, "Dial Failed", "")
+	rerror_connClosed   = NewRerror(CodeConnClosed, "Connection Closed", "")
+	rerror_writeFailed  = NewRerror(CodeWriteFailed, "Write Failed", "")
+	rerror_badPacket    = NewRerror(CodeBadPacket, "Bad Packet", "")
+	rerror_notFound     = NewRerror(CodeNotFound, "Not Found", "")
 )
 
 var (

@@ -23,9 +23,9 @@ func main() {
 		DefaultDialTimeout: time.Second * 5,
 	})
 
-	var sess, err = peer.Dial("127.0.0.1:9090")
-	if err != nil {
-		tp.Panicf("%v", err)
+	var sess, rerr = peer.Dial("127.0.0.1:9090")
+	if rerr != nil {
+		tp.Panicf("%v", rerr)
 	}
 
 	var count sync.WaitGroup
@@ -46,14 +46,13 @@ func main() {
 			go func() {
 				defer count.Done()
 				var reply = new(pb.PbTest)
-				var pullcmd = sess.Pull(
+				if rerr := sess.Pull(
 					"/group/home/test",
 					&pb.PbTest{A: 10, B: 2},
 					reply,
-				)
-				if pullcmd.Rerror() != nil {
+				).Rerror(); rerr != nil {
 					atomic.AddUint32(&failNum, 1)
-					tp.Errorf("pull error: %v", pullcmd.Rerror())
+					tp.Errorf("pull error: %v", rerr)
 				}
 			}()
 		}
