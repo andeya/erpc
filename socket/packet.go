@@ -70,11 +70,11 @@ type (
 		Ptype() byte
 		// Ptype sets the packet type
 		SetPtype(byte)
-		// Uri returns the URL string
+		// Uri returns the URI string
 		Uri() string
-		// SetUri sets the packet URL string
+		// SetUri sets the packet URI
 		SetUri(string)
-		// Url returns the URL object
+		// Url returns the URI object
 		Url() *url.URL
 		// Meta returns the metadata
 		Meta() *utils.Args
@@ -206,12 +206,18 @@ func (p *Packet) SetPtype(ptype byte) {
 	p.ptype = ptype
 }
 
-// Uri returns the URL string
+// Uri returns the URI string
 func (p *Packet) Uri() string {
 	return p.uri
 }
 
-// Url returns the URL object
+// SetUri sets the packet URI
+func (p *Packet) SetUri(uri string) {
+	p.uri = uri
+	p.url = nil
+}
+
+// Url returns the URI object
 func (p *Packet) Url() *url.URL {
 	if p.url == nil {
 		p.url, _ = url.Parse(p.uri)
@@ -220,12 +226,6 @@ func (p *Packet) Url() *url.URL {
 		}
 	}
 	return p.url
-}
-
-// SetUri sets the packet URL string
-func (p *Packet) SetUri(uri string) {
-	p.uri = uri
-	p.url = nil
 }
 
 // Meta returns the metadata.
