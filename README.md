@@ -484,6 +484,13 @@ package|import|description
 [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
 [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"`|A generic timing heartbeat plugin
 
+### Sundry
+
+package|import|description
+----|------|-----------
+[cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/sundry-cliSession)|`import cliSession "github.com/henrylee2cn/tp-ext/sundry-cliSession"`|CliSession client session which is has connection pool
+
+
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
 
 ## 8. Projects based on Teleport
