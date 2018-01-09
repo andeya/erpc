@@ -555,14 +555,16 @@ func warnInvaildHandlerHooks(plugin []Plugin) {
 			Warnf("invalid PreWritePullPlugin in router: %s", p.Name())
 		case PostWritePullPlugin:
 			Warnf("invalid PostWritePullPlugin in router: %s", p.Name())
-		case PreReadHeaderPlugin:
-			Warnf("invalid PreReadHeaderPlugin in router: %s", p.Name())
-		case PostReadPullHeaderPlugin:
-			Warnf("invalid PostReadPullHeaderPlugin in router: %s", p.Name())
 		case PreWritePushPlugin:
 			Warnf("invalid PreWritePushPlugin in router: %s", p.Name())
 		case PostWritePushPlugin:
 			Warnf("invalid PostWritePushPlugin in router: %s", p.Name())
+		case PreReadHeaderPlugin:
+			Warnf("invalid PreReadHeaderPlugin in router: %s", p.Name())
+		case PostReadPullHeaderPlugin:
+			Warnf("invalid PostReadPullHeaderPlugin in router: %s", p.Name())
+		case PostReadPushHeaderPlugin:
+			Warnf("invalid PostReadPushHeaderPlugin in router: %s", p.Name())
 		}
 	}
 }
