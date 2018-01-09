@@ -60,7 +60,7 @@ type (
 		SetId(newId string)
 		// Close closes the session.
 		Close() error
-		// Health checks if the session is ok.
+		// Health checks if the session is usable.
 		Health() bool
 		// AsyncPull sends a packet and receives reply asynchronously.
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
@@ -445,11 +445,10 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	}
 
 	s.writeLock.Lock()
-	if status := s.getStatus(); status != statusOk {
-		if !(status == statusActiveClosing && packet.Ptype() == TypeReply) {
-			s.writeLock.Unlock()
-			return ErrConnClosed
-		}
+	status := s.getStatus()
+	if status != statusOk && !(status == statusActiveClosing && packet.Ptype() == TypeReply) {
+		s.writeLock.Unlock()
+		return ErrConnClosed
 	}
 
 	defer func() {
@@ -459,7 +458,7 @@ func (s *session) write(packet *socket.Packet) (err error) {
 			if s.redialForClientFunc != nil {
 				// Wait for the status to change
 			W:
-				if s.Health() {
+				if s.isOk() {
 					time.Sleep(time.Millisecond)
 					goto W
 				}
@@ -481,8 +480,23 @@ const (
 	statusPassiveClosed int32 = 3
 )
 
-// Health checks if the session is ok.
+// Health checks if the session is usable.
 func (s *session) Health() bool {
+	status := s.getStatus()
+	if status == statusOk {
+		return true
+	}
+	if s.redialForClientFunc == nil {
+		return false
+	}
+	if status == statusPassiveClosed {
+		return true
+	}
+	return false
+}
+
+// isOk checks if the session is normal.
+func (s *session) isOk() bool {
 	return atomic.LoadInt32(&s.status) == statusOk
 }
 
