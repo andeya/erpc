@@ -99,10 +99,48 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 		p.timeNow = func() time.Time { return t0 }
 		p.timeSince = func(time.Time) time.Duration { return 0 }
 	}
-
 	addPeer(p)
 	p.pluginContainer.PostNewPeer(p)
 	return p
+}
+
+// TlsConfig returns the TLS config.
+func (p *Peer) TlsConfig() *tls.Config {
+	return p.tlsConfig
+}
+
+// SetTlsConfig sets the TLS config.
+func (p *Peer) SetTlsConfig(tlsConfig *tls.Config) {
+	p.tlsConfig = tlsConfig
+}
+
+// SetTlsConfigFromFile sets the TLS config from file.
+func (p *Peer) SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error {
+	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
+	if err != nil {
+		return err
+	}
+	p.tlsConfig = &tls.Config{
+		Certificates:             []tls.Certificate{cert},
+		NextProtos:               []string{"http/1.1", "h2"},
+		PreferServerCipherSuites: true,
+		CurvePreferences: []tls.CurveID{
+			tls.CurveP256,
+			tls.X25519,
+		},
+		MinVersion: tls.VersionTLS12,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+		},
+	}
+	return nil
 }
 
 // GetSession gets the session by id.
