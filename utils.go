@@ -59,19 +59,31 @@ var SetReadLimit = socket.SetPacketSizeLimit
 var SetSocketKeepAlive = socket.SetKeepAlive
 
 // SetSocketKeepAlivePeriod sets period between keep alives.
-// Note: if d=-1, don't change the system default value.
+// Note: if d<0, don't change the value.
 //  func SetSocketKeepAlivePeriod(d time.Duration)
 var SetSocketKeepAlivePeriod = socket.SetKeepAlivePeriod
 
+// SocketReadBuffer returns the size of the operating system's
+// receive buffer associated with the connection.
+// Note: if using the system default value, bytes=-1 and isDefault=true.
+//  func ReadBuffer() (bytes int, isDefault bool)
+var SocketReadBuffer = socket.ReadBuffer
+
 // SetSocketReadBuffer sets the size of the operating system's
 // receive buffer associated with the connection.
-// Note: if bytes=-1, don't change the system default value.
+// Note: if bytes<0, don't change the value.
 //  func SetReadBuffer(bytes int)
 var SetSocketReadBuffer = socket.SetReadBuffer
 
+// SocketWriteBuffer returns the size of the operating system's
+// transmit buffer associated with the connection.
+// Note: if using the system default value, bytes=-1 and isDefault=true.
+//  func WriteBuffer() (bytes int, isDefault bool)
+var SocketWriteBuffer = socket.WriteBuffer
+
 // SetSocketWriteBuffer sets the size of the operating system's
 // transmit buffer associated with the connection.
-// Note: Uses the default value, if bytes=1.
+// Note: if bytes<0, don't change the value.
 //  func SetWriteBuffer(bytes int)
 var SetSocketWriteBuffer = socket.SetWriteBuffer
 

@@ -17,6 +17,7 @@
 package socket
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -317,23 +318,13 @@ func SetKeepAlive(keepalive bool) {
 }
 
 // SetKeepAlivePeriod sets period between keep alives.
-// Note: if d=-1, don't change the system default value.
+// Note: if d<0, don't change the value.
 func SetKeepAlivePeriod(d time.Duration) {
-	keepAlivePeriod = d
-}
-
-// SetReadBuffer sets the size of the operating system's
-// receive buffer associated with the connection.
-// Note: if bytes=-1, don't change the system default value.
-func SetReadBuffer(bytes int) {
-	readBuffer = bytes
-}
-
-// SetWriteBuffer sets the size of the operating system's
-// transmit buffer associated with the connection.
-// Note: if bytes=-1, don't change the system default value.
-func SetWriteBuffer(bytes int) {
-	writeBuffer = bytes
+	if d >= 0 {
+		keepAlivePeriod = d
+	} else {
+		fmt.Println("socket: SetKeepAlivePeriod: invalid keepAlivePeriod:", d)
+	}
 }
 
 // ReadBuffer returns the size of the operating system's
@@ -343,11 +334,33 @@ func ReadBuffer() (bytes int, isDefault bool) {
 	return readBuffer, readBuffer == -1
 }
 
+// SetReadBuffer sets the size of the operating system's
+// receive buffer associated with the connection.
+// Note: if bytes<0, don't change the value.
+func SetReadBuffer(bytes int) {
+	if bytes >= 0 {
+		readBuffer = bytes
+	} else {
+		fmt.Println("socket: SetReadBuffer: invalid readBuffer size:", bytes)
+	}
+}
+
 // WriteBuffer returns the size of the operating system's
 // transmit buffer associated with the connection.
 // Note: if using the system default value, bytes=-1 and isDefault=true.
 func WriteBuffer() (bytes int, isDefault bool) {
 	return writeBuffer, writeBuffer == -1
+}
+
+// SetWriteBuffer sets the size of the operating system's
+// transmit buffer associated with the connection.
+// Note: if bytes<0, don't change the value.
+func SetWriteBuffer(bytes int) {
+	if bytes >= 0 {
+		writeBuffer = bytes
+	} else {
+		fmt.Println("socket: SetWriteBuffer: invalid writeBuffer size:", bytes)
+	}
 }
 
 func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {
