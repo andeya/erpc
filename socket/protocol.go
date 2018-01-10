@@ -63,12 +63,29 @@ type (
 )
 
 // default builder of socket communication protocol
-var defaultProtoFunc = func(rw io.ReadWriter) Proto {
-	return &FastProto{
-		id:   'f',
-		name: "fast",
-		r:    bufio.NewReaderSize(rw, fastProtoReadBufioSize),
-		w:    rw,
+var (
+	defaultProtoFunc = func(rw io.ReadWriter) Proto {
+		return &FastProto{
+			id:   'f',
+			name: "fast",
+			r:    bufio.NewReaderSize(rw, fastProtoReadBufioSize),
+			w:    rw,
+		}
+	}
+	fastProtoReadBufioSize int
+)
+
+func init() {
+	resetFastProtoReadBufioSize()
+}
+
+func resetFastProtoReadBufioSize() {
+	if readBuffer < 0 {
+		fastProtoReadBufioSize = 1024 * 4
+	} else if readBuffer == 0 {
+		fastProtoReadBufioSize = 1024 * 35
+	} else {
+		fastProtoReadBufioSize = readBuffer / 2
 	}
 }
 

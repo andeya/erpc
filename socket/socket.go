@@ -337,22 +337,6 @@ func SetWriteBuffer(bytes int) {
 	writeBuffer = bytes
 }
 
-var fastProtoReadBufioSize int
-
-func init() {
-	resetFastProtoReadBufioSize()
-}
-
-func resetFastProtoReadBufioSize() {
-	if readBuffer < 0 {
-		fastProtoReadBufioSize = 1024 * 4
-	} else if readBuffer == 0 {
-		fastProtoReadBufioSize = 1024 * 35
-	} else {
-		fastProtoReadBufioSize = readBuffer / 2
-	}
-}
-
 func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {
 	if len(protoFuncs) > 0 {
 		return protoFuncs[0](rw)
