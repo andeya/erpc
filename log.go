@@ -29,66 +29,25 @@ type Logger interface {
 	Level() string
 	// SetLevel sets the logger's level.
 	SetLevel(level string)
-	// // Print formats using the default formats for its operands and writes to standard output.
-	// // Spaces are added between operands when neither is a string.
-	// // It returns the number of bytes written and any write error encountered.
-	// Print(args ...interface{})
-
 	// Printf formats according to a format specifier and writes to standard output.
 	// It returns the number of bytes written and any write error encountered.
 	Printf(format string, args ...interface{})
-
-	// // Fatal is equivalent to Critica followed by a call to os.Exit(1).
-	// Fatal(args ...interface{})
-
 	// Fatalf is equivalent to Criticalf followed by a call to os.Exit(1).
 	Fatalf(format string, args ...interface{})
-
-	// // Panic is equivalent to Critical followed by a call to panic().
-	// Panic(args ...interface{})
-
 	// Panicf is equivalent to Criticalf followed by a call to panic().
 	Panicf(format string, args ...interface{})
-
-	// // Critical logs a message using CRITICAL as log level.
-	// Critical(args ...interface{})
-
 	// Criticalf logs a message using CRITICAL as log level.
 	Criticalf(format string, args ...interface{})
-
-	// // Error logs a message using ERROR as log level.
-	// Error(args ...interface{})
-
 	// Errorf logs a message using ERROR as log level.
 	Errorf(format string, args ...interface{})
-
-	// // Warn logs a message using WARNING as log level.
-	// Warn(args ...interface{})
-
 	// Warnf logs a message using WARNING as log level.
 	Warnf(format string, args ...interface{})
-
-	// // Notice logs a message using NOTICE as log level.
-	// Notice(args ...interface{})
-
 	// Noticef logs a message using NOTICE as log level.
 	Noticef(format string, args ...interface{})
-
-	// // Info logs a message using INFO as log level.
-	// Info(args ...interface{})
-
 	// Infof logs a message using INFO as log level.
 	Infof(format string, args ...interface{})
-
-	// // Debug logs a message using DEBUG as log level.
-	// Debug(args ...interface{})
-
 	// Debugf logs a message using DEBUG as log level.
 	Debugf(format string, args ...interface{})
-
-	// // Trace logs a message using TRACE as log level.
-	// Trace(args ...interface{})
-
 	// Tracef logs a message using TRACE as log level.
 	Tracef(format string, args ...interface{})
 }
@@ -96,12 +55,10 @@ type Logger interface {
 var (
 	// global logger
 	globalLogger = func() Logger {
-		logger := newDefaultlogger(defaultLoglevel)
+		logger := newDefaultlogger("TRACE")
 		graceful.SetLog(logger)
 		return logger
 	}()
-	// log level list: PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
-	defaultLoglevel = "TRACE"
 )
 
 func newDefaultlogger(level string) Logger {
@@ -144,7 +101,9 @@ func (l *defaultLogger) Level() string {
 }
 
 // SetLevel sets the logger's level.
-// Note: Concurrent is not safe!
+// Note:
+// Concurrent is not safe!
+// the teleport default logger's level list: PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
 func (l *defaultLogger) SetLevel(level string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
