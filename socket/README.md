@@ -115,10 +115,10 @@ type (
 	Proto interface {
 		// Version returns the protocol's id and name.
 		Version() (byte, string)
-		// Pack pack socket data packet.
+		// Pack writes the Packet into the connection.
 		// Note: Make sure to write only once or there will be package contamination!
 		Pack(*Packet) error
-		// Unpack unpack socket data packet.
+		// Unpack reads bytes from the connection to the Packet.
 		// Note: Concurrent unsafe!
 		Unpack(*Packet) error
 	}

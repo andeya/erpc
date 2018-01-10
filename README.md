@@ -168,18 +168,18 @@ You can customize your own communication protocol by implementing the interface:
 
 ```go
 type (
-	// Proto pack/unpack protocol scheme of socket packet.
-	Proto interface {
-		// Version returns the protocol's id and name.
-		Version() (byte, string)
-		// Pack pack socket data packet.
-		// Note: Make sure to write only once or there will be package contamination!
-		Pack(*Packet) error
-		// Unpack unpack socket data packet.
-		// Note: Concurrent unsafe!
-		Unpack(*Packet) error
-	}
-	ProtoFunc func(io.ReadWriter) Proto
+    // Proto pack/unpack protocol scheme of socket packet.
+    Proto interface {
+        // Version returns the protocol's id and name.
+        Version() (byte, string)
+        // Pack writes the Packet into the connection.
+        // Note: Make sure to write only once or there will be package contamination!
+        Pack(*Packet) error
+        // Unpack reads bytes from the connection to the Packet.
+        // Note: Concurrent unsafe!
+        Unpack(*Packet) error
+    }
+    ProtoFunc func(io.ReadWriter) Proto
 )
 ```
 
