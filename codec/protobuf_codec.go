@@ -56,6 +56,7 @@ func (ProtoCodec) Unmarshal(data []byte, v interface{}) error {
 
 var emptyStruct = struct{}{}
 
+// ProtoMarshal returns the Protobuf encoding of v.
 func ProtoMarshal(v interface{}) ([]byte, error) {
 	if p, ok := v.(proto.Message); ok {
 		return proto.Marshal(p)
@@ -66,6 +67,8 @@ func ProtoMarshal(v interface{}) ([]byte, error) {
 	return nil, fmt.Errorf("%T does not implement proto.Message", v)
 }
 
+// ProtoUnmarshal parses the Protobuf-encoded data and stores the result
+// in the value pointed to by v.
 func ProtoUnmarshal(data []byte, v interface{}) error {
 	if p, ok := v.(proto.Message); ok {
 		return proto.Unmarshal(data, p)

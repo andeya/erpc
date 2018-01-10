@@ -49,7 +49,7 @@ func newGzip(id byte, level int) *Gzip {
 	return g
 }
 
-// gzip compression filter
+// Gzip compression filter
 type Gzip struct {
 	id    byte
 	level int
@@ -57,10 +57,12 @@ type Gzip struct {
 	rPool sync.Pool
 }
 
+// Id returns transfer filter id.
 func (g *Gzip) Id() byte {
 	return g.id
 }
 
+// OnPack performs filtering on packing.
 func (g *Gzip) OnPack(src []byte) ([]byte, error) {
 	gw := g.wPool.Get().(*gzip.Writer)
 	defer g.wPool.Put(gw)
@@ -79,6 +81,7 @@ func (g *Gzip) OnPack(src []byte) ([]byte, error) {
 	return bb.Bytes(), nil
 }
 
+// OnUnpack performs filtering on unpacking.
 func (g *Gzip) OnUnpack(src []byte) ([]byte, error) {
 	gr := g.rPool.Get().(*gzip.Reader)
 	defer g.rPool.Put(gr)

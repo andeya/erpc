@@ -95,30 +95,30 @@ type Logger interface {
 
 var (
 	// global logger
-	globalLogger Logger
-	// __loglevel__: PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
-	__loglevel__ = "TRACE"
+	globalLogger = func() Logger {
+		logger := newDefaultlogger(defaultLoglevel)
+		graceful.SetLog(logger)
+		return logger
+	}()
+	// log level list: PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
+	defaultLoglevel = "TRACE"
 )
 
-func init() {
-	SetLogger(newDefaultlogger(__loglevel__))
-}
-
 func newDefaultlogger(level string) Logger {
-	l := &Log{
+	l := &defaultLogger{
 		level: level,
 	}
 	l.newSet()
 	return l
 }
 
-type Log struct {
+type defaultLogger struct {
 	*logging.Logger
 	level string
 	mu    sync.RWMutex
 }
 
-func (l *Log) newSet() {
+func (l *defaultLogger) newSet() {
 	var consoleLogBackend = &logging.LogBackend{
 		Logger: log.New(color.NewColorableStdout(), "", 0),
 		Color:  true,
@@ -137,7 +137,7 @@ func (l *Log) newSet() {
 
 // Level returns the logger's level.
 // Note: Concurrent is not safe!
-func (l *Log) Level() string {
+func (l *defaultLogger) Level() string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return l.level
@@ -145,7 +145,7 @@ func (l *Log) Level() string {
 
 // SetLevel sets the logger's level.
 // Note: Concurrent is not safe!
-func (l *Log) SetLevel(level string) {
+func (l *defaultLogger) SetLevel(level string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.level = level

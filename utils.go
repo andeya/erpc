@@ -47,7 +47,7 @@ var SetDefaultProtoFunc = socket.SetDefaultProtoFunc
 //  PacketSizeLimit() uint32
 var GetReadLimit = socket.PacketSizeLimit
 
-// SetPacketSizeLimit sets max packet size.
+// SetReadLimit sets max packet size.
 // If maxSize<=0, set it to max uint32.
 //  func SetPacketSizeLimit(maxPacketSize uint32)
 var SetReadLimit = socket.SetPacketSizeLimit

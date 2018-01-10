@@ -115,7 +115,7 @@ func (b *ByteBuffer) Reset() {
 	b.B = b.B[:0]
 }
 
-// Reset makes ByteBuffer.B empty.
+// ChangeLen changes the buffer length.
 func (b *ByteBuffer) ChangeLen(newLen int) {
 	if cap(b.B) < newLen {
 		b.B = make([]byte, newLen)
@@ -135,7 +135,7 @@ const (
 	maxPercentile           = 0.95
 )
 
-// Pool represents byte buffer pool.
+// BufferPool represents byte buffer pool.
 //
 // Distinct pools may be used for distinct types of byte buffers.
 // Properly determined byte buffer types with their own pools may help reducing

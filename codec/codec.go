@@ -1,3 +1,5 @@
+// Package codec is codec set.
+//
 // Copyright 2015-2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +13,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 package codec
 
 import (
@@ -42,7 +44,9 @@ var codecMap = struct {
 }
 
 const (
-	NilCodecId   byte   = 0
+	// NilCodecId empty codec id.
+	NilCodecId byte = 0
+	// NilCodecName empty codec name.
 	NilCodecName string = ""
 )
 

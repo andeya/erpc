@@ -31,8 +31,8 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-// Session a connection session.
 type (
+	// PreSession a connection session that has not started reading goroutine.
 	PreSession interface {
 		PostSession
 		// SetId sets the session id.
@@ -54,6 +54,7 @@ type (
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
 	}
+	// Session a connection session.
 	Session interface {
 		PostSession
 		// SetId sets the session id.
@@ -84,6 +85,7 @@ type (
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
 	}
+	// PostSession a disconnected session.
 	PostSession interface {
 		// Id returns the session id.
 		Id() string
@@ -205,7 +207,7 @@ func (s *session) Send(output *socket.Packet) *Rerror {
 	}
 	err := s.socket.WritePacket(output)
 	if err != nil {
-		rerr := rerror_connClosed.Copy()
+		rerr := rerrConnClosed.Copy()
 		rerr.Detail = err.Error()
 		return rerr
 	}
@@ -219,7 +221,7 @@ func (s *session) Receive(input *socket.Packet) *Rerror {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 	}
 	if err := s.socket.ReadPacket(input); err != nil {
-		rerr := rerror_connClosed.Copy()
+		rerr := rerrConnClosed.Copy()
 		rerr.Detail = err.Error()
 		return rerr
 	}
@@ -300,7 +302,7 @@ W:
 			s.pullCmdMap.Store(seq, cmd)
 			goto W
 		}
-		cmd.rerr = rerror_writeFailed.Copy()
+		cmd.rerr = rerrWriteFailed.Copy()
 		cmd.rerr.Detail = err.Error()
 		cmd.done()
 		return
@@ -368,7 +370,7 @@ W:
 			s.seqLock.Unlock()
 			goto W
 		}
-		rerr = rerror_writeFailed.Copy()
+		rerr = rerrWriteFailed.Copy()
 		rerr.Detail = err.Error()
 		return rerr
 	}

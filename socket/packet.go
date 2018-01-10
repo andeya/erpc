@@ -1,5 +1,3 @@
-// Socket package provides a concise, powerful and high-performance TCP
-//
 // Copyright 2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +58,7 @@ type (
 		size uint32
 		next *Packet
 	}
-	// packet header interface
+	// Header packet header interface
 	Header interface {
 		// Ptype returns the packet sequence
 		Seq() uint64
@@ -79,7 +77,7 @@ type (
 		// Meta returns the metadata
 		Meta() *utils.Args
 	}
-	// packet body interface
+	// Body packet body interface
 	Body interface {
 		// BodyCodec returns the body codec type id
 		BodyCodec() byte
@@ -186,7 +184,7 @@ func (p *Packet) doSetting(settings ...PacketSetting) {
 	}
 }
 
-// Ptype returns the packet sequence
+// Seq returns the packet sequence
 func (p *Packet) Seq() uint64 {
 	return p.seq
 }
@@ -201,7 +199,7 @@ func (p *Packet) Ptype() byte {
 	return p.ptype
 }
 
-// Ptype sets the packet type
+// SetPtype sets the packet type
 func (p *Packet) SetPtype(ptype byte) {
 	p.ptype = ptype
 }
@@ -345,7 +343,7 @@ func (p *Packet) Size() uint32 {
 	return p.size
 }
 
-// SetSizeAndCheck sets the size of packet.
+// SetSize sets the size of packet.
 // If the size is too big, returns error.
 func (p *Packet) SetSize(size uint32) error {
 	err := checkPacketSize(size)
@@ -402,7 +400,7 @@ func WithSeq(seq uint64) PacketSetting {
 	}
 }
 
-// Ptype sets the packet type
+// WithPtype sets the packet type
 func WithPtype(ptype byte) PacketSetting {
 	return func(p *Packet) {
 		p.ptype = ptype

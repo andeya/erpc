@@ -45,6 +45,7 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.R
 	}, nil
 }
 
+// UnknownPullHandle handles unknown pull packet
 func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 	time.Sleep(1)
 	var v = struct {

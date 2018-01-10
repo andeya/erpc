@@ -504,7 +504,7 @@ func (r *RootRouter) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 	r.router.Reg(ctrlStruct, plugin...)
 }
 
-// setUnknown sets the default handler,
+// SetUnknown sets the default handler,
 // which is called when no handler for PULL or PUSH is found.
 func (r *RootRouter) SetUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
 	r.router.setUnknown(unknownHandleFunc, plugin...)

@@ -1,5 +1,3 @@
-// Socket package provides a concise, powerful and high-performance TCP
-//
 // Copyright 2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");

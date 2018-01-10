@@ -329,7 +329,7 @@ func (c *readHandleCtx) handle() {
 
 	default:
 		// if unsupported, disconnected.
-		notImplemented_metaSetting.Inject(c.output.Meta())
+		notImplementedMetaSetting.Inject(c.output.Meta())
 		if c.sess.peer.printBody {
 			logformat := "disconnect(%s) due to unsupported type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
 			Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size(), bodyLogBytes(c.input))
@@ -349,7 +349,7 @@ func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
 
 	u := header.Url()
 	if len(u.Path) == 0 {
-		c.handleErr = rerror_badPacket.Copy()
+		c.handleErr = rerrBadPacket.Copy()
 		c.handleErr.Detail = "invalid URI for packet"
 		return nil
 	}
@@ -357,7 +357,7 @@ func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
 	var ok bool
 	c.handler, ok = c.sess.getPushHandler(u.Path)
 	if !ok {
-		c.handleErr = rerror_notFound
+		c.handleErr = rerrNotFound
 		return nil
 	}
 
@@ -405,17 +405,17 @@ func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
 
 	u := header.Url()
 	if len(u.Path) == 0 {
-		c.handleErr = rerror_badPacket.Copy()
+		c.handleErr = rerrBadPacket.Copy()
 		c.handleErr.Detail = "invalid URI for packet"
-		badPacket_metaSetting.Inject(c.output.Meta(), c.handleErr.Detail)
+		badPacketMetaSetting.Inject(c.output.Meta(), c.handleErr.Detail)
 		return nil
 	}
 
 	var ok bool
 	c.handler, ok = c.sess.getPullHandler(u.Path)
 	if !ok {
-		c.handleErr = rerror_notFound
-		notFound_metaSetting.Inject(c.output.Meta())
+		c.handleErr = rerrNotFound
+		notFoundMetaSetting.Inject(c.output.Meta())
 		return nil
 	}
 
@@ -475,11 +475,11 @@ func (c *readHandleCtx) handlePull() {
 	if err := c.sess.write(c.output); err != nil {
 		errStr := err.Error()
 		if c.handleErr == nil {
-			rerr = rerror_writeFailed.Copy()
+			rerr = rerrWriteFailed.Copy()
 			rerr.Detail = errStr
 			c.handleErr = rerr
 		}
-		writeFailed_metaSetting.Inject(c.output.Meta(), errStr)
+		writeFailedMetaSetting.Inject(c.output.Meta(), errStr)
 	}
 
 	rerr = c.pluginContainer.PostWriteReply(c)
@@ -594,54 +594,54 @@ type (
 var _ WriteCtx = PullCmd(nil)
 
 // Peer returns the peer.
-func (c *pullCmd) Peer() *Peer {
-	return c.sess.peer
+func (p *pullCmd) Peer() *Peer {
+	return p.sess.peer
 }
 
 // Session returns the session.
-func (c *pullCmd) Session() Session {
-	return c.sess
+func (p *pullCmd) Session() Session {
+	return p.sess
 }
 
 // Ip returns the remote addr.
-func (c *pullCmd) Ip() string {
-	return c.sess.RemoteIp()
+func (p *pullCmd) Ip() string {
+	return p.sess.RemoteIp()
 }
 
 // Public returns temporary public data of context.
-func (c *pullCmd) Public() goutil.Map {
-	return c.public
+func (p *pullCmd) Public() goutil.Map {
+	return p.public
 }
 
 // PublicLen returns the length of public data of context.
-func (c *pullCmd) PublicLen() int {
-	return c.public.Len()
+func (p *pullCmd) PublicLen() int {
+	return p.public.Len()
 }
 
 // Output returns writed packet.
-func (c *pullCmd) Output() *socket.Packet {
-	return c.output
+func (p *pullCmd) Output() *socket.Packet {
+	return p.output
 }
 
 // Result returns the pull result.
-func (c *pullCmd) Result() (interface{}, *Rerror) {
-	return c.reply, c.rerr
+func (p *pullCmd) Result() (interface{}, *Rerror) {
+	return p.reply, p.rerr
 }
 
 // Rerror returns the pull error.
-func (c *pullCmd) Rerror() *Rerror {
-	return c.rerr
+func (p *pullCmd) Rerror() *Rerror {
+	return p.rerr
 }
 
 // CostTime returns the pulled cost time.
 // If PeerConfig.CountTime=false, always returns 0.
-func (c *pullCmd) CostTime() time.Duration {
-	return c.cost
+func (p *pullCmd) CostTime() time.Duration {
+	return p.cost
 }
 
 func (p *pullCmd) cancel() {
 	p.sess.pullCmdMap.Delete(p.output.Seq())
-	p.rerr = rerror_connClosed
+	p.rerr = rerrConnClosed
 	p.doneChan <- p
 	// free count pull-launch
 	p.sess.gracepullCmdWaitGroup.Done()

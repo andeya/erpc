@@ -74,10 +74,14 @@ func GraceSignal() {
 	graceful.GraceSignal()
 }
 
-// FirstSweep is first executed.
-// BeforeExiting is executed before process exiting.
-// Usage: share github.com/henrylee2cn/goutil/graceful with other project.
-var FirstSweep, BeforeExiting func() error
+var (
+	// FirstSweep is first executed.
+	// Usage: share github.com/henrylee2cn/goutil/graceful with other project.
+	FirstSweep func() error
+	// BeforeExiting is executed before process exiting.
+	// Usage: share github.com/henrylee2cn/goutil/graceful with other project.
+	BeforeExiting func() error
+)
 
 // SetShutdown sets the function which is called after the process shutdown,
 // and the time-out period for the process shutdown.

@@ -24,18 +24,18 @@ type (
 	}
 )
 
+// MetaRerrorKey reply error metadata key
 const MetaRerrorKey = "X-Reply-Error"
 
 var (
 	_ json.Marshaler   = new(Rerror)
 	_ json.Unmarshaler = new(Rerror)
-	// _ error            = new(Rerror)
 
-	re_a = []byte(`{"code":`)
-	re_b = []byte(`,"message":"`)
-	re_c = []byte(`,"detail":"`)
-	re_d = []byte(`"`)
-	re_e = []byte(`\"`)
+	reA = []byte(`{"code":`)
+	reB = []byte(`,"message":"`)
+	reC = []byte(`,"detail":"`)
+	reD = []byte(`"`)
+	reE = []byte(`\"`)
 )
 
 // NewRerror creates a *Rerror.
@@ -87,15 +87,15 @@ func (r *Rerror) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return []byte{}, nil
 	}
-	var b = append(re_a, strconv.FormatInt(int64(r.Code), 10)...)
+	var b = append(reA, strconv.FormatInt(int64(r.Code), 10)...)
 	if len(r.Message) > 0 {
-		b = append(b, re_b...)
-		b = append(b, bytes.Replace(goutil.StringToBytes(r.Message), re_d, re_e, -1)...)
+		b = append(b, reB...)
+		b = append(b, bytes.Replace(goutil.StringToBytes(r.Message), reD, reE, -1)...)
 		b = append(b, '"')
 	}
 	if len(r.Detail) > 0 {
-		b = append(b, re_c...)
-		b = append(b, bytes.Replace(goutil.StringToBytes(r.Detail), re_d, re_e, -1)...)
+		b = append(b, reC...)
+		b = append(b, bytes.Replace(goutil.StringToBytes(r.Detail), reD, reE, -1)...)
 		b = append(b, '"')
 	}
 	b = append(b, '}')
@@ -139,7 +139,7 @@ func ToRerror(err error) *Rerror {
 	if ok {
 		return r.toRerror()
 	}
-	rerr := rerror_unknownError.Copy()
+	rerr := rerrUnknownError.Copy()
 	rerr.Detail = err.Error()
 	return rerr
 }

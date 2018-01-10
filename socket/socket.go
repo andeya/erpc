@@ -1,4 +1,4 @@
-// Socket package provides a concise, powerful and high-performance TCP socket.
+// Package socket provides a concise, powerful and high-performance TCP.
 //
 // Copyright 2017 HenryLee. All Rights Reserved.
 //
@@ -356,7 +356,6 @@ func resetFastProtoReadBufioSize() {
 func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {
 	if len(protoFuncs) > 0 {
 		return protoFuncs[0](rw)
-	} else {
-		return defaultProtoFunc(rw)
 	}
+	return defaultProtoFunc(rw)
 }

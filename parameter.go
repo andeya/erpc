@@ -73,28 +73,28 @@ const (
 
 // Internal Framework Rerror string.
 var (
-	rerror_unknownError = NewRerror(-1, "Unknown error", "")
-	rerror_dialFailed   = NewRerror(CodeDialFailed, "Dial Failed", "")
-	rerror_connClosed   = NewRerror(CodeConnClosed, "Connection Closed", "")
-	rerror_writeFailed  = NewRerror(CodeWriteFailed, "Write Failed", "")
-	rerror_badPacket    = NewRerror(CodeBadPacket, "Bad Packet", "")
-	rerror_notFound     = NewRerror(CodeNotFound, "Not Found", "")
+	rerrUnknownError = NewRerror(-1, "Unknown error", "")
+	rerrDialFailed   = NewRerror(CodeDialFailed, "Dial Failed", "")
+	rerrConnClosed   = NewRerror(CodeConnClosed, "Connection Closed", "")
+	rerrWriteFailed  = NewRerror(CodeWriteFailed, "Write Failed", "")
+	rerrBadPacket    = NewRerror(CodeBadPacket, "Bad Packet", "")
+	rerrNotFound     = NewRerror(CodeNotFound, "Not Found", "")
 )
 
 var (
-	// methodNotAllowed_metaSetting = metaSetting(NewRerror(405, "Type Not Allowed", "").String())
-	connClosed_metaSetting     = metaSetting(rerror_connClosed.String())
-	notFound_metaSetting       = metaSetting(rerror_notFound.String())
-	writeFailed_metaSetting    = metaSetting(rerror_writeFailed.String())
-	notImplemented_metaSetting = metaSetting(NewRerror(CodeNotImplemented, "Not Implemented", "").String())
-	badPacket_metaSetting      = metaSetting(rerror_badPacket.String())
+	// methodNotAllowedMetaSetting = metaSetting(NewRerror(405, "Type Not Allowed", "").String())
+	connClosedMetaSetting     = metaSetting(rerrConnClosed.String())
+	notFoundMetaSetting       = metaSetting(rerrNotFound.String())
+	writeFailedMetaSetting    = metaSetting(rerrWriteFailed.String())
+	notImplementedMetaSetting = metaSetting(NewRerror(CodeNotImplemented, "Not Implemented", "").String())
+	badPacketMetaSetting      = metaSetting(rerrBadPacket.String())
 )
 
 type metaSetting string
 
 func (m metaSetting) Inject(meta *utils.Args, detail ...string) {
 	if len(detail) > 0 {
-		m = m[:len(m)-2] + metaSetting(bytes.Replace(goutil.StringToBytes(detail[0]), re_d, re_e, -1)) + m[len(m)-2:]
+		m = m[:len(m)-2] + metaSetting(bytes.Replace(goutil.StringToBytes(detail[0]), reD, reE, -1)) + m[len(m)-2:]
 	}
 	meta.Set(MetaRerrorKey, *(*string)(unsafe.Pointer(&m)))
 }
