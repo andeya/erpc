@@ -69,7 +69,6 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 	if err := cfg.check(); err != nil {
 		Fatalf("%v", err)
 	}
-
 	var p = &Peer{
 		PullRouter:          &RootRouter{newPullRouter(pluginContainer)},
 		PushRouter:          &RootRouter{newPushRouter(pluginContainer)},

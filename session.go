@@ -37,6 +37,10 @@ type (
 		PostSession
 		// SetId sets the session id.
 		SetId(newId string)
+		// Conn returns the connection.
+		Conn() net.Conn
+		// ResetConn resets the connection.
+		ResetConn(net.Conn)
 		// Send sends packet to peer, before the formal connection.
 		// Note:
 		// the external setting seq is invalid, the internal will be forced to set;
@@ -107,6 +111,8 @@ type (
 		seq                            uint64
 		seqLock                        sync.Mutex
 		pullCmdMap                     goutil.Map
+		conn                           net.Conn
+		protoFuncs                     []socket.ProtoFunc
 		socket                         socket.Socket
 		status                         int32 // 0:ok, 1:active closed, 2:disconnect
 		closeLock                      sync.RWMutex
@@ -132,6 +138,8 @@ func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 		peer:           peer,
 		getPullHandler: peer.PullRouter.router.get,
 		getPushHandler: peer.PushRouter.router.get,
+		conn:           conn,
+		protoFuncs:     protoFuncs,
 		socket:         socket.NewSocket(conn, protoFuncs...),
 		pullCmdMap:     goutil.AtomicMap(),
 		readTimeout:    int32(peer.defaultReadTimeout),
@@ -161,6 +169,17 @@ func (s *session) SetId(newId string) {
 	hub.Set(s)
 	hub.Delete(oldId)
 	Tracef("session changes id: %s -> %s", oldId, newId)
+}
+
+// Conn returns the connection.
+func (s *session) Conn() net.Conn {
+	return s.conn
+}
+
+// ResetConn resets the connection.
+func (s *session) ResetConn(conn net.Conn) {
+	s.conn = conn
+	s.socket = socket.NewSocket(conn, s.protoFuncs...)
 }
 
 // RemoteIp returns the remote peer ip.
