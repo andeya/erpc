@@ -41,6 +41,8 @@ type (
 		Conn() net.Conn
 		// ResetConn resets the connection.
 		ResetConn(net.Conn, ...socket.ProtoFunc)
+		// GetProtoFunc returns the socket.ProtoFunc
+		GetProtoFunc() socket.ProtoFunc
 		// Send sends packet to peer, before the formal connection.
 		// Note:
 		// the external setting seq is invalid, the internal will be forced to set;
@@ -177,6 +179,7 @@ func (s *session) Conn() net.Conn {
 }
 
 // ResetConn resets the connection.
+// Note: only reset net.Conn, but not reset socket.ProtoFunc
 func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
 	s.conn = conn
 	if len(protoFunc) > 0 {
@@ -184,6 +187,14 @@ func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
 	} else {
 		s.socket = socket.NewSocket(conn, s.protoFuncs...)
 	}
+}
+
+// GetProtoFunc returns the socket.ProtoFunc
+func (s *session) GetProtoFunc() socket.ProtoFunc {
+	if len(s.protoFuncs) > 0 {
+		return s.protoFuncs[0]
+	}
+	return socket.DefaultProtoFunc()
 }
 
 // RemoteIp returns the remote peer ip.

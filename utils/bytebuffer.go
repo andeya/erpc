@@ -79,6 +79,11 @@ func (b *ByteBuffer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// Read implements io.Reader.
+func (b *ByteBuffer) Read(p []byte) (int, error) {
+	return copy(p, b.B), nil
+}
+
 // WriteByte appends the byte c to the buffer.
 //
 // The purpose of this function is bytes.Buffer compatibility.
