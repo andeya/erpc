@@ -197,7 +197,7 @@ func (p *PluginContainer) cloneAppendRight(plugins ...Plugin) *PluginContainer {
 // Remove removes a plugin by it's name.
 func (p *PluginContainer) Remove(pluginName string) error {
 	if p.plugins == nil {
-		return errors.New("no plugins are registed yet!")
+		return errors.New("no plugins are registered yet!")
 	}
 	if len(pluginName) == 0 {
 		//return error: cannot delete an unamed plugin

@@ -1,4 +1,4 @@
-// Package teleport is a versatile, high-performance and flexible TCP socket framework.
+// Package tp (teleport) is a versatile, high-performance and flexible TCP socket framework.
 // It can be used for peer-peer, rpc, gateway, micro services, push services, game services and so on.
 //
 // Copyright 2015-2017 HenryLee. All Rights Reserved.
