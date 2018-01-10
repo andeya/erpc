@@ -15,8 +15,8 @@
 package tp
 
 import (
-	"io"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/henrylee2cn/go-logging"
