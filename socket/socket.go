@@ -327,7 +327,6 @@ func SetKeepAlivePeriod(d time.Duration) {
 // Note: if bytes=-1, don't change the system default value.
 func SetReadBuffer(bytes int) {
 	readBuffer = bytes
-	resetFastProtoReadBufioSize()
 }
 
 // SetWriteBuffer sets the size of the operating system's
@@ -335,6 +334,20 @@ func SetReadBuffer(bytes int) {
 // Note: if bytes=-1, don't change the system default value.
 func SetWriteBuffer(bytes int) {
 	writeBuffer = bytes
+}
+
+// ReadBuffer returns the size of the operating system's
+// receive buffer associated with the connection.
+// Note: if using the system default value, bytes=-1 and isDefault=true.
+func ReadBuffer() (bytes int, isDefault bool) {
+	return readBuffer, readBuffer == -1
+}
+
+// WriteBuffer returns the size of the operating system's
+// transmit buffer associated with the connection.
+// Note: if using the system default value, bytes=-1 and isDefault=true.
+func WriteBuffer() (bytes int, isDefault bool) {
+	return writeBuffer, writeBuffer == -1
 }
 
 func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {
