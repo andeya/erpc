@@ -15,6 +15,7 @@
 package tp
 
 import (
+	"io"
 	"log"
 	"sync"
 
@@ -135,6 +136,7 @@ func Printf(format string, args ...interface{}) {
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func Fatalf(format string, args ...interface{}) {
 	globalLogger.Fatalf(format, args...)
+	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
