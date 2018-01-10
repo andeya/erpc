@@ -63,22 +63,14 @@ type (
 )
 
 // default builder of socket communication protocol
-var (
-	defaultProtoFunc = func(rw io.ReadWriter) Proto {
-		return &FastProto{
-			id:   'f',
-			name: "fast",
-			r:    bufio.NewReaderSize(rw, fastProtoReadBufioSize),
-			w:    rw,
-		}
+var defaultProtoFunc = func(rw io.ReadWriter) Proto {
+	return &FastProto{
+		id:   'f',
+		name: "fast",
+		r:    bufio.NewReaderSize(rw, fastProtoReadBufioSize),
+		w:    rw,
 	}
-	lengthSize = int64(binary.Size(uint32(0)))
-)
-
-// error
-var (
-	ErrProtoUnmatch = errors.New("Mismatched protocol")
-)
+}
 
 // Version returns the protocol's id and name.
 func (f *FastProto) Version() (byte, string) {
@@ -187,6 +179,8 @@ func (f *FastProto) Unpack(p *Packet) error {
 	return f.readBody(data, p)
 }
 
+var errProtoUnmatch = errors.New("Mismatched protocol")
+
 func (f *FastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 	f.rMu.Lock()
 	defer f.rMu.Unlock()
@@ -206,7 +200,7 @@ func (f *FastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 		return err
 	}
 	if bb.B[0] != f.id {
-		return ErrProtoUnmatch
+		return errProtoUnmatch
 	}
 	// transfer pipe
 	_, err = f.r.Read(bb.B[:1])
