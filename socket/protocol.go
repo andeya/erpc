@@ -192,7 +192,7 @@ func (f *fastProto) Unpack(p *Packet) error {
 	return f.readBody(data, p)
 }
 
-var errProtoUnmatch = errors.New("Mismatched protocol")
+var errProtoUnmatch = errors.New("mismatched protocol")
 
 func (f *fastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 	f.rMu.Lock()
