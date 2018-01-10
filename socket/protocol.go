@@ -62,8 +62,8 @@ type (
 	}
 )
 
-// default builder of socket communication protocol
 var (
+	// default builder of socket communication protocol
 	defaultProtoFunc = func(rw io.ReadWriter) Proto {
 		return &FastProto{
 			id:   'f',
