@@ -83,6 +83,9 @@ func (g *Gzip) OnPack(src []byte) ([]byte, error) {
 
 // OnUnpack performs filtering on unpacking.
 func (g *Gzip) OnUnpack(src []byte) ([]byte, error) {
+	if len(src) == 0 {
+		return src, nil
+	}
 	gr := g.rPool.Get().(*gzip.Reader)
 	defer g.rPool.Put(gr)
 	err := gr.Reset(bytes.NewReader(src))

@@ -73,12 +73,13 @@ const (
 
 // Internal Framework Rerror string.
 var (
-	rerrUnknownError = NewRerror(-1, "Unknown error", "")
-	rerrDialFailed   = NewRerror(CodeDialFailed, "Dial Failed", "")
-	rerrConnClosed   = NewRerror(CodeConnClosed, "Connection Closed", "")
-	rerrWriteFailed  = NewRerror(CodeWriteFailed, "Write Failed", "")
-	rerrBadPacket    = NewRerror(CodeBadPacket, "Bad Packet", "")
-	rerrNotFound     = NewRerror(CodeNotFound, "Not Found", "")
+	rerrUnknownError       = NewRerror(-1, "Unknown error", "")
+	rerrDialFailed         = NewRerror(CodeDialFailed, "Dial Failed", "")
+	rerrConnClosed         = NewRerror(CodeConnClosed, "Connection Closed", "")
+	rerrWriteFailed        = NewRerror(CodeWriteFailed, "Write Failed", "")
+	rerrBadPacket          = NewRerror(CodeBadPacket, "Bad Packet", "")
+	rerrNotFound           = NewRerror(CodeNotFound, "Not Found", "")
+	rerrCodeNotImplemented = NewRerror(CodeNotImplemented, "Not Implemented", "")
 )
 
 var (
@@ -86,7 +87,7 @@ var (
 	connClosedMetaSetting     = metaSetting(rerrConnClosed.String())
 	notFoundMetaSetting       = metaSetting(rerrNotFound.String())
 	writeFailedMetaSetting    = metaSetting(rerrWriteFailed.String())
-	notImplementedMetaSetting = metaSetting(NewRerror(CodeNotImplemented, "Not Implemented", "").String())
+	notImplementedMetaSetting = metaSetting(rerrCodeNotImplemented.String())
 	badPacketMetaSetting      = metaSetting(rerrBadPacket.String())
 )
 

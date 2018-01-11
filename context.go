@@ -308,37 +308,45 @@ func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
 		return c.bindPull(header)
 
 	default:
+		c.handleErr = rerrCodeNotImplemented
 		return nil
 	}
 }
 
 // Be executed asynchronously after readed packet
 func (c *readHandleCtx) handle() {
+	if c.handleErr != nil && c.handleErr.Code == CodeNotImplemented {
+		goto E
+	}
 	switch c.input.Ptype() {
 	case TypeReply:
 		// handles pull reply
 		c.handleReply()
+		return
 
 	case TypePush:
 		//  handles push
 		c.handlePush()
+		return
 
 	case TypePull:
 		// handles and replies pull
 		c.handlePull()
+		return
 
 	default:
-		// if unsupported, disconnected.
-		notImplementedMetaSetting.Inject(c.output.Meta())
-		if c.sess.peer.printBody {
-			logformat := "disconnect(%s) due to unsupported type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
-			Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size(), bodyLogBytes(c.input))
-		} else {
-			logformat := "disconnect(%s) due to unsupported type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n"
-			Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size())
-		}
-		go c.sess.Close()
 	}
+E:
+	// if unsupported, disconnected.
+	notImplementedMetaSetting.Inject(c.output.Meta())
+	if c.sess.peer.printBody {
+		logformat := "disconnect(%s) due to unsupported packet type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
+		Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size(), bodyLogBytes(c.input))
+	} else {
+		logformat := "disconnect(%s) due to unsupported packet type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n"
+		Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size())
+	}
+	go c.sess.Close()
 }
 
 func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
