@@ -489,6 +489,7 @@ package|import|description
 package|import|description
 ----|------|-----------
 [cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/sundry-cliSession)|`import cliSession "github.com/henrylee2cn/tp-ext/sundry-cliSession"`|Client session which has connection pool
+[websocket](https://github.com/henrylee2cn/tp-ext/blob/master/sundry-websocket)|`import websocket "github.com/henrylee2cn/tp-ext/sundry-websocket"`|Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455
 
 
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
