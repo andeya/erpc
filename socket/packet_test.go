@@ -5,8 +5,9 @@ import (
 )
 
 func TestPacketString(t *testing.T) {
-	var p = NewPacket(nil)
+	var p = NewPacket()
 	p.SetSeq(21)
+	p.XferPipe().Append('g')
 	p.SetPtype(3)
 	p.SetSize(300)
 	p.SetBody(map[string]int{"a": 1})
