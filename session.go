@@ -182,11 +182,13 @@ func (s *session) Conn() net.Conn {
 // Note: only reset net.Conn, but not reset socket.ProtoFunc
 func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
 	s.conn = conn
+	id := s.Id()
 	if len(protoFunc) > 0 {
 		s.socket = socket.NewSocket(conn, protoFunc...)
 	} else {
 		s.socket = socket.NewSocket(conn, s.protoFuncs...)
 	}
+	s.socket.SetId(id)
 }
 
 // GetProtoFunc returns the socket.ProtoFunc

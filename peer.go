@@ -209,7 +209,7 @@ func (p *Peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	}
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.Id())
+	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteIp(), sess.Id())
 	return sess, nil
 }
 
