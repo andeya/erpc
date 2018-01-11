@@ -40,6 +40,9 @@ type (
 		// Conn returns the connection.
 		Conn() net.Conn
 		// ResetConn resets the connection.
+		// Note:
+		// only reset net.Conn, but not reset socket.ProtoFunc;
+		// inherit the previous session id.
 		ResetConn(net.Conn, ...socket.ProtoFunc)
 		// GetProtoFunc returns the socket.ProtoFunc
 		GetProtoFunc() socket.ProtoFunc
@@ -179,7 +182,9 @@ func (s *session) Conn() net.Conn {
 }
 
 // ResetConn resets the connection.
-// Note: only reset net.Conn, but not reset socket.ProtoFunc
+// Note:
+// only reset net.Conn, but not reset socket.ProtoFunc;
+// inherit the previous session id.
 func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
 	s.conn = conn
 	id := s.Id()

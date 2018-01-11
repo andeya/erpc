@@ -197,7 +197,7 @@ func (p *Peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 				}
 			}
 			if err != nil {
-				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, addr, sess.Id(), err.Error())
+				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteIp(), sess.Id(), err.Error())
 			}
 			return false
 		}
@@ -236,7 +236,7 @@ func (p *Peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	atomic.StoreInt32(&sess.status, statusOk)
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.Id())
+	Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteIp(), sess.Id())
 	return nil
 }
 
