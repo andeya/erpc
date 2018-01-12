@@ -482,7 +482,9 @@ func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
 
 package|import|description
 ----|------|-----------
-[teleport own](https://github.com/henrylee2cn/teleport/blob/master/codec)|`import "github.com/henrylee2cn/teleport/codec"`|JSON, Protobuf, String
+[json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|JSON codec(teleport own)
+[protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|Protobuf codec(teleport own)
+[string](https://github.com/henrylee2cn/teleport/blob/master/codec/string_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|String codec(teleport own)
 
 ### 插件
 
@@ -495,14 +497,14 @@ package|import|description
 
 package|import|description
 ----|------|-----------
-[teleport default](https://github.com/henrylee2cn/teleport/blob/master/socket)|`import "github.com/henrylee2cn/teleport/socket"`|A fast socket communication protocol(socket.NewFastProtoFunc)
+[fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70"`|A fast socket communication protocol(teleport default protocol)
 [jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto)|`import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"`|A JSON socket communication protocol
 
 ### 传输过滤器
 
 package|import|description
 ----|------|-----------
-[teleport own](https://github.com/henrylee2cn/teleport/blob/master/xfer)|`import "github.com/henrylee2cn/teleport/xfer"`|Gzip
+[gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go)|`import "github.com/henrylee2cn/teleport/xfer"`|Gzip(teleport own)
 
 ### 其他
 
