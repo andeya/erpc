@@ -478,12 +478,31 @@ func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
 
 ## 7. 扩展包
 
+### 编解码器
+
+package|import|description
+----|------|-----------
+[teleport own](https://github.com/henrylee2cn/teleport/blob/master/codec)|`import "github.com/henrylee2cn/teleport/codec"`|JSON, Protobuf, String
+
 ### 插件
 
 package|import|description
 ----|------|-----------
 [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
 [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"`|A generic timing heartbeat plugin
+
+### 协议
+
+package|import|description
+----|------|-----------
+[teleport default](https://github.com/henrylee2cn/teleport/blob/master/socket)|`import "github.com/henrylee2cn/teleport/socket"`|A fast socket communication protocol(socket.NewFastProto)
+[jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto)|`import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"`|A JSON socket communication protocol
+
+### 传输过滤器
+
+package|import|description
+----|------|-----------
+[teleport own](https://github.com/henrylee2cn/teleport/blob/master/xfer)|`import "github.com/henrylee2cn/teleport/xfer"`|Gzip
 
 ### 其他
 
