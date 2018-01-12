@@ -42,7 +42,7 @@ type (
 )
 
 // default builder of socket communication protocol.
-var defaultProtoFunc = NewFastProto
+var defaultProtoFunc = NewFastProtoFunc
 
 // DefaultProtoFunc gets the default builder of socket communication protocol
 func DefaultProtoFunc() ProtoFunc {
@@ -65,9 +65,9 @@ type fastProto struct {
 	rMu  sync.Mutex
 }
 
-// NewFastProto creates a fastProto protocol.
+// NewFastProtoFunc is creation function of fast socket protocol.
 // NOTE: it is the default protocol.
-func NewFastProto(rw io.ReadWriter) Proto {
+var NewFastProtoFunc = func(rw io.ReadWriter) Proto {
 	var (
 		fastProtoReadBufioSize    int
 		readBufferSize, isDefault = ReadBuffer()
