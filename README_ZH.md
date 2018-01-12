@@ -497,7 +497,7 @@ package|import|description
 
 package|import|description
 ----|------|-----------
-[fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70"`|A fast socket communication protocol(teleport default protocol)
+[fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70)|`import "github.com/henrylee2cn/teleport/socket`|A fast socket communication protocol(teleport default protocol)
 [jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto)|`import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"`|A JSON socket communication protocol
 
 ### 传输过滤器
