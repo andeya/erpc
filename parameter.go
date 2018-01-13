@@ -73,3 +73,14 @@ var (
 	rerrNotFound           = NewRerror(CodeNotFound, "Not Found", "")
 	rerrCodeNotImplemented = NewRerror(CodeNotImplemented, "Not Implemented", "")
 )
+
+// IsConnRerror determines whether the error is a connection error
+func IsConnRerror(rerr *Rerror) bool {
+	if rerr == nil {
+		return false
+	}
+	if rerr.Code == CodeDialFailed || rerr.Code == CodeConnClosed {
+		return true
+	}
+	return false
+}

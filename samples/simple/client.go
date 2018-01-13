@@ -60,6 +60,9 @@ func main() {
 		&reply,
 		socket.WithXferPipe('g'),
 	).Rerror()
+	if tp.IsConnRerror(rerr) {
+		tp.Fatalf("has conn rerror: %v", rerr)
+	}
 	if rerr != nil {
 		tp.Fatalf("pull error: %v", rerr)
 	}
