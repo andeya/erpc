@@ -26,7 +26,6 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
-	"github.com/henrylee2cn/goutil/errors"
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 )
@@ -330,10 +329,10 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		return
 	}
 
-	var err error
 W:
-	if err = s.write(output); err != nil {
-		if err == ErrConnClosed && s.redialForClient() {
+	cmd.rerr = s.write(output)
+	if cmd.rerr != nil {
+		if cmd.rerr == rerrConnClosed && s.redialForClient() {
 			s.pullCmdMap.Delete(seq)
 			s.seqLock.Lock()
 			seq = s.seq
@@ -343,8 +342,6 @@ W:
 			s.pullCmdMap.Store(seq, cmd)
 			goto W
 		}
-		cmd.rerr = rerrWriteFailed.Copy()
-		cmd.rerr.Detail = err.Error()
 		cmd.done()
 		return
 	}
@@ -401,18 +398,15 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 		return rerr
 	}
 
-	var err error
 W:
-	if err = s.write(output); err != nil {
-		if err == ErrConnClosed && s.redialForClient() {
+	if rerr = s.write(output); rerr != nil {
+		if rerr == rerrConnClosed && s.redialForClient() {
 			s.seqLock.Lock()
 			output.SetSeq(s.seq)
 			s.seq++
 			s.seqLock.Unlock()
 			goto W
 		}
-		rerr = rerrWriteFailed.Copy()
-		rerr.Detail = err.Error()
 		return rerr
 	}
 
@@ -475,10 +469,7 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-// ErrConnClosed connection is closed error.
-var ErrConnClosed = errors.New("connection is closed")
-
-func (s *session) write(packet *socket.Packet) (err error) {
+func (s *session) write(packet *socket.Packet) (rerr *Rerror) {
 	var (
 		writeTimeout = s.WriteTimeout()
 		now          time.Time
@@ -491,13 +482,17 @@ func (s *session) write(packet *socket.Packet) (err error) {
 	status := s.getStatus()
 	if status != statusOk && !(status == statusActiveClosing && packet.Ptype() == TypeReply) {
 		s.writeLock.Unlock()
-		return ErrConnClosed
+		return rerrConnClosed
 	}
 
+	var err error
 	defer func() {
 		s.writeLock.Unlock()
+		if err == nil {
+			return
+		}
 		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
-			err = ErrConnClosed
+			rerr = rerrConnClosed
 			if s.redialForClientFunc != nil {
 				// Wait for the status to change
 			W:
@@ -506,14 +501,17 @@ func (s *session) write(packet *socket.Packet) (err error) {
 					goto W
 				}
 			}
+			return
 		}
+		rerr = rerrWriteFailed.Copy()
+		rerr.Detail = err.Error()
 	}()
 
 	if writeTimeout > 0 {
 		s.socket.SetWriteDeadline(now.Add(writeTimeout))
 	}
 	err = s.socket.WritePacket(packet)
-	return err
+	return rerr
 }
 
 const (

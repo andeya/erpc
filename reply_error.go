@@ -75,11 +75,11 @@ func (r Rerror) Copy() *Rerror {
 
 // SetToMeta sets self to 'X-Reply-Error' metadata.
 func (r *Rerror) SetToMeta(meta *utils.Args) {
-	errStr := r.String()
-	if len(errStr) == 0 {
+	b, _ := r.MarshalJSON()
+	if len(b) == 0 {
 		return
 	}
-	meta.Set(MetaRerrorKey, errStr)
+	meta.Set(MetaRerrorKey, goutil.BytesToString(b))
 }
 
 // MarshalJSON marshals Rerror into JSON, implements json.Marshaler interface.

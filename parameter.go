@@ -14,14 +14,6 @@
 
 package tp
 
-import (
-	"bytes"
-	"unsafe"
-
-	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/teleport/utils"
-)
-
 // Packet types
 const (
 	TypeUndefined byte = 0
@@ -81,21 +73,3 @@ var (
 	rerrNotFound           = NewRerror(CodeNotFound, "Not Found", "")
 	rerrCodeNotImplemented = NewRerror(CodeNotImplemented, "Not Implemented", "")
 )
-
-var (
-	// methodNotAllowedMetaSetting = metaSetting(NewRerror(405, "Type Not Allowed", "").String())
-	connClosedMetaSetting     = metaSetting(rerrConnClosed.String())
-	notFoundMetaSetting       = metaSetting(rerrNotFound.String())
-	writeFailedMetaSetting    = metaSetting(rerrWriteFailed.String())
-	notImplementedMetaSetting = metaSetting(rerrCodeNotImplemented.String())
-	badPacketMetaSetting      = metaSetting(rerrBadPacket.String())
-)
-
-type metaSetting string
-
-func (m metaSetting) Inject(meta *utils.Args, detail ...string) {
-	if len(detail) > 0 {
-		m = m[:len(m)-2] + metaSetting(bytes.Replace(goutil.StringToBytes(detail[0]), reD, reE, -1)) + m[len(m)-2:]
-	}
-	meta.Set(MetaRerrorKey, *(*string)(unsafe.Pointer(&m)))
-}

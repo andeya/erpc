@@ -338,7 +338,7 @@ func (c *readHandleCtx) handle() {
 	}
 E:
 	// if unsupported, disconnected.
-	notImplementedMetaSetting.Inject(c.output.Meta())
+	rerrCodeNotImplemented.SetToMeta(c.output.Meta())
 	if c.sess.peer.printBody {
 		logformat := "disconnect(%s) due to unsupported packet type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
 		Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size(), bodyLogBytes(c.input))
@@ -415,7 +415,7 @@ func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
 	if len(u.Path) == 0 {
 		c.handleErr = rerrBadPacket.Copy()
 		c.handleErr.Detail = "invalid URI for packet"
-		badPacketMetaSetting.Inject(c.output.Meta(), c.handleErr.Detail)
+		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
@@ -423,7 +423,7 @@ func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
 	c.handler, ok = c.sess.getPullHandler(u.Path)
 	if !ok {
 		c.handleErr = rerrNotFound
-		notFoundMetaSetting.Inject(c.output.Meta())
+		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
@@ -480,14 +480,12 @@ func (c *readHandleCtx) handlePull() {
 	if rerr == nil {
 		c.handleErr = rerr
 	}
-	if err := c.sess.write(c.output); err != nil {
-		errStr := err.Error()
+	rerr = c.sess.write(c.output)
+	if rerr != nil {
 		if c.handleErr == nil {
-			rerr = rerrWriteFailed.Copy()
-			rerr.Detail = errStr
 			c.handleErr = rerr
 		}
-		writeFailedMetaSetting.Inject(c.output.Meta(), errStr)
+		rerr.SetToMeta(c.output.Meta())
 	}
 
 	rerr = c.pluginContainer.PostWriteReply(c)
