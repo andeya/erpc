@@ -33,7 +33,7 @@ type (
 	// PostNewPeerPlugin is executed after creating peer.
 	PostNewPeerPlugin interface {
 		Plugin
-		PostNewPeer(*Peer) error
+		PostNewPeer(EarlyPeer) error
 	}
 	// PostRegPlugin is executed after registering handler.
 	PostRegPlugin interface {
@@ -48,12 +48,12 @@ type (
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
 		Plugin
-		PostDial(PreSession) *Rerror
+		PostDial(EarlySession) *Rerror
 	}
 	// PostAcceptPlugin is executed after accepting connection.
 	PostAcceptPlugin interface {
 		Plugin
-		PostAccept(PreSession) *Rerror
+		PostAccept(EarlySession) *Rerror
 	}
 	// PreWritePullPlugin is executed before writing PULL packet.
 	PreWritePullPlugin interface {
@@ -88,7 +88,7 @@ type (
 	// PreReadHeaderPlugin is executed before reading packet header.
 	PreReadHeaderPlugin interface {
 		Plugin
-		PreReadHeader(BaseCtx) *Rerror
+		PreReadHeader(PreCtx) *Rerror
 	}
 	// PostReadPullHeaderPlugin is executed after reading PULL packet header.
 	PostReadPullHeaderPlugin interface {
@@ -138,7 +138,7 @@ type (
 	// PostDisconnectPlugin is executed after disconnectingy.
 	PostDisconnectPlugin interface {
 		Plugin
-		PostDisconnect(PostSession) *Rerror
+		PostDisconnect(BaseSession) *Rerror
 	}
 )
 
@@ -256,7 +256,7 @@ func (p *PluginContainer) PreNewPeer(peerConfig *PeerConfig) {
 }
 
 // PostNewPeer executes the defined plugins after creating peer.
-func (p *PluginContainer) PostNewPeer(peer *Peer) {
+func (p *PluginContainer) PostNewPeer(peer EarlyPeer) {
 	var err error
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostNewPeerPlugin); ok {
@@ -296,7 +296,7 @@ func (p *PluginContainer) PostListen(addr net.Addr) {
 }
 
 // PostDial executes the defined plugins after dialing.
-func (p *PluginContainer) PostDial(sess PreSession) *Rerror {
+func (p *PluginContainer) PostDial(sess EarlySession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
@@ -310,7 +310,7 @@ func (p *PluginContainer) PostDial(sess PreSession) *Rerror {
 }
 
 // PostAccept executes the defined plugins after accepting connection.
-func (p *PluginContainer) PostAccept(sess PreSession) *Rerror {
+func (p *PluginContainer) PostAccept(sess EarlySession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
@@ -408,7 +408,7 @@ func (p *PluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
 }
 
 // PreReadHeader executes the defined plugins before reading packet header.
-func (p *PluginContainer) PreReadHeader(ctx BaseCtx) *Rerror {
+func (p *PluginContainer) PreReadHeader(ctx PreCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
@@ -548,7 +548,7 @@ func (p *PluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
 }
 
 // PostDisconnect executes the defined plugins after disconnectingy.
-func (p *PluginContainer) PostDisconnect(sess PostSession) *Rerror {
+func (p *PluginContainer) PostDisconnect(sess BaseSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDisconnectPlugin); ok {

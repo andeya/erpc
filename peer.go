@@ -31,46 +31,98 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-// Peer peer which is server or client.
-type Peer struct {
-	rootRouter          *RootRouter
-	pluginContainer     *PluginContainer
-	sessHub             *SessionHub
-	closeCh             chan struct{}
-	freeContext         *readHandleCtx
-	ctxLock             sync.Mutex
-	defaultReadTimeout  time.Duration // readdeadline for underlying net.Conn
-	defaultWriteTimeout time.Duration // writedeadline for underlying net.Conn
-	tlsConfig           *tls.Config
-	slowCometDuration   time.Duration
-	defaultBodyCodec    byte
-	printBody           bool
-	countTime           bool
-	timeNow             func() time.Time
-	timeSince           func(time.Time) time.Duration
-	mu                  sync.Mutex
+type (
+	// BasePeer peer with the common method set
+	BasePeer interface {
+		// Close closes peer.
+		Close() (err error)
+		// CountSession returns the number of sessions.
+		CountSession() int
+		// Dial connects with the peer of the destination address.
+		Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
+		// DialContext connects with the peer of the destination address, using the provided context.
+		DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
+		// GetSession gets the session by id.
+		GetSession(sessionId string) (Session, bool)
+		// RangeSession ranges all sessions. If fn returns false, stop traversing.
+		RangeSession(fn func(sess Session) bool)
+		// ServeConn serves the connection and returns a session.
+		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
+		// Group adds handler group.
+		Group(pathPrefix string, plugin ...Plugin) *Router
+		// RegPull registers PULL handler.
+		RegPull(ctrlStruct interface{}, plugin ...Plugin)
+		// RegPush registers PUSH handler.
+		RegPush(ctrlStruct interface{}, plugin ...Plugin)
+		// SetTlsConfig sets the TLS config.
+		SetTlsConfig(tlsConfig *tls.Config)
+		// SetTlsConfigFromFile sets the TLS config from file.
+		SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error
+		// SetUnknownPull sets the default handler, which is called when no handler for PULL is found.
+		SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin)
+		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
+		SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
+		// TlsConfig returns the TLS config.
+		TlsConfig() *tls.Config
+	}
+	// EarlyPeer the communication peer that has just been created
+	EarlyPeer interface {
+		BasePeer
+		// SetRootGroup sets the router root group.
+		SetRootGroup(routerRoot string)
+	}
+	// Peer the communication peer which is server or client role
+	Peer interface {
+		BasePeer
+		// Listen turns on the listening service.
+		Listen(protoFunc ...socket.ProtoFunc) error
+	}
+	peer struct {
+		rootRouter          *RootRouter
+		pluginContainer     *PluginContainer
+		sessHub             *SessionHub
+		closeCh             chan struct{}
+		freeContext         *readHandleCtx
+		ctxLock             sync.Mutex
+		defaultReadTimeout  time.Duration // readdeadline for underlying net.Conn
+		defaultWriteTimeout time.Duration // writedeadline for underlying net.Conn
+		tlsConfig           *tls.Config
+		slowCometDuration   time.Duration
+		defaultBodyCodec    byte
+		printBody           bool
+		countTime           bool
+		timeNow             func() time.Time
+		timeSince           func(time.Time) time.Duration
+		mu                  sync.Mutex
 
-	network string
+		network string
 
-	// only for client role
-	defaultDialTimeout time.Duration
-	redialTimes        int32
+		// only for client role
+		defaultDialTimeout time.Duration
+		redialTimes        int32
 
-	// only for server role
-	listenAddr string
-	listen     net.Listener
-}
+		// only for server role
+		listenAddr string
+		listen     net.Listener
+	}
+)
+
+var (
+	_ BasePeer  = new(peer)
+	_ EarlyPeer = new(peer)
+	_ Peer      = new(peer)
+)
 
 // NewPeer creates a new peer.
-func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
+func NewPeer(cfg PeerConfig, plugin ...Plugin) Peer {
 	pluginContainer := newPluginContainer()
 	pluginContainer.AppendRight(plugin...)
 	pluginContainer.PreNewPeer(&cfg)
 	if err := cfg.check(); err != nil {
 		Fatalf("%v", err)
 	}
-	var p = &Peer{
-		rootRouter:          newRootRouter(cfg.RouterRoot, pluginContainer),
+	var p = &peer{
+		rootRouter:          newRootRouter("/", pluginContainer),
 		pluginContainer:     pluginContainer,
 		sessHub:             newSessionHub(),
 		defaultReadTimeout:  cfg.DefaultReadTimeout,
@@ -103,17 +155,17 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 }
 
 // TlsConfig returns the TLS config.
-func (p *Peer) TlsConfig() *tls.Config {
+func (p *peer) TlsConfig() *tls.Config {
 	return p.tlsConfig
 }
 
 // SetTlsConfig sets the TLS config.
-func (p *Peer) SetTlsConfig(tlsConfig *tls.Config) {
+func (p *peer) SetTlsConfig(tlsConfig *tls.Config) {
 	p.tlsConfig = tlsConfig
 }
 
 // SetTlsConfigFromFile sets the TLS config from file.
-func (p *Peer) SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error {
+func (p *peer) SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error {
 	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
 	if err != nil {
 		return err
@@ -142,25 +194,25 @@ func (p *Peer) SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error {
 }
 
 // GetSession gets the session by id.
-func (p *Peer) GetSession(sessionId string) (Session, bool) {
+func (p *peer) GetSession(sessionId string) (Session, bool) {
 	return p.sessHub.Get(sessionId)
 }
 
 // RangeSession ranges all sessions.
 // If fn returns false, stop traversing.
-func (p *Peer) RangeSession(fn func(sess Session) bool) {
+func (p *peer) RangeSession(fn func(sess Session) bool) {
 	p.sessHub.sessions.Range(func(key, value interface{}) bool {
 		return fn(value.(*session))
 	})
 }
 
 // CountSession returns the number of sessions.
-func (p *Peer) CountSession() int {
+func (p *peer) CountSession() int {
 	return p.sessHub.sessions.Len()
 }
 
 // Dial connects with the peer of the destination address.
-func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
+func (p *peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
 		return net.DialTimeout(p.network, addr, p.defaultDialTimeout)
 	}, addr, protoFunc)
@@ -168,14 +220,14 @@ func (p *Peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerro
 
 // DialContext connects with the peer of the destination address,
 // using the provided context.
-func (p *Peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
+func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
 		var d net.Dialer
 		return d.DialContext(ctx, p.network, addr)
 	}, addr, protoFunc)
 }
 
-func (p *Peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) (*session, *Rerror) {
+func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) (*session, *Rerror) {
 	var conn, dialErr = dialFunc()
 	if dialErr != nil {
 		rerr := rerrDialFailed.Copy()
@@ -212,7 +264,7 @@ func (p *Peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	return sess, nil
 }
 
-func (p *Peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) error {
+func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) error {
 	var conn, dialErr = dialFunc()
 	if dialErr != nil {
 		return dialErr
@@ -243,7 +295,7 @@ func (p *Peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 var ErrListenClosed = errors.New("listener is closed")
 
 // Listen turns on the listening service.
-func (p *Peer) Listen(protoFunc ...socket.ProtoFunc) error {
+func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
 	lis, err := listen(p.network, p.listenAddr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
@@ -313,7 +365,7 @@ func (p *Peer) Listen(protoFunc ...socket.ProtoFunc) error {
 }
 
 // ServeConn serves the connection and returns a session.
-func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
+func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
 	network := conn.LocalAddr().Network()
 	if strings.Contains(network, "udp") {
 		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
@@ -341,7 +393,7 @@ func (p *Peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 }
 
 // Close closes peer.
-func (p *Peer) Close() (err error) {
+func (p *peer) Close() (err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
@@ -369,7 +421,7 @@ func (p *Peer) Close() (err error) {
 	return err
 }
 
-func (p *Peer) getContext(s *session, withWg bool) *readHandleCtx {
+func (p *peer) getContext(s *session, withWg bool) *readHandleCtx {
 	p.ctxLock.Lock()
 	if withWg {
 		// count get context
@@ -386,7 +438,7 @@ func (p *Peer) getContext(s *session, withWg bool) *readHandleCtx {
 	return ctx
 }
 
-func (p *Peer) putContext(ctx *readHandleCtx, withWg bool) {
+func (p *peer) putContext(ctx *readHandleCtx, withWg bool) {
 	p.ctxLock.Lock()
 	defer p.ctxLock.Unlock()
 	if withWg {
@@ -398,39 +450,44 @@ func (p *Peer) putContext(ctx *readHandleCtx, withWg bool) {
 	p.freeContext = ctx
 }
 
+// SetRootGroup sets the router root group.
+func (p *peer) SetRootGroup(routerRoot string) {
+	p.rootRouter = &RootRouter{p.rootRouter.Group(routerRoot)}
+}
+
 // Group adds handler group.
-func (p *Peer) Group(pathPrefix string, plugin ...Plugin) *Router {
+func (p *peer) Group(pathPrefix string, plugin ...Plugin) *Router {
 	return p.rootRouter.Group(pathPrefix, plugin...)
 }
 
 // RegPull registers PULL handler.
-func (p *Peer) RegPull(ctrlStruct interface{}, plugin ...Plugin) {
+func (p *peer) RegPull(ctrlStruct interface{}, plugin ...Plugin) {
 	p.rootRouter.RegPull(ctrlStruct, plugin...)
 }
 
 // RegPush registers PUSH handler.
-func (p *Peer) RegPush(ctrlStruct interface{}, plugin ...Plugin) {
+func (p *peer) RegPush(ctrlStruct interface{}, plugin ...Plugin) {
 	p.rootRouter.RegPush(ctrlStruct, plugin...)
 }
 
 // SetUnknownPull sets the default handler,
 // which is called when no handler for PULL is found.
-func (p *Peer) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
+func (p *peer) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
 	p.rootRouter.SetUnknownPull(fn, plugin...)
 }
 
 // SetUnknownPush sets the default handler,
 // which is called when no handler for PUSH is found.
-func (p *Peer) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
+func (p *peer) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
 	p.rootRouter.SetUnknownPush(fn, plugin...)
 }
 
 // maybe useful
 
-func (p *Peer) getPullHandler(uriPath string) (*Handler, bool) {
+func (p *peer) getPullHandler(uriPath string) (*Handler, bool) {
 	return p.rootRouter.getPull(uriPath)
 }
 
-func (p *Peer) getPushHandler(uriPath string) (*Handler, bool) {
+func (p *peer) getPushHandler(uriPath string) (*Handler, bool) {
 	return p.rootRouter.getPush(uriPath)
 }

@@ -27,10 +27,10 @@ import (
 )
 
 type (
-	// BaseCtx common context method set.
-	BaseCtx interface {
+	// PreCtx context method set used before reading packet header.
+	PreCtx interface {
 		// Peer returns the peer.
-		Peer() *Peer
+		Peer() Peer
 		// Session returns the session.
 		Session() Session
 		// Ip returns the remote addr.
@@ -42,20 +42,9 @@ type (
 		// Rerror returns the handle error.
 		Rerror() *Rerror
 	}
-	// WriteCtx context method set for writing packet.
-	WriteCtx interface {
-		BaseCtx
-		// Output returns writed packet.
-		Output() *socket.Packet
-	}
-	// ReadCtx context method set for reading packet.
-	ReadCtx interface {
-		BaseCtx
-		readedHeaderCtx
-		// Input returns readed packet.
-		Input() *socket.Packet
-	}
-	readedHeaderCtx interface {
+	// BaseCtx common context method set.
+	BaseCtx interface {
+		PreCtx
 		// Seq returns the input packet sequence.
 		Seq() uint64
 		// GetMeta gets the header metadata for the input packet.
@@ -73,12 +62,23 @@ type (
 		// Query returns the input packet uri query object.
 		Query() url.Values
 	}
+	// WriteCtx context method set for writing packet.
+	WriteCtx interface {
+		PreCtx
+		// Output returns writed packet.
+		Output() *socket.Packet
+	}
+	// ReadCtx context method set for reading packet.
+	ReadCtx interface {
+		BaseCtx
+		// Input returns readed packet.
+		Input() *socket.Packet
+	}
 	// PushCtx context method set for handling the pushed packet.
 	// For example:
 	//  type HomePush struct{ PushCtx }
 	PushCtx interface {
 		BaseCtx
-		readedHeaderCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
 	}
@@ -87,7 +87,6 @@ type (
 	//  type HomePull struct{ PullCtx }
 	PullCtx interface {
 		BaseCtx
-		readedHeaderCtx
 		// Input returns readed packet.
 		Input() *socket.Packet
 		// GetBodyCodec gets the body codec type of the input packet.
@@ -104,7 +103,6 @@ type (
 	// UnknownPushCtx context method set for handling the unknown pushed packet.
 	UnknownPushCtx interface {
 		BaseCtx
-		readedHeaderCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
 		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
@@ -115,7 +113,6 @@ type (
 	// UnknownPullCtx context method set for handling the unknown pulled packet.
 	UnknownPullCtx interface {
 		BaseCtx
-		readedHeaderCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
 		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
@@ -148,6 +145,7 @@ type (
 )
 
 var (
+	_ PreCtx         = new(readHandleCtx)
 	_ BaseCtx        = new(readHandleCtx)
 	_ WriteCtx       = new(readHandleCtx)
 	_ ReadCtx        = new(readHandleCtx)
@@ -197,7 +195,7 @@ func (c *readHandleCtx) clean() {
 }
 
 // Peer returns the peer.
-func (c *readHandleCtx) Peer() *Peer {
+func (c *readHandleCtx) Peer() Peer {
 	return c.sess.peer
 }
 
@@ -295,7 +293,7 @@ func (c *readHandleCtx) Ip() string {
 
 // Be executed synchronously when reading packet
 func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
-	c.start = c.Peer().timeNow()
+	c.start = c.sess.timeNow()
 	c.pluginContainer = c.sess.peer.pluginContainer
 	switch header.Ptype() {
 	case TypeReply:
@@ -383,7 +381,7 @@ func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
 // handlePush handles push.
 func (c *readHandleCtx) handlePush() {
 	defer func() {
-		c.cost = c.Peer().timeSince(c.start)
+		c.cost = c.sess.timeSince(c.start)
 		c.sess.runlog(c.cost, c.input, nil, typePushHandle)
 	}()
 
@@ -447,7 +445,7 @@ func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
 // handlePull handles and replies pull.
 func (c *readHandleCtx) handlePull() {
 	defer func() {
-		c.cost = c.Peer().timeSince(c.start)
+		c.cost = c.sess.timeSince(c.start)
 		c.sess.runlog(c.cost, c.input, c.output, typePullHandle)
 	}()
 
@@ -524,7 +522,7 @@ func (c *readHandleCtx) handleReply() {
 	defer func() {
 		c.handleErr = c.pullCmd.rerr
 		c.pullCmd.done()
-		c.pullCmd.cost = c.Peer().timeSince(c.pullCmd.start)
+		c.pullCmd.cost = c.sess.timeSince(c.pullCmd.start)
 		c.sess.runlog(c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
 	}()
 	if c.pullCmd.rerr != nil {
@@ -566,7 +564,7 @@ type (
 	// PullCmd the command of the pulling operation's response.
 	PullCmd interface {
 		// Peer returns the peer.
-		Peer() *Peer
+		Peer() Peer
 		// Session returns the session.
 		Session() Session
 		// Ip returns the remote addr.
@@ -600,7 +598,7 @@ type (
 var _ WriteCtx = PullCmd(nil)
 
 // Peer returns the peer.
-func (p *pullCmd) Peer() *Peer {
+func (p *pullCmd) Peer() Peer {
 	return p.sess.peer
 }
 

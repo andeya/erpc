@@ -26,19 +26,19 @@ import (
 )
 
 var peers = struct {
-	list map[*Peer]struct{}
+	list map[*peer]struct{}
 	rwmu sync.RWMutex
 }{
-	list: make(map[*Peer]struct{}),
+	list: make(map[*peer]struct{}),
 }
 
-func addPeer(p *Peer) {
+func addPeer(p *peer) {
 	peers.rwmu.Lock()
 	peers.list[p] = struct{}{}
 	peers.rwmu.Unlock()
 }
 
-func deletePeer(p *Peer) {
+func deletePeer(p *peer) {
 	peers.rwmu.Lock()
 	delete(peers.list, p)
 	peers.rwmu.Unlock()
@@ -53,7 +53,7 @@ func shutdown() error {
 	)
 	for p := range peers.list {
 		count++
-		go func(peer *Peer) {
+		go func(peer *peer) {
 			errCh <- peer.Close()
 		}(p)
 	}

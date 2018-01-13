@@ -31,9 +31,24 @@ import (
 )
 
 type (
-	// PreSession a connection session that has not started reading goroutine.
-	PreSession interface {
-		PostSession
+	// BaseSession a connection session with the common method set.
+	BaseSession interface {
+		// Id returns the session id.
+		Id() string
+		// Peer returns the peer.
+		Peer() Peer
+		// LocalIp returns the local peer ip.
+		LocalIp() string
+		// RemoteIp returns the remote peer ip.
+		RemoteIp() string
+		// Public returns temporary public data of session(socket).
+		Public() goutil.Map
+		// PublicLen returns the length of public data of session(socket).
+		PublicLen() int
+	}
+	// EarlySession a connection session that has not started reading goroutine.
+	EarlySession interface {
+		BaseSession
 		// SetId sets the session id.
 		SetId(newId string)
 		// Conn returns the connection.
@@ -64,7 +79,7 @@ type (
 	}
 	// Session a connection session.
 	Session interface {
-		PostSession
+		BaseSession
 		// SetId sets the session id.
 		SetId(newId string)
 		// Close closes the session.
@@ -93,25 +108,12 @@ type (
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
 	}
-	// PostSession a disconnected session.
-	PostSession interface {
-		// Id returns the session id.
-		Id() string
-		// Peer returns the peer.
-		Peer() *Peer
-		// LocalIp returns the local peer ip.
-		LocalIp() string
-		// RemoteIp returns the remote peer ip.
-		RemoteIp() string
-		// Public returns temporary public data of session(socket).
-		Public() goutil.Map
-		// PublicLen returns the length of public data of session(socket).
-		PublicLen() int
-	}
 
 	session struct {
-		peer                           *Peer
+		peer                           *peer
 		getPullHandler, getPushHandler func(uriPath string) (*Handler, bool)
+		timeSince                      func(time.Time) time.Duration
+		timeNow                        func() time.Time
 		seq                            uint64
 		seqLock                        sync.Mutex
 		pullCmdMap                     goutil.Map
@@ -132,16 +134,18 @@ type (
 )
 
 var (
-	_ PreSession  = new(session)
-	_ Session     = new(session)
-	_ PostSession = new(session)
+	_ EarlySession = new(session)
+	_ Session      = new(session)
+	_ BaseSession  = new(session)
 )
 
-func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
+func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
 	var s = &session{
 		peer:           peer,
 		getPullHandler: peer.rootRouter.getPull,
 		getPushHandler: peer.rootRouter.getPush,
+		timeSince:      peer.timeSince,
+		timeNow:        peer.timeNow,
 		conn:           conn,
 		protoFuncs:     protoFuncs,
 		socket:         socket.NewSocket(conn, protoFuncs...),
@@ -153,7 +157,7 @@ func newSession(peer *Peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 }
 
 // Peer returns the peer.
-func (s *session) Peer() *Peer {
+func (s *session) Peer() Peer {
 	return s.peer
 }
 
