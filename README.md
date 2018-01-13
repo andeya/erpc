@@ -306,14 +306,13 @@ func (p *AliasPlugin) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
 ```go
 aliasesPlugin := NewAliasPlugin()
 aliasesPlugin.Alias("/alias", "/origin")
-
-pullGroup := peer.PullRouter.Group("pull", aliasesPlugin)
-pullGroup.Reg(new(XxxPullController))
-peer.PullRouter.SetUnknown(XxxUnknownPullHandler)
-
-pushGroup := peer.PushRouter.Group("push")
-pushGroup.Reg(new(XxxPushController), aliasesPlugin)
-peer.PushRouter.SetUnknown(XxxUnknownPushHandler)
+// add router group
+group := peer.Group("test")
+// register to test group
+group.RegPull(new(XxxPullController), aliasesPlugin)
+group.RegPush(new(XxxPushController))
+peer.SetUnknownPull(XxxUnknownPullHandler)
+peer.SetUnknownPush(XxxUnknownPushHandler)
 ```
 
 ## 6. Complete Demo
@@ -340,9 +339,9 @@ func main() {
         CountTime:         true,
         ListenAddress:     "0.0.0.0:9090",
     })
-    group := peer.PullRouter.Group("group")
-    group.Reg(new(Home))
-    peer.PullRouter.SetUnknown(UnknownPullHandle)
+    group := peer.Group("group")
+    group.RegPull(new(Home))
+    peer.SetUnknownPull(UnknownPullHandle)
     peer.Listen()
 }
 
@@ -368,6 +367,7 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.R
     }, nil
 }
 
+// UnknownPullHandle handles unknown pull packet
 func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
     time.Sleep(1)
     var v = struct {
@@ -416,7 +416,7 @@ func main() {
         RedialTimes: 3,
     })
     defer peer.Close()
-    peer.PushRouter.Reg(new(Push))
+    peer.RegPush(new(Push))
 
     var sess, rerr = peer.Dial("127.0.0.1:9090")
     if rerr != nil {
@@ -457,6 +457,9 @@ func main() {
         &reply,
         socket.WithXferPipe('g'),
     ).Rerror()
+    if tp.IsConnRerror(rerr) {
+        tp.Fatalf("has conn rerror: %v", rerr)
+    }
     if rerr != nil {
         tp.Fatalf("pull error: %v", rerr)
     }

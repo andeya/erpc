@@ -21,8 +21,8 @@ func main() {
 		ListenAddress:    "0.0.0.0:9090",
 	})
 	{
-		group := peer.PullRouter.Group("group")
-		group.Reg(new(Home))
+		group := peer.Group("group")
+		group.RegPull(new(Home))
 	}
 	peer.Listen()
 }

@@ -70,14 +70,18 @@ import (
 //      return nil
 //  }
 type (
+	// RootRouter the router root
+	RootRouter struct {
+		*Router
+	}
+	// Router PULL or PUSH router
 	Router struct {
-		handlers       map[string]*Handler
-		unknownHandler **Handler
+		handlers    map[string]*Handler
+		unknownPull **Handler
+		unknownPush **Handler
 		// only for register router
 		pathPrefix      string
 		pluginContainer *PluginContainer
-		typ             string
-		maker           HandlersMaker
 	}
 	// Handler pull or push handler type info
 	Handler struct {
@@ -101,25 +105,49 @@ const (
 	pnUnknownPull = "unknown_pull"
 )
 
+// newPullRouter creates packet router.
+func newRouter(pluginContainer *PluginContainer) *Router {
+	return &Router{
+		handlers:        make(map[string]*Handler),
+		unknownPull:     new(*Handler),
+		unknownPush:     new(*Handler),
+		pathPrefix:      "/",
+		pluginContainer: pluginContainer,
+	}
+}
+
 // Group add handler group.
 func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
 	warnInvaildHandlerHooks(plugin)
 	return &Router{
 		handlers:        r.handlers,
-		unknownHandler:  r.unknownHandler,
+		unknownPull:     r.unknownPull,
+		unknownPush:     r.unknownPush,
 		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
 		pluginContainer: pluginContainer,
-		maker:           r.maker,
-		typ:             r.typ,
 	}
 }
 
-// Reg registers handler.
-func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
-	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
-	warnInvaildHandlerHooks(plugin)
-	handlers, err := r.maker(
+// RegPull registers PULL handler.
+func (r *Router) RegPull(ctrlStruct interface{}, plugin ...Plugin) {
+	r.reg(pnPull, pullHandlersMaker, ctrlStruct, plugin)
+}
+
+// RegPush registers PUSH handler.
+func (r *Router) RegPush(ctrlStruct interface{}, plugin ...Plugin) {
+	r.reg(pnPush, pushHandlersMaker, ctrlStruct, plugin)
+}
+
+func (r *Router) reg(
+	routerTypeName string,
+	handlerMaker func(string, interface{}, *PluginContainer) ([]*Handler, error),
+	ctrlStruct interface{},
+	plugins []Plugin,
+) {
+	pluginContainer := r.pluginContainer.cloneAppendRight(plugins...)
+	warnInvaildHandlerHooks(plugins)
+	handlers, err := handlerMaker(
 		r.pathPrefix,
 		ctrlStruct,
 		pluginContainer,
@@ -129,35 +157,27 @@ func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 	}
 	for _, h := range handlers {
 		if _, ok := r.handlers[h.name]; ok {
-			Fatalf("there is a %s handler conflict: %s", r.typ, h.name)
+			Fatalf("there is a handler conflict: %s", h.name)
 		}
-		h.routerTypeName = r.typ
+		h.routerTypeName = routerTypeName
 		r.handlers[h.name] = h
 		pluginContainer.PostReg(h)
-		Printf("register %s handler: %s", r.typ, h.name)
+		Printf("register %s handler: %s", routerTypeName, h.name)
 	}
 }
 
-// setUnknown sets the default handler,
-// which is called when no handler for PULL or PUSH is found.
-func (r *Router) setUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
+// SetUnknownPull sets the default handler,
+// which is called when no handler for PULL is found.
+func (r *RootRouter) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
 	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
 	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
+		name:            pnUnknownPush,
 		isUnknown:       true,
 		argElem:         reflect.TypeOf([]byte{}),
 		pluginContainer: pluginContainer,
-	}
-
-	switch r.typ {
-	case pnPull:
-		h.name = pnUnknownPull
-		fn, ok := unknownHandleFunc.(func(UnknownPullCtx) (interface{}, *Rerror))
-		if !ok {
-			Fatalf("SetUnknown: %s handler needs type:\n func(ctx UnknownPullCtx) (reply interface{}, rerr *Rerror)", h.name)
-		}
-		h.unknownHandleFunc = func(ctx *readHandleCtx) {
+		unknownHandleFunc: func(ctx *readHandleCtx) {
 			body, rerr := fn(ctx)
 			if rerr != nil {
 				ctx.handleErr = rerr
@@ -168,49 +188,61 @@ func (r *Router) setUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
 					ctx.output.SetBodyCodec(ctx.input.BodyCodec())
 				}
 			}
-		}
-
-	case pnPush:
-		h.name = pnUnknownPush
-		fn, ok := unknownHandleFunc.(func(ctx UnknownPushCtx) *Rerror)
-		if !ok {
-			Fatalf("SetUnknown: %s handler needs type:\n func(ctx UnknownPushCtx) *Rerror", h.name)
-		}
-		h.unknownHandleFunc = func(ctx *readHandleCtx) {
-			ctx.handleErr = fn(ctx)
-		}
+		},
 	}
 
-	if *r.unknownHandler == nil {
+	if *r.unknownPull == nil {
 		Printf("set %s handler", h.name)
 	} else {
 		Warnf("covered %s handler", h.name)
 	}
-	r.unknownHandler = &h
+	r.unknownPull = &h
 }
 
-func (r *Router) get(uriPath string) (*Handler, bool) {
+// SetUnknownPush sets the default handler,
+// which is called when no handler for PUSH is found.
+func (r *RootRouter) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
+	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
+	warnInvaildHandlerHooks(plugin)
+
+	var h = &Handler{
+		name:            pnUnknownPush,
+		isUnknown:       true,
+		argElem:         reflect.TypeOf([]byte{}),
+		pluginContainer: pluginContainer,
+		unknownHandleFunc: func(ctx *readHandleCtx) {
+			ctx.handleErr = fn(ctx)
+		},
+	}
+
+	if *r.unknownPush == nil {
+		Printf("set %s handler", h.name)
+	} else {
+		Warnf("covered %s handler", h.name)
+	}
+	r.unknownPush = &h
+}
+
+func (r *Router) getPull(uriPath string) (*Handler, bool) {
 	t, ok := r.handlers[uriPath]
 	if ok {
 		return t, true
 	}
-	if unknown := *r.unknownHandler; unknown != nil {
+	if unknown := *r.unknownPull; unknown != nil {
 		return unknown, true
 	}
 	return nil, false
 }
 
-// newPullRouter creates pull packet router.
-// Note: ctrlStruct needs to implement PullCtx interface.
-func newPullRouter(pluginContainer *PluginContainer) *Router {
-	return &Router{
-		handlers:        make(map[string]*Handler),
-		unknownHandler:  new(*Handler),
-		pathPrefix:      "/",
-		pluginContainer: pluginContainer,
-		maker:           pullHandlersMaker,
-		typ:             pnPull,
+func (r *Router) getPush(uriPath string) (*Handler, bool) {
+	t, ok := r.handlers[uriPath]
+	if ok {
+		return t, true
 	}
+	if unknown := *r.unknownPush; unknown != nil {
+		return unknown, true
+	}
+	return nil, false
 }
 
 // Note: ctrlStruct needs to implement PullCtx interface.
@@ -325,19 +357,6 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 		})
 	}
 	return handlers, nil
-}
-
-// newPushRouter creates push packet router.
-// Note: ctrlStruct needs to implement PushCtx interface.
-func newPushRouter(pluginContainer *PluginContainer) *Router {
-	return &Router{
-		handlers:        make(map[string]*Handler),
-		unknownHandler:  new(*Handler),
-		pathPrefix:      "/",
-		pluginContainer: pluginContainer,
-		maker:           pushHandlersMaker,
-		typ:             pnPush,
-	}
 }
 
 // Note: ctrlStruct needs to implement PushCtx interface.
@@ -489,38 +508,22 @@ func (h *Handler) ReplyType() reflect.Type {
 	return h.reply
 }
 
-// IsPush checks if it is push handler or not.
-func (h *Handler) IsPush() bool {
-	return h.reply == nil
-}
-
 // IsPull checks if it is pull handler or not.
 func (h *Handler) IsPull() bool {
-	return !h.IsPush()
+	return h.routerTypeName == pnPull || h.routerTypeName == pnUnknownPull
+}
+
+// IsPush checks if it is push handler or not.
+func (h *Handler) IsPush() bool {
+	return h.routerTypeName == pnPush || h.routerTypeName == pnUnknownPush
+}
+
+// IsUnknown checks if it is unknown handler(pull/push) or not.
+func (h *Handler) IsUnknown() bool {
+	return h.isUnknown
 }
 
 // RouterTypeName returns the router type name.
 func (h *Handler) RouterTypeName() string {
 	return h.routerTypeName
-}
-
-// RootRouter the router root
-type RootRouter struct {
-	router *Router
-}
-
-// Group add handler group.
-func (r *RootRouter) Group(pathPrefix string, plugin ...Plugin) *Router {
-	return r.router.Group(pathPrefix, plugin...)
-}
-
-// Reg registers handler.
-func (r *RootRouter) Reg(ctrlStruct interface{}, plugin ...Plugin) {
-	r.router.Reg(ctrlStruct, plugin...)
-}
-
-// SetUnknown sets the default handler,
-// which is called when no handler for PULL or PUSH is found.
-func (r *RootRouter) SetUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
-	r.router.setUnknown(unknownHandleFunc, plugin...)
 }

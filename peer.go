@@ -33,22 +33,22 @@ import (
 
 // Peer peer which is server or client.
 type Peer struct {
-	PullRouter, PushRouter *RootRouter
-	pluginContainer        *PluginContainer
-	sessHub                *SessionHub
-	closeCh                chan struct{}
-	freeContext            *readHandleCtx
-	ctxLock                sync.Mutex
-	defaultReadTimeout     time.Duration // readdeadline for underlying net.Conn
-	defaultWriteTimeout    time.Duration // writedeadline for underlying net.Conn
-	tlsConfig              *tls.Config
-	slowCometDuration      time.Duration
-	defaultBodyCodec       byte
-	printBody              bool
-	countTime              bool
-	timeNow                func() time.Time
-	timeSince              func(time.Time) time.Duration
-	mu                     sync.Mutex
+	rootRouter          *RootRouter
+	pluginContainer     *PluginContainer
+	sessHub             *SessionHub
+	closeCh             chan struct{}
+	freeContext         *readHandleCtx
+	ctxLock             sync.Mutex
+	defaultReadTimeout  time.Duration // readdeadline for underlying net.Conn
+	defaultWriteTimeout time.Duration // writedeadline for underlying net.Conn
+	tlsConfig           *tls.Config
+	slowCometDuration   time.Duration
+	defaultBodyCodec    byte
+	printBody           bool
+	countTime           bool
+	timeNow             func() time.Time
+	timeSince           func(time.Time) time.Duration
+	mu                  sync.Mutex
 
 	network string
 
@@ -70,8 +70,7 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 		Fatalf("%v", err)
 	}
 	var p = &Peer{
-		PullRouter:          &RootRouter{newPullRouter(pluginContainer)},
-		PushRouter:          &RootRouter{newPushRouter(pluginContainer)},
+		rootRouter:          &RootRouter{newRouter(pluginContainer)},
 		pluginContainer:     pluginContainer,
 		sessHub:             newSessionHub(),
 		defaultReadTimeout:  cfg.DefaultReadTimeout,
@@ -397,4 +396,41 @@ func (p *Peer) putContext(ctx *readHandleCtx, withWg bool) {
 	ctx.clean()
 	ctx.next = p.freeContext
 	p.freeContext = ctx
+}
+
+// Group add handler group.
+func (p *Peer) Group(pathPrefix string, plugin ...Plugin) *Router {
+	return p.rootRouter.Group(pathPrefix, plugin...)
+}
+
+// RegPull registers PULL handler.
+func (p *Peer) RegPull(ctrlStruct interface{}, plugin ...Plugin) {
+	p.rootRouter.RegPull(ctrlStruct, plugin...)
+}
+
+// RegPush registers PUSH handler.
+func (p *Peer) RegPush(ctrlStruct interface{}, plugin ...Plugin) {
+	p.rootRouter.RegPush(ctrlStruct, plugin...)
+}
+
+// SetUnknownPull sets the default handler,
+// which is called when no handler for PULL is found.
+func (p *Peer) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
+	p.rootRouter.SetUnknownPull(fn, plugin...)
+}
+
+// SetUnknownPush sets the default handler,
+// which is called when no handler for PUSH is found.
+func (p *Peer) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
+	p.rootRouter.SetUnknownPush(fn, plugin...)
+}
+
+// maybe useful
+
+func (p *Peer) getPullHandler(uriPath string) (*Handler, bool) {
+	return p.rootRouter.getPull(uriPath)
+}
+
+func (p *Peer) getPushHandler(uriPath string) (*Handler, bool) {
+	return p.rootRouter.getPush(uriPath)
 }
