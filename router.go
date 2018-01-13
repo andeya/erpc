@@ -105,18 +105,20 @@ const (
 	pnUnknownPull = "unknown_pull"
 )
 
-// newPullRouter creates packet router.
-func newRouter(pluginContainer *PluginContainer) *Router {
-	return &Router{
-		handlers:        make(map[string]*Handler),
-		unknownPull:     new(*Handler),
-		unknownPush:     new(*Handler),
-		pathPrefix:      "/",
-		pluginContainer: pluginContainer,
+// newRootRouter creates root router.
+func newRootRouter(rootGroup string, pluginContainer *PluginContainer) *RootRouter {
+	return &RootRouter{
+		Router: &Router{
+			handlers:        make(map[string]*Handler),
+			unknownPull:     new(*Handler),
+			unknownPush:     new(*Handler),
+			pathPrefix:      rootGroup,
+			pluginContainer: pluginContainer,
+		},
 	}
 }
 
-// Group add handler group.
+// Group adds handler group.
 func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
 	warnInvaildHandlerHooks(plugin)

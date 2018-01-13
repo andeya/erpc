@@ -70,7 +70,7 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) *Peer {
 		Fatalf("%v", err)
 	}
 	var p = &Peer{
-		rootRouter:          &RootRouter{newRouter(pluginContainer)},
+		rootRouter:          newRootRouter(cfg.RouterRoot, pluginContainer),
 		pluginContainer:     pluginContainer,
 		sessHub:             newSessionHub(),
 		defaultReadTimeout:  cfg.DefaultReadTimeout,
@@ -398,7 +398,7 @@ func (p *Peer) putContext(ctx *readHandleCtx, withWg bool) {
 	p.freeContext = ctx
 }
 
-// Group add handler group.
+// Group adds handler group.
 func (p *Peer) Group(pathPrefix string, plugin ...Plugin) *Router {
 	return p.rootRouter.Group(pathPrefix, plugin...)
 }

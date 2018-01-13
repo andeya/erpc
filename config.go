@@ -17,6 +17,7 @@ package tp
 import (
 	"errors"
 	"math"
+	"path"
 	"time"
 
 	"github.com/henrylee2cn/cfgo"
@@ -38,6 +39,7 @@ type PeerConfig struct {
 	RedialTimes         int32         `yaml:"redial_times"           ini:"redial_times"           comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; for client role"`
 	Network             string        `yaml:"network"                ini:"network"                comment:"Network; tcp, tcp4, tcp6, unix or unixpacket"`
 	ListenAddress       string        `yaml:"listen_address"         ini:"listen_address"         comment:"Listen address; for server role"`
+	RouterRoot          string        `yaml:"router_root"            ini:"router_root"            comment:"The root router group"`
 }
 
 var _ cfgo.Config = new(PeerConfig)
@@ -66,5 +68,6 @@ func (p *PeerConfig) check() error {
 	if len(p.DefaultBodyCodec) == 0 {
 		p.DefaultBodyCodec = "json"
 	}
+	p.RouterRoot = path.Join("/", p.RouterRoot)
 	return nil
 }
