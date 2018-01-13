@@ -88,9 +88,17 @@ type (
 		handleFunc        func(*readHandleCtx, reflect.Value)
 		unknownHandleFunc func(*readHandleCtx)
 		pluginContainer   *PluginContainer
+		routerTypeName    string
 	}
 	// HandlersMaker makes []*Handler
 	HandlersMaker func(string, interface{}, *PluginContainer) ([]*Handler, error)
+)
+
+const (
+	pnPush        = "push"
+	pnPull        = "pull"
+	pnUnknownPush = "unknown_push"
+	pnUnknownPull = "unknown_pull"
 )
 
 // Group add handler group.
@@ -103,6 +111,7 @@ func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
 		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
 		pluginContainer: pluginContainer,
 		maker:           r.maker,
+		typ:             r.typ,
 	}
 }
 
@@ -120,10 +129,11 @@ func (r *Router) Reg(ctrlStruct interface{}, plugin ...Plugin) {
 	}
 	for _, h := range handlers {
 		if _, ok := r.handlers[h.name]; ok {
-			Fatalf("There is a %s handler conflict: %s", r.typ, h.name)
+			Fatalf("there is a %s handler conflict: %s", r.typ, h.name)
 		}
-		pluginContainer.PostReg(h)
+		h.routerTypeName = r.typ
 		r.handlers[h.name] = h
+		pluginContainer.PostReg(h)
 		Printf("register %s handler: %s", r.typ, h.name)
 	}
 }
@@ -141,8 +151,8 @@ func (r *Router) setUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
 	}
 
 	switch r.typ {
-	case "pull":
-		h.name = "unknown_pull"
+	case pnPull:
+		h.name = pnUnknownPull
 		fn, ok := unknownHandleFunc.(func(UnknownPullCtx) (interface{}, *Rerror))
 		if !ok {
 			Fatalf("SetUnknown: %s handler needs type:\n func(ctx UnknownPullCtx) (reply interface{}, rerr *Rerror)", h.name)
@@ -160,8 +170,8 @@ func (r *Router) setUnknown(unknownHandleFunc interface{}, plugin ...Plugin) {
 			}
 		}
 
-	case "push":
-		h.name = "unknown_push"
+	case pnPush:
+		h.name = pnUnknownPush
 		fn, ok := unknownHandleFunc.(func(ctx UnknownPushCtx) *Rerror)
 		if !ok {
 			Fatalf("SetUnknown: %s handler needs type:\n func(ctx UnknownPushCtx) *Rerror", h.name)
@@ -199,7 +209,7 @@ func newPullRouter(pluginContainer *PluginContainer) *Router {
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
 		maker:           pullHandlersMaker,
-		typ:             "pull",
+		typ:             pnPull,
 	}
 }
 
@@ -326,7 +336,7 @@ func newPushRouter(pluginContainer *PluginContainer) *Router {
 		pathPrefix:      "/",
 		pluginContainer: pluginContainer,
 		maker:           pushHandlersMaker,
-		typ:             "push",
+		typ:             pnPush,
 	}
 }
 
@@ -487,6 +497,11 @@ func (h *Handler) IsPush() bool {
 // IsPull checks if it is pull handler or not.
 func (h *Handler) IsPull() bool {
 	return !h.IsPush()
+}
+
+// RouterTypeName returns the router type name.
+func (h *Handler) RouterTypeName() string {
+	return h.routerTypeName
 }
 
 // RootRouter the router root

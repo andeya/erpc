@@ -250,8 +250,10 @@ func (p *Peer) Listen(protoFunc ...socket.ProtoFunc) error {
 		Fatalf("%v", err)
 	}
 	defer lis.Close()
-	p.listen = lis
 
+	p.pluginContainer.PostListen(lis.Addr())
+
+	p.listen = lis
 	network := lis.Addr().Network()
 	addr := lis.Addr().String()
 	Printf("listen ok (network:%s, addr:%s)", network, addr)

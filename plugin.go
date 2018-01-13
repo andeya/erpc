@@ -15,6 +15,8 @@
 package tp
 
 import (
+	"net"
+
 	"github.com/henrylee2cn/goutil/errors"
 )
 
@@ -33,10 +35,15 @@ type (
 		Plugin
 		PostNewPeer(*Peer) error
 	}
-	// PostRegPlugin is executed before registering handler.
+	// PostRegPlugin is executed after registering handler.
 	PostRegPlugin interface {
 		Plugin
 		PostReg(*Handler) error
+	}
+	// PostListenPlugin is executed between listening and accepting.
+	PostListenPlugin interface {
+		Plugin
+		PostListen(net.Addr) error
 	}
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
@@ -267,11 +274,25 @@ func (p *PluginContainer) PostReg(h *Handler) {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostRegPlugin); ok {
 			if err = _plugin.PostReg(h); err != nil {
-				Fatalf("%s-PostRegPlugin(%s)", plugin.Name(), err.Error())
+				Fatalf("[register %s handler: %s] %s-PostRegPlugin(%s)", h.RouterTypeName(), h.Name(), plugin.Name(), err.Error())
 				return
 			}
 		}
 	}
+}
+
+// PostListen is executed between listening and accepting.
+func (p *PluginContainer) PostListen(addr net.Addr) {
+	var err error
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PostListenPlugin); ok {
+			if err = _plugin.PostListen(addr); err != nil {
+				Fatalf("[network:%s, addr:%s] %s-PostListenPlugin(%s)", addr.Network(), addr.String(), plugin.Name(), err.Error())
+				return
+			}
+		}
+	}
+	return
 }
 
 // PostDial executes the defined plugins after dialing.
@@ -280,7 +301,7 @@ func (p *PluginContainer) PostDial(sess PreSession) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
 			if rerr = _plugin.PostDial(sess); rerr != nil {
-				Debugf("dial fail (addr: %s, id: %s): %s-PostDialPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
+				Debugf("[addr:%s, id:%s] %s-PostDialPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -294,7 +315,7 @@ func (p *PluginContainer) PostAccept(sess PreSession) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
 			if rerr = _plugin.PostAccept(sess); rerr != nil {
-				Debugf("accept session(addr: %s, id: %s): %s-PostAcceptPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
+				Debugf("[addr:%s, id:%s] %s-PostAcceptPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
