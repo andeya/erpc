@@ -107,6 +107,7 @@ const (
 
 // newRootRouter creates root router.
 func newRootRouter(rootGroup string, pluginContainer *PluginContainer) *RootRouter {
+	rootGroup = path.Join("/", rootGroup)
 	return &RootRouter{
 		Router: &Router{
 			handlers:        make(map[string]*Handler),

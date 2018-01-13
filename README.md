@@ -496,6 +496,7 @@ package|import|description
 
 package|import|description
 ----|------|-----------
+[RouterRootSetting](https://github.com/henrylee2cn/teleport/blob/master/plugin/router_root.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A plugin to set the peer router root
 [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
 [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"`|A generic timing heartbeat plugin
 
