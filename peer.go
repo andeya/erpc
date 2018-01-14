@@ -54,14 +54,14 @@ type (
 		RoutePull(ctrlStruct interface{}, plugin ...Plugin)
 		// RoutePush registers PUSH handler.
 		RoutePush(ctrlStruct interface{}, plugin ...Plugin)
-		// SetTlsConfig sets the TLS config.
-		SetTlsConfig(tlsConfig *tls.Config)
-		// SetTlsConfigFromFile sets the TLS config from file.
-		SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error
 		// SetUnknownPull sets the default handler, which is called when no handler for PULL is found.
 		SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin)
 		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
 		SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
+		// SetTlsConfig sets the TLS config.
+		SetTlsConfig(tlsConfig *tls.Config)
+		// SetTlsConfigFromFile sets the TLS config from file.
+		SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error
 		// TlsConfig returns the TLS config.
 		TlsConfig() *tls.Config
 	}
