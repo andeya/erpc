@@ -18,20 +18,24 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
-// NewRouterRootSetting creates a plugin to set the peer router root.
-func NewRouterRootSetting(routerRoot string) tp.PostNewPeerPlugin {
-	return &routerRootSetting{routerRoot}
+// RootRoute creates a plugin to set the peer router root.
+func RootRoute(routerRoot string) tp.Plugin {
+	return &rootRoute{routerRoot}
 }
 
-type routerRootSetting struct {
+type rootRoute struct {
 	routerRoot string
 }
 
-func (r *routerRootSetting) Name() string {
-	return "RouterRootSetting"
+var (
+	_ tp.PostNewPeerPlugin = new(rootRoute)
+)
+
+func (r *rootRoute) Name() string {
+	return "RootRoute"
 }
 
-func (r *routerRootSetting) PostNewPeer(peer tp.EarlyPeer) error {
+func (r *rootRoute) PostNewPeer(peer tp.EarlyPeer) error {
 	peer.RootRoute(r.routerRoot)
 	return nil
 }
