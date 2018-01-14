@@ -68,8 +68,8 @@ type (
 	// EarlyPeer the communication peer that has just been created
 	EarlyPeer interface {
 		BasePeer
-		// SetRouterRoot sets the router root group.
-		SetRouterRoot(routerRoot string)
+		// RootRoute sets the router root group.
+		RootRoute(routerRoot string)
 	}
 	// Peer the communication peer which is server or client role
 	Peer interface {
@@ -450,8 +450,8 @@ func (p *peer) putContext(ctx *readHandleCtx, withWg bool) {
 	p.freeContext = ctx
 }
 
-// SetRouterRoot sets the router root group.
-func (p *peer) SetRouterRoot(routerRoot string) {
+// RootRoute sets the router root group.
+func (p *peer) RootRoute(routerRoot string) {
 	p.rootRouter = newRootRouter(routerRoot, p.pluginContainer)
 }
 

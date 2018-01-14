@@ -32,6 +32,6 @@ func (r *routerRootSetting) Name() string {
 }
 
 func (r *routerRootSetting) PostNewPeer(peer tp.EarlyPeer) error {
-	peer.SetRouterRoot(r.routerRoot)
+	peer.RootRoute(r.routerRoot)
 	return nil
 }
