@@ -311,7 +311,7 @@ func (p *AliasPlugin) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
 aliasesPlugin := NewAliasPlugin()
 aliasesPlugin.Alias("/alias", "/origin")
 // add router group
-group := peer.Group("test")
+group := peer.SubRoute("test")
 // register to test group
 group.RegPull(new(XxxPullController), aliasesPlugin)
 group.RegPush(new(XxxPushController))
@@ -343,7 +343,7 @@ func main() {
         CountTime:         true,
         ListenAddress:     "0.0.0.0:9090",
     })
-    group := peer.Group("group")
+    group := peer.SubRoute("group")
     group.RegPull(new(Home))
     peer.SetUnknownPull(UnknownPullHandle)
     peer.Listen()

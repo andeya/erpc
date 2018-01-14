@@ -48,8 +48,8 @@ type (
 		RangeSession(fn func(sess Session) bool)
 		// ServeConn serves the connection and returns a session.
 		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
-		// Group adds handler group.
-		Group(pathPrefix string, plugin ...Plugin) *Router
+		// SubRoute adds handler group.
+		SubRoute(pathPrefix string, plugin ...Plugin) *Router
 		// RegPull registers PULL handler.
 		RegPull(ctrlStruct interface{}, plugin ...Plugin)
 		// RegPush registers PUSH handler.
@@ -455,9 +455,9 @@ func (p *peer) SetRouterRoot(routerRoot string) {
 	p.rootRouter = newRootRouter(routerRoot, p.pluginContainer)
 }
 
-// Group adds handler group.
-func (p *peer) Group(pathPrefix string, plugin ...Plugin) *Router {
-	return p.rootRouter.Group(pathPrefix, plugin...)
+// SubRoute adds handler group.
+func (p *peer) SubRoute(pathPrefix string, plugin ...Plugin) *Router {
+	return p.rootRouter.SubRoute(pathPrefix, plugin...)
 }
 
 // RegPull registers PULL handler.

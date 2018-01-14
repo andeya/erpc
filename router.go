@@ -119,8 +119,8 @@ func newRootRouter(rootGroup string, pluginContainer *PluginContainer) *RootRout
 	}
 }
 
-// Group adds handler group.
-func (r *Router) Group(pathPrefix string, plugin ...Plugin) *Router {
+// SubRoute adds handler group.
+func (r *Router) SubRoute(pathPrefix string, plugin ...Plugin) *Router {
 	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
 	warnInvaildHandlerHooks(plugin)
 	return &Router{
