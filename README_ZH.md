@@ -314,8 +314,8 @@ aliasesPlugin.Alias("/alias", "/origin")
 // add router group
 group := peer.SubRoute("test")
 // register to test group
-group.RegPull(new(XxxPullController), aliasesPlugin)
-group.RegPush(new(XxxPushController))
+group.RoutePull(new(XxxPullController), aliasesPlugin)
+group.RoutePush(new(XxxPushController))
 peer.SetUnknownPull(XxxUnknownPullHandler)
 peer.SetUnknownPush(XxxUnknownPushHandler)
 ```
@@ -345,7 +345,7 @@ func main() {
         ListenAddress:     "0.0.0.0:9090",
     })
     group := peer.SubRoute("group")
-    group.RegPull(new(Home))
+    group.RoutePull(new(Home))
     peer.SetUnknownPull(UnknownPullHandle)
     peer.Listen()
 }
@@ -421,7 +421,7 @@ func main() {
         RedialTimes: 3,
     })
     defer peer.Close()
-    peer.RegPush(new(Push))
+    peer.RoutePush(new(Push))
 
     var sess, rerr = peer.Dial("127.0.0.1:9090")
     if rerr != nil {

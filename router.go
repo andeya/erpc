@@ -132,13 +132,13 @@ func (r *Router) SubRoute(pathPrefix string, plugin ...Plugin) *Router {
 	}
 }
 
-// RegPull registers PULL handler.
-func (r *Router) RegPull(ctrlStruct interface{}, plugin ...Plugin) {
+// RoutePull registers PULL handler.
+func (r *Router) RoutePull(ctrlStruct interface{}, plugin ...Plugin) {
 	r.reg(pnPull, pullHandlersMaker, ctrlStruct, plugin)
 }
 
-// RegPush registers PUSH handler.
-func (r *Router) RegPush(ctrlStruct interface{}, plugin ...Plugin) {
+// RoutePush registers PUSH handler.
+func (r *Router) RoutePush(ctrlStruct interface{}, plugin ...Plugin) {
 	r.reg(pnPush, pushHandlersMaker, ctrlStruct, plugin)
 }
 

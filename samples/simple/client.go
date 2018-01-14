@@ -19,7 +19,7 @@ func main() {
 		RedialTimes: 3,
 	})
 	defer peer.Close()
-	peer.RegPush(new(Push))
+	peer.RoutePush(new(Push))
 
 	var sess, rerr = peer.Dial("127.0.0.1:9090")
 	if rerr != nil {

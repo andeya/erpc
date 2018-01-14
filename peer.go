@@ -50,10 +50,10 @@ type (
 		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
 		// SubRoute adds handler group.
 		SubRoute(pathPrefix string, plugin ...Plugin) *Router
-		// RegPull registers PULL handler.
-		RegPull(ctrlStruct interface{}, plugin ...Plugin)
-		// RegPush registers PUSH handler.
-		RegPush(ctrlStruct interface{}, plugin ...Plugin)
+		// RoutePull registers PULL handler.
+		RoutePull(ctrlStruct interface{}, plugin ...Plugin)
+		// RoutePush registers PUSH handler.
+		RoutePush(ctrlStruct interface{}, plugin ...Plugin)
 		// SetTlsConfig sets the TLS config.
 		SetTlsConfig(tlsConfig *tls.Config)
 		// SetTlsConfigFromFile sets the TLS config from file.
@@ -460,14 +460,14 @@ func (p *peer) SubRoute(pathPrefix string, plugin ...Plugin) *Router {
 	return p.rootRouter.SubRoute(pathPrefix, plugin...)
 }
 
-// RegPull registers PULL handler.
-func (p *peer) RegPull(ctrlStruct interface{}, plugin ...Plugin) {
-	p.rootRouter.RegPull(ctrlStruct, plugin...)
+// RoutePull registers PULL handler.
+func (p *peer) RoutePull(ctrlStruct interface{}, plugin ...Plugin) {
+	p.rootRouter.RoutePull(ctrlStruct, plugin...)
 }
 
-// RegPush registers PUSH handler.
-func (p *peer) RegPush(ctrlStruct interface{}, plugin ...Plugin) {
-	p.rootRouter.RegPush(ctrlStruct, plugin...)
+// RoutePush registers PUSH handler.
+func (p *peer) RoutePush(ctrlStruct interface{}, plugin ...Plugin) {
+	p.rootRouter.RoutePush(ctrlStruct, plugin...)
 }
 
 // SetUnknownPull sets the default handler,

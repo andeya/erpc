@@ -18,7 +18,7 @@ func main() {
 		ListenAddress:     "0.0.0.0:9090",
 	})
 	group := peer.SubRoute("group")
-	group.RegPull(new(Home))
+	group.RoutePull(new(Home))
 	peer.SetUnknownPull(UnknownPullHandle)
 	peer.Listen()
 }

@@ -22,7 +22,7 @@ func main() {
 	})
 	{
 		group := peer.SubRoute("group")
-		group.RegPull(new(Home))
+		group.RoutePull(new(Home))
 	}
 	peer.Listen()
 }
