@@ -513,6 +513,7 @@ package|import|description
 package|import|description
 ----|------|-----------
 [gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go)|`import "github.com/henrylee2cn/teleport/xfer"`|Gzip(teleport own)
+[md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash)|`import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"`|Provides a integrity check transfer filter
 
 ### 其他
 
