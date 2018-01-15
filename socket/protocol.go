@@ -210,7 +210,7 @@ func (f *fastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 	}
 	// protocol
 	bb.ChangeLen(1024)
-	_, err = f.r.Read(bb.B[:1])
+	_, err = io.ReadFull(f.r, bb.B[:1])
 	if err != nil {
 		return err
 	}
@@ -218,13 +218,13 @@ func (f *fastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 		return errProtoUnmatch
 	}
 	// transfer pipe
-	_, err = f.r.Read(bb.B[:1])
+	_, err = io.ReadFull(f.r, bb.B[:1])
 	if err != nil {
 		return err
 	}
 	var xferLen = bb.B[0]
 	if xferLen > 0 {
-		_, err = f.r.Read(bb.B[:xferLen])
+		_, err = io.ReadFull(f.r, bb.B[:xferLen])
 		if err != nil {
 			return err
 		}
