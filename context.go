@@ -49,6 +49,11 @@ type (
 		Seq() uint64
 		// GetMeta gets the header metadata for the input packet.
 		GetMeta(key string) []byte
+		// VisitMeta calls f for each existing metadata.
+		//
+		// f must not retain references to key and value after returning.
+		// Make key and/or value copies if you need storing them after returning.
+		VisitMeta(f func(key, value []byte))
 		// CopyMeta returns the input packet metadata copy.
 		CopyMeta() *utils.Args
 		// Uri returns the input packet uri.
@@ -257,6 +262,14 @@ func (c *readHandleCtx) Query() url.Values {
 // GetMeta gets the header metadata for the input packet.
 func (c *readHandleCtx) GetMeta(key string) []byte {
 	return c.input.Meta().Peek(key)
+}
+
+// VisitMeta calls f for each existing metadata.
+//
+// f must not retain references to key and value after returning.
+// Make key and/or value copies if you need storing them after returning.
+func (c *readHandleCtx) VisitMeta(f func(key, value []byte)) {
+	c.input.Meta().VisitAll(f)
 }
 
 // CopyMeta returns the input packet metadata copy.
