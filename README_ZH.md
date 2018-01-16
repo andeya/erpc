@@ -515,12 +515,12 @@ package|import|description
 [gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go)|`import "github.com/henrylee2cn/teleport/xfer"`|Gzip(teleport own)
 [md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash)|`import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"`|Provides a integrity check transfer filter
 
-### 其他
+### 其他模块
 
 package|import|description
 ----|------|-----------
-[cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/sundry-cliSession)|`import cliSession "github.com/henrylee2cn/tp-ext/sundry-cliSession"`|Client session which has connection pool
-[websocket](https://github.com/henrylee2cn/tp-ext/blob/master/sundry-websocket)|`import websocket "github.com/henrylee2cn/tp-ext/sundry-websocket"`|Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455
+[cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/mod-cliSession)|`import cliSession "github.com/henrylee2cn/tp-ext/mod-cliSession"`|Client session which has connection pool
+[websocket](https://github.com/henrylee2cn/tp-ext/blob/master/mod-websocket)|`import websocket "github.com/henrylee2cn/tp-ext/mod-websocket"`|Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455
 
 
 [扩展库](https://github.com/henrylee2cn/tp-ext)
