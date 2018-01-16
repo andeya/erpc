@@ -30,22 +30,25 @@ func Proxy(caller Caller) tp.Plugin {
 	}
 }
 
-// Proxy creates a proxy plugin for handling unknown pulling.
+// ProxyPull creates a proxy plugin for handling unknown pulling.
 func ProxyPull(fn PullFunc) tp.Plugin {
 	return &proxy{pullFunc: fn}
 }
 
-// Proxy creates a proxy plugin for handling unknown pushing.
+// ProxyPush creates a proxy plugin for handling unknown pushing.
 func ProxyPush(fn PushFunc) tp.Plugin {
 	return &proxy{pushFunc: fn}
 }
 
 type (
+	// Caller the object used to pull and push
 	Caller interface {
 		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) tp.PullCmd
 		Push(uri string, args interface{}, setting ...socket.PacketSetting) *tp.Rerror
 	}
+	// PullFunc the function used to pull
 	PullFunc func(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) tp.PullCmd
+	// PushFunc the function used to push
 	PushFunc func(uri string, args interface{}, setting ...socket.PacketSetting) *tp.Rerror
 	proxy    struct {
 		peer     tp.Peer
