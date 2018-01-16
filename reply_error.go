@@ -24,9 +24,6 @@ type (
 	}
 )
 
-// MetaRerrorKey reply error metadata key
-const MetaRerrorKey = "X-Reply-Error"
-
 var (
 	_ json.Marshaler   = new(Rerror)
 	_ json.Unmarshaler = new(Rerror)

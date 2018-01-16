@@ -33,8 +33,14 @@ type (
 		Peer() Peer
 		// Session returns the session.
 		Session() Session
+		// Id returns the session id.
+		Id() string
+		// RealId returns the real remote id.
+		RealId() string
 		// Ip returns the remote addr.
 		Ip() string
+		// RealIp returns the the current real remote addr.
+		RealIp() string
 		// Public returns temporary public data of context.
 		Public() goutil.Map
 		// PublicLen returns the length of public data of context.
@@ -47,8 +53,8 @@ type (
 		PreCtx
 		// Seq returns the input packet sequence.
 		Seq() uint64
-		// GetMeta gets the header metadata for the input packet.
-		GetMeta(key string) []byte
+		// PeekMeta peeks the header metadata for the input packet.
+		PeekMeta(key string) []byte
 		// VisitMeta calls f for each existing metadata.
 		//
 		// f must not retain references to key and value after returning.
@@ -100,7 +106,10 @@ type (
 		Output() *socket.Packet
 		// SetBodyCodec sets the body codec for reply packet.
 		SetBodyCodec(byte)
-		// SetMeta sets the header metadata for reply packet.
+		// AddMeta adds the header metadata 'key=value' for reply packet.
+		// Multiple values for the same key may be added.
+		AddMeta(key, value string)
+		// SetMeta sets the header metadata 'key=value' for reply packet.
 		SetMeta(key, value string)
 		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
@@ -126,7 +135,10 @@ type (
 		Bind(v interface{}) (bodyCodec byte, err error)
 		// SetBodyCodec sets the body codec for reply packet.
 		SetBodyCodec(byte)
-		// SetMeta sets the header metadata for reply packet.
+		// AddMeta adds the header metadata 'key=value' for reply packet.
+		// Multiple values for the same key may be added.
+		AddMeta(key, value string)
+		// SetMeta sets the header metadata 'key=value' for reply packet.
 		SetMeta(key, value string)
 		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
@@ -259,8 +271,8 @@ func (c *readHandleCtx) Query() url.Values {
 	return c.input.Url().Query()
 }
 
-// GetMeta gets the header metadata for the input packet.
-func (c *readHandleCtx) GetMeta(key string) []byte {
+// PeekMeta peeks the header metadata for the input packet.
+func (c *readHandleCtx) PeekMeta(key string) []byte {
 	return c.input.Meta().Peek(key)
 }
 
@@ -279,7 +291,13 @@ func (c *readHandleCtx) CopyMeta() *utils.Args {
 	return dst
 }
 
-// SetMeta sets the header metadata for reply packet.
+// AddMeta adds the header metadata 'key=value' for reply packet.
+// Multiple values for the same key may be added.
+func (c *readHandleCtx) AddMeta(key, value string) {
+	c.output.Meta().Add(key, value)
+}
+
+// SetMeta sets the header metadata 'key=value' for reply packet.
 func (c *readHandleCtx) SetMeta(key, value string) {
 	c.output.Meta().Set(key, value)
 }
@@ -299,8 +317,31 @@ func (c *readHandleCtx) AddXferPipe(filterId ...byte) {
 	c.output.XferPipe().Append(filterId...)
 }
 
+// Id returns the session id.
+func (c *readHandleCtx) Id() string {
+	return c.sess.Id()
+}
+
+// RealId returns the current real remote id.
+func (c *readHandleCtx) RealId() string {
+	realId := c.PeekMeta(MetaRealId)
+	if len(realId) > 0 {
+		return string(realId)
+	}
+	return c.sess.Id()
+}
+
 // Ip returns the remote addr.
 func (c *readHandleCtx) Ip() string {
+	return c.sess.RemoteIp()
+}
+
+// RealIp returns the the current real remote addr.
+func (c *readHandleCtx) RealIp() string {
+	realIp := c.PeekMeta(MetaRealIp)
+	if len(realIp) > 0 {
+		return string(realIp)
+	}
 	return c.sess.RemoteIp()
 }
 
@@ -513,6 +554,7 @@ func (c *readHandleCtx) bindReply(header socket.Header) interface{} {
 	}
 	c.pullCmd = _pullCmd.(*pullCmd)
 	c.public = c.pullCmd.public
+	c.pullCmd.inputMeta = c.CopyMeta()
 
 	rerr := c.pluginContainer.PostReadReplyHeader(c)
 	if rerr != nil {
@@ -580,8 +622,14 @@ type (
 		Peer() Peer
 		// Session returns the session.
 		Session() Session
+		// Id returns the session id.
+		Id() string
+		// RealId returns the real remote id.
+		RealId() string
 		// Ip returns the remote addr.
 		Ip() string
+		// RealIp returns the the current real remote addr.
+		RealIp() string
 		// Public returns temporary public data of context.
 		Public() goutil.Map
 		// PublicLen returns the length of public data of context.
@@ -592,19 +640,22 @@ type (
 		Result() (interface{}, *Rerror)
 		// Rerror returns the pull error.
 		Rerror() *Rerror
+		// InputMeta returns the header metadata of input packet.
+		InputMeta() *utils.Args
 		// CostTime returns the pulled cost time.
 		// If PeerConfig.CountTime=false, always returns 0.
 		CostTime() time.Duration
 	}
 	pullCmd struct {
-		sess     *session
-		output   *socket.Packet
-		reply    interface{}
-		rerr     *Rerror
-		doneChan chan PullCmd // Strobes when pull is complete.
-		start    time.Time
-		cost     time.Duration
-		public   goutil.Map
+		sess      *session
+		output    *socket.Packet
+		reply     interface{}
+		rerr      *Rerror
+		inputMeta *utils.Args
+		doneChan  chan PullCmd // Strobes when pull is complete.
+		start     time.Time
+		cost      time.Duration
+		public    goutil.Map
 	}
 )
 
@@ -620,8 +671,31 @@ func (p *pullCmd) Session() Session {
 	return p.sess
 }
 
+// Id returns the session id.
+func (p *pullCmd) Id() string {
+	return p.sess.Id()
+}
+
+// RealId returns the current real remote id.
+func (p *pullCmd) RealId() string {
+	realId := p.inputMeta.Peek(MetaRealId)
+	if len(realId) > 0 {
+		return string(realId)
+	}
+	return p.sess.Id()
+}
+
 // Ip returns the remote addr.
 func (p *pullCmd) Ip() string {
+	return p.sess.RemoteIp()
+}
+
+// RealIp returns the the current real remote addr.
+func (p *pullCmd) RealIp() string {
+	realIp := p.inputMeta.Peek(MetaRealIp)
+	if len(realIp) > 0 {
+		return string(realIp)
+	}
 	return p.sess.RemoteIp()
 }
 
@@ -648,6 +722,11 @@ func (p *pullCmd) Result() (interface{}, *Rerror) {
 // Rerror returns the pull error.
 func (p *pullCmd) Rerror() *Rerror {
 	return p.rerr
+}
+
+// InputMeta returns the header metadata of input packet.
+func (p *pullCmd) InputMeta() *utils.Args {
+	return p.inputMeta
 }
 
 // CostTime returns the pulled cost time.
