@@ -20,7 +20,7 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-// A proxy plugin for handling unknown pulling and pushing.
+// A proxy plugin for handling unknown pulling or pushing.
 
 // Proxy creates a proxy plugin for handling unknown pulling and pushing.
 func Proxy(caller Caller) tp.Plugin {

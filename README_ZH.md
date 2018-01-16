@@ -320,7 +320,7 @@ peer.SetUnknownPull(XxxUnknownPullHandler)
 peer.SetUnknownPush(XxxUnknownPushHandler)
 ```
 
-## 6. 完整示例
+## 6. 简单示例
 
 ### server.go
 
@@ -328,72 +328,38 @@ peer.SetUnknownPush(XxxUnknownPushHandler)
 package main
 
 import (
-    "encoding/json"
+    "fmt"
     "time"
 
     tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
-    go tp.GraceSignal()
-    // tp.SetReadLimit(10)
-    tp.SetShutdown(time.Second*20, nil, nil)
-    var peer = tp.NewPeer(tp.PeerConfig{
-        SlowCometDuration: time.Millisecond * 500,
-        PrintBody:         true,
-        CountTime:         true,
-        ListenAddress:     "0.0.0.0:9090",
+    svr := tp.NewPeer(tp.PeerConfig{
+        CountTime:     true,
+        ListenAddress: ":9090",
     })
-    group := peer.SubRoute("group")
-    group.RoutePull(new(Home))
-    peer.SetUnknownPull(UnknownPullHandle)
-    peer.Listen()
+    svr.RoutePull(new(math))
+    svr.Listen()
 }
 
-// Home controller
-type Home struct {
+type math struct {
     tp.PullCtx
 }
 
-// Test handler
-func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
-    h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
-        "your_id": h.Query().Get("peer_id"),
-    })
-    meta := h.CopyMeta()
-    meta.VisitAll(func(k, v []byte) {
-        tp.Infof("meta: key: %s, value: %s", k, v)
-    })
-    time.Sleep(5e9)
-    return map[string]interface{}{
-        "your_args":   *args,
-        "server_time": time.Now(),
-        "meta":        meta.String(),
-    }, nil
-}
-
-// UnknownPullHandle handles unknown pull packet
-func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
-    time.Sleep(1)
-    var v = struct {
-        RawMessage json.RawMessage
-        Bytes      []byte
-    }{}
-    codecId, err := ctx.Bind(&v)
-    if err != nil {
-        return nil, tp.NewRerror(1001, "bind error", err.Error())
+func (m *math) Add(args *[]int) (int, *tp.Rerror) {
+    if m.Query().Get("push_status") == "yes" {
+        m.Session().Push(
+            "/push/status",
+            fmt.Sprintf("%d numbers are being added...", len(*args)),
+        )
+        time.Sleep(time.Millisecond * 10)
     }
-    tp.Debugf("UnknownPullHandle: codec: %d, RawMessage: %s, bytes: %s",
-        codecId, v.RawMessage, v.Bytes,
-    )
-    ctx.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
-        "your_id": ctx.Query().Get("peer_id"),
-    })
-    return map[string]interface{}{
-        "your_args":   v,
-        "server_time": time.Now(),
-        "meta":        ctx.CopyMeta().String(),
-    }, nil
+    var r int
+    for _, a := range *args {
+        r += a
+    }
+    return r, nil
 }
 ```
 
@@ -403,85 +369,43 @@ func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 package main
 
 import (
-    "encoding/json"
-    "time"
-
     tp "github.com/henrylee2cn/teleport"
-    "github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
-    go tp.GraceSignal()
-    tp.SetShutdown(time.Second*20, nil, nil)
-    var peer = tp.NewPeer(tp.PeerConfig{
-        SlowCometDuration: time.Millisecond * 500,
-        // DefaultBodyCodec:    "json",
-        PrintBody:   true,
-        CountTime:   true,
-        RedialTimes: 3,
-    })
-    defer peer.Close()
-    peer.RoutePush(new(Push))
-
-    var sess, rerr = peer.Dial("127.0.0.1:9090")
-    if rerr != nil {
-        tp.Fatalf("%v", rerr)
+    tp.SetLoggerLevel("ERROR")
+    cli := tp.NewPeer(tp.PeerConfig{})
+    defer cli.Close()
+    cli.RoutePush(new(push))
+    sess, err := cli.Dial(":9090")
+    if err != nil {
+        tp.Fatalf("%v", err)
     }
-    sess.SetId("testId")
 
-    var reply interface{}
-    for {
-        if rerr = sess.Pull(
-            "/group/home/test?peer_id=call-1",
-            map[string]interface{}{
-                "bytes": []byte("test bytes"),
-            },
-            &reply,
-            socket.WithXferPipe('g'),
-            socket.WithSetMeta("set", "0"),
-            socket.WithAddMeta("add", "1"),
-            socket.WithAddMeta("add", "2"),
-        ).Rerror(); rerr != nil {
-            tp.Errorf("pull error: %v", rerr)
-            time.Sleep(time.Second * 2)
-        } else {
-            break
-        }
-    }
-    tp.Infof("test: %#v", reply)
-
-    rerr = sess.Pull(
-        "/group/home/test_unknown?peer_id=call-2",
-        struct {
-            RawMessage json.RawMessage
-            Bytes      []byte
-        }{
-            json.RawMessage(`{"RawMessage":"test_unknown"}`),
-            []byte("test bytes"),
-        },
+    var reply int
+    rerr := sess.Pull("/math/add?push_status=yes",
+        []int{1, 2, 3, 4, 5},
         &reply,
-        socket.WithXferPipe('g'),
     ).Rerror()
-    if tp.IsConnRerror(rerr) {
-        tp.Fatalf("has conn rerror: %v", rerr)
-    }
+
     if rerr != nil {
-        tp.Fatalf("pull error: %v", rerr)
+        tp.Fatalf("%v", err)
     }
-    tp.Infof("test_unknown: %#v", reply)
+    tp.Printf("reply: %d", reply)
 }
 
-// Push controller
-type Push struct {
+type push struct {
     tp.PushCtx
 }
 
-// Test handler
-func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
-    tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+func (p *push) Status(args *string) *tp.Rerror {
+    tp.Printf("server status: %s", *args)
     return nil
 }
 ```
+
+[More](https://github.com/henrylee2cn/teleport/blob/master/samples)
+
 
 ## 7. 扩展包
 
@@ -497,7 +421,8 @@ package|import|description
 
 package|import|description
 ----|------|-----------
-[RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/router_root.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A plugin to set the peer router root
+[RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A plugin to set the peer router root
+[proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A proxy plugin for handling unknown pulling or pushing
 [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
 [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"`|A generic timing heartbeat plugin
 
