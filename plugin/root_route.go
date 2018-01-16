@@ -18,6 +18,8 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+// A plugin to set the peer router root
+
 // RootRoute creates a plugin to set the peer router root.
 func RootRoute(routerRoot string) tp.Plugin {
 	return &rootRoute{routerRoot}
