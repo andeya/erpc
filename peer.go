@@ -48,16 +48,6 @@ type (
 		RangeSession(fn func(sess Session) bool)
 		// ServeConn serves the connection and returns a session.
 		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
-		// SubRoute adds handler group.
-		SubRoute(pathPrefix string, plugin ...Plugin) *Router
-		// RoutePull registers PULL handler.
-		RoutePull(ctrlStruct interface{}, plugin ...Plugin)
-		// RoutePush registers PUSH handler.
-		RoutePush(ctrlStruct interface{}, plugin ...Plugin)
-		// SetUnknownPull sets the default handler, which is called when no handler for PULL is found.
-		SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin)
-		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
-		SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
 		// SetTlsConfig sets the TLS config.
 		SetTlsConfig(tlsConfig *tls.Config)
 		// SetTlsConfigFromFile sets the TLS config from file.
@@ -74,6 +64,16 @@ type (
 	// Peer the communication peer which is server or client role
 	Peer interface {
 		BasePeer
+		// SubRoute adds handler group.
+		SubRoute(pathPrefix string, plugin ...Plugin) *Router
+		// RoutePull registers PULL handler.
+		RoutePull(ctrlStruct interface{}, plugin ...Plugin)
+		// RoutePush registers PUSH handler.
+		RoutePush(ctrlStruct interface{}, plugin ...Plugin)
+		// SetUnknownPull sets the default handler, which is called when no handler for PULL is found.
+		SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin)
+		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
+		SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
 		// Listen turns on the listening service.
 		Listen(protoFunc ...socket.ProtoFunc) error
 	}
