@@ -1,0 +1,61 @@
+package main
+
+import (
+	"time"
+
+	tp "github.com/henrylee2cn/teleport"
+)
+
+func main() {
+	go tp.GraceSignal()
+	tp.SetShutdown(time.Second*20, nil, nil)
+	var peer = tp.NewPeer(tp.PeerConfig{
+		SlowCometDuration: time.Millisecond * 500,
+		PrintBody:         true,
+	})
+	defer peer.Close()
+	peer.RoutePush(new(Push))
+
+	var sess, rerr = peer.Dial("127.0.0.1:9090")
+	if rerr != nil {
+		tp.Fatalf("%v", rerr)
+	}
+	var reply []byte
+	for {
+		if rerr = sess.Pull(
+			"/group/home/test?peer_id=call-1",
+			[]byte("pull text"),
+			&reply,
+		).Rerror(); rerr != nil {
+			tp.Errorf("pull error: %v", rerr)
+			time.Sleep(time.Second * 2)
+		} else {
+			break
+		}
+	}
+	tp.Infof("test reply: %s", reply)
+
+	rerr = sess.Pull(
+		"/group/home/test_unknown?peer_id=call-2",
+		[]byte("unknown pull text"),
+		&reply,
+	).Rerror()
+	if tp.IsConnRerror(rerr) {
+		tp.Fatalf("has conn rerror: %v", rerr)
+	}
+	if rerr != nil {
+		tp.Fatalf("pull error: %v", rerr)
+	}
+	tp.Infof("test_unknown: %s", reply)
+}
+
+// Push controller
+type Push struct {
+	tp.PushCtx
+}
+
+// Test handler
+func (p *Push) Test(args *[]byte) *tp.Rerror {
+	tp.Infof("receive push(%s):\nargs: %s\nquery: %#v\n", p.Ip(), *args, p.Query())
+	return nil
+}

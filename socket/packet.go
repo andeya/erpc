@@ -96,11 +96,15 @@ type (
 		// NewBody(seq uint64, ptype byte, uri string) interface{}
 
 		// MarshalBody returns the encoding of body.
+		// Note: when the body is a stream of bytes, no marshalling is done.
 		MarshalBody() ([]byte, error)
-		// UnmarshalNewBody unmarshal the encoded data to a new body.
-		// Note: seq, ptype, uri must be setted already.
+		// UnmarshalNewBody unmarshals the encoded data to a new body.
+		// Note:
+		// seq, ptype, uri must be setted already;
+		// when the body is a stream of bytes, no unmarshalling is done.
 		UnmarshalNewBody(bodyBytes []byte) error
-		// UnmarshalBody unmarshal the encoded data to the existed body.
+		// UnmarshalBody unmarshals the encoded data to the existed body.
+		// Note: when the body is a stream of bytes, no unmarshalling is done.
 		UnmarshalBody(bodyBytes []byte) error
 	}
 
@@ -266,30 +270,48 @@ func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc) {
 // }
 
 // MarshalBody returns the encoding of body.
+// Note: when the body is a stream of bytes, no marshalling is done.
 func (p *Packet) MarshalBody() ([]byte, error) {
-	if p.body == nil {
+	switch body := p.body.(type) {
+	default:
+		c, err := codec.Get(p.bodyCodec)
+		if err != nil {
+			return []byte{}, err
+		}
+		return c.Marshal(body)
+	case nil:
 		return []byte{}, nil
+	case *[]byte:
+		if body == nil {
+			return []byte{}, nil
+		}
+		return *body, nil
+	case []byte:
+		return body, nil
 	}
-	c, err := codec.Get(p.bodyCodec)
-	if err != nil {
-		return []byte{}, err
-	}
-	return c.Marshal(p.body)
 }
 
-// UnmarshalNewBody unmarshal the encoded data to a new body.
-// Note: seq, ptype, uri must be setted already.
+// UnmarshalNewBody unmarshals the encoded data to a new body.
+// Note:
+// seq, ptype, uri must be setted already;
+// when the body is a stream of bytes, no unmarshalling is done.
 func (p *Packet) UnmarshalNewBody(bodyBytes []byte) error {
 	if p.newBodyFunc == nil {
 		p.body = nil
 		return nil
 	}
 	p.body = p.newBodyFunc(p)
+	return p.UnmarshalBody(bodyBytes)
+}
+
+// UnmarshalBody unmarshals the encoded data to the existed body.
+// Note: when the body is a stream of bytes, no unmarshalling is done.
+func (p *Packet) UnmarshalBody(bodyBytes []byte) error {
+	if len(bodyBytes) == 0 {
+		return nil
+	}
 	switch body := p.body.(type) {
 	default:
-		if len(bodyBytes) == 0 {
-			return nil
-		}
 		c, err := codec.Get(p.bodyCodec)
 		if err != nil {
 			return err
@@ -299,29 +321,8 @@ func (p *Packet) UnmarshalNewBody(bodyBytes []byte) error {
 		return nil
 	case *[]byte:
 		if body != nil {
-			*body = bodyBytes
-		}
-		return nil
-	}
-}
-
-// UnmarshalBody unmarshal the encoded data to the existed body.
-func (p *Packet) UnmarshalBody(bodyBytes []byte) error {
-	if len(bodyBytes) == 0 {
-		return nil
-	}
-	c, err := codec.Get(p.bodyCodec)
-	if err != nil {
-		return err
-	}
-	switch body := p.body.(type) {
-	default:
-		return c.Unmarshal(bodyBytes, p.body)
-	case nil:
-		return nil
-	case *[]byte:
-		if body != nil {
-			*body = bodyBytes
+			*body = make([]byte, len(bodyBytes))
+			copy(*body, bodyBytes)
 		}
 		return nil
 	}

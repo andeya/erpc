@@ -69,11 +69,12 @@ func (StringCodec) Unmarshal(data []byte, v interface{}) error {
 	case nil:
 		return nil
 	case *string:
-		*s = goutil.BytesToString(data)
+		*s = string(data)
 	case []byte:
 		copy(s, data)
 	case *[]byte:
-		*s = data
+		*s = make([]byte, len(data))
+		copy(*s, data)
 	default:
 		return fmt.Errorf("[]byte can not be directly converted to %T type", v)
 	}
