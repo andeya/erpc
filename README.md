@@ -123,6 +123,8 @@ type (
         ptype byte
         // URL string
         uri string
+        // URL object
+        url *url.URL
         // metadata
         meta *utils.Args
         // body codec type
@@ -139,6 +141,11 @@ type (
         xferPipe *xfer.XferPipe
         // packet size
         size uint32
+        // ctx is the packet handling context,
+        // carries a deadline, a cancelation signal,
+        // and other values across API boundaries.
+        ctx context.Context
+        // stack
         next *Packet
     }
 
@@ -388,7 +395,7 @@ func main() {
     ).Rerror()
 
     if rerr != nil {
-        tp.Fatalf("%v", err)
+        tp.Fatalf("%v", rerr)
     }
     tp.Printf("reply: %d", reply)
 }

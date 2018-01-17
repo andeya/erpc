@@ -21,7 +21,7 @@ func main() {
 	).Rerror()
 
 	if rerr != nil {
-		tp.Fatalf("%v", err)
+		tp.Fatalf("%v", rerr)
 	}
 	tp.Printf("reply: %d", reply)
 }

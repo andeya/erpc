@@ -16,6 +16,7 @@ package tp
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,12 +71,12 @@ type (
 		Receive(input *socket.Packet) *Rerror
 		// ReadTimeout returns readdeadline for underlying net.Conn.
 		ReadTimeout() time.Duration
-		// ReadTimeout returns readdeadline for underlying net.Conn.
-		SetReadTimeout(duration time.Duration)
-		// WriteTimeout returns writedeadline for underlying net.Conn.
-		SetWriteTimeout(duration time.Duration)
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
+		// ReadTimeout returns readdeadline for underlying net.Conn.
+		SetReadTimeout(time.Duration)
+		// WriteTimeout returns writedeadline for underlying net.Conn.
+		SetWriteTimeout(time.Duration)
 	}
 	// Session a connection session.
 	Session interface {
@@ -101,10 +102,6 @@ type (
 		Push(uri string, args interface{}, setting ...socket.PacketSetting) *Rerror
 		// ReadTimeout returns readdeadline for underlying net.Conn.
 		ReadTimeout() time.Duration
-		// ReadTimeout returns readdeadline for underlying net.Conn.
-		SetReadTimeout(duration time.Duration)
-		// WriteTimeout returns writedeadline for underlying net.Conn.
-		SetWriteTimeout(duration time.Duration)
 		// WriteTimeout returns writedeadline for underlying net.Conn.
 		WriteTimeout() time.Duration
 	}
@@ -430,10 +427,11 @@ func (s *session) PublicLen() int {
 }
 
 func (s *session) startReadAndHandle() {
-	var (
-		err         error
-		readTimeout time.Duration
-	)
+	if readTimeout := s.ReadTimeout(); readTimeout > 0 {
+		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
+	}
+
+	var err error
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("%v\n%s", p, goutil.PanicTrace(2))
@@ -447,9 +445,6 @@ func (s *session) startReadAndHandle() {
 		if s.peer.pluginContainer.PreReadHeader(ctx) != nil {
 			s.peer.putContext(ctx, false)
 			return
-		}
-		if readTimeout = s.ReadTimeout(); readTimeout > 0 {
-			s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 		}
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil || !s.goonRead() {
@@ -473,48 +468,66 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-func (s *session) write(packet *socket.Packet) (rerr *Rerror) {
-	var (
-		writeTimeout = s.WriteTimeout()
-		now          time.Time
-	)
-	if writeTimeout > 0 {
-		now = coarsetime.CeilingTimeNow()
-	}
-
-	s.writeLock.Lock()
+func (s *session) write(packet *socket.Packet) *Rerror {
 	status := s.getStatus()
-	if status != statusOk && !(status == statusActiveClosing && packet.Ptype() == TypeReply) {
-		s.writeLock.Unlock()
+	if status != statusOk &&
+		!(status == statusActiveClosing && packet.Ptype() == TypeReply) {
 		return rerrConnClosed
 	}
 
-	var err error
-	defer func() {
-		s.writeLock.Unlock()
-		if err == nil {
-			return
-		}
-		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
-			rerr = rerrConnClosed
-			if s.redialForClientFunc != nil {
-				// Wait for the status to change
-			W:
-				if s.isOk() {
-					time.Sleep(time.Millisecond)
-					goto W
-				}
-			}
-			return
-		}
-		rerr = rerrWriteFailed.Copy()
-		rerr.Detail = err.Error()
-	}()
-
-	if writeTimeout > 0 {
-		s.socket.SetWriteDeadline(now.Add(writeTimeout))
+	var (
+		rerr          *Rerror
+		err           error
+		ctx           = packet.Context()
+		deadline, has = ctx.Deadline()
+	)
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+		goto ERR
+	default:
 	}
-	err = s.socket.WritePacket(packet)
+
+	if !has {
+		if wTimeout := s.WriteTimeout(); wTimeout > 0 {
+			deadline = time.Now().Add(s.WriteTimeout())
+			ctx, _ = context.WithDeadline(ctx, deadline)
+			packet.SetContext(ctx)
+		}
+	}
+
+	s.writeLock.Lock()
+	defer s.writeLock.Unlock()
+
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+		goto ERR
+	default:
+		s.socket.SetWriteDeadline(deadline)
+		err = s.socket.WritePacket(packet)
+	}
+
+	if err == nil {
+		return nil
+	}
+
+	if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
+		rerr = rerrConnClosed
+		if s.redialForClientFunc != nil {
+			// Wait for the status to change
+		W:
+			if s.isOk() {
+				time.Sleep(time.Millisecond)
+				goto W
+			}
+		}
+		return rerr
+	}
+
+ERR:
+	rerr = rerrWriteFailed.Copy()
+	rerr.Detail = err.Error()
 	return rerr
 }
 
