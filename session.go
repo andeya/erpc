@@ -586,6 +586,7 @@ func (s *session) Close() error {
 	}
 
 	s.activelyClosing()
+	s.peer.sessHub.Delete(s.Id())
 
 	s.graceCtxWaitGroup.Wait()
 	s.gracepullCmdWaitGroup.Wait()
@@ -596,7 +597,6 @@ func (s *session) Close() error {
 	}
 
 	err := s.socket.Close()
-	s.peer.sessHub.Delete(s.Id())
 
 	s.peer.pluginContainer.PostDisconnect(s)
 	return err
@@ -609,6 +609,7 @@ func (s *session) readDisconnected(err error) {
 	}
 	// Notice passively closed
 	s.passivelyClosed()
+	s.peer.sessHub.Delete(s.Id())
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
@@ -628,7 +629,6 @@ func (s *session) readDisconnected(err error) {
 	}
 
 	s.socket.Close()
-	s.peer.sessHub.Delete(s.Id())
 	s.peer.pluginContainer.PostDisconnect(s)
 
 	if !s.redialForClient() {
