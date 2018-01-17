@@ -476,8 +476,7 @@ func (s *session) isDisconnected() bool {
 }
 
 var (
-	deadlineForEndlessRead = time.Time{}
-	deadlineForStopRead    = time.Time{}.Add(1)
+	deadlineForStopRead = time.Time{}.Add(1)
 )
 
 // Close closes the session.
@@ -503,7 +502,7 @@ func (s *session) Close() (err error) {
 	if !s.isDisconnected() {
 		// make sure do not disconnect because of reading timeout.
 		// wait for the subsequent write to complete.
-		s.socket.SetReadDeadline(deadlineForEndlessRead)
+		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(s.WriteTimeout()))
 	}
 
 	return
