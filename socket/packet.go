@@ -16,6 +16,7 @@ package socket
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -56,6 +57,11 @@ type (
 		xferPipe *xfer.XferPipe
 		// packet size
 		size uint32
+		// ctx is the packet handling context,
+		// carries a deadline, a cancelation signal,
+		// and other values across API boundaries.
+		ctx context.Context
+		// stack
 		next *Packet
 	}
 	// Header packet header interface
@@ -186,6 +192,19 @@ func (p *Packet) doSetting(settings ...PacketSetting) {
 			fn(p)
 		}
 	}
+}
+
+// Context returns the packet handling context.
+func (p *Packet) Context() context.Context {
+	if p.ctx == nil {
+		return context.Background()
+	}
+	return p.ctx
+}
+
+// SetContext sets the packet handling context.
+func (p *Packet) SetContext(ctx context.Context) {
+	p.ctx = ctx
 }
 
 // Seq returns the packet sequence
@@ -393,6 +412,13 @@ func (p *Packet) String() string {
 
 // PacketSetting sets Header field.
 type PacketSetting func(*Packet)
+
+// WithContext sets the packet handling context.
+func WithContext(ctx context.Context) PacketSetting {
+	return func(p *Packet) {
+		p.ctx = ctx
+	}
+}
 
 // WithSeq sets the packet sequence
 func WithSeq(seq uint64) PacketSetting {
