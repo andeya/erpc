@@ -351,7 +351,7 @@ func (ProtoLee) readBody(
 
 func readAll(reader io.Reader, p []byte) (string, error) {
 	perLen := len(p)
-	_, err := reader.Read(p[:perLen])
+	_, err := io.ReadFull(reader, p[:perLen])
 	if err == nil {
 		_, err = io.Copy(ioutil.Discard, reader)
 	}
