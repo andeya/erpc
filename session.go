@@ -488,6 +488,7 @@ func (s *session) Close() (err error) {
 		return nil
 	}
 	atomic.StoreInt32(&s.closed, 1)
+	s.peer.sessHub.Delete(s.Id())
 
 	defer func() {
 		s.graceCtxWaitGroup.Wait()
@@ -495,7 +496,6 @@ func (s *session) Close() (err error) {
 		// make sure return s.startReadAndHandle
 		s.socket.SetReadDeadline(deadlineForStopRead)
 		err = s.socket.Close()
-		s.peer.sessHub.Delete(s.Id())
 		s.closeLock.Unlock()
 		s.peer.pluginContainer.PostDisconnect(s)
 	}()
