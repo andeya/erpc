@@ -279,48 +279,42 @@ func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
 - Plugin Demo
 
 ```go
-// AliasPlugin can be used to set aliases for pull or push services
-type AliasPlugin struct {
-	Aliases map[string]string
+// NewIgnoreCase Returns a ignoreCase plugin.
+func NewIgnoreCase() *ignoreCase {
+    return &ignoreCase{}
 }
 
-// NewAliasPlugin creates a new NewAliasPlugin
-func NewAliasPlugin() *AliasPlugin {
-	return &AliasPlugin{Aliases: make(map[string]string)}
+type ignoreCase struct{}
+
+var (
+    _ tp.PostReadPullHeaderPlugin = new(ignoreCase)
+    _ tp.PostReadPushHeaderPlugin = new(ignoreCase)
+)
+
+func (i *ignoreCase) Name() string {
+    return "ignoreCase"
 }
 
-// Alias sets a alias for the uri.
-// For example Alias("/arith/mul", "/mul")
-func (p *AliasPlugin) Alias(alias string, uri string) {
-	p.Aliases[alias] = uri
+func (i *ignoreCase) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
+    // Dynamic transformation path is lowercase
+    ctx.Url().Path = strings.ToLower(ctx.Url().Path)
+    return nil
 }
 
-// Name return name of this plugin.
-func (p *AliasPlugin) Name() string {
-	return "AliasPlugin"
-}
-
-// PostReadPullHeader converts the alias of this service.
-func (p *AliasPlugin) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
-	var u = ctx.Input().Header.Uri
-	if p.Aliases != nil {
-		if a = p.Aliases[u]; a != "" {
-			ctx.Input().Header.Uri = a
-		}
-	}
-	return nil
+func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
+    // Dynamic transformation path is lowercase
+    ctx.Url().Path = strings.ToLower(ctx.Url().Path)
+    return nil
 }
 ```
 
 - Register above handler and plugin
 
 ```go
-aliasesPlugin := NewAliasPlugin()
-aliasesPlugin.Alias("/alias", "/origin")
 // add router group
 group := peer.SubRoute("test")
 // register to test group
-group.RoutePull(new(XxxPullController), aliasesPlugin)
+group.RoutePull(new(XxxPullController), NewIgnoreCase())
 group.RoutePush(new(XxxPushController))
 peer.SetUnknownPull(XxxUnknownPullHandler)
 peer.SetUnknownPush(XxxUnknownPushHandler)
