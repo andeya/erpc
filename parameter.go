@@ -64,16 +64,41 @@ const (
 	// CodeNetworkAuthenticationRequired = 511
 )
 
+// CodeText returns the reply error code text.
+// If the type is undefined returns 'Unknown Error'.
+func CodeText(rerrCode int32) string {
+	switch rerrCode {
+	case CodeDialFailed:
+		return "Dial Failed"
+	case CodeConnClosed:
+		return "Connection Closed"
+	case CodeWriteFailed:
+		return "Write Failed"
+	case CodeBadPacket:
+		return "Bad Packet"
+	case CodeNotFound:
+		return "Not Found"
+	case CodeHandleTimeout:
+		return "Handle Timeout"
+	case CodeNotImplemented:
+		return "Not Implemented"
+	case CodeUnknownError:
+		fallthrough
+	default:
+		return "Unknown Error"
+	}
+}
+
 // Internal Framework Rerror string.
 var (
-	rerrUnknownError       = NewRerror(-1, "Unknown error", "")
-	rerrDialFailed         = NewRerror(CodeDialFailed, "Dial Failed", "")
-	rerrConnClosed         = NewRerror(CodeConnClosed, "Connection Closed", "")
-	rerrWriteFailed        = NewRerror(CodeWriteFailed, "Write Failed", "")
-	rerrBadPacket          = NewRerror(CodeBadPacket, "Bad Packet", "")
-	rerrNotFound           = NewRerror(CodeNotFound, "Not Found", "")
-	rerrHandleTimeout      = NewRerror(CodeHandleTimeout, "Handle Timeout", "")
-	rerrCodeNotImplemented = NewRerror(CodeNotImplemented, "Not Implemented", "")
+	rerrUnknownError       = NewRerror(CodeUnknownError, CodeText(CodeUnknownError), "")
+	rerrDialFailed         = NewRerror(CodeDialFailed, CodeText(CodeDialFailed), "")
+	rerrConnClosed         = NewRerror(CodeConnClosed, CodeText(CodeConnClosed), "")
+	rerrWriteFailed        = NewRerror(CodeWriteFailed, CodeText(CodeWriteFailed), "")
+	rerrBadPacket          = NewRerror(CodeBadPacket, CodeText(CodeBadPacket), "")
+	rerrNotFound           = NewRerror(CodeNotFound, CodeText(CodeNotFound), "")
+	rerrHandleTimeout      = NewRerror(CodeHandleTimeout, CodeText(CodeHandleTimeout), "")
+	rerrCodeNotImplemented = NewRerror(CodeNotImplemented, CodeText(CodeNotImplemented), "")
 )
 
 // IsConnRerror determines whether the error is a connection error
