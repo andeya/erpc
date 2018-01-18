@@ -78,22 +78,22 @@ type (
 		Listen(protoFunc ...socket.ProtoFunc) error
 	}
 	peer struct {
-		rootRouter          *RootRouter
-		pluginContainer     *PluginContainer
-		sessHub             *SessionHub
-		closeCh             chan struct{}
-		freeContext         *readHandleCtx
-		ctxLock             sync.Mutex
-		defaultReadTimeout  time.Duration // readdeadline for underlying net.Conn
-		defaultWriteTimeout time.Duration // writedeadline for underlying net.Conn
-		tlsConfig           *tls.Config
-		slowCometDuration   time.Duration
-		defaultBodyCodec    byte
-		printBody           bool
-		countTime           bool
-		timeNow             func() time.Time
-		timeSince           func(time.Time) time.Duration
-		mu                  sync.Mutex
+		rootRouter        *RootRouter
+		pluginContainer   *PluginContainer
+		sessHub           *SessionHub
+		closeCh           chan struct{}
+		freeContext       *readHandleCtx
+		ctxLock           sync.Mutex
+		defaultSessionAge time.Duration // Default session max age, if less than or equal to 0, no time limit
+		defaultContextAge time.Duration // Default PULL or PUSH context max age, if less than or equal to 0, no time limit
+		tlsConfig         *tls.Config
+		slowCometDuration time.Duration
+		defaultBodyCodec  byte
+		printBody         bool
+		countTime         bool
+		timeNow           func() time.Time
+		timeSince         func(time.Time) time.Duration
+		mu                sync.Mutex
 
 		network string
 
@@ -122,19 +122,19 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) Peer {
 		Fatalf("%v", err)
 	}
 	var p = &peer{
-		rootRouter:          newRootRouter("/", pluginContainer),
-		pluginContainer:     pluginContainer,
-		sessHub:             newSessionHub(),
-		defaultReadTimeout:  cfg.DefaultReadTimeout,
-		defaultWriteTimeout: cfg.DefaultWriteTimeout,
-		closeCh:             make(chan struct{}),
-		slowCometDuration:   cfg.slowCometDuration,
-		defaultDialTimeout:  cfg.DefaultDialTimeout,
-		network:             cfg.Network,
-		listenAddr:          cfg.ListenAddress,
-		printBody:           cfg.PrintBody,
-		countTime:           cfg.CountTime,
-		redialTimes:         cfg.RedialTimes,
+		rootRouter:         newRootRouter("/", pluginContainer),
+		pluginContainer:    pluginContainer,
+		sessHub:            newSessionHub(),
+		defaultSessionAge:  cfg.DefaultSessionAge,
+		defaultContextAge:  cfg.DefaultContextAge,
+		closeCh:            make(chan struct{}),
+		slowCometDuration:  cfg.slowCometDuration,
+		defaultDialTimeout: cfg.DefaultDialTimeout,
+		network:            cfg.Network,
+		listenAddr:         cfg.ListenAddress,
+		printBody:          cfg.PrintBody,
+		countTime:          cfg.CountTime,
+		redialTimes:        cfg.RedialTimes,
 	}
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
 		Fatalf("%v", err)
@@ -341,11 +341,11 @@ func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
 		tempDelay = 0
 		AnywayGo(func() {
 			if c, ok := conn.(*tls.Conn); ok {
-				if p.defaultReadTimeout > 0 {
-					c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultReadTimeout))
+				if p.defaultSessionAge > 0 {
+					c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultSessionAge))
 				}
-				if p.defaultWriteTimeout > 0 {
-					c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultWriteTimeout))
+				if p.defaultContextAge > 0 {
+					c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultContextAge))
 				}
 				if err := c.Handshake(); err != nil {
 					Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())
@@ -371,11 +371,11 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
 	}
 	if c, ok := conn.(*tls.Conn); ok {
-		if p.defaultReadTimeout > 0 {
-			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultReadTimeout))
+		if p.defaultSessionAge > 0 {
+			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultSessionAge))
 		}
-		if p.defaultWriteTimeout > 0 {
-			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultWriteTimeout))
+		if p.defaultContextAge > 0 {
+			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultContextAge))
 		}
 		if err := c.Handshake(); err != nil {
 			return nil, errors.Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())

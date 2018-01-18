@@ -69,14 +69,14 @@ type (
 		// Receive receives a packet from peer, before the formal connection.
 		// Note: does not support automatic redial after disconnection.
 		Receive(input *socket.Packet) *Rerror
-		// ReadTimeout returns readdeadline for underlying net.Conn.
-		ReadTimeout() time.Duration
-		// WriteTimeout returns writedeadline for underlying net.Conn.
-		WriteTimeout() time.Duration
-		// ReadTimeout returns readdeadline for underlying net.Conn.
-		SetReadTimeout(time.Duration)
-		// WriteTimeout returns writedeadline for underlying net.Conn.
-		SetWriteTimeout(time.Duration)
+		// SessionAge returns the session max age.
+		SessionAge() time.Duration
+		// ContextAge returns PULL or PUSH context max age.
+		ContextAge() time.Duration
+		// SetSessionAge sets the session max age.
+		SetSessionAge(duration time.Duration)
+		// SetContextAge sets PULL or PUSH context max age.
+		SetContextAge(duration time.Duration)
 	}
 	// Session a connection session.
 	Session interface {
@@ -100,10 +100,10 @@ type (
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 		Push(uri string, args interface{}, setting ...socket.PacketSetting) *Rerror
-		// ReadTimeout returns readdeadline for underlying net.Conn.
-		ReadTimeout() time.Duration
-		// WriteTimeout returns writedeadline for underlying net.Conn.
-		WriteTimeout() time.Duration
+		// SessionAge returns the session max age.
+		SessionAge() time.Duration
+		// ContextAge returns PULL or PUSH context max age.
+		ContextAge() time.Duration
 	}
 
 	session struct {
@@ -122,8 +122,8 @@ type (
 		writeLock                      sync.Mutex
 		graceCtxWaitGroup              sync.WaitGroup
 		gracepullCmdWaitGroup          sync.WaitGroup
-		readTimeout                    int32 // time.Duration
-		writeTimeout                   int32 // time.Duration
+		sessionAge                     int32 // time.Duration
+		contextAge                     int32 // time.Duration
 		// only for client role
 		redialForClientFunc func() bool
 		redialLock          sync.Mutex
@@ -147,8 +147,8 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 		protoFuncs:     protoFuncs,
 		socket:         socket.NewSocket(conn, protoFuncs...),
 		pullCmdMap:     goutil.AtomicMap(),
-		readTimeout:    int32(peer.defaultReadTimeout),
-		writeTimeout:   int32(peer.defaultWriteTimeout),
+		sessionAge:     int32(peer.defaultSessionAge),
+		contextAge:     int32(peer.defaultContextAge),
 	}
 	return s
 }
@@ -214,24 +214,24 @@ func (s *session) LocalIp() string {
 	return s.socket.LocalAddr().String()
 }
 
-// ReadTimeout returns readdeadline for underlying net.Conn.
-func (s *session) ReadTimeout() time.Duration {
-	return time.Duration(atomic.LoadInt32(&s.readTimeout))
+// SessionAge returns the session max age.
+func (s *session) SessionAge() time.Duration {
+	return time.Duration(atomic.LoadInt32(&s.sessionAge))
 }
 
-// WriteTimeout returns writedeadline for underlying net.Conn.
-func (s *session) WriteTimeout() time.Duration {
-	return time.Duration(atomic.LoadInt32(&s.writeTimeout))
+// ContextAge returns PULL or PUSH context max age.
+func (s *session) ContextAge() time.Duration {
+	return time.Duration(atomic.LoadInt32(&s.contextAge))
 }
 
-// ReadTimeout returns readdeadline for underlying net.Conn.
-func (s *session) SetReadTimeout(duration time.Duration) {
-	atomic.StoreInt32(&s.readTimeout, int32(duration))
+// SetSessionAge sets the session max age.
+func (s *session) SetSessionAge(duration time.Duration) {
+	atomic.StoreInt32(&s.sessionAge, int32(duration))
 }
 
-// WriteTimeout returns writedeadline for underlying net.Conn.
-func (s *session) SetWriteTimeout(duration time.Duration) {
-	atomic.StoreInt32(&s.writeTimeout, int32(duration))
+// SetContextAge sets PULL or PUSH context max age.
+func (s *session) SetContextAge(duration time.Duration) {
+	atomic.StoreInt32(&s.contextAge, int32(duration))
 }
 
 // Send sends packet to peer, before the formal connection.
@@ -258,7 +258,7 @@ func (s *session) Send(output *socket.Packet) *Rerror {
 // Receive receives a packet from peer, before the formal connection.
 // Note: does not support automatic redial after disconnection.
 func (s *session) Receive(input *socket.Packet) *Rerror {
-	if readTimeout := s.ReadTimeout(); readTimeout > 0 {
+	if readTimeout := s.SessionAge(); readTimeout > 0 {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 	}
 	if err := s.socket.ReadPacket(input); err != nil {
@@ -427,7 +427,7 @@ func (s *session) PublicLen() int {
 }
 
 func (s *session) startReadAndHandle() {
-	if readTimeout := s.ReadTimeout(); readTimeout > 0 {
+	if readTimeout := s.SessionAge(); readTimeout > 0 {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 	}
 
@@ -489,8 +489,8 @@ func (s *session) write(packet *socket.Packet) *Rerror {
 	}
 
 	if !has {
-		if wTimeout := s.WriteTimeout(); wTimeout > 0 {
-			deadline = time.Now().Add(s.WriteTimeout())
+		if wTimeout := s.ContextAge(); wTimeout > 0 {
+			deadline = time.Now().Add(s.ContextAge())
 			ctx, _ = context.WithDeadline(ctx, deadline)
 			packet.SetContext(ctx)
 		}
