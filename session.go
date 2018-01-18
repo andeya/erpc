@@ -227,6 +227,11 @@ func (s *session) ContextAge() time.Duration {
 // SetSessionAge sets the session max age.
 func (s *session) SetSessionAge(duration time.Duration) {
 	atomic.StoreInt32(&s.sessionAge, int32(duration))
+	if duration > 0 {
+		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(duration))
+	} else {
+		s.socket.SetReadDeadline(time.Time{})
+	}
 }
 
 // SetContextAge sets PULL or PUSH context max age.
@@ -295,6 +300,10 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 	}
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
+	}
+	if age := s.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(output.Context(), age)
+		socket.WithContext(ctxTimout)(output)
 	}
 
 	cmd := &pullCmd{
@@ -387,6 +396,10 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
+	if age := s.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(output.Context(), age)
+		socket.WithContext(ctxTimout)(output)
+	}
 
 	defer func() {
 		if p := recover(); p != nil {
@@ -427,8 +440,13 @@ func (s *session) PublicLen() int {
 }
 
 func (s *session) startReadAndHandle() {
+	var withContext socket.PacketSetting
 	if readTimeout := s.SessionAge(); readTimeout > 0 {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
+		ctxTimout, _ := context.WithTimeout(context.Background(), readTimeout)
+		withContext = socket.WithContext(ctxTimout)
+	} else {
+		withContext = socket.WithContext(nil)
 	}
 
 	var err error
@@ -442,6 +460,7 @@ func (s *session) startReadAndHandle() {
 	// read pull, pull reple or push
 	for s.goonRead() {
 		var ctx = s.peer.getContext(s, false)
+		withContext(ctx.input)
 		if s.peer.pluginContainer.PreReadHeader(ctx) != nil {
 			s.peer.putContext(ctx, false)
 			return
@@ -449,8 +468,6 @@ func (s *session) startReadAndHandle() {
 		err = s.socket.ReadPacket(ctx.input)
 		if err != nil || !s.goonRead() {
 			s.peer.putContext(ctx, false)
-			// DEBUG:
-			// Debugf("s.socket.ReadPacket(ctx.input): err: %v", err)
 			return
 		}
 		s.graceCtxWaitGroup.Add(1)
@@ -476,24 +493,16 @@ func (s *session) write(packet *socket.Packet) *Rerror {
 	}
 
 	var (
-		rerr          *Rerror
-		err           error
-		ctx           = packet.Context()
-		deadline, has = ctx.Deadline()
+		rerr        *Rerror
+		err         error
+		ctx         = packet.Context()
+		deadline, _ = ctx.Deadline()
 	)
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
 		goto ERR
 	default:
-	}
-
-	if !has {
-		if wTimeout := s.ContextAge(); wTimeout > 0 {
-			deadline = time.Now().Add(s.ContextAge())
-			ctx, _ = context.WithDeadline(ctx, deadline)
-			packet.SetContext(ctx)
-		}
 	}
 
 	s.writeLock.Lock()

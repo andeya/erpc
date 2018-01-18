@@ -46,6 +46,7 @@ const (
 	CodeWriteFailed    = 104
 	CodeBadPacket      = 400
 	CodeNotFound       = 404
+	CodeHandleTimeout  = 408
 	CodeNotImplemented = 501
 
 	// CodeConflict                      = 409
@@ -71,6 +72,7 @@ var (
 	rerrWriteFailed        = NewRerror(CodeWriteFailed, "Write Failed", "")
 	rerrBadPacket          = NewRerror(CodeBadPacket, "Bad Packet", "")
 	rerrNotFound           = NewRerror(CodeNotFound, "Not Found", "")
+	rerrHandleTimeout      = NewRerror(CodeHandleTimeout, "Handle Timeout", "")
 	rerrCodeNotImplemented = NewRerror(CodeNotImplemented, "Not Implemented", "")
 )
 

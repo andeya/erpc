@@ -15,6 +15,7 @@
 package tp
 
 import (
+	"context"
 	"net/url"
 	"reflect"
 	"time"
@@ -47,6 +48,9 @@ type (
 		PublicLen() int
 		// Rerror returns the handle error.
 		Rerror() *Rerror
+		// Context carries a deadline, a cancelation signal, and other values across
+		// API boundaries.
+		Context() context.Context
 	}
 	// BaseCtx common context method set.
 	BaseCtx interface {
@@ -157,6 +161,7 @@ type (
 		cost            time.Duration
 		pluginContainer *PluginContainer
 		handleErr       *Rerror
+		context         context.Context
 		next            *readHandleCtx
 	}
 )
@@ -207,6 +212,7 @@ func (c *readHandleCtx) clean() {
 	c.cost = 0
 	c.pluginContainer = nil
 	c.handleErr = nil
+	c.context = nil
 	c.input.Reset(socket.WithNewBody(c.binding))
 	c.output.Reset()
 }
@@ -345,6 +351,20 @@ func (c *readHandleCtx) RealIp() string {
 	return c.sess.RemoteIp()
 }
 
+// Context carries a deadline, a cancelation signal, and other values across
+// API boundaries.
+func (c *readHandleCtx) Context() context.Context {
+	if c.context == nil {
+		return c.input.Context()
+	}
+	return c.context
+}
+
+// setContext sets the context for timeout.
+func (c *readHandleCtx) setContext(ctx context.Context) {
+	c.context = ctx
+}
+
 // Be executed synchronously when reading packet
 func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
 	c.start = c.sess.timeNow()
@@ -352,13 +372,10 @@ func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
 	switch header.Ptype() {
 	case TypeReply:
 		return c.bindReply(header)
-
 	case TypePush:
 		return c.bindPush(header)
-
 	case TypePull:
 		return c.bindPull(header)
-
 	default:
 		c.handleErr = rerrCodeNotImplemented
 		return nil
@@ -434,6 +451,11 @@ func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
 
 // handlePush handles push.
 func (c *readHandleCtx) handlePush() {
+	if age := c.sess.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(context.Background(), age)
+		c.setContext(ctxTimout)
+	}
+
 	defer func() {
 		c.cost = c.sess.timeSince(c.start)
 		c.sess.runlog(c.cost, c.input, nil, typePushHandle)
@@ -498,6 +520,12 @@ func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
 
 // handlePull handles and replies pull.
 func (c *readHandleCtx) handlePull() {
+	if age := c.sess.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(c.input.Context(), age)
+		c.setContext(ctxTimout)
+		socket.WithContext(ctxTimout)(c.output)
+	}
+
 	defer func() {
 		c.cost = c.sess.timeSince(c.start)
 		c.sess.runlog(c.cost, c.input, c.output, typePullHandle)
@@ -555,6 +583,7 @@ func (c *readHandleCtx) bindReply(header socket.Header) interface{} {
 	c.pullCmd = _pullCmd.(*pullCmd)
 	c.public = c.pullCmd.public
 	c.pullCmd.inputMeta = c.CopyMeta()
+	c.setContext(c.pullCmd.output.Context())
 
 	rerr := c.pluginContainer.PostReadReplyHeader(c)
 	if rerr != nil {
@@ -636,6 +665,9 @@ type (
 		PublicLen() int
 		// Output returns writed packet.
 		Output() *socket.Packet
+		// Context carries a deadline, a cancelation signal, and other values across
+		// API boundaries.
+		Context() context.Context
 		// Result returns the pull result.
 		Result() (interface{}, *Rerror)
 		// Rerror returns the pull error.
@@ -712,6 +744,12 @@ func (p *pullCmd) PublicLen() int {
 // Output returns writed packet.
 func (p *pullCmd) Output() *socket.Packet {
 	return p.output
+}
+
+// Context carries a deadline, a cancelation signal, and other values across
+// API boundaries.
+func (p *pullCmd) Context() context.Context {
+	return p.output.Context()
 }
 
 // Result returns the pull result.

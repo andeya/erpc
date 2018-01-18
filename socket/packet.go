@@ -182,6 +182,7 @@ func (p *Packet) Reset(settings ...PacketSetting) {
 	p.uri = ""
 	p.url = nil
 	p.size = 0
+	p.ctx = nil
 	p.bodyCodec = codec.NilCodecId
 	p.doSetting(settings...)
 }
@@ -194,17 +195,17 @@ func (p *Packet) doSetting(settings ...PacketSetting) {
 	}
 }
 
+// // HasContext returns true if the packet handling context is not nil.
+// func (p *Packet) HasContext() bool {
+// 	return p.ctx != nil
+// }
+
 // Context returns the packet handling context.
 func (p *Packet) Context() context.Context {
 	if p.ctx == nil {
 		return context.Background()
 	}
 	return p.ctx
-}
-
-// SetContext sets the packet handling context.
-func (p *Packet) SetContext(ctx context.Context) {
-	p.ctx = ctx
 }
 
 // Seq returns the packet sequence
