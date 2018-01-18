@@ -19,8 +19,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/pool"
-
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -118,6 +118,22 @@ TRYGO:
 	if !Go(fn) {
 		time.Sleep(time.Second)
 		goto TRYGO
+	}
+}
+
+// NewFakePullCmd creates a fake PullCmd.
+func NewFakePullCmd(p Peer, uri string, args, reply interface{}, rerr *Rerror) PullCmd {
+	output := socket.NewPacket(
+		socket.WithPtype(TypePull),
+		socket.WithUri(uri),
+		socket.WithBody(args),
+	)
+	return &pullCmd{
+		sess:   newSession(p.(*peer), nil, nil),
+		output: output,
+		reply:  reply,
+		public: goutil.RwMap(),
+		rerr:   rerr,
 	}
 }
 
