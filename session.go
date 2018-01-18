@@ -122,8 +122,10 @@ type (
 		writeLock                      sync.Mutex
 		graceCtxWaitGroup              sync.WaitGroup
 		gracepullCmdWaitGroup          sync.WaitGroup
-		sessionAge                     int32 // time.Duration
-		contextAge                     int32 // time.Duration
+		sessionAge                     time.Duration
+		contextAge                     time.Duration
+		sessionAgeLock                 sync.RWMutex
+		contextAgeLock                 sync.RWMutex
 		// only for client role
 		redialForClientFunc func() bool
 		redialLock          sync.Mutex
@@ -147,8 +149,8 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 		protoFuncs:     protoFuncs,
 		socket:         socket.NewSocket(conn, protoFuncs...),
 		pullCmdMap:     goutil.AtomicMap(),
-		sessionAge:     int32(peer.defaultSessionAge),
-		contextAge:     int32(peer.defaultContextAge),
+		sessionAge:     peer.defaultSessionAge,
+		contextAge:     peer.defaultContextAge,
 	}
 	return s
 }
@@ -216,27 +218,37 @@ func (s *session) LocalIp() string {
 
 // SessionAge returns the session max age.
 func (s *session) SessionAge() time.Duration {
-	return time.Duration(atomic.LoadInt32(&s.sessionAge))
-}
-
-// ContextAge returns PULL or PUSH context max age.
-func (s *session) ContextAge() time.Duration {
-	return time.Duration(atomic.LoadInt32(&s.contextAge))
+	s.sessionAgeLock.RLock()
+	age := s.sessionAge
+	s.sessionAgeLock.RUnlock()
+	return age
 }
 
 // SetSessionAge sets the session max age.
 func (s *session) SetSessionAge(duration time.Duration) {
-	atomic.StoreInt32(&s.sessionAge, int32(duration))
+	s.sessionAgeLock.Lock()
+	s.sessionAge = duration
 	if duration > 0 {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(duration))
 	} else {
 		s.socket.SetReadDeadline(time.Time{})
 	}
+	s.sessionAgeLock.Unlock()
+}
+
+// ContextAge returns PULL or PUSH context max age.
+func (s *session) ContextAge() time.Duration {
+	s.contextAgeLock.RLock()
+	age := s.contextAge
+	s.contextAgeLock.RUnlock()
+	return age
 }
 
 // SetContextAge sets PULL or PUSH context max age.
 func (s *session) SetContextAge(duration time.Duration) {
-	atomic.StoreInt32(&s.contextAge, int32(duration))
+	s.contextAgeLock.Lock()
+	s.contextAge = duration
+	s.contextAgeLock.Unlock()
 }
 
 // Send sends packet to peer, before the formal connection.
