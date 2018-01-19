@@ -87,6 +87,13 @@ var SocketWriteBuffer = socket.WriteBuffer
 //  func SetWriteBuffer(bytes int)
 var SetSocketWriteBuffer = socket.SetWriteBuffer
 
+// SetSocketNoDelay controls whether the operating system should delay
+// packet transmission in hopes of sending fewer packets (Nagle's
+// algorithm).  The default is true (no delay), meaning that data is
+// sent as soon as possible after a Write.
+//  func SetNoDelay(noDelay bool)
+var SetSocketNoDelay = socket.SetNoDelay
+
 var (
 	_maxGoroutinesAmount      = (1024 * 1024 * 8) / 8 // max memory 8GB (8KB/goroutine)
 	_maxGoroutineIdleDuration time.Duration

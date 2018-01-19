@@ -280,6 +280,11 @@ func (s *socket) optimize() {
 			c.SetWriteBuffer(writeBuffer)
 		}
 	}
+	if c, ok := s.Conn.(ifaceSetNoDelay); ok {
+		if !noDelay {
+			c.SetNoDelay(noDelay)
+		}
+	}
 }
 
 type (
@@ -298,6 +303,13 @@ type (
 		// transmit buffer associated with the connection.
 		SetWriteBuffer(bytes int) error
 	}
+	ifaceSetNoDelay interface {
+		// SetNoDelay controls whether the operating system should delay
+		// packet transmission in hopes of sending fewer packets (Nagle's
+		// algorithm).  The default is true (no delay), meaning that data is
+		// sent as soon as possible after a Write.
+		SetNoDelay(noDelay bool) error
+	}
 )
 
 // Connection related system configuration
@@ -307,6 +319,7 @@ var (
 	changeKeepAlive bool          = false
 	keepAlive       bool          = true
 	keepAlivePeriod time.Duration = -1
+	noDelay         bool          = true
 )
 
 // SetKeepAlive sets whether the operating system should send
@@ -361,6 +374,14 @@ func SetWriteBuffer(bytes int) {
 	} else {
 		fmt.Println("socket: SetWriteBuffer: invalid writeBuffer size:", bytes)
 	}
+}
+
+// SetNoDelay controls whether the operating system should delay
+// packet transmission in hopes of sending fewer packets (Nagle's
+// algorithm).  The default is true (no delay), meaning that data is
+// sent as soon as possible after a Write.
+func SetNoDelay(_noDelay bool) {
+	noDelay = _noDelay
 }
 
 func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {

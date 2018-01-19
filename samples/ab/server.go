@@ -13,6 +13,7 @@ func main() {
 	// go func() {
 	// 	http.ListenAndServe("0.0.0.0:9091", nil)
 	// }()
+	tp.SetSocketNoDelay(false)
 	tp.SetLoggerLevel("WARNING")
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)

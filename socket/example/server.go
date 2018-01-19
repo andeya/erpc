@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	socket.SetNoDelay(false)
 	socket.SetPacketSizeLimit(512)
 	lis, err := net.Listen("tcp", "0.0.0.0:8000")
 	if err != nil {
