@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
@@ -11,7 +12,7 @@ func main() {
 		CountTime:         true,
 		ListenAddress:     ":9090",
 		DefaultSessionAge: time.Second * 7,
-		DefaultContextAge: time.Second,
+		DefaultContextAge: time.Second * 2,
 	})
 	svr.RoutePull(new(test))
 	svr.Listen()
@@ -26,8 +27,7 @@ func (t *test) Ok(args *string) (string, *tp.Rerror) {
 }
 
 func (t *test) Timeout(args *string) (string, *tp.Rerror) {
-	time.Sleep(time.Second)
-	tCtx := t.Context()
+	tCtx, _ := context.WithTimeout(t.Context(), time.Second)
 	select {
 	case <-tCtx.Done():
 		return *args + " -> Not Timeout", nil

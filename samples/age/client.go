@@ -21,11 +21,14 @@ func main() {
 	sess.Pull("/test/ok", "test1", &reply)
 	tp.Printf("test normal: %v", reply)
 
+	sess.Pull("/test/timeout", "test2", &reply).Rerror()
+	tp.Printf("test: server context timeout: %v", reply)
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	ch := make(chan tp.PullCmd, 1)
 	sess.AsyncPull(
 		"/test/timeout",
-		"test2",
+		"test3",
 		&reply,
 		ch,
 		socket.WithContext(ctx),
@@ -33,12 +36,11 @@ func main() {
 	select {
 	case <-ch:
 		cancel()
-		tp.Printf("test: context timeout: %v", reply)
 	case <-ctx.Done():
-		tp.Printf("test: context timeout: %v", ctx.Err())
+		tp.Printf("test: client context timeout: %v", ctx.Err())
 	}
 
 	time.Sleep(time.Second * 5)
-	rerr := sess.Pull("/test/ok", "test3", &reply).Rerror()
-	tp.Printf("test: disconnect due to timeout: %v", rerr.ToError())
+	rerr := sess.Pull("/test/ok", "test4", &reply).Rerror()
+	tp.Printf("test: disconnect due to server session timeout: %v", rerr.ToError())
 }
