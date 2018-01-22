@@ -385,7 +385,7 @@ func SetNoDelay(_noDelay bool) {
 }
 
 func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {
-	if len(protoFuncs) > 0 {
+	if len(protoFuncs) > 0 && protoFuncs[0] != nil {
 		return protoFuncs[0](rw)
 	}
 	return defaultProtoFunc(rw)
