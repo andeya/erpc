@@ -321,7 +321,24 @@ peer.SetUnknownPull(XxxUnknownPullHandler)
 peer.SetUnknownPush(XxxUnknownPushHandler)
 ```
 
-## 6. 简单示例
+## 6. 配置信息
+
+```go
+type PeerConfig struct {
+    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix or unixpacket"`
+    ListenAddress      string        `yaml:"listen_address"       ini:"listen_address"       comment:"Listen address; for server role"`
+    DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
+    RedialTimes        int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; for client role"`
+    DefaultBodyCodec   string        `yaml:"default_body_codec"   ini:"default_body_codec"   comment:"Default body codec type id"`
+    DefaultSessionAge  time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
+    DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default PULL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
+    SlowCometDuration  time.Duration `yaml:"slow_comet_duration"  ini:"slow_comet_duration"  comment:"Slow operation alarm threshold; ns,µs,ms,s ..."`
+    PrintBody          bool          `yaml:"print_body"           ini:"print_body"           comment:"Is print body or not"`
+    CountTime          bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
+}
+```
+
+## 7. 完整示例
 
 ### server.go
 
@@ -408,7 +425,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
 
-## 7. 扩展包
+## 8. 扩展包
 
 ### 编解码器
 
@@ -451,14 +468,15 @@ package|import|description
 
 [扩展库](https://github.com/henrylee2cn/tp-ext)
 
-## 8. 基于Teleport的项目
+## 9. 基于Teleport的项目
 
 project|description
 ----|---------------
 [pholcus](https://github.com/henrylee2cn/pholcus)|Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具
-[ants](https://github.com/henrylee2cn/ants)|Ants 是一套基于 Teleport 框架，类似于轻量级服务网格的微服务系统
+[ant](https://github.com/henrylee2cn/ant)|Ant 是一套简单、灵活的基于 Teleport 的微服务框架
+[ants](https://github.com/xiaoenai/ants)|Ants 是一套基于 Ant 和 Teleport 的高可用的微服务架构解决方案
 
-## 9. 企业用户
+## 10. 企业用户
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -466,6 +484,6 @@ project|description
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 10. 开源协议
+## 11. 开源协议
 
 Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) 协议发布

@@ -320,7 +320,24 @@ peer.SetUnknownPull(XxxUnknownPullHandler)
 peer.SetUnknownPush(XxxUnknownPushHandler)
 ```
 
-## 6. Simple Demo
+## 6. Config
+
+```go
+type PeerConfig struct {
+    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix or unixpacket"`
+    ListenAddress      string        `yaml:"listen_address"       ini:"listen_address"       comment:"Listen address; for server role"`
+    DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
+    RedialTimes        int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; for client role"`
+    DefaultBodyCodec   string        `yaml:"default_body_codec"   ini:"default_body_codec"   comment:"Default body codec type id"`
+    DefaultSessionAge  time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
+    DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default PULL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
+    SlowCometDuration  time.Duration `yaml:"slow_comet_duration"  ini:"slow_comet_duration"  comment:"Slow operation alarm threshold; ns,µs,ms,s ..."`
+    PrintBody          bool          `yaml:"print_body"           ini:"print_body"           comment:"Is print body or not"`
+    CountTime          bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
+}
+```
+
+## 7. Example
 
 ### server.go
 
@@ -406,7 +423,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
-## 7. Extensions
+## 8. Extensions
 
 ### Codec
 
@@ -449,14 +466,15 @@ package|import|description
 
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
 
-## 8. Projects based on Teleport
+## 9. Projects based on Teleport
 
 project|description
 ----|---------------
 [pholcus](https://github.com/henrylee2cn/pholcus)|Pholcus is a distributed, high concurrency and powerful web crawler software
-[ants](https://github.com/henrylee2cn/ants)|Ants is a set of microservices-system based on Teleport framework and similar to lightweight service mesh
+[ant](https://github.com/henrylee2cn/ant)|Ant is a simple and flexible microservice framework based on Teleport
+[ants](https://github.com/xiaoenai/ants)|Ants is set of highly available microservices architecture based on Ant and Teleport framework
 
-## 9. Business Users
+## 10. Business Users
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -464,6 +482,6 @@ project|description
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 10. License
+## 11. License
 
 Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text
