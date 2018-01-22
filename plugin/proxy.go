@@ -51,7 +51,6 @@ type (
 	// PushFunc the function used to push
 	PushFunc func(uri string, args interface{}, setting ...socket.PacketSetting) *tp.Rerror
 	proxy    struct {
-		peer     tp.Peer
 		pullFunc PullFunc
 		pushFunc PushFunc
 	}
@@ -59,7 +58,6 @@ type (
 
 var (
 	_ tp.PostNewPeerPlugin = new(proxy)
-	_ tp.PostListenPlugin  = new(proxy)
 )
 
 func (p *proxy) Name() string {
@@ -67,16 +65,11 @@ func (p *proxy) Name() string {
 }
 
 func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
-	p.peer = peer.(tp.Peer)
-	return nil
-}
-
-func (p *proxy) PostListen() error {
 	if p.pullFunc != nil {
-		p.peer.SetUnknownPull(p.pull)
+		peer.SetUnknownPull(p.pull)
 	}
 	if p.pushFunc != nil {
-		p.peer.SetUnknownPush(p.push)
+		peer.SetUnknownPush(p.push)
 	}
 	return nil
 }

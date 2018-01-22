@@ -2,7 +2,6 @@ package main
 
 import (
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/plugin"
 )
 
 func main() {
@@ -10,11 +9,10 @@ func main() {
 
 	cli := tp.NewPeer(
 		tp.PeerConfig{},
-		plugin.RootRoute("/cli"),
 	)
 	defer cli.Close()
-
-	cli.RoutePush(new(push))
+	group := cli.SubRoute("/cli")
+	group.RoutePush(new(push))
 
 	sess, err := cli.Dial(":9090")
 	if err != nil {
