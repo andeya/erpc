@@ -206,7 +206,7 @@ type Peer interface {
 
 ## 5. 用法
 
-- Peer端点（服务端或客户端）示例
+### 5.1 Peer端点（服务端或客户端）示例
 
 ```go
 // Start a server
@@ -223,7 +223,7 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
 
-- PullController模板示例
+### 5.2 PullController模板示例
 
 ```go
 type XxxPullController struct {
@@ -241,7 +241,7 @@ func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
 }
 ```
 
-- PushController模板示例
+### 5.3 PushController模板示例
 
 ```go
 type XxxPushController struct {
@@ -259,7 +259,7 @@ func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
 }
 ```
 
-- UnknownPullHandler模板示例
+### 5.4 UnknownPullHandler模板示例
 
 ```go
 func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
@@ -268,7 +268,7 @@ func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 }
 ```
 
-- UnknownPushHandler模板示例
+### 5.5 UnknownPushHandler模板示例
 
 ```go
 func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
@@ -277,7 +277,7 @@ func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
 }
 ```
 
-- 插件示例
+### 5.6 插件示例
 
 ```go
 // NewIgnoreCase Returns a ignoreCase plugin.
@@ -309,7 +309,7 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 }
 ```
 
-- 注册以上操作和插件示例到路由
+### 5.7 注册以上操作和插件示例到路由
 
 ```go
 // add router group
@@ -321,7 +321,7 @@ peer.SetUnknownPull(XxxUnknownPullHandler)
 peer.SetUnknownPush(XxxUnknownPushHandler)
 ```
 
-## 6. 配置信息
+### 5.8 配置信息
 
 ```go
 type PeerConfig struct {
