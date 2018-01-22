@@ -27,23 +27,23 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 - teleport
 
-client concurrency|mean(ms)|median(ms)|max(ms)|min(ms)|throughput(TPS)
--------------|-------------|-------------|-------------|-------------|-------------
-100|1|0|16|0|75505
-500|9|11|97|0|52192
-1000|19|24|187|0|50040
-2000|39|54|409|0|42551
-5000|96|128|1148|0|46367
+| client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
+| ------------------ | -------- | ---------- | ------- | ------- | --------------- |
+| 100                | 1        | 0          | 16      | 0       | 75505           |
+| 500                | 9        | 11         | 97      | 0       | 52192           |
+| 1000               | 19       | 24         | 187     | 0       | 50040           |
+| 2000               | 39       | 54         | 409     | 0       | 42551           |
+| 5000               | 96       | 128        | 1148    | 0       | 46367           |
 
 - teleport/socket
 
-client concurrency|mean(ms)|median(ms)|max(ms)|min(ms)|throughput(TPS)
--------------|-------------|-------------|-------------|-------------|-------------
-100|0|0|14|0|225682
-500|2|1|24|0|212630
-1000|4|3|51|0|180733
-2000|8|6|64|0|183351
-5000|21|18|651|0|133886
+| client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
+| ------------------ | -------- | ---------- | ------- | ------- | --------------- |
+| 100                | 0        | 0          | 14      | 0       | 225682          |
+| 500                | 2        | 1          | 24      | 0       | 212630          |
+| 1000               | 4        | 3          | 51      | 0       | 180733          |
+| 2000               | 8        | 6          | 64      | 0       | 183351          |
+| 5000               | 21       | 18         | 651     | 0       | 133886          |
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
@@ -55,11 +55,11 @@ client concurrency|mean(ms)|median(ms)|max(ms)|min(ms)|throughput(TPS)
 
 ## 1. Version
 
-version | status | branch
---------|--------|--------
-v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/master)
-v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2)
-v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
+| version | status  | branch                                   |
+| ------- | ------- | ---------------------------------------- |
+| v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/master) |
+| v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
+| v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
 
 ## 2. Install
@@ -340,14 +340,14 @@ type PeerConfig struct {
 ### 5.9 Optimize
 
 - SetPacketSizeLimit sets max packet size.
-If maxSize<=0, set it to max uint32.
+  If maxSize<=0, set it to max uint32.
 
     ```go
     func SetPacketSizeLimit(maxPacketSize uint32)
     ```
 
 - SetSocketKeepAlive sets whether the operating system should send
-keepalive messages on the connection.
+  keepalive messages on the connection.
 
     ```go
     func SetSocketKeepAlive(keepalive bool)
@@ -360,23 +360,23 @@ keepalive messages on the connection.
     ```
 
 - SetSocketNoDelay controls whether the operating system should delay
-packet transmission in hopes of sending fewer packets (Nagle's
-algorithm).  The default is true (no delay), meaning that data is
-sent as soon as possible after a Write.
+  packet transmission in hopes of sending fewer packets (Nagle's
+  algorithm).  The default is true (no delay), meaning that data is
+  sent as soon as possible after a Write.
 
     ```go
     func SetSocketNoDelay(_noDelay bool)
     ```
 
 - SetSocketReadBuffer sets the size of the operating system's
-receive buffer associated with the connection.
+  receive buffer associated with the connection.
 
     ```go
     func SetSocketReadBuffer(bytes int)
     ```
 
 - SetSocketWriteBuffer sets the size of the operating system's
-transmit buffer associated with the connection.
+  transmit buffer associated with the connection.
 
     ```go
     func SetSocketWriteBuffer(bytes int)
@@ -473,52 +473,53 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 ### Codec
 
-package|import|description
-----|------|-----------
-[json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|JSON codec(teleport own)
-[protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|Protobuf codec(teleport own)
-[string](https://github.com/henrylee2cn/teleport/blob/master/codec/string_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|String codec(teleport own)
+| package                                  | import                                   | description                  |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------- |
+| [json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
+| [protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
+| [string](https://github.com/henrylee2cn/teleport/blob/master/codec/string_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | String codec(teleport own)   |
 
 ### Plugin
 
-package|import|description
-----|------|-----------
-[RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A plugin to set the peer router root
-[proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A proxy plugin for handling unknown pulling or pushing
-[binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
-[heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"`|A generic timing heartbeat plugin
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A plugin to set the peer router root     |
+| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+| [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder) | `import binder "github.com/henrylee2cn/tp-ext/plugin-binder"` | Parameter Binding Verification for Struct Handler |
+| [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat) | `import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"` | A generic timing heartbeat plugin        |
+| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
 
 ### Protocol
 
-package|import|description
-----|------|-----------
-[fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70)|`import "github.com/henrylee2cn/teleport/socket`|A fast socket communication protocol(teleport default protocol)
-[jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto)|`import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"`|A JSON socket communication protocol
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70) | `import "github.com/henrylee2cn/teleport/socket` | A fast socket communication protocol(teleport default protocol) |
+| [jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto) | `import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"` | A JSON socket communication protocol     |
 
 ### Transfer-Filter
 
-package|import|description
-----|------|-----------
-[gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go)|`import "github.com/henrylee2cn/teleport/xfer"`|Gzip(teleport own)
-[md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash)|`import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"`|Provides a integrity check transfer filter
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go) | `import "github.com/henrylee2cn/teleport/xfer"` | Gzip(teleport own)                       |
+| [md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash) | `import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"` | Provides a integrity check transfer filter |
 
 ### Module
 
-package|import|description
-----|------|-----------
-[cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/mod-cliSession)|`import cliSession "github.com/henrylee2cn/tp-ext/mod-cliSession"`|Client session which has connection pool
-[websocket](https://github.com/henrylee2cn/tp-ext/blob/master/mod-websocket)|`import websocket "github.com/henrylee2cn/tp-ext/mod-websocket"`|Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/mod-cliSession) | `import cliSession "github.com/henrylee2cn/tp-ext/mod-cliSession"` | Client session which has connection pool |
+| [websocket](https://github.com/henrylee2cn/tp-ext/blob/master/mod-websocket) | `import websocket "github.com/henrylee2cn/tp-ext/mod-websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
 
 
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
 
 ## 8. Projects based on Teleport
 
-project|description
-----|---------------
-[pholcus](https://github.com/henrylee2cn/pholcus)|Pholcus is a distributed, high concurrency and powerful web crawler software
-[ant](https://github.com/henrylee2cn/ant)|Ant is a simple and flexible microservice framework based on Teleport
-[ants](https://github.com/xiaoenai/ants)|Ants is set of highly available microservices architecture based on Ant and Teleport framework
+| project                                  | description                              |
+| ---------------------------------------- | ---------------------------------------- |
+| [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus is a distributed, high concurrency and powerful web crawler software |
+| [ant](https://github.com/henrylee2cn/ant) | Ant is a simple and flexible microservice framework based on Teleport |
+| [ants](https://github.com/xiaoenai/ants) | Ants is set of highly available microservices architecture based on Ant and Teleport framework |
 
 ## 9. Business Users
 

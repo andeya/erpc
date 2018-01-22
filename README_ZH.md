@@ -26,23 +26,23 @@ Teleport是一个通用、高效、灵活的Socket框架。
 
 - teleport
 
-并发client|平均值(ms)|中位数(ms)|最大值(ms)|最小值(ms)|吞吐率(TPS)
--------------|-------------|-------------|-------------|-------------|-------------
-100|1|0|16|0|75505
-500|9|11|97|0|52192
-1000|19|24|187|0|50040
-2000|39|54|409|0|42551
-5000|96|128|1148|0|46367
+| 并发client | 平均值(ms) | 中位数(ms) | 最大值(ms) | 最小值(ms) | 吞吐率(TPS) |
+| -------- | ------- | ------- | ------- | ------- | -------- |
+| 100      | 1       | 0       | 16      | 0       | 75505    |
+| 500      | 9       | 11      | 97      | 0       | 52192    |
+| 1000     | 19      | 24      | 187     | 0       | 50040    |
+| 2000     | 39      | 54      | 409     | 0       | 42551    |
+| 5000     | 96      | 128     | 1148    | 0       | 46367    |
 
 - teleport/socket
 
-并发client|平均值(ms)|中位数(ms)|最大值(ms)|最小值(ms)|吞吐率(TPS)
--------------|-------------|-------------|-------------|-------------|-------------
-100|0|0|14|0|225682
-500|2|1|24|0|212630
-1000|4|3|51|0|180733
-2000|8|6|64|0|183351
-5000|21|18|651|0|133886
+| 并发client | 平均值(ms) | 中位数(ms) | 最大值(ms) | 最小值(ms) | 吞吐率(TPS) |
+| -------- | ------- | ------- | ------- | ------- | -------- |
+| 100      | 0       | 0       | 14      | 0       | 225682   |
+| 500      | 2       | 1       | 24      | 0       | 212630   |
+| 1000     | 4       | 3       | 51      | 0       | 180733   |
+| 2000     | 8       | 6       | 64      | 0       | 183351   |
+| 5000     | 21      | 18      | 651     | 0       | 133886   |
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
@@ -54,11 +54,11 @@ Teleport是一个通用、高效、灵活的Socket框架。
 
 ## 1. 版本
 
-版本 | 状态 | 分支
---------|--------|--------
-v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/master)
-v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2)
-v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1)
+| 版本   | 状态      | 分支                                       |
+| ---- | ------- | ---------------------------------------- |
+| v3   | release | [v3](https://github.com/henrylee2cn/teleport/tree/master) |
+| v2   | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
+| v1   | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
 ## 2. 安装
 
@@ -341,7 +341,7 @@ type PeerConfig struct {
 ### 5.9 通信优化
 
 - SetPacketSizeLimit 设置包大小的上限，
-如果 maxSize<=0，上限默认为最大 uint32
+  如果 maxSize<=0，上限默认为最大 uint32
 
     ```go
     func SetPacketSizeLimit(maxPacketSize uint32)
@@ -470,52 +470,53 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 ### 编解码器
 
-package|import|description
-----|------|-----------
-[json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|JSON codec(teleport own)
-[protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|Protobuf codec(teleport own)
-[string](https://github.com/henrylee2cn/teleport/blob/master/codec/string_codec.go)|`import "github.com/henrylee2cn/teleport/codec"`|String codec(teleport own)
+| package                                  | import                                   | description                  |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------- |
+| [json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
+| [protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
+| [string](https://github.com/henrylee2cn/teleport/blob/master/codec/string_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | String codec(teleport own)   |
 
 ### 插件
 
-package|import|description
-----|------|-----------
-[RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A plugin to set the peer router root
-[proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go)|`import "github.com/henrylee2cn/teleport/plugin"`|A proxy plugin for handling unknown pulling or pushing
-[binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder)|`import binder "github.com/henrylee2cn/tp-ext/plugin-binder"`|Parameter Binding Verification for Struct Handler
-[heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat)|`import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"`|A generic timing heartbeat plugin
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A plugin to set the peer router root     |
+| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+| [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder) | `import binder "github.com/henrylee2cn/tp-ext/plugin-binder"` | Parameter Binding Verification for Struct Handler |
+| [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat) | `import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"` | A generic timing heartbeat plugin        |
+| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
 
 ### 协议
 
-package|import|description
-----|------|-----------
-[fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70)|`import "github.com/henrylee2cn/teleport/socket`|A fast socket communication protocol(teleport default protocol)
-[jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto)|`import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"`|A JSON socket communication protocol
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70) | `import "github.com/henrylee2cn/teleport/socket` | A fast socket communication protocol(teleport default protocol) |
+| [jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto) | `import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"` | A JSON socket communication protocol     |
 
 ### 传输过滤器
 
-package|import|description
-----|------|-----------
-[gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go)|`import "github.com/henrylee2cn/teleport/xfer"`|Gzip(teleport own)
-[md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash)|`import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"`|Provides a integrity check transfer filter
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go) | `import "github.com/henrylee2cn/teleport/xfer"` | Gzip(teleport own)                       |
+| [md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash) | `import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"` | Provides a integrity check transfer filter |
 
 ### 其他模块
 
-package|import|description
-----|------|-----------
-[cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/mod-cliSession)|`import cliSession "github.com/henrylee2cn/tp-ext/mod-cliSession"`|Client session which has connection pool
-[websocket](https://github.com/henrylee2cn/tp-ext/blob/master/mod-websocket)|`import websocket "github.com/henrylee2cn/tp-ext/mod-websocket"`|Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455
+| package                                  | import                                   | description                              |
+| ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| [cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/mod-cliSession) | `import cliSession "github.com/henrylee2cn/tp-ext/mod-cliSession"` | Client session which has connection pool |
+| [websocket](https://github.com/henrylee2cn/tp-ext/blob/master/mod-websocket) | `import websocket "github.com/henrylee2cn/tp-ext/mod-websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
 
 
 [扩展库](https://github.com/henrylee2cn/tp-ext)
 
 ## 8. 基于Teleport的项目
 
-project|description
-----|---------------
-[pholcus](https://github.com/henrylee2cn/pholcus)|Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具
-[ant](https://github.com/henrylee2cn/ant)|Ant 是一套简单、灵活的基于 Teleport 的微服务框架
-[ants](https://github.com/xiaoenai/ants)|Ants 是一套基于 Ant 和 Teleport 的高可用的微服务架构解决方案
+| project                                  | description                              |
+| ---------------------------------------- | ---------------------------------------- |
+| [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具 |
+| [ant](https://github.com/henrylee2cn/ant) | Ant 是一套简单、灵活的基于 Teleport 的微服务框架          |
+| [ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 Ant 和 Teleport 的高可用的微服务架构解决方案 |
 
 ## 9. 企业用户
 
