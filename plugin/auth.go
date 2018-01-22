@@ -80,11 +80,12 @@ func (a *auth) PostAccept(sess tp.EarlySession) *tp.Rerror {
 		}
 		return nil
 	})
-	if input.Uri() != authURI {
-		return tp.NewRerror(tp.CodeBadPacket, tp.CodeText(tp.CodeBadPacket), "Received an unexecepted response: "+input.Uri())
-	}
 	if rerr != nil {
 		return rerr
+	}
+
+	if input.Uri() != authURI {
+		return tp.NewRerror(tp.CodeBadPacket, tp.CodeText(tp.CodeBadPacket), "Received an unexecepted response: "+input.Uri())
 	}
 
 	authInfo := *input.Body().(*string)
