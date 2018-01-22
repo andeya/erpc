@@ -27,11 +27,11 @@ func (e *earlyPull) Name() string {
 
 func (e *earlyPull) PostDial(sess tp.EarlySession) *tp.Rerror {
 	rerr := sess.Send(
+		"/early/ping",
 		map[string]string{
 			"author": "henrylee2cn",
 		},
 		nil,
-		socket.WithUri("/early/ping"),
 	)
 	if rerr != nil {
 		return rerr

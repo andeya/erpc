@@ -65,7 +65,7 @@ type (
 		// Note:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
-		Send(body interface{}, rerr *Rerror, setting ...socket.PacketSetting) *Rerror
+		Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) *Rerror
 		// Receive receives a packet from peer, before the formal connection.
 		// Note: does not support automatic redial after disconnection.
 		Receive(socket.NewBodyFunc, ...socket.PacketSetting) (*socket.Packet, *Rerror)
@@ -255,7 +255,7 @@ func (s *session) SetContextAge(duration time.Duration) {
 // Note:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(body interface{}, rerr *Rerror, setting ...socket.PacketSetting) *Rerror {
+func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) *Rerror {
 	output := socket.GetPacket(setting...)
 	s.seqLock.Lock()
 	output.SetSeq(s.seq)
@@ -263,6 +263,9 @@ func (s *session) Send(body interface{}, rerr *Rerror, setting ...socket.PacketS
 	s.seqLock.Unlock()
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
+	}
+	if len(uri) > 0 {
+		output.SetUri(uri)
 	}
 	if body != nil {
 		output.SetBody(body)
