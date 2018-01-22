@@ -47,8 +47,8 @@ func (e *earlyReply) PostAccept(sess tp.EarlySession) *tp.Rerror {
 		}
 	}
 	return sess.Send(
+		reply,
 		rerr,
 		socket.WithUri("/early/pong"),
-		socket.WithBody(reply),
 	)
 }
