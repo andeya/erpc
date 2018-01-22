@@ -5,17 +5,15 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/plugin"
 )
 
 func main() {
 	svr := tp.NewPeer(tp.PeerConfig{
 		CountTime:     true,
 		ListenAddress: ":9090",
-	},
-		plugin.RootRoute("/srv"),
-	)
-	svr.RoutePull(new(math))
+	})
+	group := svr.SubRoute("/srv")
+	group.RoutePull(new(math))
 	svr.Listen()
 }
 

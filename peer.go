@@ -58,12 +58,6 @@ type (
 	// EarlyPeer the communication peer that has just been created
 	EarlyPeer interface {
 		BasePeer
-		// RootRoute sets the router root group.
-		RootRoute(routerRoot string)
-	}
-	// Peer the communication peer which is server or client role
-	Peer interface {
-		BasePeer
 		// SubRoute adds handler group.
 		SubRoute(pathPrefix string, plugin ...Plugin) *Router
 		// RoutePull registers PULL handler.
@@ -74,6 +68,10 @@ type (
 		SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin)
 		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
 		SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
+	}
+	// Peer the communication peer which is server or client role
+	Peer interface {
+		EarlyPeer
 		// Listen turns on the listening service.
 		Listen(protoFunc ...socket.ProtoFunc) error
 	}
@@ -448,11 +446,6 @@ func (p *peer) putContext(ctx *readHandleCtx, withWg bool) {
 	ctx.clean()
 	ctx.next = p.freeContext
 	p.freeContext = ctx
-}
-
-// RootRoute sets the router root group.
-func (p *peer) RootRoute(routerRoot string) {
-	p.rootRouter = newRootRouter(routerRoot, p.pluginContainer)
 }
 
 // SubRoute adds handler group.
