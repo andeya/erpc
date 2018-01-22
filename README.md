@@ -487,7 +487,6 @@ func (p *push) Status(args *string) *tp.Rerror {
 | [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder) | `import binder "github.com/henrylee2cn/tp-ext/plugin-binder"` | Parameter Binding Verification for Struct Handler |
 | [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat) | `import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"` | A generic timing heartbeat plugin        |
 | [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
-| [RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A plugin to set the peer router root     |
 
 ### Protocol
 
