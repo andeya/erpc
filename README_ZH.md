@@ -480,11 +480,11 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A plugin to set the peer router root     |
-| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
 | [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder) | `import binder "github.com/henrylee2cn/tp-ext/plugin-binder"` | Parameter Binding Verification for Struct Handler |
 | [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat) | `import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"` | A generic timing heartbeat plugin        |
-| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
+| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+| [RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A plugin to set the peer router root     |
 
 ### 协议
 
@@ -514,9 +514,9 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
-| [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具 |
 | [ant](https://github.com/henrylee2cn/ant) | Ant 是一套简单、灵活的基于 Teleport 的微服务框架          |
 | [ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 Ant 和 Teleport 的高可用的微服务架构解决方案 |
+| [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具 |
 
 ## 9. 企业用户
 

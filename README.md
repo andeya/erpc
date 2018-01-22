@@ -483,11 +483,11 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A plugin to set the peer router root     |
-| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
 | [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder) | `import binder "github.com/henrylee2cn/tp-ext/plugin-binder"` | Parameter Binding Verification for Struct Handler |
 | [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat) | `import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"` | A generic timing heartbeat plugin        |
-| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
+| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+| [RootRoute](https://github.com/henrylee2cn/teleport/blob/master/plugin/root_route.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A plugin to set the peer router root     |
 
 ### Protocol
 
@@ -517,9 +517,9 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
-| [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus is a distributed, high concurrency and powerful web crawler software |
 | [ant](https://github.com/henrylee2cn/ant) | Ant is a simple and flexible microservice framework based on Teleport |
 | [ants](https://github.com/xiaoenai/ants) | Ants is set of highly available microservices architecture based on Ant and Teleport framework |
+| [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus is a distributed, high concurrency and powerful web crawler software |
 
 ## 9. Business Users
 
