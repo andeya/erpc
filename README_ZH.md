@@ -338,7 +338,48 @@ type PeerConfig struct {
 }
 ```
 
-## 7. 完整示例
+### 5.9 通信优化
+
+- SetPacketSizeLimit 设置包大小的上限，
+如果 maxSize<=0，上限默认为最大 uint32
+
+    ```go
+    func SetPacketSizeLimit(maxPacketSize uint32)
+    ```
+
+- SetSocketKeepAlive 是否允许操作系统的发送TCP的keepalive探测包
+
+    ```go
+    func SetSocketKeepAlive(keepalive bool)
+    ```
+
+
+- SetSocketKeepAlivePeriod 设置操作系统的TCP发送keepalive探测包的频度
+
+    ```go
+    func SetSocketKeepAlivePeriod(d time.Duration)
+    ```
+
+- SetSocketNoDelay 是否禁用Nagle算法，禁用后将不在合并较小数据包进行批量发送，默认为禁用
+
+    ```go
+    func SetSocketNoDelay(_noDelay bool)
+    ```
+
+- SetSocketReadBuffer 设置操作系统的TCP读缓存区的大小
+
+    ```go
+    func SetSocketReadBuffer(bytes int)
+    ```
+
+- SetSocketWriteBuffer 设置操作系统的TCP写缓存区的大小
+
+    ```go
+    func SetSocketWriteBuffer(bytes int)
+    ```
+
+
+## 6. 完整示例
 
 ### server.go
 
@@ -425,7 +466,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
 
-## 8. 扩展包
+## 7. 扩展包
 
 ### 编解码器
 
@@ -468,7 +509,7 @@ package|import|description
 
 [扩展库](https://github.com/henrylee2cn/tp-ext)
 
-## 9. 基于Teleport的项目
+## 8. 基于Teleport的项目
 
 project|description
 ----|---------------
@@ -476,7 +517,7 @@ project|description
 [ant](https://github.com/henrylee2cn/ant)|Ant 是一套简单、灵活的基于 Teleport 的微服务框架
 [ants](https://github.com/xiaoenai/ants)|Ants 是一套基于 Ant 和 Teleport 的高可用的微服务架构解决方案
 
-## 10. 企业用户
+## 9. 企业用户
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -484,6 +525,6 @@ project|description
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 11. 开源协议
+## 10. 开源协议
 
 Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) 协议发布

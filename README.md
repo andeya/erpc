@@ -206,7 +206,7 @@ type Peer interface {
 
 ## 5. Usage
 
-- Peer(server or client) Demo
+### 5.1 Peer(server or client) Demo
 
 ```go
 // Start a server
@@ -222,7 +222,7 @@ var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
-- PullController Model Demo
+### 5.2 PullController Model Demo
 
 ```go
 type XxxPullController struct {
@@ -240,7 +240,7 @@ func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
 }
 ```
 
-- PushController Model Demo
+### 5.3 PushController Model Demo
 
 ```go
 type XxxPushController struct {
@@ -258,7 +258,7 @@ func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
 }
 ```
 
-- UnknownPullHandler Type Demo
+### 5.4 UnknownPullHandler Type Demo
 
 ```go
 func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
@@ -267,7 +267,7 @@ func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 }
 ```
 
-- UnknownPushHandler Type Demo
+### 5.5 UnknownPushHandler Type Demo
 
 ```go
 func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
@@ -276,7 +276,7 @@ func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
 }
 ```
 
-- Plugin Demo
+### 5.6 Plugin Demo
 
 ```go
 // NewIgnoreCase Returns a ignoreCase plugin.
@@ -308,7 +308,7 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 }
 ```
 
-- Register above handler and plugin
+### 5.7 Register above handler and plugin
 
 ```go
 // add router group
@@ -320,7 +320,7 @@ peer.SetUnknownPull(XxxUnknownPullHandler)
 peer.SetUnknownPush(XxxUnknownPushHandler)
 ```
 
-## 6. Config
+### 5.8 Config
 
 ```go
 type PeerConfig struct {
@@ -337,7 +337,53 @@ type PeerConfig struct {
 }
 ```
 
-## 7. Example
+### 5.9 Optimize
+
+- SetPacketSizeLimit sets max packet size.
+If maxSize<=0, set it to max uint32.
+
+    ```go
+    func SetPacketSizeLimit(maxPacketSize uint32)
+    ```
+
+- SetSocketKeepAlive sets whether the operating system should send
+keepalive messages on the connection.
+
+    ```go
+    func SetSocketKeepAlive(keepalive bool)
+    ```
+
+- SetSocketKeepAlivePeriod sets period between keep alives.
+
+    ```go
+    func SetSocketKeepAlivePeriod(d time.Duration)
+    ```
+
+- SetSocketNoDelay controls whether the operating system should delay
+packet transmission in hopes of sending fewer packets (Nagle's
+algorithm).  The default is true (no delay), meaning that data is
+sent as soon as possible after a Write.
+
+    ```go
+    func SetSocketNoDelay(_noDelay bool)
+    ```
+
+- SetSocketReadBuffer sets the size of the operating system's
+receive buffer associated with the connection.
+
+    ```go
+    func SetSocketReadBuffer(bytes int)
+    ```
+
+- SetSocketWriteBuffer sets the size of the operating system's
+transmit buffer associated with the connection.
+
+    ```go
+    func SetSocketWriteBuffer(bytes int)
+    ```
+
+
+## 6. Example
 
 ### server.go
 
@@ -423,7 +469,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
-## 8. Extensions
+## 7. Extensions
 
 ### Codec
 
@@ -466,7 +512,7 @@ package|import|description
 
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
 
-## 9. Projects based on Teleport
+## 8. Projects based on Teleport
 
 project|description
 ----|---------------
@@ -474,7 +520,7 @@ project|description
 [ant](https://github.com/henrylee2cn/ant)|Ant is a simple and flexible microservice framework based on Teleport
 [ants](https://github.com/xiaoenai/ants)|Ants is set of highly available microservices architecture based on Ant and Teleport framework
 
-## 10. Business Users
+## 9. Business Users
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -482,6 +528,6 @@ project|description
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 11. License
+## 10. License
 
 Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text

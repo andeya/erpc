@@ -141,6 +141,52 @@ func GetSocket(net.Conn, ...ProtoFunc) Socket
 func NewSocket(net.Conn, ...ProtoFunc) Socket
 ```
 
+## Optimize
+
+- SetPacketSizeLimit sets max packet size.
+If maxSize<=0, set it to max uint32.
+
+	```go
+	func SetPacketSizeLimit(maxPacketSize uint32)
+	```
+
+- SetKeepAlive sets whether the operating system should send
+keepalive messages on the connection.
+
+	```go
+	func SetKeepAlive(keepalive bool)
+	```
+
+- SetKeepAlivePeriod sets period between keep alives.
+
+	```go
+	func SetKeepAlivePeriod(d time.Duration)
+	```
+
+- SetNoDelay controls whether the operating system should delay
+packet transmission in hopes of sending fewer packets (Nagle's
+algorithm).  The default is true (no delay), meaning that data is
+sent as soon as possible after a Write.
+
+	```go
+	func SetNoDelay(_noDelay bool)
+	```
+
+- SetReadBuffer sets the size of the operating system's
+receive buffer associated with the connection.
+
+	```go
+	func SetReadBuffer(bytes int)
+	```
+
+- SetWriteBuffer sets the size of the operating system's
+transmit buffer associated with the connection.
+
+	```go
+	func SetWriteBuffer(bytes int)
+	```
+
+
 ## Demo
 
 ### server.go
