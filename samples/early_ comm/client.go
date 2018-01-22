@@ -22,7 +22,7 @@ func main() {
 type earlyPull struct{}
 
 func (e *earlyPull) Name() string {
-	return "early_comm"
+	return "early_pull"
 }
 
 func (e *earlyPull) PostDial(sess tp.EarlySession) *tp.Rerror {
