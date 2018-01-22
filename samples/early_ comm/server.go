@@ -1,0 +1,54 @@
+package main
+
+import (
+	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/socket"
+)
+
+func main() {
+	svr := tp.NewPeer(tp.PeerConfig{
+		PrintBody:     false,
+		ListenAddress: ":9090",
+	},
+		new(earlyReply),
+	)
+	svr.Listen()
+}
+
+type earlyReply struct{}
+
+func (e *earlyReply) Name() string {
+	return "early_reply"
+}
+
+func (e *earlyReply) PostAccept(sess tp.EarlySession) *tp.Rerror {
+	var rigthUri bool
+	input, rerr := sess.Receive(func(header socket.Header) interface{} {
+		if header.Uri() == "/early/ping" {
+			rigthUri = true
+			return new(map[string]string)
+		}
+		return nil
+	})
+	if rerr != nil {
+		return rerr
+	}
+
+	var reply string
+	if !rigthUri {
+		rerr = tp.NewRerror(10005, "unexpected request", "")
+	} else {
+		body := *input.Body().(*map[string]string)
+		if body["author"] != "henrylee2cn" {
+			rerr = tp.NewRerror(10005, "incorrect author", body["author"])
+		} else {
+			rerr = nil
+			reply = "OK"
+		}
+	}
+	return sess.Send(
+		rerr,
+		socket.WithUri("/early/pong"),
+		socket.WithBody(reply),
+	)
+}

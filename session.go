@@ -65,10 +65,10 @@ type (
 		// Note:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
-		Send(output *socket.Packet) *Rerror
+		Send(*Rerror, ...socket.PacketSetting) *Rerror
 		// Receive receives a packet from peer, before the formal connection.
 		// Note: does not support automatic redial after disconnection.
-		Receive(input *socket.Packet) *Rerror
+		Receive(socket.NewBodyFunc, ...socket.PacketSetting) (*socket.Packet, *Rerror)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns PULL or PUSH context max age.
@@ -255,7 +255,8 @@ func (s *session) SetContextAge(duration time.Duration) {
 // Note:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(output *socket.Packet) *Rerror {
+func (s *session) Send(rerr *Rerror, setting ...socket.PacketSetting) *Rerror {
+	output := socket.GetPacket(setting...)
 	s.seqLock.Lock()
 	output.SetSeq(s.seq)
 	s.seq++
@@ -263,7 +264,11 @@ func (s *session) Send(output *socket.Packet) *Rerror {
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
+	if rerr != nil {
+		rerr.SetToMeta(output.Meta())
+	}
 	err := s.socket.WritePacket(output)
+	socket.PutPacket(output)
 	if err != nil {
 		rerr := rerrConnClosed.Copy()
 		rerr.Detail = err.Error()
@@ -274,16 +279,20 @@ func (s *session) Send(output *socket.Packet) *Rerror {
 
 // Receive receives a packet from peer, before the formal connection.
 // Note: does not support automatic redial after disconnection.
-func (s *session) Receive(input *socket.Packet) *Rerror {
+func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.PacketSetting) (*socket.Packet, *Rerror) {
+	input := socket.GetPacket(setting...)
+	input.SetNewBody(newBodyFunc)
 	if readTimeout := s.SessionAge(); readTimeout > 0 {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 	}
 	if err := s.socket.ReadPacket(input); err != nil {
 		rerr := rerrConnClosed.Copy()
 		rerr.Detail = err.Error()
-		return rerr
+		socket.PutPacket(input)
+		return nil, rerr
 	}
-	return nil
+	rerr := NewRerrorFromMeta(input.Meta())
+	return input, rerr
 }
 
 // AsyncPull sends a packet and receives reply asynchronously.
