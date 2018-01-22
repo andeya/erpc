@@ -81,8 +81,7 @@ func (a *auth) PostAccept(sess tp.EarlySession) *tp.Rerror {
 		return nil
 	})
 	if input.Uri() != authURI {
-		rerrStr := "Received an unexecepted response: " + input.Uri()
-		return tp.NewRerror(tp.CodeBadPacket, tp.CodeText(tp.CodeBadPacket), rerrStr)
+		return tp.NewRerror(tp.CodeBadPacket, tp.CodeText(tp.CodeBadPacket), "Received an unexecepted response: "+input.Uri())
 	}
 	if rerr != nil {
 		return rerr
