@@ -200,7 +200,7 @@ func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
 
 // GetProtoFunc returns the socket.ProtoFunc
 func (s *session) GetProtoFunc() socket.ProtoFunc {
-	if len(s.protoFuncs) > 0 {
+	if len(s.protoFuncs) > 0 && s.protoFuncs[0] != nil {
 		return s.protoFuncs[0]
 	}
 	return socket.DefaultProtoFunc()
