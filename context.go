@@ -565,7 +565,8 @@ func (c *readHandleCtx) handlePull() {
 		if c.handleErr == nil {
 			c.handleErr = rerr
 		}
-		rerr.SetToMeta(c.output.Meta())
+		// rerr.SetToMeta(c.output.Meta())
+		return
 	}
 
 	rerr = c.pluginContainer.PostWriteReply(c)

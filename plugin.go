@@ -60,7 +60,7 @@ type (
 		Plugin
 		PreWritePull(WriteCtx) *Rerror
 	}
-	// PostWritePullPlugin is executed after writing PULL packet.
+	// PostWritePullPlugin is executed after successful writing PULL packet.
 	PostWritePullPlugin interface {
 		Plugin
 		PostWritePull(WriteCtx) *Rerror
@@ -70,7 +70,7 @@ type (
 		Plugin
 		PreWriteReply(WriteCtx) *Rerror
 	}
-	// PostWriteReplyPlugin is executed after writing REPLY packet.
+	// PostWriteReplyPlugin is executed after successful writing REPLY packet.
 	PostWriteReplyPlugin interface {
 		Plugin
 		PostWriteReply(WriteCtx) *Rerror
@@ -80,7 +80,7 @@ type (
 		Plugin
 		PreWritePush(WriteCtx) *Rerror
 	}
-	// PostWritePushPlugin is executed after writing PUSH packet.
+	// PostWritePushPlugin is executed after successful writing PUSH packet.
 	PostWritePushPlugin interface {
 		Plugin
 		PostWritePush(WriteCtx) *Rerror
@@ -337,7 +337,7 @@ func (p *PluginContainer) PreWritePull(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PostWritePull executes the defined plugins after writing PULL packet.
+// PostWritePull executes the defined plugins after successful writing PULL packet.
 func (p *PluginContainer) PostWritePull(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -365,7 +365,7 @@ func (p *PluginContainer) PreWriteReply(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PostWriteReply executes the defined plugins after writing REPLY packet.
+// PostWriteReply executes the defined plugins after successful writing REPLY packet.
 func (p *PluginContainer) PostWriteReply(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -393,7 +393,7 @@ func (p *PluginContainer) PreWritePush(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PostWritePush executes the defined plugins after writing PUSH packet.
+// PostWritePush executes the defined plugins after successful writing PUSH packet.
 func (p *PluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
