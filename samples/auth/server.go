@@ -13,7 +13,7 @@ func main() {
 }
 
 const (
-	clientAuthInfo = "client auth info"
+	clientAuthInfo = "client-auth-info-12345"
 	codeAuthFail   = 403
 	textAuthFail   = "auth fail"
 	detailAuthFail = "auth fail detail"

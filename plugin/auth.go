@@ -61,16 +61,14 @@ func (a *auth) Name() string {
 }
 
 func (a *auth) PostDial(sess tp.EarlySession) *tp.Rerror {
-	rerr := sess.Send(authURI, a.generateAuthInfoFunc(), nil)
+	rerr := sess.Send(authURI, a.generateAuthInfoFunc(), nil, socket.WithBodyCodec('s'))
 	if rerr != nil {
 		return rerr
 	}
-
 	_, rerr = sess.Receive(func(header socket.Header) interface{} {
 		return nil
 	})
-
-	return nil
+	return rerr
 }
 
 func (a *auth) PostAccept(sess tp.EarlySession) *tp.Rerror {
@@ -83,14 +81,11 @@ func (a *auth) PostAccept(sess tp.EarlySession) *tp.Rerror {
 	if rerr != nil {
 		return rerr
 	}
-
 	if input.Uri() != authURI {
-		return tp.NewRerror(tp.CodeBadPacket, tp.CodeText(tp.CodeBadPacket), "Received an unexecepted response: "+input.Uri())
+		return tp.NewRerror(tp.CodeBadPacket, tp.CodeText(tp.CodeBadPacket), "received an unexecepted response: "+input.Uri())
 	}
-
 	authInfo := *input.Body().(*string)
 	rerr = a.verifyAuthInfoFunc(authInfo, sess)
-
 	rerr2 := sess.Send(authURI, nil, rerr)
 	if rerr == nil {
 		rerr = rerr2
