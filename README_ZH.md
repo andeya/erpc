@@ -209,6 +209,7 @@ type (
 
 运行过程中以挂载方式执行的插件。
 
+```go
 type (
     // Plugin plugin background
     Plugin interface {
@@ -221,7 +222,7 @@ type (
     }
     ...
 )
-
+```
 
 ### 4.6 通信协议
 
