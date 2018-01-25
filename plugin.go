@@ -20,6 +20,8 @@ import (
 	"github.com/henrylee2cn/goutil/errors"
 )
 
+// Plug-ins during runtime
+
 type (
 	// Plugin plugin background
 	Plugin interface {

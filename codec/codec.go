@@ -1,4 +1,4 @@
-// Package codec is codec set.
+// Package codec is the body's codec set.
 //
 // Copyright 2015-2017 HenryLee. All Rights Reserved.
 //
@@ -20,20 +20,18 @@ import (
 	"fmt"
 )
 
-type (
-	// Codec makes Encoder and Decoder
-	Codec interface {
-		// Id returns codec id.
-		Id() byte
-		// Name returns codec name.
-		Name() string
-		// Marshal returns the encoding of v.
-		Marshal(v interface{}) ([]byte, error)
-		// Unmarshal parses the encoded data and stores the result
-		// in the value pointed to by v.
-		Unmarshal(data []byte, v interface{}) error
-	}
-)
+// Codec makes the body's Encoder and Decoder
+type Codec interface {
+	// Id returns codec id.
+	Id() byte
+	// Name returns codec name.
+	Name() string
+	// Marshal returns the encoding of v.
+	Marshal(v interface{}) ([]byte, error)
+	// Unmarshal parses the encoded data and stores the result
+	// in the value pointed to by v.
+	Unmarshal(data []byte, v interface{}) error
+}
 
 var codecMap = struct {
 	nameMap map[string]Codec
