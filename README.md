@@ -7,7 +7,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 [简体中文](https://github.com/henrylee2cn/teleport/blob/master/README_ZH.md)
 
 
-![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_architecture.png)
+![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_framework.png)
 
 
 ## Benchmark
@@ -88,7 +88,7 @@ go get -u github.com/henrylee2cn/teleport
 - Client session support automatically redials after disconnection
 - Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and so on
 
-## 4. Architecture
+## 4. Design
 
 ### 4.1 Keywords
 
@@ -152,8 +152,31 @@ type (
     // NewBodyFunc creates a new body by header info.
     NewBodyFunc func(seq uint64, ptype byte, uri string) interface{}
 )
+```
 
-// in xfer package
+### 4.3 Codec
+
+The body's codec set.
+
+```go
+type Codec interface {
+    // Id returns codec id.
+    Id() byte
+    // Name returns codec name.
+    Name() string
+    // Marshal returns the encoding of v.
+    Marshal(v interface{}) ([]byte, error)
+    // Unmarshal parses the encoded data and stores the result
+    // in the value pointed to by v.
+    Unmarshal(data []byte, v interface{}) error
+}
+```
+
+### 4.4 XferPipe
+
+Transfer filter pipe, handles byte stream of packet when transfer.
+
+```go
 type (
     // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
     // Note: the length can not be bigger than 255!
@@ -169,7 +192,24 @@ type (
 )
 ```
 
-### 4.3 Protocol
+### 4.5 Plugin
+
+Plug-ins during runtime.
+
+type (
+    // Plugin plugin background
+    Plugin interface {
+        Name() string
+    }
+    // PreNewPeerPlugin is executed before creating peer.
+    PreNewPeerPlugin interface {
+        Plugin
+        PreNewPeer(*PeerConfig, *PluginContainer) error
+    }
+    ...
+)
+
+### 4.6 Protocol
 
 You can customize your own communication protocol by implementing the interface:
 
@@ -517,7 +557,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
 | [ant](https://github.com/henrylee2cn/ant) | Ant is a simple and flexible microservice framework based on Teleport |
-| [ants](https://github.com/xiaoenai/ants) | Ants is set of highly available microservices architecture based on Ant and Teleport framework |
+| [ants](https://github.com/xiaoenai/ants) | Ants is a highly available microservice platform based on Ant and Teleport |
 | [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus is a distributed, high concurrency and powerful web crawler software |
 
 ## 9. Business Users
