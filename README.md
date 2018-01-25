@@ -196,6 +196,7 @@ type (
 
 Plug-ins during runtime.
 
+```go
 type (
     // Plugin plugin background
     Plugin interface {
@@ -208,6 +209,7 @@ type (
     }
     ...
 )
+```
 
 ### 4.6 Protocol
 
