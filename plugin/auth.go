@@ -61,6 +61,9 @@ func (a *auth) Name() string {
 }
 
 func (a *auth) PostDial(sess tp.EarlySession) *tp.Rerror {
+	if a.generateAuthInfoFunc == nil {
+		return nil
+	}
 	rerr := sess.Send(authURI, a.generateAuthInfoFunc(), nil, socket.WithBodyCodec('s'))
 	if rerr != nil {
 		return rerr
@@ -72,6 +75,9 @@ func (a *auth) PostDial(sess tp.EarlySession) *tp.Rerror {
 }
 
 func (a *auth) PostAccept(sess tp.EarlySession) *tp.Rerror {
+	if a.verifyAuthInfoFunc == nil {
+		return nil
+	}
 	input, rerr := sess.Receive(func(header socket.Header) interface{} {
 		if header.Uri() == authURI {
 			return new(string)
