@@ -6,7 +6,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 可用于Peer-Peer对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
 
 
-![Teleport-Architecture](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_architecture.png)
+![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_framework.png)
 
 
 ## 性能测试
@@ -86,7 +86,7 @@ go get -u github.com/henrylee2cn/teleport
 - 客户端的Session支持断线后自动重连
 - 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket`等
 
-## 4. 架构
+## 4. 框架设计
 
 ### 4.1 名称解释
 
@@ -167,8 +167,63 @@ type (
     }
 )
 ```
+### 4.3 编解码器
 
-### 4.3 通信协议
+数据包中Body内容的编解码器。
+
+```go
+type Codec interface {
+    // Id returns codec id.
+    Id() byte
+    // Name returns codec name.
+    Name() string
+    // Marshal returns the encoding of v.
+    Marshal(v interface{}) ([]byte, error)
+    // Unmarshal parses the encoded data and stores the result
+    // in the value pointed to by v.
+    Unmarshal(data []byte, v interface{}) error
+}
+```
+
+### 4.4 过滤管道
+
+传输数据的过滤管道。
+
+```go
+type (
+    // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
+    // Note: the length can not be bigger than 255!
+    XferPipe struct {
+        filters []XferFilter
+    }
+    // XferFilter handles byte stream of packet when transfer.
+    XferFilter interface {
+        Id() byte
+        OnPack([]byte) ([]byte, error)
+        OnUnpack([]byte) ([]byte, error)
+    }
+)
+```
+
+### 4.5 插件
+
+运行过程中以挂载方式执行的插件。
+
+type (
+    // Plugin plugin background
+    Plugin interface {
+        Name() string
+    }
+    // PreNewPeerPlugin is executed before creating peer.
+    PreNewPeerPlugin interface {
+        Plugin
+        PreNewPeer(*PeerConfig, *PluginContainer) error
+    }
+    ...
+)
+
+
+### 4.6 通信协议
 
 支持通过接口定制自己的通信协议：
 
