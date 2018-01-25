@@ -570,7 +570,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
 | [ant](https://github.com/henrylee2cn/ant) | Ant 是一套简单、灵活的基于 Teleport 的微服务框架          |
-| [ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 Ant 和 Teleport 的高可用的微服务架构解决方案 |
+| [ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 Ant 和 Teleport 的高可用的微服务平台解决方案 |
 | [pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具 |
 
 ## 9. 企业用户
