@@ -439,6 +439,7 @@ func WithPtype(ptype byte) PacketSetting {
 func WithUri(uri string) PacketSetting {
 	return func(p *Packet) {
 		p.uri = uri
+		p.url = nil
 	}
 }
 
