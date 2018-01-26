@@ -72,7 +72,7 @@ import (
 type (
 	// Router the router of pull or push handlers.
 	Router struct {
-		*SubRouter
+		subRouter *SubRouter
 	}
 	// SubRouter without the SetUnknownPull and SetUnknownPush methods
 	SubRouter struct {
@@ -110,7 +110,7 @@ const (
 func newRouter(rootGroup string, pluginContainer *PluginContainer) *Router {
 	rootGroup = path.Join("/", rootGroup)
 	root := &Router{
-		SubRouter: &SubRouter{
+		subRouter: &SubRouter{
 			handlers:        make(map[string]*Handler),
 			unknownPull:     new(*Handler),
 			unknownPush:     new(*Handler),
@@ -118,18 +118,23 @@ func newRouter(rootGroup string, pluginContainer *PluginContainer) *Router {
 			pluginContainer: pluginContainer,
 		},
 	}
-	root.SubRouter.root = root
+	root.subRouter.root = root
 	return root
 }
 
-// Root returns the root router which is added the SetUnknownPull and SetUnknownPush methods.
+// Root returns the root router.
 func (r *SubRouter) Root() *Router {
 	return r.root
 }
 
-// WithUnknown converts to the router which is added the SetUnknownPull and SetUnknownPush methods.
-func (r *SubRouter) WithUnknown() *Router {
-	return &Router{r}
+// ToRouter converts to the router which is added the SetUnknownPull and SetUnknownPush methods.
+func (r *SubRouter) ToRouter() *Router {
+	return &Router{subRouter: r}
+}
+
+// SubRoute adds handler group.
+func (r *Router) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
+	return r.subRouter.SubRoute(pathPrefix, plugin...)
 }
 
 // SubRoute adds handler group.
@@ -147,8 +152,18 @@ func (r *SubRouter) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 }
 
 // RoutePull registers PULL handler.
+func (r *Router) RoutePull(ctrlStruct interface{}, plugin ...Plugin) {
+	r.subRouter.RoutePull(ctrlStruct, plugin...)
+}
+
+// RoutePull registers PULL handler.
 func (r *SubRouter) RoutePull(ctrlStruct interface{}, plugin ...Plugin) {
 	r.reg(pnPull, pullHandlersMaker, ctrlStruct, plugin)
+}
+
+// RoutePush registers PUSH handler.
+func (r *Router) RoutePush(ctrlStruct interface{}, plugin ...Plugin) {
+	r.subRouter.RoutePush(ctrlStruct, plugin...)
 }
 
 // RoutePush registers PUSH handler.
@@ -186,7 +201,7 @@ func (r *SubRouter) reg(
 // SetUnknownPull sets the default handler,
 // which is called when no handler for PULL is found.
 func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
-	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
+	pluginContainer := r.subRouter.pluginContainer.cloneAppendRight(plugin...)
 	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
@@ -208,18 +223,18 @@ func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), 
 		},
 	}
 
-	if *r.unknownPull == nil {
+	if *r.subRouter.unknownPull == nil {
 		Printf("set %s handler", h.name)
 	} else {
 		Warnf("covered %s handler", h.name)
 	}
-	r.unknownPull = &h
+	r.subRouter.unknownPull = &h
 }
 
 // SetUnknownPush sets the default handler,
 // which is called when no handler for PUSH is found.
 func (r *Router) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
-	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
+	pluginContainer := r.subRouter.pluginContainer.cloneAppendRight(plugin...)
 	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
@@ -232,12 +247,12 @@ func (r *Router) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugi
 		},
 	}
 
-	if *r.unknownPush == nil {
+	if *r.subRouter.unknownPush == nil {
 		Printf("set %s handler", h.name)
 	} else {
 		Warnf("covered %s handler", h.name)
 	}
-	r.unknownPush = &h
+	r.subRouter.unknownPush = &h
 }
 
 func (r *SubRouter) getPull(uriPath string) (*Handler, bool) {

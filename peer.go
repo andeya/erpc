@@ -485,9 +485,9 @@ func (p *peer) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
 // maybe useful
 
 func (p *peer) getPullHandler(uriPath string) (*Handler, bool) {
-	return p.router.getPull(uriPath)
+	return p.router.subRouter.getPull(uriPath)
 }
 
 func (p *peer) getPushHandler(uriPath string) (*Handler, bool) {
-	return p.router.getPush(uriPath)
+	return p.router.subRouter.getPush(uriPath)
 }

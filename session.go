@@ -141,8 +141,8 @@ var (
 func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
 	var s = &session{
 		peer:           peer,
-		getPullHandler: peer.router.getPull,
-		getPushHandler: peer.router.getPush,
+		getPullHandler: peer.router.subRouter.getPull,
+		getPushHandler: peer.router.subRouter.getPush,
 		timeSince:      peer.timeSince,
 		timeNow:        peer.timeNow,
 		conn:           conn,
