@@ -4,6 +4,7 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
@@ -26,6 +27,7 @@ func main() {
 			"/group/home/test?peer_id=call-1",
 			[]byte("pull text"),
 			&reply,
+			socket.WithQuery("a", "1"),
 		).Rerror(); rerr != nil {
 			tp.Errorf("pull error: %v", rerr)
 			time.Sleep(time.Second * 2)
@@ -39,6 +41,7 @@ func main() {
 		"/group/home/test_unknown?peer_id=call-2",
 		[]byte("unknown pull text"),
 		&reply,
+		socket.WithQuery("b", "2"),
 	).Rerror()
 	if tp.IsConnRerror(rerr) {
 		tp.Fatalf("has conn rerror: %v", rerr)
