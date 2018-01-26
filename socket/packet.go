@@ -442,6 +442,19 @@ func WithUri(uri string) PacketSetting {
 	}
 }
 
+// WithQuery sets the packet URL query parameter.
+func WithQuery(key, value string) PacketSetting {
+	return func(p *Packet) {
+		if p.url == nil {
+			p.url, _ = url.Parse(p.uri)
+		}
+		v := p.url.Query()
+		v.Add(key, value)
+		p.url.RawQuery = v.Encode()
+		p.uri = p.url.String()
+	}
+}
+
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
 func WithAddMeta(key, value string) PacketSetting {
