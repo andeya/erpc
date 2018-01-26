@@ -289,16 +289,16 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 ### 5.2 PullController模板示例
 
 ```go
-type XxxPullController struct {
+type Aaa struct {
     tp.PullCtx
 }
 // XxZz register the route: /aaa/xx_zz
-func (x *XxxPullController) XxZz(args *<T>) (<T>, *tp.Rerror) {
+func (x *Aaa) XxZz(args *<T>) (<T>, *tp.Rerror) {
     ...
     return r, nil
 }
 // YyZz register the route: /aaa/yy_zz
-func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
+func (x *Aaa) YyZz(args *<T>) (<T>, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -307,16 +307,16 @@ func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
 ### 5.3 PushController模板示例
 
 ```go
-type XxxPushController struct {
+type Bbb struct {
     tp.PushCtx
 }
 // XxZz register the route: /bbb/yy_zz
-func (b *XxxPushController) XxZz(args *<T>) *tp.Rerror {
+func (b *Bbb) XxZz(args *<T>) *tp.Rerror {
     ...
     return r, nil
 }
 // YyZz register the route: /bbb/yy_zz
-func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
+func (b *Bbb) YyZz(args *<T>) *tp.Rerror {
     ...
     return r, nil
 }
@@ -325,7 +325,7 @@ func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
 ### 5.4 UnknownPullHandler模板示例
 
 ```go
-func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -334,7 +334,7 @@ func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 ### 5.5 UnknownPushHandler模板示例
 
 ```go
-func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
+func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
     ...
     return nil
 }
@@ -378,10 +378,10 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 // add router group
 group := peer.SubRoute("test")
 // register to test group
-group.RoutePull(new(XxxPullController), NewIgnoreCase())
-group.RoutePush(new(XxxPushController))
-peer.SetUnknownPull(XxxUnknownPullHandler)
-peer.SetUnknownPush(XxxUnknownPushHandler)
+group.RoutePull(new(Aaa), NewIgnoreCase())
+group.RoutePush(new(Bbb))
+peer.SetUnknownPull(XxxUnknownPull)
+peer.SetUnknownPush(XxxUnknownPush)
 ```
 
 ### 5.8 配置信息
