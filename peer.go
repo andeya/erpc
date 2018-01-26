@@ -58,8 +58,10 @@ type (
 	// EarlyPeer the communication peer that has just been created
 	EarlyPeer interface {
 		BasePeer
+		// Router returns the root router of pull or push handlers.
+		Router() *Router
 		// SubRoute adds handler group.
-		SubRoute(pathPrefix string, plugin ...Plugin) *Router
+		SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter
 		// RoutePull registers PULL handler.
 		RoutePull(ctrlStruct interface{}, plugin ...Plugin)
 		// RoutePush registers PUSH handler.
@@ -76,7 +78,7 @@ type (
 		Listen(protoFunc ...socket.ProtoFunc) error
 	}
 	peer struct {
-		rootRouter        *RootRouter
+		router            *Router
 		pluginContainer   *PluginContainer
 		sessHub           *SessionHub
 		closeCh           chan struct{}
@@ -120,7 +122,7 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) Peer {
 		Fatalf("%v", err)
 	}
 	var p = &peer{
-		rootRouter:         newRootRouter("/", pluginContainer),
+		router:             newRouter("/", pluginContainer),
 		pluginContainer:    pluginContainer,
 		sessHub:            newSessionHub(),
 		defaultSessionAge:  cfg.DefaultSessionAge,
@@ -448,39 +450,44 @@ func (p *peer) putContext(ctx *readHandleCtx, withWg bool) {
 	p.freeContext = ctx
 }
 
+// Router returns the root router of pull or push handlers.
+func (p *peer) Router() *Router {
+	return p.router
+}
+
 // SubRoute adds handler group.
-func (p *peer) SubRoute(pathPrefix string, plugin ...Plugin) *Router {
-	return p.rootRouter.SubRoute(pathPrefix, plugin...)
+func (p *peer) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
+	return p.router.SubRoute(pathPrefix, plugin...)
 }
 
 // RoutePull registers PULL handler.
 func (p *peer) RoutePull(ctrlStruct interface{}, plugin ...Plugin) {
-	p.rootRouter.RoutePull(ctrlStruct, plugin...)
+	p.router.RoutePull(ctrlStruct, plugin...)
 }
 
 // RoutePush registers PUSH handler.
 func (p *peer) RoutePush(ctrlStruct interface{}, plugin ...Plugin) {
-	p.rootRouter.RoutePush(ctrlStruct, plugin...)
+	p.router.RoutePush(ctrlStruct, plugin...)
 }
 
 // SetUnknownPull sets the default handler,
 // which is called when no handler for PULL is found.
 func (p *peer) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
-	p.rootRouter.SetUnknownPull(fn, plugin...)
+	p.router.SetUnknownPull(fn, plugin...)
 }
 
 // SetUnknownPush sets the default handler,
 // which is called when no handler for PUSH is found.
 func (p *peer) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
-	p.rootRouter.SetUnknownPush(fn, plugin...)
+	p.router.SetUnknownPush(fn, plugin...)
 }
 
 // maybe useful
 
 func (p *peer) getPullHandler(uriPath string) (*Handler, bool) {
-	return p.rootRouter.getPull(uriPath)
+	return p.router.getPull(uriPath)
 }
 
 func (p *peer) getPushHandler(uriPath string) (*Handler, bool) {
-	return p.rootRouter.getPush(uriPath)
+	return p.router.getPush(uriPath)
 }
