@@ -446,13 +446,12 @@ func WithUri(uri string) PacketSetting {
 // WithQuery sets the packet URL query parameter.
 func WithQuery(key, value string) PacketSetting {
 	return func(p *Packet) {
-		if p.url == nil {
-			p.url, _ = url.Parse(p.uri)
-		}
-		v := p.url.Query()
+		u := p.Url()
+		v := u.Query()
 		v.Add(key, value)
-		p.url.RawQuery = v.Encode()
-		p.uri = p.url.String()
+		u.RawQuery = v.Encode()
+		p.uri = u.String()
+		p.url = u
 	}
 }
 
