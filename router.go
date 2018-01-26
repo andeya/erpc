@@ -29,43 +29,43 @@ import (
 // Router the router of pull or push handlers.
 //
 // PullController Model Demo:
-//  type XxxPullController struct {
+//  type Aaa struct {
 //      tp.PullCtx
 //  }
 //  // XxZz register the route: /aaa/xx_zz
-//  func (x *XxxPullController) XxZz(args *<T>) (<T>, *tp.Rerror) {
+//  func (x *Aaa) XxZz(args *<T>) (<T>, *tp.Rerror) {
 //      ...
 //      return r, nil
 //  }
 //  // YyZz register the route: /aaa/yy_zz
-//  func (x *XxxPullController) YyZz(args *<T>) (<T>, *tp.Rerror) {
+//  func (x *Aaa) YyZz(args *<T>) (<T>, *tp.Rerror) {
 //      ...
 //      return r, nil
 //  }
 //
 // PushController Model Demo:
-//  type XxxPushController struct {
+//  type Bbb struct {
 //      tp.PushCtx
 //  }
 //  // XxZz register the route: /bbb/yy_zz
-//  func (b *XxxPushController) XxZz(args *<T>) *tp.Rerror {
+//  func (b *Bbb) XxZz(args *<T>) *tp.Rerror {
 //      ...
 //      return r, nil
 //  }
 //  // YyZz register the route: /bbb/yy_zz
-//  func (b *XxxPushController) YyZz(args *<T>) *tp.Rerror {
+//  func (b *Bbb) YyZz(args *<T>) *tp.Rerror {
 //      ...
 //      return r, nil
 //  }
 //
 // UnknownPullHandler Type Demo:
-//  func XxxUnknownPullHandler (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+//  func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 //      ...
 //      return r, nil
 //  }
 //
 // UnknownPushHandler Type Demo:
-//  func XxxUnknownPushHandler(ctx tp.UnknownPushCtx) *tp.Rerror {
+//  func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 //      ...
 //      return nil
 //  }
