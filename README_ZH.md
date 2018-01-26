@@ -46,12 +46,6 @@ Teleport是一个通用、高效、灵活的Socket框架。
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
-
-![tp_socket_cpu_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.png)
-
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_torch.svg)**
-
-
 - CPU耗时火焰图 teleport/socket
 
 ![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
