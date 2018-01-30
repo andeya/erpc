@@ -221,6 +221,8 @@ func (s *session) Send(packet *socket.Packet, writeTimeout ...time.Duration) err
 			t = s.peer.timeNow().Add(writeTimeout[0])
 		}
 		s.socket.SetWriteDeadline(t)
+	} else if wt := s.WriteTimeout(); wt > 0 {
+		s.socket.SetWriteDeadline(coarsetime.CeilingTimeNow().Add(wt))
 	}
 	return s.socket.WritePacket(packet)
 }
@@ -233,6 +235,8 @@ func (s *session) Receive(packet *socket.Packet, readTimeout ...time.Duration) e
 			t = s.peer.timeNow().Add(readTimeout[0])
 		}
 		s.socket.SetReadDeadline(t)
+	} else if rt := s.ReadTimeout(); rt > 0 {
+		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(rt))
 	}
 	return s.socket.ReadPacket(packet)
 }
