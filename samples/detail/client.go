@@ -14,6 +14,7 @@ func main() {
 	var peer = tp.NewPeer(tp.PeerConfig{
 		SlowCometDuration: time.Millisecond * 500,
 		// DefaultBodyCodec:    "json",
+		// DefaultContextAge: time.Second * 5,
 		PrintBody:   true,
 		CountTime:   true,
 		RedialTimes: 3,

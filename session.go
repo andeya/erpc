@@ -114,7 +114,6 @@ type (
 		seq                            uint64
 		seqLock                        sync.Mutex
 		pullCmdMap                     goutil.Map
-		conn                           net.Conn
 		protoFuncs                     []socket.ProtoFunc
 		socket                         socket.Socket
 		status                         int32 // 0:ok, 1:active closed, 2:disconnect
@@ -126,9 +125,10 @@ type (
 		contextAge                     time.Duration
 		sessionAgeLock                 sync.RWMutex
 		contextAgeLock                 sync.RWMutex
+		conn                           net.Conn
+		connLock                       sync.RWMutex
 		// only for client role
-		redialForClientFunc func() bool
-		redialLock          sync.Mutex
+		redialForClientFunc func(oldConn net.Conn) bool
 	}
 )
 
@@ -180,7 +180,10 @@ func (s *session) SetId(newId string) {
 
 // Conn returns the connection.
 func (s *session) Conn() net.Conn {
-	return s.conn
+	s.connLock.RLock()
+	c := s.conn
+	s.connLock.RUnlock()
+	return c
 }
 
 // ResetConn resets the connection.
@@ -188,6 +191,8 @@ func (s *session) Conn() net.Conn {
 // only reset net.Conn, but not reset socket.ProtoFunc;
 // inherit the previous session id.
 func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
+	s.connLock.Lock()
+	defer s.connLock.Unlock()
 	s.conn = conn
 	id := s.Id()
 	if len(protoFunc) > 0 {
@@ -273,14 +278,13 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 	if rerr != nil {
 		rerr.SetToMeta(output.Meta())
 	}
-	err := s.socket.WritePacket(output)
-	socket.PutPacket(output)
-	if err != nil {
-		rerr := rerrConnClosed.Copy()
-		rerr.Detail = err.Error()
-		return rerr
+	if age := s.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(output.Context(), age)
+		socket.WithContext(ctxTimout)(output)
 	}
-	return nil
+	_, rerr = s.write(output)
+	socket.PutPacket(output)
+	return rerr
 }
 
 // Receive receives a packet from peer, before the formal connection.
@@ -288,9 +292,14 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.PacketSetting) (*socket.Packet, *Rerror) {
 	input := socket.GetPacket(setting...)
 	input.SetNewBody(newBodyFunc)
-	if readTimeout := s.SessionAge(); readTimeout > 0 {
-		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
+
+	if age := s.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(input.Context(), age)
+		socket.WithContext(ctxTimout)(input)
 	}
+	deadline, _ := input.Context().Deadline()
+	s.socket.SetReadDeadline(deadline)
+
 	if err := s.socket.ReadPacket(input); err != nil {
 		rerr := rerrConnClosed.Copy()
 		rerr.Detail = err.Error()
@@ -352,6 +361,9 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		})
 	}
 
+	cmd.mu.Lock()
+	defer cmd.mu.Unlock()
+
 	s.pullCmdMap.Store(seq, cmd)
 
 	defer func() {
@@ -365,18 +377,10 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		cmd.done()
 		return
 	}
-
+	var usedConn net.Conn
 W:
-	cmd.rerr = s.write(output)
-	if cmd.rerr != nil {
-		if cmd.rerr == rerrConnClosed && s.redialForClient() {
-			s.pullCmdMap.Delete(seq)
-			s.seqLock.Lock()
-			seq = s.seq
-			s.seq++
-			s.seqLock.Unlock()
-			output.SetSeq(seq)
-			s.pullCmdMap.Store(seq, cmd)
+	if usedConn, cmd.rerr = s.write(output); cmd.rerr != nil {
+		if cmd.rerr == rerrConnClosed && s.redialForClient(usedConn) {
 			goto W
 		}
 		cmd.done()
@@ -439,13 +443,10 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 		return rerr
 	}
 
+	var usedConn net.Conn
 W:
-	if rerr = s.write(output); rerr != nil {
-		if rerr == rerrConnClosed && s.redialForClient() {
-			s.seqLock.Lock()
-			output.SetSeq(s.seq)
-			s.seq++
-			s.seqLock.Unlock()
+	if usedConn, rerr = s.write(output); rerr != nil {
+		if rerr == rerrConnClosed && s.redialForClient(usedConn) {
 			goto W
 		}
 		return rerr
@@ -473,10 +474,13 @@ func (s *session) startReadAndHandle() {
 		ctxTimout, _ := context.WithTimeout(context.Background(), readTimeout)
 		withContext = socket.WithContext(ctxTimout)
 	} else {
+		s.socket.SetReadDeadline(time.Time{})
 		withContext = socket.WithContext(nil)
 	}
 
-	var err error
+	var (
+		err error
+	)
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("%v\n%s", p, goutil.PanicTrace(2))
@@ -512,11 +516,46 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-func (s *session) write(packet *socket.Packet) *Rerror {
+func (s *session) readDisconnected(err error) {
+	status := s.getStatus()
+	if status == statusActiveClosed {
+		return
+	}
+	// Notice passively closed
+	s.passivelyClosed()
+	s.peer.sessHub.Delete(s.Id())
+
+	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
+		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
+	}
+	s.graceCtxWaitGroup.Wait()
+
+	// cancel the pullCmd that is waiting for a reply
+	s.pullCmdMap.Range(func(_, v interface{}) bool {
+		pullCmd := v.(*pullCmd)
+		pullCmd.mu.Lock()
+		if !pullCmd.hasReply() && pullCmd.rerr == nil {
+			pullCmd.cancel()
+		}
+		pullCmd.mu.Unlock()
+		return true
+	})
+
+	if status == statusActiveClosing {
+		return
+	}
+
+	s.socket.Close()
+
+	s.peer.pluginContainer.PostDisconnect(s)
+}
+
+func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
+	conn := s.Conn()
 	status := s.getStatus()
 	if status != statusOk &&
 		!(status == statusActiveClosing && packet.Ptype() == TypeReply) {
-		return rerrConnClosed
+		return conn, rerrConnClosed
 	}
 
 	var (
@@ -545,26 +584,17 @@ func (s *session) write(packet *socket.Packet) *Rerror {
 	}
 
 	if err == nil {
-		return nil
+		return conn, nil
 	}
 
 	if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
-		rerr = rerrConnClosed
-		if s.redialForClientFunc != nil {
-			// Wait for the status to change
-		W:
-			if s.isOk() {
-				time.Sleep(time.Millisecond)
-				goto W
-			}
-		}
-		return rerr
+		return conn, rerrConnClosed
 	}
 
 ERR:
 	rerr = rerrWriteFailed.Copy()
 	rerr.Detail = err.Error()
-	return rerr
+	return conn, rerr
 }
 
 const (
@@ -651,55 +681,11 @@ func (s *session) Close() error {
 	return err
 }
 
-func (s *session) readDisconnected(err error) {
-	status := s.getStatus()
-	if status == statusActiveClosed {
-		return
-	}
-	// Notice passively closed
-	s.passivelyClosed()
-	s.peer.sessHub.Delete(s.Id())
-
-	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
-		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
-	}
-	s.graceCtxWaitGroup.Wait()
-
-	if s.redialForClientFunc == nil || status == statusActiveClosing {
-		s.pullCmdMap.Range(func(_, v interface{}) bool {
-			pullCmd := v.(*pullCmd)
-			pullCmd.cancel()
-			return true
-		})
-	}
-
-	if status == statusActiveClosing {
-		return
-	}
-
-	s.socket.Close()
-	s.peer.pluginContainer.PostDisconnect(s)
-
-	if !s.redialForClient() {
-		s.pullCmdMap.Range(func(_, v interface{}) bool {
-			pullCmd := v.(*pullCmd)
-			pullCmd.cancel()
-			return true
-		})
-	}
-}
-
-func (s *session) redialForClient() bool {
+func (s *session) redialForClient(oldConn net.Conn) bool {
 	if s.redialForClientFunc == nil {
 		return false
 	}
-	s.redialLock.Lock()
-	defer s.redialLock.Unlock()
-	status := s.getStatus()
-	if status == statusOk || status == statusActiveClosed || status == statusActiveClosing {
-		return true
-	}
-	return s.redialForClientFunc()
+	return s.redialForClientFunc(oldConn)
 }
 
 // SessionHub sessions hub
