@@ -57,9 +57,9 @@ type (
 		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
 		// Send sends packet to peer.
-		Send(packet *socket.Packet) error
+		Send(packet *socket.Packet, writeTimeout ...time.Duration) error
 		// Receive receives a packet from peer.
-		Receive(packet *socket.Packet) error
+		Receive(packet *socket.Packet, readTimeout ...time.Duration) error
 	}
 	Session interface {
 		// SetId sets the session id.
@@ -214,12 +214,26 @@ func (s *session) SetWriteTimeout(duration time.Duration) {
 }
 
 // Send sends packet to peer.
-func (s *session) Send(packet *socket.Packet) error {
+func (s *session) Send(packet *socket.Packet, writeTimeout ...time.Duration) error {
+	if len(writeTimeout) > 0 {
+		var t time.Time
+		if writeTimeout[0] > 0 {
+			t = s.peer.timeNow().Add(writeTimeout[0])
+		}
+		s.socket.SetWriteDeadline(t)
+	}
 	return s.socket.WritePacket(packet)
 }
 
 // Receive receives a packet from peer.
-func (s *session) Receive(packet *socket.Packet) error {
+func (s *session) Receive(packet *socket.Packet, readTimeout ...time.Duration) error {
+	if len(readTimeout) > 0 {
+		var t time.Time
+		if readTimeout[0] > 0 {
+			t = s.peer.timeNow().Add(readTimeout[0])
+		}
+		s.socket.SetReadDeadline(t)
+	}
 	return s.socket.ReadPacket(packet)
 }
 
