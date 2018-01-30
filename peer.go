@@ -253,6 +253,11 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 				if err == nil {
 					return true
 				}
+				// if i > 1 {
+				// 	Warnf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteIp(), sess.Id(), err.Error())
+				// 	// Debug:
+				// 	time.Sleep(5e9)
+				// }
 			}
 			if err != nil {
 				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteIp(), sess.Id(), err.Error())

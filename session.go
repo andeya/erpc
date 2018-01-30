@@ -479,13 +479,14 @@ func (s *session) startReadAndHandle() {
 	}
 
 	var (
-		err error
+		err     error
+		oldConn = s.Conn()
 	)
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("%v\n%s", p, goutil.PanicTrace(2))
 		}
-		s.readDisconnected(err)
+		s.readDisconnected(oldConn, err)
 	}()
 
 	// read pull, pull reple or push
@@ -516,7 +517,7 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-func (s *session) readDisconnected(err error) {
+func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	status := s.getStatus()
 	if status == statusActiveClosed {
 		return
@@ -547,7 +548,9 @@ func (s *session) readDisconnected(err error) {
 
 	s.socket.Close()
 
-	s.peer.pluginContainer.PostDisconnect(s)
+	if !s.redialForClient(oldConn) {
+		s.peer.pluginContainer.PostDisconnect(s)
+	}
 }
 
 func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
