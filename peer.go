@@ -238,8 +238,15 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 		conn = tls.Client(conn, p.tlsConfig)
 	}
 	var sess = newSession(p, conn, protoFuncs)
+
+	// create redial func
 	if p.redialTimes > 0 {
-		sess.redialForClientFunc = func() bool {
+		sess.redialForClientFunc = func(oldConn net.Conn) bool {
+			sess.connLock.Lock()
+			defer sess.connLock.Unlock()
+			if oldConn != sess.conn {
+				return true
+			}
 			var err error
 			for i := p.redialTimes; i > 0; i-- {
 				err = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
@@ -253,6 +260,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 			return false
 		}
 	}
+
 	sess.socket.SetId(sess.LocalIp())
 	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
 		sess.Close()
@@ -274,6 +282,7 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	}
 	oldIp := sess.LocalIp()
 	oldId := sess.Id()
+	sess.conn = conn
 	sess.socket.Reset(conn, protoFuncs...)
 	if oldIp == oldId {
 		sess.socket.SetId(sess.LocalIp())

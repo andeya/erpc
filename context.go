@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/url"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/henrylee2cn/goutil"
@@ -560,7 +561,7 @@ func (c *readHandleCtx) handlePull() {
 	if rerr == nil {
 		c.handleErr = rerr
 	}
-	rerr = c.sess.write(c.output)
+	_, rerr = c.sess.write(c.output)
 	if rerr != nil {
 		if c.handleErr == nil {
 			c.handleErr = rerr
@@ -582,7 +583,12 @@ func (c *readHandleCtx) bindReply(header socket.Header) interface{} {
 		return nil
 	}
 	c.pullCmd = _pullCmd.(*pullCmd)
+
+	// unlock: handleReply
+	c.pullCmd.mu.Lock()
+
 	c.public = c.pullCmd.public
+	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
 	c.pullCmd.inputMeta = c.CopyMeta()
 	c.setContext(c.pullCmd.output.Context())
 
@@ -604,6 +610,10 @@ func (c *readHandleCtx) handleReply() {
 	if c.pullCmd == nil {
 		return
 	}
+
+	// lock: bindReply
+	defer c.pullCmd.mu.Unlock()
+
 	defer func() {
 		c.handleErr = c.pullCmd.rerr
 		c.pullCmd.done()
@@ -689,6 +699,7 @@ type (
 		start     time.Time
 		cost      time.Duration
 		public    goutil.Map
+		mu        sync.Mutex
 	}
 )
 
@@ -780,6 +791,11 @@ func (p *pullCmd) cancel() {
 	p.doneChan <- p
 	// free count pull-launch
 	p.sess.gracepullCmdWaitGroup.Done()
+}
+
+// if pullCmd.inputMeta!=nil, means the pullCmd is replyed.
+func (p *pullCmd) hasReply() bool {
+	return p.inputMeta != nil
 }
 
 func (p *pullCmd) done() {
