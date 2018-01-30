@@ -215,29 +215,25 @@ func (s *session) SetWriteTimeout(duration time.Duration) {
 
 // Send sends packet to peer.
 func (s *session) Send(packet *socket.Packet, writeTimeout ...time.Duration) error {
-	if len(writeTimeout) > 0 {
-		var t time.Time
-		if writeTimeout[0] > 0 {
-			t = s.peer.timeNow().Add(writeTimeout[0])
-		}
-		s.socket.SetWriteDeadline(t)
+	var t time.Time
+	if len(writeTimeout) > 0 && writeTimeout[0] > 0 {
+		t = coarsetime.CeilingTimeNow().Add(writeTimeout[0])
 	} else if wt := s.WriteTimeout(); wt > 0 {
-		s.socket.SetWriteDeadline(coarsetime.CeilingTimeNow().Add(wt))
+		t = coarsetime.CeilingTimeNow().Add(wt)
 	}
+	s.socket.SetWriteDeadline(t)
 	return s.socket.WritePacket(packet)
 }
 
 // Receive receives a packet from peer.
 func (s *session) Receive(packet *socket.Packet, readTimeout ...time.Duration) error {
-	if len(readTimeout) > 0 {
-		var t time.Time
-		if readTimeout[0] > 0 {
-			t = s.peer.timeNow().Add(readTimeout[0])
-		}
-		s.socket.SetReadDeadline(t)
+	var t time.Time
+	if len(readTimeout) > 0 && readTimeout[0] > 0 {
+		t = coarsetime.CeilingTimeNow().Add(readTimeout[0])
 	} else if rt := s.ReadTimeout(); rt > 0 {
-		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(rt))
+		t = coarsetime.CeilingTimeNow().Add(rt)
 	}
+	s.socket.SetReadDeadline(t)
 	return s.socket.ReadPacket(packet)
 }
 
