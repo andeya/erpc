@@ -528,12 +528,12 @@ func (s *session) getStatus() int32 {
 // Close closes the session.
 func (s *session) Close() error {
 	s.lock.Lock()
-	defer s.lock.Unlock()
 
 	s.statusLock.Lock()
 	status := s.getStatus()
 	if status != statusOk {
 		s.statusLock.Unlock()
+		s.lock.Unlock()
 		return nil
 	}
 	s.activelyClosing()
@@ -552,6 +552,7 @@ func (s *session) Close() error {
 	s.statusLock.Unlock()
 
 	err := s.socket.Close()
+	s.lock.Unlock()
 
 	s.peer.pluginContainer.PostDisconnect(s)
 	return err
