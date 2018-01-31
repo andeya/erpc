@@ -602,6 +602,10 @@ func (s *session) redialForClient(oldConn net.Conn) bool {
 	if s.redialForClientFunc == nil {
 		return false
 	}
+	status := s.getStatus()
+	if status == statusActiveClosed || status == statusActiveClosing {
+		return false
+	}
 	return s.redialForClientFunc(oldConn)
 }
 
