@@ -118,7 +118,6 @@ type (
 		socket                         socket.Socket
 		status                         int32 // 0:ok, 1:active closed, 2:disconnect
 		statusLock                     sync.Mutex
-		closeLock                      sync.RWMutex
 		writeLock                      sync.Mutex
 		graceCtxWaitGroup              sync.WaitGroup
 		gracepullCmdWaitGroup          sync.WaitGroup
@@ -127,9 +126,9 @@ type (
 		sessionAgeLock                 sync.RWMutex
 		contextAgeLock                 sync.RWMutex
 		conn                           net.Conn
-		connLock                       sync.RWMutex
+		lock                           sync.RWMutex
 		// only for client role
-		redialForClientFunc func(oldConn net.Conn) bool
+		redialForClientLocked func(oldConn net.Conn) bool
 	}
 )
 
@@ -181,9 +180,9 @@ func (s *session) SetId(newId string) {
 
 // Conn returns the connection.
 func (s *session) Conn() net.Conn {
-	s.connLock.RLock()
+	s.lock.RLock()
 	c := s.conn
-	s.connLock.RUnlock()
+	s.lock.RUnlock()
 	return c
 }
 
@@ -192,8 +191,8 @@ func (s *session) Conn() net.Conn {
 // only reset net.Conn, but not reset socket.ProtoFunc;
 // inherit the previous session id.
 func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
-	s.connLock.Lock()
-	defer s.connLock.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.conn = conn
 	id := s.Id()
 	if len(protoFunc) > 0 {
@@ -481,7 +480,7 @@ func (s *session) Health() bool {
 	if status == statusOk {
 		return true
 	}
-	if s.redialForClientFunc == nil {
+	if s.redialForClientLocked == nil {
 		return false
 	}
 	if status == statusPassiveClosed {
@@ -528,8 +527,8 @@ func (s *session) getStatus() int32 {
 
 // Close closes the session.
 func (s *session) Close() error {
-	s.closeLock.Lock()
-	defer s.closeLock.Unlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	s.statusLock.Lock()
 	status := s.getStatus()
@@ -599,14 +598,16 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 }
 
 func (s *session) redialForClient(oldConn net.Conn) bool {
-	if s.redialForClientFunc == nil {
+	if s.redialForClientLocked == nil {
 		return false
 	}
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	status := s.getStatus()
 	if status == statusActiveClosed || status == statusActiveClosing {
 		return false
 	}
-	return s.redialForClientFunc(oldConn)
+	return s.redialForClientLocked(oldConn)
 }
 
 func (s *session) startReadAndHandle() {
