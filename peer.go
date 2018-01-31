@@ -241,9 +241,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 
 	// create redial func
 	if p.redialTimes > 0 {
-		sess.redialForClientFunc = func(oldConn net.Conn) bool {
-			sess.connLock.Lock()
-			defer sess.connLock.Unlock()
+		sess.redialForClientLocked = func(oldConn net.Conn) bool {
 			if oldConn != sess.conn {
 				return true
 			}
