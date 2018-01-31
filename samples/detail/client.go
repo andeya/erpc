@@ -49,6 +49,8 @@ func main() {
 	}
 	tp.Infof("test: %#v", reply)
 
+	// sess.Close()
+
 	rerr = sess.Pull(
 		"/group/home/test_unknown?peer_id=call-2",
 		struct {
