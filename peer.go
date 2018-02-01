@@ -36,8 +36,8 @@ type Peer struct {
 	closeCh              chan struct{}
 	freeContext          *readHandleCtx
 	ctxLock              sync.Mutex
-	defaultReadTimeout   int32 // time.Duration // readdeadline for underlying net.Conn
-	defaultWriteTimeout  int32 // time.Duration // writedeadline for underlying net.Conn
+	defaultReadTimeout   time.Duration // readdeadline for underlying net.Conn
+	defaultWriteTimeout  time.Duration // writedeadline for underlying net.Conn
 	tlsConfig            *tls.Config
 	slowCometDuration    time.Duration
 	defaultHeaderCodec   string
@@ -72,8 +72,8 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		PushRouter:           newPushRouter(pluginContainer),
 		pluginContainer:      pluginContainer,
 		sessHub:              newSessionHub(),
-		defaultReadTimeout:   int32(cfg.DefaultReadTimeout),
-		defaultWriteTimeout:  int32(cfg.DefaultWriteTimeout),
+		defaultReadTimeout:   cfg.DefaultReadTimeout,
+		defaultWriteTimeout:  cfg.DefaultWriteTimeout,
 		closeCh:              make(chan struct{}),
 		slowCometDuration:    slowCometDuration,
 		defaultDialTimeout:   cfg.DefaultDialTimeout,

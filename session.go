@@ -131,8 +131,10 @@ type (
 		writeLock             sync.Mutex
 		graceCtxWaitGroup     sync.WaitGroup
 		gracePullCmdWaitGroup sync.WaitGroup
-		readTimeout           int32 // time.Duration
-		writeTimeout          int32 // time.Duration
+		readTimeout           time.Duration
+		readTimeoutLock       sync.RWMutex
+		writeTimeout          time.Duration
+		writeTimeoutLock      sync.RWMutex
 	}
 )
 
@@ -195,22 +197,32 @@ func (s *session) LocalIp() string {
 
 // ReadTimeout returns readdeadline for underlying net.Conn.
 func (s *session) ReadTimeout() time.Duration {
-	return time.Duration(atomic.LoadInt32(&s.readTimeout))
-}
-
-// WriteTimeout returns writedeadline for underlying net.Conn.
-func (s *session) WriteTimeout() time.Duration {
-	return time.Duration(atomic.LoadInt32(&s.writeTimeout))
+	s.readTimeoutLock.RLock()
+	t := s.readTimeout
+	s.readTimeoutLock.RUnlock()
+	return t
 }
 
 // ReadTimeout returns readdeadline for underlying net.Conn.
 func (s *session) SetReadTimeout(duration time.Duration) {
-	atomic.StoreInt32(&s.readTimeout, int32(duration))
+	s.readTimeoutLock.Lock()
+	s.readTimeout = duration
+	s.readTimeoutLock.Unlock()
+}
+
+// WriteTimeout returns writedeadline for underlying net.Conn.
+func (s *session) WriteTimeout() time.Duration {
+	s.writeTimeoutLock.RLock()
+	t := s.writeTimeout
+	s.writeTimeoutLock.RUnlock()
+	return t
 }
 
 // WriteTimeout returns writedeadline for underlying net.Conn.
 func (s *session) SetWriteTimeout(duration time.Duration) {
-	atomic.StoreInt32(&s.writeTimeout, int32(duration))
+	s.writeTimeoutLock.Lock()
+	s.writeTimeout = duration
+	s.writeTimeoutLock.Unlock()
 }
 
 // Send sends packet to peer.
