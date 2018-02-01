@@ -276,12 +276,6 @@ func (s *socket) Close() error {
 	if s.isActiveClosed() {
 		return nil
 	}
-	atomic.StoreInt32(&s.curState, activeClose)
-
-	var errs []error
-	if s.Conn != nil {
-		errs = append(errs, s.Conn.Close())
-	}
 
 	s.readMutex.Lock()
 	s.writeMutex.Lock()
@@ -289,9 +283,14 @@ func (s *socket) Close() error {
 		s.readMutex.Unlock()
 		s.writeMutex.Unlock()
 	}()
-
 	if s.isActiveClosed() {
 		return nil
+	}
+	atomic.StoreInt32(&s.curState, activeClose)
+
+	var errs []error
+	if s.Conn != nil {
+		errs = append(errs, s.Conn.Close())
 	}
 
 	s.closeGzipReader()
