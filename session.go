@@ -400,6 +400,9 @@ func (s *session) startReadAndHandle() {
 		s.Close()
 	}()
 
+	// by default, blocking mode is used
+	s.socket.SetReadDeadline(time.Time{})
+
 	// read pull, pull reple or push
 	for s.IsOk() {
 		var ctx = s.peer.getContext(s, false)
@@ -474,6 +477,8 @@ func (s *session) write(packet *socket.Packet) (err error) {
 
 	if writeTimeout > 0 {
 		s.socket.SetWriteDeadline(now.Add(writeTimeout))
+	} else {
+		s.socket.SetWriteDeadline(now)
 	}
 	err = s.socket.WritePacket(packet)
 	return err
