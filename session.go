@@ -534,7 +534,7 @@ func (s *session) readDisconnected(err error) {
 
 	atomic.StoreInt32(&s.disconnected, 1)
 
-	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
+	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket && atomic.LoadInt32(&s.closed) != 1 {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
 	}
 
