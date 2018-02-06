@@ -17,6 +17,7 @@ package tp
 import (
 	"crypto/tls"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/henrylee2cn/goutil"
@@ -101,6 +102,10 @@ func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-func init() {
-	Printf("The current process PID: %d", os.Getpid())
+var printPidOnce sync.Once
+
+func doPrintPid() {
+	printPidOnce.Do(func() {
+		Printf("The current process PID: %d", os.Getpid())
+	})
 }
