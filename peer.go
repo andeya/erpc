@@ -115,6 +115,7 @@ var (
 
 // NewPeer creates a new peer.
 func NewPeer(cfg PeerConfig, plugin ...Plugin) Peer {
+	doPrintPid()
 	pluginContainer := newPluginContainer()
 	pluginContainer.AppendRight(plugin...)
 	pluginContainer.PreNewPeer(&cfg)
