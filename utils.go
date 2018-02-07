@@ -77,13 +77,17 @@ func NewFakePullCmd(p Peer, uri string, args, reply interface{}, rerr *Rerror) P
 		socket.WithUri(uri),
 		socket.WithBody(args),
 	)
-	return &pullCmd{
-		sess:   newSession(p.(*peer), nil, nil),
+	cmd := &pullCmd{
 		output: output,
 		reply:  reply,
 		public: goutil.RwMap(),
 		rerr:   rerr,
 	}
+
+	if peerObj, ok := p.(*peer); ok {
+		cmd.sess = newSession(peerObj, nil, nil)
+	}
+	return cmd
 }
 
 func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
