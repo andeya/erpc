@@ -658,22 +658,6 @@ func (c *readHandleCtx) Bind(v interface{}) (byte, error) {
 type (
 	// PullCmd the command of the pulling operation's response.
 	PullCmd interface {
-		// Peer returns the peer.
-		Peer() Peer
-		// Session returns the session.
-		Session() Session
-		// Id returns the session id.
-		Id() string
-		// RealId returns the real remote id.
-		RealId() string
-		// Ip returns the remote addr.
-		Ip() string
-		// RealIp returns the the current real remote addr.
-		RealIp() string
-		// Public returns temporary public data of context.
-		Public() goutil.Map
-		// PublicLen returns the length of public data of context.
-		PublicLen() int
 		// Output returns writed packet.
 		Output() *socket.Packet
 		// Context carries a deadline, a cancelation signal, and other values across
@@ -703,7 +687,7 @@ type (
 	}
 )
 
-var _ WriteCtx = PullCmd(nil)
+var _ WriteCtx = new(pullCmd)
 
 // Peer returns the peer.
 func (p *pullCmd) Peer() Peer {
