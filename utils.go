@@ -15,14 +15,15 @@
 package tp
 
 import (
+	"context"
 	"crypto/tls"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/pool"
 	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 // GetPacket gets a *Packet form packet stack.
@@ -70,26 +71,6 @@ TRYGO:
 	}
 }
 
-// NewFakePullCmd creates a fake PullCmd.
-func NewFakePullCmd(p Peer, uri string, args, reply interface{}, rerr *Rerror) PullCmd {
-	output := socket.NewPacket(
-		socket.WithPtype(TypePull),
-		socket.WithUri(uri),
-		socket.WithBody(args),
-	)
-	cmd := &pullCmd{
-		output: output,
-		reply:  reply,
-		public: goutil.RwMap(),
-		rerr:   rerr,
-	}
-
-	if peerObj, ok := p.(*peer); ok {
-		cmd.sess = newSession(peerObj, nil, nil)
-	}
-	return cmd
-}
-
 func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	var tlsConfig *tls.Config
 	if len(certFile) > 0 && len(keyFile) > 0 {
@@ -112,4 +93,57 @@ func doPrintPid() {
 	printPidOnce.Do(func() {
 		Printf("The current process PID: %d", os.Getpid())
 	})
+}
+
+type fakePullCmd struct {
+	output    *socket.Packet
+	reply     interface{}
+	rerr      *Rerror
+	inputMeta *utils.Args
+}
+
+// NewFakePullCmd creates a fake PullCmd.
+func NewFakePullCmd(uri string, args, reply interface{}, rerr *Rerror) PullCmd {
+	return &fakePullCmd{
+		output: socket.NewPacket(
+			socket.WithPtype(TypePull),
+			socket.WithUri(uri),
+			socket.WithBody(args),
+		),
+		reply:     reply,
+		rerr:      rerr,
+		inputMeta: utils.AcquireArgs(),
+	}
+}
+
+// Output returns writed packet.
+func (f *fakePullCmd) Output() *socket.Packet {
+	return f.output
+}
+
+// Context carries a deadline, a cancelation signal, and other values across
+// API boundaries.
+func (f *fakePullCmd) Context() context.Context {
+	return f.output.Context()
+}
+
+// Result returns the pull result.
+func (f *fakePullCmd) Result() (interface{}, *Rerror) {
+	return f.reply, f.rerr
+}
+
+// Rerror returns the pull error.
+func (f *fakePullCmd) Rerror() *Rerror {
+	return f.rerr
+}
+
+// InputMeta returns the header metadata of input packet.
+func (f *fakePullCmd) InputMeta() *utils.Args {
+	return f.inputMeta
+}
+
+// CostTime returns the pulled cost time.
+// If PeerConfig.CountTime=false, always returns 0.
+func (f *fakePullCmd) CostTime() time.Duration {
+	return 0
 }
