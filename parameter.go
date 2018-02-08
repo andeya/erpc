@@ -40,14 +40,14 @@ func TypeText(typ byte) string {
 // Internal Framework Rerror code.
 // Note: Recommended custom code is greater than 1000.
 const (
-	CodeUnknownError   = -1
-	CodeDialFailed     = 105
-	CodeConnClosed     = 102
-	CodeWriteFailed    = 104
-	CodeBadPacket      = 400
-	CodeNotFound       = 404
-	CodeHandleTimeout  = 408
-	CodeNotImplemented = 501
+	CodeUnknownError    = -1
+	CodeDialFailed      = 105
+	CodeConnClosed      = 102
+	CodeWriteFailed     = 104
+	CodeBadPacket       = 400
+	CodeNotFound        = 404
+	CodePtypeNotAllowed = 405
+	CodeHandleTimeout   = 408
 
 	// CodeConflict                      = 409
 	// CodeUnsupportedTx                 = 410
@@ -80,8 +80,8 @@ func CodeText(rerrCode int32) string {
 		return "Not Found"
 	case CodeHandleTimeout:
 		return "Handle Timeout"
-	case CodeNotImplemented:
-		return "Not Implemented"
+	case CodePtypeNotAllowed:
+		return "Packet Type Not Allowed"
 	case CodeUnknownError:
 		fallthrough
 	default:
@@ -91,14 +91,14 @@ func CodeText(rerrCode int32) string {
 
 // Internal Framework Rerror string.
 var (
-	rerrUnknownError       = NewRerror(CodeUnknownError, CodeText(CodeUnknownError), "")
-	rerrDialFailed         = NewRerror(CodeDialFailed, CodeText(CodeDialFailed), "")
-	rerrConnClosed         = NewRerror(CodeConnClosed, CodeText(CodeConnClosed), "")
-	rerrWriteFailed        = NewRerror(CodeWriteFailed, CodeText(CodeWriteFailed), "")
-	rerrBadPacket          = NewRerror(CodeBadPacket, CodeText(CodeBadPacket), "")
-	rerrNotFound           = NewRerror(CodeNotFound, CodeText(CodeNotFound), "")
-	rerrHandleTimeout      = NewRerror(CodeHandleTimeout, CodeText(CodeHandleTimeout), "")
-	rerrCodeNotImplemented = NewRerror(CodeNotImplemented, CodeText(CodeNotImplemented), "")
+	rerrUnknownError        = NewRerror(CodeUnknownError, CodeText(CodeUnknownError), "")
+	rerrDialFailed          = NewRerror(CodeDialFailed, CodeText(CodeDialFailed), "")
+	rerrConnClosed          = NewRerror(CodeConnClosed, CodeText(CodeConnClosed), "")
+	rerrWriteFailed         = NewRerror(CodeWriteFailed, CodeText(CodeWriteFailed), "")
+	rerrBadPacket           = NewRerror(CodeBadPacket, CodeText(CodeBadPacket), "")
+	rerrNotFound            = NewRerror(CodeNotFound, CodeText(CodeNotFound), "")
+	rerrCodePtypeNotAllowed = NewRerror(CodePtypeNotAllowed, CodeText(CodePtypeNotAllowed), "")
+	rerrHandleTimeout       = NewRerror(CodeHandleTimeout, CodeText(CodeHandleTimeout), "")
 )
 
 // IsConnRerror determines whether the error is a connection error

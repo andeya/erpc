@@ -378,14 +378,14 @@ func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
 	case TypePull:
 		return c.bindPull(header)
 	default:
-		c.handleErr = rerrCodeNotImplemented
+		c.handleErr = rerrCodePtypeNotAllowed
 		return nil
 	}
 }
 
 // Be executed asynchronously after readed packet
 func (c *readHandleCtx) handle() {
-	if c.handleErr != nil && c.handleErr.Code == CodeNotImplemented {
+	if c.handleErr != nil && c.handleErr.Code == CodePtypeNotAllowed {
 		goto E
 	}
 	switch c.input.Ptype() {
@@ -408,7 +408,7 @@ func (c *readHandleCtx) handle() {
 	}
 E:
 	// if unsupported, disconnected.
-	rerrCodeNotImplemented.SetToMeta(c.output.Meta())
+	rerrCodePtypeNotAllowed.SetToMeta(c.output.Meta())
 	if c.sess.peer.printBody {
 		logformat := "disconnect(%s) due to unsupported packet type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
 		Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size(), bodyLogBytes(c.input))
