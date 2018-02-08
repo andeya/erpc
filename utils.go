@@ -71,22 +71,6 @@ TRYGO:
 	}
 }
 
-func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
-	var tlsConfig *tls.Config
-	if len(certFile) > 0 && len(keyFile) > 0 {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			return nil, err
-		}
-		tlsConfig = &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			// NextProtos: []string{"http/1.1", "h2"},
-			PreferServerCipherSuites: true,
-		}
-	}
-	return tlsConfig, nil
-}
-
 var printPidOnce sync.Once
 
 func doPrintPid() {
