@@ -117,7 +117,8 @@ func Reboot(timeout ...time.Duration) {
 	graceful.Reboot(timeout...)
 }
 
-func listen(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
+// NewInheritListener creates a new listener that can be inherited on reboot.
+func NewInheritListener(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
 	lis, err := inherit_net.Listen(network, laddr)
 	if err != nil {
 		return nil, err
