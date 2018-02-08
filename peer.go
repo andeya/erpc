@@ -167,31 +167,9 @@ func (p *peer) SetTlsConfig(tlsConfig *tls.Config) {
 
 // SetTlsConfigFromFile sets the TLS config from file.
 func (p *peer) SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error {
-	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
-	if err != nil {
-		return err
-	}
-	p.tlsConfig = &tls.Config{
-		Certificates:             []tls.Certificate{cert},
-		NextProtos:               []string{"http/1.1", "h2"},
-		PreferServerCipherSuites: true,
-		CurvePreferences: []tls.CurveID{
-			tls.CurveP256,
-			tls.X25519,
-		},
-		MinVersion: tls.VersionTLS12,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-		},
-	}
-	return nil
+	var err error
+	p.tlsConfig, err = NewTlsConfigFromFile(tlsCertFile, tlsKeyFile)
+	return err
 }
 
 // GetSession gets the session by id.
@@ -309,7 +287,7 @@ var ErrListenClosed = errors.New("listener is closed")
 
 // Listen turns on the listening service.
 func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
-	lis, err := listen(p.network, p.listenAddr, p.tlsConfig)
+	lis, err := NewInheritListener(p.network, p.listenAddr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
 	}
