@@ -77,10 +77,10 @@ func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
 func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 	var settings = make([]socket.PacketSetting, 0, 8)
 	ctx.VisitMeta(func(key, value []byte) {
-		settings = append(settings, socket.WithAddMeta(string(key), string(value)))
+		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
 	if len(ctx.PeekMeta(tp.MetaRealIp)) == 0 {
-		settings = append(settings, socket.WithAddMeta(tp.MetaRealIp, ctx.Ip()))
+		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, ctx.Ip()))
 	}
 	var reply []byte
 	pullcmd := p.pullFunc(ctx.Uri(), ctx.InputBodyBytes(), &reply, settings...)
@@ -93,10 +93,10 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 	var settings = make([]socket.PacketSetting, 0, 8)
 	ctx.VisitMeta(func(key, value []byte) {
-		settings = append(settings, socket.WithAddMeta(string(key), string(value)))
+		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
 	if len(ctx.PeekMeta(tp.MetaRealIp)) == 0 {
-		settings = append(settings, socket.WithAddMeta(tp.MetaRealIp, ctx.Ip()))
+		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, ctx.Ip()))
 	}
 	return p.pushFunc(ctx.Uri(), ctx.InputBodyBytes(), settings...)
 }

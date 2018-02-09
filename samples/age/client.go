@@ -5,7 +5,6 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
@@ -31,7 +30,7 @@ func main() {
 		"test3",
 		&reply,
 		ch,
-		socket.WithContext(ctx),
+		tp.WithContext(ctx),
 	)
 	select {
 	case <-ch:
