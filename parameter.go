@@ -14,6 +14,10 @@
 
 package tp
 
+import (
+	"github.com/henrylee2cn/teleport/socket"
+)
+
 // Packet types
 const (
 	TypeUndefined byte = 0
@@ -120,3 +124,13 @@ const (
 	// MetaRealIp real IP metadata key
 	MetaRealIp = "X-Real-IP"
 )
+
+// WithRealIdMeta sets the real ID to metadata.
+func WithRealId(id string) socket.PacketSetting {
+	return socket.WithAddMeta(MetaRealId, id)
+}
+
+// WithRealIpMeta sets the real IP to metadata.
+func WithRealIp(ip string) socket.PacketSetting {
+	return socket.WithAddMeta(MetaRealIp, ip)
+}
