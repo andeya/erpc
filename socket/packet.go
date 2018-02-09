@@ -421,21 +421,21 @@ func WithContext(ctx context.Context) PacketSetting {
 	}
 }
 
-// WithSeq sets the packet sequence
+// WithSeq sets the packet sequence.
 func WithSeq(seq uint64) PacketSetting {
 	return func(p *Packet) {
 		p.seq = seq
 	}
 }
 
-// WithPtype sets the packet type
+// WithPtype sets the packet type.
 func WithPtype(ptype byte) PacketSetting {
 	return func(p *Packet) {
 		p.ptype = ptype
 	}
 }
 
-// WithUri sets the packet URL string
+// WithUri sets the packet URL string.
 func WithUri(uri string) PacketSetting {
 	return func(p *Packet) {
 		p.uri = uri
@@ -470,14 +470,14 @@ func WithSetMeta(key, value string) PacketSetting {
 	}
 }
 
-// WithBodyCodec sets the body codec
+// WithBodyCodec sets the body codec.
 func WithBodyCodec(bodyCodec byte) PacketSetting {
 	return func(p *Packet) {
 		p.bodyCodec = bodyCodec
 	}
 }
 
-// WithBody sets the body object
+// WithBody sets the body object.
 func WithBody(body interface{}) PacketSetting {
 	return func(p *Packet) {
 		p.body = body

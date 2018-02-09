@@ -80,12 +80,12 @@ var DefaultProtoFunc = socket.DefaultProtoFunc
 var SetDefaultProtoFunc = socket.SetDefaultProtoFunc
 
 // GetReadLimit gets the packet size upper limit of reading.
-//  PacketSizeLimit() uint32
+//  GetReadLimit() uint32
 var GetReadLimit = socket.PacketSizeLimit
 
 // SetReadLimit sets max packet size.
 // If maxSize<=0, set it to max uint32.
-//  func SetPacketSizeLimit(maxPacketSize uint32)
+//  func SetReadLimit(maxPacketSize uint32)
 var SetReadLimit = socket.SetPacketSizeLimit
 
 // SetSocketKeepAlive sets whether the operating system should send
@@ -102,30 +102,30 @@ var SetSocketKeepAlivePeriod = socket.SetKeepAlivePeriod
 // SocketReadBuffer returns the size of the operating system's
 // receive buffer associated with the connection.
 // Note: if using the system default value, bytes=-1 and isDefault=true.
-//  func ReadBuffer() (bytes int, isDefault bool)
+//  func SocketReadBuffer() (bytes int, isDefault bool)
 var SocketReadBuffer = socket.ReadBuffer
 
 // SetSocketReadBuffer sets the size of the operating system's
 // receive buffer associated with the connection.
 // Note: if bytes<0, don't change the value.
-//  func SetReadBuffer(bytes int)
+//  func SetSocketReadBuffer(bytes int)
 var SetSocketReadBuffer = socket.SetReadBuffer
 
 // SocketWriteBuffer returns the size of the operating system's
 // transmit buffer associated with the connection.
 // Note: if using the system default value, bytes=-1 and isDefault=true.
-//  func WriteBuffer() (bytes int, isDefault bool)
+//  func SocketWriteBuffer() (bytes int, isDefault bool)
 var SocketWriteBuffer = socket.WriteBuffer
 
 // SetSocketWriteBuffer sets the size of the operating system's
 // transmit buffer associated with the connection.
 // Note: if bytes<0, don't change the value.
-//  func SetWriteBuffer(bytes int)
+//  func SetSocketWriteBuffer(bytes int)
 var SetSocketWriteBuffer = socket.SetWriteBuffer
 
 // SetSocketNoDelay controls whether the operating system should delay
 // packet transmission in hopes of sending fewer packets (Nagle's
 // algorithm).  The default is true (no delay), meaning that data is
 // sent as soon as possible after a Write.
-//  func SetNoDelay(noDelay bool)
+//  func SetSocketNoDelay(noDelay bool)
 var SetSocketNoDelay = socket.SetNoDelay

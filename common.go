@@ -133,48 +133,59 @@ const (
 	MetaRealIp = "X-Real-IP"
 )
 
-// WithRealIdMeta sets the real ID to metadata.
+// WithRealId sets the real ID to metadata.
 func WithRealId(id string) socket.PacketSetting {
 	return socket.WithAddMeta(MetaRealId, id)
 }
 
-// WithRealIpMeta sets the real IP to metadata.
+// WithRealIp sets the real IP to metadata.
 func WithRealIp(ip string) socket.PacketSetting {
 	return socket.WithAddMeta(MetaRealIp, ip)
 }
 
 // WithContext sets the packet handling context.
+//  func WithContext(ctx context.Context) socket.PacketSetting
 var WithContext = socket.WithContext
 
-// WithSeq sets the packet sequence
+// WithSeq sets the packet sequence.
+//  func WithSeq(seq uint64) socket.PacketSetting
 var WithSeq = socket.WithSeq
 
-// WithPtype sets the packet type
+// WithPtype sets the packet type.
+//  func WithPtype(ptype byte) socket.PacketSetting
 var WithPtype = socket.WithPtype
 
-// WithUri sets the packet URL string
+// WithUri sets the packet URL string.
+//  func WithUri(uri string) socket.PacketSetting
 var WithUri = socket.WithUri
 
 // WithQuery sets the packet URL query parameter.
+//  func WithQuery(key, value string) socket.PacketSetting
 var WithQuery = socket.WithQuery
 
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
+//  func WithAddMeta(key, value string) socket.PacketSetting
 var WithAddMeta = socket.WithAddMeta
 
 // WithSetMeta sets 'key=value' metadata argument.
+//  func WithSetMeta(key, value string) socket.PacketSetting
 var WithSetMeta = socket.WithSetMeta
 
-// WithBodyCodec sets the body codec
+// WithBodyCodec sets the body codec.
+//  func WithBodyCodec(bodyCodec byte) socket.PacketSetting
 var WithBodyCodec = socket.WithBodyCodec
 
-// WithBody sets the body object
+// WithBody sets the body object.
+//  func WithBody(body interface{}) socket.PacketSetting
 var WithBody = socket.WithBody
 
 // WithNewBody resets the function of geting body.
+//  func WithNewBody(newBodyFunc socket.NewBodyFunc) socket.PacketSetting
 var WithNewBody = socket.WithNewBody
 
 // WithXferPipe sets transfer filter pipe.
+//  func WithXferPipe(filterId ...byte) socket.PacketSetting
 var WithXferPipe = socket.WithXferPipe
 
 // GetPacket gets a *Packet form packet stack.
