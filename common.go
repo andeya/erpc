@@ -158,7 +158,8 @@ var WithUri = socket.WithUri
 // WithQuery sets the packet URL query parameter.
 var WithQuery = socket.WithQuery
 
-// WithAddMeta adds 'key=value' metadata argument. Multiple values for the same key may be added.
+// WithAddMeta adds 'key=value' metadata argument.
+// Multiple values for the same key may be added.
 var WithAddMeta = socket.WithAddMeta
 
 // WithSetMeta sets 'key=value' metadata argument.
