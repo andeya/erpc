@@ -54,7 +54,11 @@ func (ProtoCodec) Unmarshal(data []byte, v interface{}) error {
 	return ProtoUnmarshal(data, v)
 }
 
-var emptyStruct = struct{}{}
+var (
+	// EmptyStruct empty struct for protobuf
+	EmptyStruct = new(PbEmpty)
+	emptyStruct = struct{}{}
+)
 
 // ProtoMarshal returns the Protobuf encoding of v.
 func ProtoMarshal(v interface{}) ([]byte, error) {
@@ -62,7 +66,7 @@ func ProtoMarshal(v interface{}) ([]byte, error) {
 		return proto.Marshal(p)
 	}
 	if v == nil || v == emptyStruct {
-		return proto.Marshal(Empty)
+		return proto.Marshal(EmptyStruct)
 	}
 	return nil, fmt.Errorf("%T does not implement proto.Message", v)
 }
