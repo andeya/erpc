@@ -9,9 +9,8 @@ It is generated from these files:
 	empty.proto
 
 It has these top-level messages:
-	Empty
+	PbEmpty
 */
-
 package codec
 
 import proto "github.com/gogo/protobuf/proto"
@@ -31,19 +30,18 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-var Empty = new(empty)
+type PbEmpty struct {
+}
 
-type empty struct{}
-
-func (m *empty) Reset()                    { *m = empty{} }
-func (m *empty) String() string            { return proto.CompactTextString(m) }
-func (*empty) ProtoMessage()               {}
-func (*empty) Descriptor() ([]byte, []int) { return fileDescriptorempty, []int{0} }
+func (m *PbEmpty) Reset()                    { *m = PbEmpty{} }
+func (m *PbEmpty) String() string            { return proto.CompactTextString(m) }
+func (*PbEmpty) ProtoMessage()               {}
+func (*PbEmpty) Descriptor() ([]byte, []int) { return fileDescriptorEmpty, []int{0} }
 
 func init() {
-	proto.RegisterType((*empty)(nil), "empty.empty")
+	proto.RegisterType((*PbEmpty)(nil), "codec.PbEmpty")
 }
-func (m *empty) Marshal() (dAtA []byte, err error) {
+func (m *PbEmpty) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -53,7 +51,7 @@ func (m *empty) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *empty) MarshalTo(dAtA []byte) (int, error) {
+func (m *PbEmpty) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -61,7 +59,7 @@ func (m *empty) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func encodeFixed64empty(dAtA []byte, offset int, v uint64) int {
+func encodeFixed64Empty(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	dAtA[offset+1] = uint8(v >> 8)
 	dAtA[offset+2] = uint8(v >> 16)
@@ -72,14 +70,14 @@ func encodeFixed64empty(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset+7] = uint8(v >> 56)
 	return offset + 8
 }
-func encodeFixed32empty(dAtA []byte, offset int, v uint32) int {
+func encodeFixed32Empty(dAtA []byte, offset int, v uint32) int {
 	dAtA[offset] = uint8(v)
 	dAtA[offset+1] = uint8(v >> 8)
 	dAtA[offset+2] = uint8(v >> 16)
 	dAtA[offset+3] = uint8(v >> 24)
 	return offset + 4
 }
-func encodeVarintempty(dAtA []byte, offset int, v uint64) int {
+func encodeVarintEmpty(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
@@ -88,13 +86,13 @@ func encodeVarintempty(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *empty) Size() (n int) {
+func (m *PbEmpty) Size() (n int) {
 	var l int
 	_ = l
 	return n
 }
 
-func sovempty(x uint64) (n int) {
+func sovEmpty(x uint64) (n int) {
 	for {
 		n++
 		x >>= 7
@@ -104,10 +102,10 @@ func sovempty(x uint64) (n int) {
 	}
 	return n
 }
-func sozempty(x uint64) (n int) {
-	return sovempty(uint64((x << 1) ^ uint64((int64(x) >> 63))))
+func sozEmpty(x uint64) (n int) {
+	return sovEmpty(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *empty) Unmarshal(dAtA []byte) error {
+func (m *PbEmpty) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -115,7 +113,7 @@ func (m *empty) Unmarshal(dAtA []byte) error {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 64 {
-				return ErrIntOverflowempty
+				return ErrIntOverflowEmpty
 			}
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
@@ -130,20 +128,20 @@ func (m *empty) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: empty: wiretype end group for non-group")
+			return fmt.Errorf("proto: PbEmpty: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: empty: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: PbEmpty: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
 			iNdEx = preIndex
-			skippy, err := skipempty(dAtA[iNdEx:])
+			skippy, err := skipEmpty(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
 			if skippy < 0 {
-				return ErrInvalidLengthempty
+				return ErrInvalidLengthEmpty
 			}
 			if (iNdEx + skippy) > l {
 				return io.ErrUnexpectedEOF
@@ -157,14 +155,14 @@ func (m *empty) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func skipempty(dAtA []byte) (n int, err error) {
+func skipEmpty(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
 			if shift >= 64 {
-				return 0, ErrIntOverflowempty
+				return 0, ErrIntOverflowEmpty
 			}
 			if iNdEx >= l {
 				return 0, io.ErrUnexpectedEOF
@@ -181,7 +179,7 @@ func skipempty(dAtA []byte) (n int, err error) {
 		case 0:
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
-					return 0, ErrIntOverflowempty
+					return 0, ErrIntOverflowEmpty
 				}
 				if iNdEx >= l {
 					return 0, io.ErrUnexpectedEOF
@@ -199,7 +197,7 @@ func skipempty(dAtA []byte) (n int, err error) {
 			var length int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
-					return 0, ErrIntOverflowempty
+					return 0, ErrIntOverflowEmpty
 				}
 				if iNdEx >= l {
 					return 0, io.ErrUnexpectedEOF
@@ -213,7 +211,7 @@ func skipempty(dAtA []byte) (n int, err error) {
 			}
 			iNdEx += length
 			if length < 0 {
-				return 0, ErrInvalidLengthempty
+				return 0, ErrInvalidLengthEmpty
 			}
 			return iNdEx, nil
 		case 3:
@@ -222,7 +220,7 @@ func skipempty(dAtA []byte) (n int, err error) {
 				var start int = iNdEx
 				for shift := uint(0); ; shift += 7 {
 					if shift >= 64 {
-						return 0, ErrIntOverflowempty
+						return 0, ErrIntOverflowEmpty
 					}
 					if iNdEx >= l {
 						return 0, io.ErrUnexpectedEOF
@@ -238,7 +236,7 @@ func skipempty(dAtA []byte) (n int, err error) {
 				if innerWireType == 4 {
 					break
 				}
-				next, err := skipempty(dAtA[start:])
+				next, err := skipEmpty(dAtA[start:])
 				if err != nil {
 					return 0, err
 				}
@@ -258,17 +256,17 @@ func skipempty(dAtA []byte) (n int, err error) {
 }
 
 var (
-	ErrInvalidLengthempty = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowempty   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthEmpty = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowEmpty   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("empty.proto", fileDescriptorempty) }
+func init() { proto.RegisterFile("empty.proto", fileDescriptorEmpty) }
 
-var fileDescriptorempty = []byte{
-	// 70 bytes of a gzipped FileDescriptorProto
+var fileDescriptorEmpty = []byte{
+	// 77 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4e, 0xcd, 0x2d, 0x28,
-	0xa9, 0xd4, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x73, 0x94, 0xd8, 0xb9, 0x20, 0x0c,
-	0x27, 0x81, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48, 0x8e, 0x71, 0xc2,
-	0x63, 0x39, 0x86, 0x24, 0x36, 0xb0, 0x42, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0x53, 0xf8,
-	0xf1, 0x89, 0x37, 0x00, 0x00, 0x00,
+	0xa9, 0xd4, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4d, 0xce, 0x4f, 0x49, 0x4d, 0x56, 0xe2,
+	0xe4, 0x62, 0x0f, 0x48, 0x72, 0x05, 0x89, 0x3b, 0x09, 0x9c, 0x78, 0x24, 0xc7, 0x78, 0xe1, 0x91,
+	0x1c, 0xe3, 0x83, 0x47, 0x72, 0x8c, 0x13, 0x1e, 0xcb, 0x31, 0x24, 0xb1, 0x81, 0x95, 0x1a, 0x03,
+	0x02, 0x00, 0x00, 0xff, 0xff, 0x53, 0xa8, 0xee, 0x5f, 0x39, 0x00, 0x00, 0x00,
 }
