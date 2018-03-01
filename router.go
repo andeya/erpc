@@ -214,7 +214,7 @@ func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), 
 			if rerr != nil {
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
-			} else if body != nil {
+			} else {
 				ctx.output.SetBody(body)
 				if ctx.output.BodyCodec() == codec.NilCodecId {
 					ctx.output.SetBodyCodec(ctx.input.BodyCodec())
@@ -369,13 +369,15 @@ func pullHandlersMaker(pathPrefix string, ctrlStruct interface{}, pluginContaine
 			obj := pool.Get().(*PullCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
-			ctx.output.SetBody(rets[0].Interface())
 			rerr, _ := rets[1].Interface().(*Rerror)
 			if rerr != nil {
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
-			} else if ctx.output.Body() != nil && ctx.output.BodyCodec() == codec.NilCodecId {
-				ctx.output.SetBodyCodec(ctx.input.BodyCodec())
+			} else {
+				ctx.output.SetBody(rets[0].Interface())
+				if ctx.output.BodyCodec() == codec.NilCodecId {
+					ctx.output.SetBodyCodec(ctx.input.BodyCodec())
+				}
 			}
 			pool.Put(obj)
 		}
