@@ -24,7 +24,7 @@ func (m *math) Add(args *[]int) (int, *tp.Rerror) {
 	if m.Query().Get("push_status") == "yes" {
 		m.Session().Push(
 			"/push/status",
-			fmt.Sprintf("%d numbers are being added...", len(*args)),
+			fmt.Sprintf("numbers %+v are being added...", args),
 		)
 		time.Sleep(time.Millisecond * 10)
 	}
