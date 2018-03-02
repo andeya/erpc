@@ -286,43 +286,84 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
 
-### 5.2 PullController模板示例
+### 5.2 Pull-Controller-Struct 接口模板
 
 ```go
 type Aaa struct {
     tp.PullCtx
 }
-// XxZz register the route: /aaa/xx_zz
 func (x *Aaa) XxZz(args *<T>) (<T>, *tp.Rerror) {
-    ...
-    return r, nil
-}
-// YyZz register the route: /aaa/yy_zz
-func (x *Aaa) YyZz(args *<T>) (<T>, *tp.Rerror) {
     ...
     return r, nil
 }
 ```
 
-### 5.3 PushController模板示例
+- 注册到根路由：
+
+```go
+// register the pull route: /aaa/xx_zz
+peer.RoutePull(new(Aaa))
+
+// or register the pull route: /xx_zz
+peer.RoutePullFunc((*Aaa).XxZz)
+```
+
+### 5.3 Pull-Handler-Function 接口模板
+
+```go
+func XxZz(ctx tp.PullCtx, args *<T>) (<T>, *tp.Rerror) {
+    ...
+    return r, nil
+}
+```
+
+- 注册到根路由：
+
+```go
+// register the pull route: /xx_zz
+peer.RoutePullFunc(XxZz)
+```
+
+### 5.4 Push-Controller-Struct 接口模板
 
 ```go
 type Bbb struct {
     tp.PushCtx
 }
-// XxZz register the route: /bbb/yy_zz
-func (b *Bbb) XxZz(args *<T>) *tp.Rerror {
-    ...
-    return r, nil
-}
-// YyZz register the route: /bbb/yy_zz
 func (b *Bbb) YyZz(args *<T>) *tp.Rerror {
     ...
-    return r, nil
+    return nil
 }
 ```
 
-### 5.4 UnknownPullHandler模板示例
+- 注册到根路由：
+
+```go
+// register the push route: /bbb/yy_zz
+peer.RoutePush(new(Bbb))
+
+// or register the push route: /yy_zz
+peer.RoutePushFunc((*Bbb).YyZz)
+```
+
+### 5.5 Push-Handler-Function 接口模板
+
+```go
+// YyZz register the route: /yy_zz
+func YyZz(ctx tp.PushCtx, args *<T>) *tp.Rerror {
+    ...
+    return nil
+}
+```
+
+- 注册到根路由：
+
+```go
+// register the push route: /yy_zz
+peer.RoutePushFunc(YyZz)
+```
+
+### 5.6 Unknown-Pull-Handler-Function 接口模板
 
 ```go
 func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
@@ -331,7 +372,14 @@ func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 }
 ```
 
-### 5.5 UnknownPushHandler模板示例
+- 注册到根路由：
+
+```go
+// register the unknown pull route: /*
+peer.SetUnknownPull(XxxUnknownPull)
+```
+
+### 5.7 Unknown-Push-Handler-Function 接口模板
 
 ```go
 func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
@@ -340,7 +388,14 @@ func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 }
 ```
 
-### 5.6 插件示例
+- 注册到根路由：
+
+```go
+// register the unknown push route: /*
+peer.SetUnknownPush(XxxUnknownPush)
+```
+
+### 5.8 插件示例
 
 ```go
 // NewIgnoreCase Returns a ignoreCase plugin.
@@ -372,19 +427,21 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 }
 ```
 
-### 5.7 注册以上操作和插件示例到路由
+### 5.9 注册以上操作和插件示例到路由
 
 ```go
 // add router group
 group := peer.SubRoute("test")
 // register to test group
 group.RoutePull(new(Aaa), NewIgnoreCase())
+peer.RoutePullFunc(XxZz, NewIgnoreCase())
 group.RoutePush(new(Bbb))
+peer.RoutePushFunc(YyZz)
 peer.SetUnknownPull(XxxUnknownPull)
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
-### 5.8 配置信息
+### 5.10 配置信息
 
 ```go
 type PeerConfig struct {
@@ -401,7 +458,7 @@ type PeerConfig struct {
 }
 ```
 
-### 5.9 通信优化
+### 5.11 通信优化
 
 - SetPacketSizeLimit 设置包大小的上限，
   如果 maxSize<=0，上限默认为最大 uint32
