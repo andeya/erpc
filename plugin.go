@@ -137,7 +137,7 @@ type (
 		Plugin
 		PostReadReplyBody(ReadCtx) *Rerror
 	}
-	// PostDisconnectPlugin is executed after disconnectingy.
+	// PostDisconnectPlugin is executed after disconnection.
 	PostDisconnectPlugin interface {
 		Plugin
 		PostDisconnect(BaseSession) *Rerror
@@ -549,7 +549,7 @@ func (p *PluginContainer) PostReadReplyBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PostDisconnect executes the defined plugins after disconnectingy.
+// PostDisconnect executes the defined plugins after disconnection.
 func (p *PluginContainer) PostDisconnect(sess BaseSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
