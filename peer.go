@@ -398,7 +398,7 @@ func (p *peer) Close() (err error) {
 		}
 	}()
 	close(p.closeCh)
-	delete(peers.list, p)
+	deletePeer(p)
 	var (
 		count int
 		errCh = make(chan error, 10)
