@@ -1,0 +1,23 @@
+cfg_cli:
+  count_time: false
+  default_body_codec: json
+  default_context_age: 0s
+  default_dial_timeout: 0s
+  default_session_age: 0s
+  listen_address: ""
+  network: tcp
+  print_body: false
+  redial_times: 0
+  slow_comet_duration: 0s
+
+cfg_srv:
+  network: tcp
+  listen_address: :9090
+  default_dial_timeout: 0s
+  redial_times: 0
+  default_body_codec: json
+  default_session_age: 0s
+  default_context_age: 0s
+  slow_comet_duration: 0s
+  print_body: false
+  count_time: true
