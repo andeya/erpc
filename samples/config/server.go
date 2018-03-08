@@ -11,7 +11,7 @@ func main() {
 		ListenAddress: ":9090",
 	}
 
-	// auto create and sync config from config/config.yaml
+	// auto create and sync config/config.yaml
 	cfgo.MustGet("config/config.yaml", true).MustReg("cfg_srv", &cfg)
 
 	svr := tp.NewPeer(cfg)

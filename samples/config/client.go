@@ -8,7 +8,7 @@ import (
 func main() {
 	cfg := tp.PeerConfig{}
 
-	// auto create and sync config from config/config.yaml
+	// auto create and sync config/config.yaml
 	cfgo.MustGet("config/config.yaml", true).MustReg("cfg_cli", &cfg)
 
 	cli := tp.NewPeer(cfg)
