@@ -291,6 +291,9 @@ var ErrListenClosed = errors.New("listener is closed")
 
 // Listen turns on the listening service.
 func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
+	if len(p.listenAddr) == 0 {
+		Fatalf("listenAddress can not be empty")
+	}
 	lis, err := NewInheritListener(p.network, p.listenAddr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
