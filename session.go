@@ -623,14 +623,14 @@ func (s *session) startReadAndHandle() {
 	}
 
 	var (
-		err     error
-		oldConn = s.Conn()
+		err  error
+		conn = s.Conn()
 	)
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("%v\n%s", p, goutil.PanicTrace(2))
 		}
-		s.readDisconnected(oldConn, err)
+		s.readDisconnected(conn, err)
 	}()
 
 	// read pull, pull reple or push
