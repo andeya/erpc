@@ -81,7 +81,10 @@ func (b *ByteBuffer) Write(p []byte) (int, error) {
 
 // Read implements io.Reader.
 func (b *ByteBuffer) Read(p []byte) (int, error) {
-	return copy(p, b.B), nil
+	if len(p) < len(b.B) {
+		return copy(p, b.B), nil
+	}
+	return copy(p, b.B), io.EOF
 }
 
 // WriteByte appends the byte c to the buffer.
