@@ -60,12 +60,6 @@ func (b *ByteBuffer) ReadFrom(r io.Reader) (int64, error) {
 	}
 }
 
-// WriteTo implements io.WriterTo.
-func (b *ByteBuffer) WriteTo(w io.Writer) (int64, error) {
-	n, err := w.Write(b.B)
-	return int64(n), err
-}
-
 // Bytes returns b.B, i.e. all the bytes accumulated in the buffer.
 //
 // The purpose of this function is bytes.Buffer compatibility.
@@ -77,14 +71,6 @@ func (b *ByteBuffer) Bytes() []byte {
 func (b *ByteBuffer) Write(p []byte) (int, error) {
 	b.B = append(b.B, p...)
 	return len(p), nil
-}
-
-// Read implements io.Reader.
-func (b *ByteBuffer) Read(p []byte) (int, error) {
-	if len(p) < len(b.B) {
-		return copy(p, b.B), nil
-	}
-	return copy(p, b.B), io.EOF
 }
 
 // WriteByte appends the byte c to the buffer.
