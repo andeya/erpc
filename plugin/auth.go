@@ -15,6 +15,8 @@
 package plugin
 
 import (
+	"fmt"
+
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/socket"
@@ -88,7 +90,11 @@ func (a *auth) PostAccept(sess tp.EarlySession) *tp.Rerror {
 		return rerr
 	}
 	if input.Uri() != authURI {
-		return tp.NewRerror(tp.CodeBadPacket, tp.CodeText(tp.CodeBadPacket), "received an unexecepted response: "+input.Uri())
+		return tp.NewRerror(
+			tp.CodeUnauthorized,
+			tp.CodeText(tp.CodeUnauthorized),
+			fmt.Sprintf("the 1th package want: PULL %s, but have: %s %s", authURI, tp.TypeText(input.Ptype()), input.Uri()),
+		)
 	}
 	authInfo := *input.Body().(*string)
 	rerr = a.verifyAuthInfoFunc(authInfo, sess)
