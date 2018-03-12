@@ -53,9 +53,9 @@ func TypeText(typ byte) string {
 // Note: Recommended custom code is greater than 1000.
 const (
 	CodeUnknownError    = -1
-	CodeDialFailed      = 105
 	CodeConnClosed      = 102
 	CodeWriteFailed     = 104
+	CodeDialFailed      = 105
 	CodeBadPacket       = 400
 	CodeNotFound        = 404
 	CodePtypeNotAllowed = 405
