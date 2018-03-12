@@ -57,6 +57,7 @@ const (
 	CodeWriteFailed     = 104
 	CodeDialFailed      = 105
 	CodeBadPacket       = 400
+	CodeUnauthorized    = 401
 	CodeNotFound        = 404
 	CodePtypeNotAllowed = 405
 	CodeHandleTimeout   = 408
@@ -64,7 +65,6 @@ const (
 	// CodeConflict                      = 409
 	// CodeUnsupportedTx                 = 410
 	// CodeUnsupportedCodecType          = 415
-	// CodeUnauthorized                  = 401
 	// CodeInternalServerError           = 500
 	// CodeBadGateway                    = 502
 	// CodeServiceUnavailable            = 503
@@ -80,14 +80,16 @@ const (
 // If the type is undefined returns 'Unknown Error'.
 func CodeText(rerrCode int32) string {
 	switch rerrCode {
+	case CodeBadPacket:
+		return "Bad Packet"
+	case CodeUnauthorized:
+		return "Unauthorized"
 	case CodeDialFailed:
 		return "Dial Failed"
 	case CodeConnClosed:
 		return "Connection Closed"
 	case CodeWriteFailed:
 		return "Write Failed"
-	case CodeBadPacket:
-		return "Bad Packet"
 	case CodeNotFound:
 		return "Not Found"
 	case CodeHandleTimeout:
