@@ -61,12 +61,12 @@ const (
 	CodeNotFound        = 404
 	CodePtypeNotAllowed = 405
 	CodeHandleTimeout   = 408
+	CodeBadGateway      = 502
 
 	// CodeConflict                      = 409
 	// CodeUnsupportedTx                 = 410
 	// CodeUnsupportedCodecType          = 415
 	// CodeInternalServerError           = 500
-	// CodeBadGateway                    = 502
 	// CodeServiceUnavailable            = 503
 	// CodeGatewayTimeout                = 504
 	// CodeVariantAlsoNegotiates         = 506
@@ -96,6 +96,8 @@ func CodeText(rerrCode int32) string {
 		return "Handle Timeout"
 	case CodePtypeNotAllowed:
 		return "Packet Type Not Allowed"
+	case CodeBadGateway:
+		return "Bad Gateway"
 	case CodeUnknownError:
 		fallthrough
 	default:
