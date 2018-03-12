@@ -87,7 +87,12 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 	pullcmd.InputMeta().VisitAll(func(key, value []byte) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
-	return reply, pullcmd.Rerror()
+	rerr := pullcmd.Rerror()
+	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
+		rerr.Code = tp.CodeBadGateway
+		rerr.Message = tp.CodeText(tp.CodeBadGateway)
+	}
+	return reply, rerr
 }
 
 func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
@@ -98,5 +103,10 @@ func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 	if len(ctx.PeekMeta(tp.MetaRealIp)) == 0 {
 		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, ctx.Ip()))
 	}
-	return p.pushFunc(ctx.Uri(), ctx.InputBodyBytes(), settings...)
+	rerr := p.pushFunc(ctx.Uri(), ctx.InputBodyBytes(), settings...)
+	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
+		rerr.Code = tp.CodeBadGateway
+		rerr.Message = tp.CodeText(tp.CodeBadGateway)
+	}
+	return rerr
 }
