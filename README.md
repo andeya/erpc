@@ -72,7 +72,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 ## 2. Install
 
 ```sh
-go get -u github.com/henrylee2cn/teleport
+go get -u -f github.com/henrylee2cn/teleport
 ```
 
 ## 3. Feature
