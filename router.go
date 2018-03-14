@@ -272,7 +272,7 @@ func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), 
 	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
-		name:            pnUnknownPush,
+		name:            pnUnknownPull,
 		isUnknown:       true,
 		argElem:         reflect.TypeOf([]byte{}),
 		pluginContainer: pluginContainer,
