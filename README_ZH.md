@@ -71,7 +71,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 ## 2. 安装
 
 ```sh
-go get -u github.com/henrylee2cn/teleport
+go get -u -f github.com/henrylee2cn/teleport
 ```
 
 ## 3. 特性
