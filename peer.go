@@ -299,13 +299,13 @@ func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
 		Fatalf("%v", err)
 	}
 	defer lis.Close()
-
-	p.pluginContainer.PostListen(lis.Addr())
-
 	p.listen = lis
+
 	network := lis.Addr().Network()
 	addr := lis.Addr().String()
 	Printf("listen ok (network:%s, addr:%s)", network, addr)
+
+	p.pluginContainer.PostListen(lis.Addr())
 
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
