@@ -62,14 +62,14 @@ type (
 		Router() *Router
 		// SubRoute adds handler group.
 		SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter
-		// RoutePull registers PULL handler.
-		RoutePull(ctrlStruct interface{}, plugin ...Plugin)
-		// RoutePullFunc registers PULL handler.
-		RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin)
-		// RoutePush registers PUSH handler.
-		RoutePush(ctrlStruct interface{}, plugin ...Plugin)
-		// RoutePushFunc registers PUSH handler.
-		RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin)
+		// RoutePull registers PULL handlers, and returns the paths.
+		RoutePull(ctrlStruct interface{}, plugin ...Plugin) []string
+		// RoutePullFunc registers PULL handler, and returns the path.
+		RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string
+		// RoutePush registers PUSH handlers, and returns the paths.
+		RoutePush(ctrlStruct interface{}, plugin ...Plugin) []string
+		// RoutePushFunc registers PUSH handler, and returns the path.
+		RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) string
 		// SetUnknownPull sets the default handler, which is called when no handler for PULL is found.
 		SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin)
 		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
@@ -458,24 +458,24 @@ func (p *peer) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 	return p.router.SubRoute(pathPrefix, plugin...)
 }
 
-// RoutePull registers PULL handler.
-func (p *peer) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) {
-	p.router.RoutePull(pullCtrlStruct, plugin...)
+// RoutePull registers PULL handlers, and returns the paths.
+func (p *peer) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) []string {
+	return p.router.RoutePull(pullCtrlStruct, plugin...)
 }
 
-// RoutePullFunc registers PULL handler.
-func (p *peer) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) {
-	p.router.RoutePullFunc(pullHandleFunc, plugin...)
+// RoutePullFunc registers PULL handler, and returns the path.
+func (p *peer) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string {
+	return p.router.RoutePullFunc(pullHandleFunc, plugin...)
 }
 
-// RoutePush registers PUSH handler.
-func (p *peer) RoutePush(pushCtrlStruct interface{}, plugin ...Plugin) {
-	p.router.RoutePush(pushCtrlStruct, plugin...)
+// RoutePush registers PUSH handlers, and returns the paths.
+func (p *peer) RoutePush(pushCtrlStruct interface{}, plugin ...Plugin) []string {
+	return p.router.RoutePush(pushCtrlStruct, plugin...)
 }
 
-// RoutePushFunc registers PUSH handler.
-func (p *peer) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) {
-	p.router.RoutePushFunc(pushHandleFunc, plugin...)
+// RoutePushFunc registers PUSH handler, and returns the path.
+func (p *peer) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) string {
+	return p.router.RoutePushFunc(pushHandleFunc, plugin...)
 }
 
 // SetUnknownPull sets the default handler,
