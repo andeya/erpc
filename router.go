@@ -198,44 +198,44 @@ func (r *SubRouter) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 	}
 }
 
-// RoutePull registers PULL handler.
-func (r *Router) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) {
-	r.subRouter.RoutePull(pullCtrlStruct, plugin...)
+// RoutePull registers PULL handlers, and returns the paths.
+func (r *Router) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) []string {
+	return r.subRouter.RoutePull(pullCtrlStruct, plugin...)
 }
 
-// RoutePull registers PULL handler.
-func (r *SubRouter) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) {
-	r.reg(pnPull, makePullHandlersFromStruct, pullCtrlStruct, plugin)
+// RoutePull registers PULL handlers, and returns the paths.
+func (r *SubRouter) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) []string {
+	return r.reg(pnPull, makePullHandlersFromStruct, pullCtrlStruct, plugin)
 }
 
-// RoutePullFunc registers PULL handler.
-func (r *Router) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) {
-	r.subRouter.RoutePullFunc(pullHandleFunc, plugin...)
+// RoutePullFunc registers PULL handler, and returns the path.
+func (r *Router) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string {
+	return r.subRouter.RoutePullFunc(pullHandleFunc, plugin...)
 }
 
-// RoutePullFunc registers PULL handler.
-func (r *SubRouter) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) {
-	r.reg(pnPull, makePullHandlersFromFunc, pullHandleFunc, plugin)
+// RoutePullFunc registers PULL handler, and returns the path.
+func (r *SubRouter) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string {
+	return r.reg(pnPull, makePullHandlersFromFunc, pullHandleFunc, plugin)[0]
 }
 
-// RoutePush registers PUSH handler.
-func (r *Router) RoutePush(pushCtrlStruct interface{}, plugin ...Plugin) {
-	r.subRouter.RoutePush(pushCtrlStruct, plugin...)
+// RoutePush registers PUSH handlers, and returns the paths.
+func (r *Router) RoutePush(pushCtrlStruct interface{}, plugin ...Plugin) []string {
+	return r.subRouter.RoutePush(pushCtrlStruct, plugin...)
 }
 
-// RoutePush registers PUSH handler.
-func (r *SubRouter) RoutePush(pushCtrlStruct interface{}, plugin ...Plugin) {
-	r.reg(pnPush, makePushHandlersFromStruct, pushCtrlStruct, plugin)
+// RoutePush registers PUSH handlers, and returns the paths.
+func (r *SubRouter) RoutePush(pushCtrlStruct interface{}, plugin ...Plugin) []string {
+	return r.reg(pnPush, makePushHandlersFromStruct, pushCtrlStruct, plugin)
 }
 
-// RoutePushFunc registers PUSH handler.
-func (r *Router) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) {
-	r.subRouter.RoutePushFunc(pushHandleFunc, plugin...)
+// RoutePushFunc registers PUSH handler, and returns the path.
+func (r *Router) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) string {
+	return r.subRouter.RoutePushFunc(pushHandleFunc, plugin...)
 }
 
-// RoutePushFunc registers PUSH handler.
-func (r *SubRouter) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) {
-	r.reg(pnPush, makePushHandlersFromFunc, pushHandleFunc, plugin)
+// RoutePushFunc registers PUSH handler, and returns the path.
+func (r *SubRouter) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) string {
+	return r.reg(pnPush, makePushHandlersFromFunc, pushHandleFunc, plugin)[0]
 }
 
 func (r *SubRouter) reg(
@@ -243,7 +243,7 @@ func (r *SubRouter) reg(
 	handlerMaker func(string, interface{}, *PluginContainer) ([]*Handler, error),
 	ctrlStruct interface{},
 	plugins []Plugin,
-) {
+) []string {
 	pluginContainer := r.pluginContainer.cloneAppendRight(plugins...)
 	warnInvaildHandlerHooks(plugins)
 	handlers, err := handlerMaker(
@@ -254,6 +254,7 @@ func (r *SubRouter) reg(
 	if err != nil {
 		Fatalf("%v", err)
 	}
+	var names []string
 	for _, h := range handlers {
 		if _, ok := r.handlers[h.name]; ok {
 			Fatalf("there is a handler conflict: %s", h.name)
@@ -262,7 +263,9 @@ func (r *SubRouter) reg(
 		r.handlers[h.name] = h
 		pluginContainer.PostReg(h)
 		Printf("register %s handler: %s", routerTypeName, h.name)
+		names = append(names, h.name)
 	}
+	return names
 }
 
 // SetUnknownPull sets the default handler,
