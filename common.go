@@ -24,6 +24,7 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/pool"
+	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 	"github.com/henrylee2cn/teleport/utils"
 )
@@ -155,11 +156,16 @@ func WithRealIp(ip string) socket.PacketSetting {
 }
 
 // WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
+// Note: If the specified codec is invalid, the receiver will ignore the mate data.
 func WithAcceptBodyCodec(bodyCodec byte) socket.PacketSetting {
+	if bodyCodec == codec.NilCodecId {
+		return func(*socket.Packet) {}
+	}
 	return socket.WithAddMeta(MetaAcceptBodyCodec, strconv.FormatUint(uint64(bodyCodec), 10))
 }
 
 // GetAcceptBodyCodec gets the body codec that the sender wishes to accept.
+// Note: If the specified codec is invalid, the receiver will ignore the mate data.
 func GetAcceptBodyCodec(meta *utils.Args) (byte, bool) {
 	s := meta.Peek(MetaAcceptBodyCodec)
 	if len(s) == 0 || len(s) > 3 {
@@ -169,7 +175,8 @@ func GetAcceptBodyCodec(meta *utils.Args) (byte, bool) {
 	if err != nil {
 		return 0, false
 	}
-	return byte(b), true
+	c := byte(b)
+	return c, c != codec.NilCodecId
 }
 
 // WithContext sets the packet handling context.
