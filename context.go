@@ -557,23 +557,38 @@ func (c *readHandleCtx) handlePull() {
 	}
 
 	// reply pull
-	rerr := c.pluginContainer.PreWriteReply(c)
-	if rerr == nil {
-		c.handleErr = rerr
-	}
-	_, rerr = c.sess.write(c.output)
+	c.pluginContainer.PreWriteReply(c)
+	_, rerr := c.sess.write(c.output)
 	if rerr != nil {
 		if c.handleErr == nil {
 			c.handleErr = rerr
 		}
-		// rerr.SetToMeta(c.output.Meta())
+		if rerr != rerrConnClosed {
+			c.output.SetBody(nil)
+			rerr2 := rerrInternalServerError.Copy()
+			rerr2.Detail = rerr.Detail
+			rerr2.SetToMeta(c.output.Meta())
+			c.sess.write(c.output)
+		}
 		return
 	}
 
-	rerr = c.pluginContainer.PostWriteReply(c)
-	if c.handleErr == nil {
-		c.handleErr = rerr
+	c.pluginContainer.PostWriteReply(c)
+}
+
+func (c *readHandleCtx) setReplyBody(body interface{}) {
+	c.output.SetBody(body)
+	if c.output.BodyCodec() != codec.NilCodecId {
+		return
 	}
+	acceptBodyCodec, ok := GetAcceptBodyCodec(c.input.Meta())
+	if ok {
+		if _, err := codec.Get(acceptBodyCodec); err == nil {
+			c.output.SetBodyCodec(acceptBodyCodec)
+			return
+		}
+	}
+	c.output.SetBodyCodec(c.input.BodyCodec())
 }
 
 func (c *readHandleCtx) bindReply(header socket.Header) interface{} {

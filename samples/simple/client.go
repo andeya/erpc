@@ -18,6 +18,7 @@ func main() {
 	rerr := sess.Pull("/math/add?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
 		&reply,
+		// tp.WithAcceptBodyCodec('j'),
 	).Rerror()
 
 	if rerr != nil {
