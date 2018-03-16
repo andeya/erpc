@@ -47,7 +47,7 @@ func NewRerror(code int32, message, detail string) *Rerror {
 // NewRerrorFromMeta creates a *Rerror from 'X-Reply-Error' metadata.
 // Return nil if there is no 'X-Reply-Error' in metadata.
 func NewRerrorFromMeta(meta *utils.Args) *Rerror {
-	b := meta.Peek(MetaRerrorKey)
+	b := meta.Peek(MetaRerror)
 	if len(b) == 0 {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (r *Rerror) SetToMeta(meta *utils.Args) {
 	if len(b) == 0 {
 		return
 	}
-	meta.Set(MetaRerrorKey, goutil.BytesToString(b))
+	meta.Set(MetaRerror, goutil.BytesToString(b))
 }
 
 // MarshalJSON marshals Rerror into JSON, implements json.Marshaler interface.
@@ -112,11 +112,11 @@ func (r *Rerror) UnmarshalJSON(b []byte) error {
 }
 
 func hasRerror(meta *utils.Args) bool {
-	return meta.Has(MetaRerrorKey)
+	return meta.Has(MetaRerror)
 }
 
 func getRerrorBytes(meta *utils.Args) []byte {
-	return meta.Peek(MetaRerrorKey)
+	return meta.Peek(MetaRerror)
 }
 
 // ToError converts to error

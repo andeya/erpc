@@ -18,7 +18,7 @@ func TestRerror(t *testing.T) {
 	meta := new(utils.Args)
 	rerr.SetToMeta(meta)
 	t.Logf("%v", meta.String())
-	b := meta.Peek(MetaRerrorKey)
+	b := meta.Peek(MetaRerror)
 	t.Logf("%s", b)
 	newRerr := NewRerrorFromMeta(meta)
 	t.Logf("%v", newRerr)
