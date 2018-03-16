@@ -702,6 +702,8 @@ func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
 		return conn, rerrConnClosed
 	}
 
+	Debugf("write error: %s", err.Error())
+
 ERR:
 	rerr = rerrWriteFailed.Copy()
 	rerr.Detail = err.Error()

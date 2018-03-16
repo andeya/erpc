@@ -354,31 +354,29 @@ func (p *PluginContainer) PostWritePull(ctx WriteCtx) *Rerror {
 }
 
 // PreWriteReply executes the defined plugins before writing REPLY packet.
-func (p *PluginContainer) PreWriteReply(ctx WriteCtx) *Rerror {
+func (p *PluginContainer) PreWriteReply(ctx WriteCtx) {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWriteReplyPlugin); ok {
 			if rerr = _plugin.PreWriteReply(ctx); rerr != nil {
 				Errorf("%s-PreWriteReplyPlugin(%s)", plugin.Name(), rerr.String())
-				return rerr
+				return
 			}
 		}
 	}
-	return nil
 }
 
 // PostWriteReply executes the defined plugins after successful writing REPLY packet.
-func (p *PluginContainer) PostWriteReply(ctx WriteCtx) *Rerror {
+func (p *PluginContainer) PostWriteReply(ctx WriteCtx) {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWriteReplyPlugin); ok {
 			if rerr = _plugin.PostWriteReply(ctx); rerr != nil {
 				Errorf("%s-PostWriteReplyPlugin(%s)", plugin.Name(), rerr.String())
-				return rerr
+				return
 			}
 		}
 	}
-	return nil
 }
 
 // PreWritePush executes the defined plugins before writing PUSH packet.

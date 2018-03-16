@@ -18,9 +18,11 @@ import (
 	"context"
 	"crypto/tls"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/pool"
 	"github.com/henrylee2cn/teleport/socket"
 	"github.com/henrylee2cn/teleport/utils"
@@ -52,21 +54,21 @@ func TypeText(typ byte) string {
 // Internal Framework Rerror code.
 // Note: Recommended custom code is greater than 1000.
 const (
-	CodeUnknownError    = -1
-	CodeConnClosed      = 102
-	CodeWriteFailed     = 104
-	CodeDialFailed      = 105
-	CodeBadPacket       = 400
-	CodeUnauthorized    = 401
-	CodeNotFound        = 404
-	CodePtypeNotAllowed = 405
-	CodeHandleTimeout   = 408
-	CodeBadGateway      = 502
+	CodeUnknownError        = -1
+	CodeConnClosed          = 102
+	CodeWriteFailed         = 104
+	CodeDialFailed          = 105
+	CodeBadPacket           = 400
+	CodeUnauthorized        = 401
+	CodeNotFound            = 404
+	CodePtypeNotAllowed     = 405
+	CodeHandleTimeout       = 408
+	CodeInternalServerError = 500
+	CodeBadGateway          = 502
 
 	// CodeConflict                      = 409
 	// CodeUnsupportedTx                 = 410
 	// CodeUnsupportedCodecType          = 415
-	// CodeInternalServerError           = 500
 	// CodeServiceUnavailable            = 503
 	// CodeGatewayTimeout                = 504
 	// CodeVariantAlsoNegotiates         = 506
@@ -96,6 +98,8 @@ func CodeText(rerrCode int32) string {
 		return "Handle Timeout"
 	case CodePtypeNotAllowed:
 		return "Packet Type Not Allowed"
+	case CodeInternalServerError:
+		return "Internal Server Error"
 	case CodeBadGateway:
 		return "Bad Gateway"
 	case CodeUnknownError:
@@ -115,6 +119,7 @@ var (
 	rerrNotFound            = NewRerror(CodeNotFound, CodeText(CodeNotFound), "")
 	rerrCodePtypeNotAllowed = NewRerror(CodePtypeNotAllowed, CodeText(CodePtypeNotAllowed), "")
 	rerrHandleTimeout       = NewRerror(CodeHandleTimeout, CodeText(CodeHandleTimeout), "")
+	rerrInternalServerError = NewRerror(CodeInternalServerError, CodeText(CodeInternalServerError), "")
 )
 
 // IsConnRerror determines whether the error is a connection error
@@ -135,6 +140,8 @@ const (
 	MetaRealId = "X-Real-ID"
 	// MetaRealIp real IP metadata key
 	MetaRealIp = "X-Real-IP"
+	// MetaAcceptBodyCodec the key of body codec that the sender wishes to accept
+	MetaAcceptBodyCodec = "X-Accept-Body-Codec"
 )
 
 // WithRealId sets the real ID to metadata.
@@ -145,6 +152,24 @@ func WithRealId(id string) socket.PacketSetting {
 // WithRealIp sets the real IP to metadata.
 func WithRealIp(ip string) socket.PacketSetting {
 	return socket.WithAddMeta(MetaRealIp, ip)
+}
+
+// WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
+func WithAcceptBodyCodec(bodyCodec byte) socket.PacketSetting {
+	return socket.WithAddMeta(MetaAcceptBodyCodec, strconv.FormatUint(uint64(bodyCodec), 10))
+}
+
+// GetAcceptBodyCodec gets the body codec that the sender wishes to accept.
+func GetAcceptBodyCodec(meta *utils.Args) (byte, bool) {
+	s := meta.Peek(MetaAcceptBodyCodec)
+	if len(s) == 0 || len(s) > 3 {
+		return 0, false
+	}
+	b, err := strconv.ParseUint(goutil.BytesToString(s), 10, 8)
+	if err != nil {
+		return 0, false
+	}
+	return byte(b), true
 }
 
 // WithContext sets the packet handling context.
