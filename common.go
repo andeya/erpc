@@ -129,8 +129,8 @@ func IsConnRerror(rerr *Rerror) bool {
 }
 
 const (
-	// MetaRerrorKey reply error metadata key
-	MetaRerrorKey = "X-Reply-Error"
+	// MetaRerror reply error metadata key
+	MetaRerror = "X-Reply-Error"
 	// MetaRealId real ID metadata key
 	MetaRealId = "X-Real-ID"
 	// MetaRealIp real IP metadata key
