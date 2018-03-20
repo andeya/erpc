@@ -603,6 +603,7 @@ func (c *readHandleCtx) bindReply(header socket.Header) interface{} {
 	c.pullCmd.mu.Lock()
 
 	c.public = c.pullCmd.public
+	c.pullCmd.inputBodyCodec = c.GetBodyCodec()
 	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
 	c.pullCmd.inputMeta = c.CopyMeta()
 	c.setContext(c.pullCmd.output.Context())
@@ -682,6 +683,8 @@ type (
 		Result() (interface{}, *Rerror)
 		// Rerror returns the pull error.
 		Rerror() *Rerror
+		// InputBodyCodec gets the body codec type of the input packet.
+		InputBodyCodec() byte
 		// InputMeta returns the header metadata of input packet.
 		InputMeta() *utils.Args
 		// CostTime returns the pulled cost time.
@@ -689,16 +692,17 @@ type (
 		CostTime() time.Duration
 	}
 	pullCmd struct {
-		sess      *session
-		output    *socket.Packet
-		reply     interface{}
-		rerr      *Rerror
-		inputMeta *utils.Args
-		doneChan  chan PullCmd // Strobes when pull is complete.
-		start     time.Time
-		cost      time.Duration
-		public    goutil.Map
-		mu        sync.Mutex
+		sess           *session
+		output         *socket.Packet
+		reply          interface{}
+		rerr           *Rerror
+		inputBodyCodec byte
+		inputMeta      *utils.Args
+		doneChan       chan PullCmd // Strobes when pull is complete.
+		start          time.Time
+		cost           time.Duration
+		public         goutil.Map
+		mu             sync.Mutex
 	}
 )
 
@@ -771,6 +775,11 @@ func (p *pullCmd) Result() (interface{}, *Rerror) {
 // Rerror returns the pull error.
 func (p *pullCmd) Rerror() *Rerror {
 	return p.rerr
+}
+
+// InputBodyCodec gets the body codec type of the input packet.
+func (p *pullCmd) InputBodyCodec() byte {
+	return p.inputBodyCodec
 }
 
 // InputMeta returns the header metadata of input packet.

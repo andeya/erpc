@@ -319,6 +319,11 @@ func (f *fakePullCmd) Rerror() *Rerror {
 	return f.rerr
 }
 
+// InputBodyCodec gets the body codec type of the input packet.
+func (f *fakePullCmd) InputBodyCodec() byte {
+	return codec.NilCodecId
+}
+
 // InputMeta returns the header metadata of input packet.
 func (f *fakePullCmd) InputMeta() *utils.Args {
 	return f.inputMeta
