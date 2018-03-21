@@ -100,9 +100,10 @@ type (
 		// MarshalBody returns the encoding of body.
 		// Note: when the body is a stream of bytes, no marshalling is done.
 		MarshalBody() ([]byte, error)
-		// UnmarshalBody unmarshals the encoded data to the existed body.
+		// UnmarshalBody unmarshals the encoded data to the body.
 		// Note:
 		//  seq, ptype, uri must be setted already;
+		//  if body=nil, try to use newBodyFunc to create a new one;
 		//  when the body is a stream of bytes, no unmarshalling is done.
 		UnmarshalBody(bodyBytes []byte) error
 	}
@@ -301,9 +302,10 @@ func (p *Packet) MarshalBody() ([]byte, error) {
 	}
 }
 
-// UnmarshalBody unmarshals the encoded data to the existed body.
+// UnmarshalBody unmarshals the encoded data to the body.
 // Note:
 //  seq, ptype, uri must be setted already;
+//  if body=nil, try to use newBodyFunc to create a new one;
 //  when the body is a stream of bytes, no unmarshalling is done.
 func (p *Packet) UnmarshalBody(bodyBytes []byte) error {
 	if p.body == nil && p.newBodyFunc != nil {
