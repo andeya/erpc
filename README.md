@@ -128,10 +128,10 @@ type (
         seq uint64
         // packet type, such as PULL, PUSH, REPLY
         ptype byte
-        // URL string
+        // URI string
         uri string
-        // URL object
-        url *url.URL
+        // URI object
+        uriObject *url.URL
         // metadata
         meta *utils.Args
         // body codec type

@@ -37,10 +37,10 @@ type (
 		seq uint64
 		// packet type, such as PULL, PUSH, REPLY
 		ptype byte
-		// URL string
+		// URI string
 		uri string
-		// URL object
-		url *url.URL
+		// URI object
+		uriObject *url.URL
 		// metadata
 		meta *utils.Args
 		// body codec type
@@ -76,10 +76,12 @@ type (
 		SetPtype(byte)
 		// Uri returns the URI string
 		Uri() string
+		// UriObject returns the URI object
+		UriObject() *url.URL
 		// SetUri sets the packet URI
 		SetUri(string)
-		// Url returns the URI object
-		Url() *url.URL
+		// SetUriObject sets the packet URI
+		SetUriObject(uriObject *url.URL)
 		// Meta returns the metadata
 		Meta() *utils.Args
 	}
@@ -180,7 +182,7 @@ func (p *Packet) Reset(settings ...PacketSetting) {
 	p.seq = 0
 	p.ptype = 0
 	p.uri = ""
-	p.url = nil
+	p.uriObject = nil
 	p.size = 0
 	p.ctx = nil
 	p.bodyCodec = codec.NilCodecId
@@ -230,24 +232,34 @@ func (p *Packet) SetPtype(ptype byte) {
 
 // Uri returns the URI string
 func (p *Packet) Uri() string {
+	if p.uriObject != nil {
+		return p.uriObject.String()
+	}
 	return p.uri
+}
+
+// UriObject returns the URI object
+func (p *Packet) UriObject() *url.URL {
+	if p.uriObject == nil {
+		p.uriObject, _ = url.Parse(p.uri)
+		if p.uriObject == nil {
+			p.uriObject = new(url.URL)
+		}
+		p.uri = ""
+	}
+	return p.uriObject
 }
 
 // SetUri sets the packet URI
 func (p *Packet) SetUri(uri string) {
 	p.uri = uri
-	p.url = nil
+	p.uriObject = nil
 }
 
-// Url returns the URI object
-func (p *Packet) Url() *url.URL {
-	if p.url == nil {
-		p.url, _ = url.Parse(p.uri)
-		if p.url == nil {
-			p.url = new(url.URL)
-		}
-	}
-	return p.url
+// SetUriObject sets the packet URI
+func (p *Packet) SetUriObject(uriObject *url.URL) {
+	p.uriObject = uriObject
+	p.uri = ""
 }
 
 // Meta returns the metadata.
@@ -435,23 +447,27 @@ func WithPtype(ptype byte) PacketSetting {
 	}
 }
 
-// WithUri sets the packet URL string.
+// WithUri sets the packet URI string.
 func WithUri(uri string) PacketSetting {
 	return func(p *Packet) {
-		p.uri = uri
-		p.url = nil
+		p.SetUri(uri)
 	}
 }
 
-// WithQuery sets the packet URL query parameter.
+// WithUriObject sets the packet URI object.
+func WithUriObject(uriObject *url.URL) PacketSetting {
+	return func(p *Packet) {
+		p.SetUriObject(uriObject)
+	}
+}
+
+// WithQuery sets the packet URI query parameter.
 func WithQuery(key, value string) PacketSetting {
 	return func(p *Packet) {
-		u := p.Url()
+		u := p.UriObject()
 		v := u.Query()
 		v.Add(key, value)
 		u.RawQuery = v.Encode()
-		p.uri = u.String()
-		p.url = u
 	}
 }
 
