@@ -69,10 +69,10 @@ type (
 		CopyMeta() *utils.Args
 		// Uri returns the input packet uri.
 		Uri() string
-		// ChangeUri changes the input packet uri.
-		ChangeUri(string)
-		// Url returns the input packet uri object.
-		Url() *url.URL
+		// UriObject returns the input packet uri object.
+		UriObject() *url.URL
+		// ResetUri resets the input packet uri.
+		ResetUri(string)
 		// Path returns the input packet uri path.
 		Path() string
 		// Query returns the input packet uri query object.
@@ -258,24 +258,24 @@ func (c *readHandleCtx) Uri() string {
 	return c.input.Uri()
 }
 
-// ChangeUri changes the input packet uri.
-func (c *readHandleCtx) ChangeUri(uri string) {
-	c.input.SetUri(uri)
+// UriObject returns the input packet uri object.
+func (c *readHandleCtx) UriObject() *url.URL {
+	return c.input.UriObject()
 }
 
-// Url returns the input packet uri object.
-func (c *readHandleCtx) Url() *url.URL {
-	return c.input.Url()
+// ResetUri resets the input packet uri.
+func (c *readHandleCtx) ResetUri(uri string) {
+	c.input.SetUri(uri)
 }
 
 // Path returns the input packet uri path.
 func (c *readHandleCtx) Path() string {
-	return c.input.Url().Path
+	return c.input.UriObject().Path
 }
 
 // Query returns the input packet uri query object.
 func (c *readHandleCtx) Query() url.Values {
-	return c.input.Url().Query()
+	return c.input.UriObject().Query()
 }
 
 // PeekMeta peeks the header metadata for the input packet.
@@ -425,7 +425,7 @@ func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
 		return nil
 	}
 
-	u := header.Url()
+	u := header.UriObject()
 	if len(u.Path) == 0 {
 		c.handleErr = rerrBadPacket.Copy()
 		c.handleErr.Detail = "invalid URI for packet"
@@ -477,16 +477,13 @@ func (c *readHandleCtx) handlePush() {
 }
 
 func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
-	c.output.SetSeq(header.Seq())
-	c.output.SetUri(header.Uri())
-
 	c.handleErr = c.pluginContainer.PostReadPullHeader(c)
 	if c.handleErr != nil {
 		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
-	u := header.Url()
+	u := header.UriObject()
 	if len(u.Path) == 0 {
 		c.handleErr = rerrBadPacket.Copy()
 		c.handleErr.Detail = "invalid URI for packet"
@@ -521,22 +518,21 @@ func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
 
 // handlePull handles and replies pull.
 func (c *readHandleCtx) handlePull() {
-	if age := c.sess.ContextAge(); age > 0 {
-		ctxTimout, _ := context.WithTimeout(c.input.Context(), age)
-		c.setContext(ctxTimout)
-		socket.WithContext(ctxTimout)(c.output)
-	}
-
 	defer func() {
 		c.cost = c.sess.timeSince(c.start)
 		c.sess.runlog(c.cost, c.input, c.output, typePullHandle)
 	}()
 
-	// set packet type
 	c.output.SetPtype(TypeReply)
-
-	// copy transfer filter pipe
+	c.output.SetSeq(c.input.Seq())
+	c.output.SetUriObject(c.input.UriObject())
 	c.output.AppendXferPipeFrom(c.input)
+
+	if age := c.sess.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(c.input.Context(), age)
+		c.setContext(ctxTimout)
+		socket.WithContext(ctxTimout)(c.output)
+	}
 
 	if c.handleErr == nil {
 		c.handleErr = NewRerrorFromMeta(c.output.Meta())

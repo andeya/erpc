@@ -191,11 +191,15 @@ var WithSeq = socket.WithSeq
 //  func WithPtype(ptype byte) socket.PacketSetting
 var WithPtype = socket.WithPtype
 
-// WithUri sets the packet URL string.
+// WithUri sets the packet URI string.
 //  func WithUri(uri string) socket.PacketSetting
 var WithUri = socket.WithUri
 
-// WithQuery sets the packet URL query parameter.
+// WithUriObject sets the packet URI object.
+//  func WithUriObject(uriObject *url.URL) socket.PacketSetting
+var WithUriObject = socket.WithUriObject
+
+// WithQuery sets the packet URI query parameter.
 //  func WithQuery(key, value string) socket.PacketSetting
 var WithQuery = socket.WithQuery
 
