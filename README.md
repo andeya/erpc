@@ -120,44 +120,55 @@ go get -u -f github.com/henrylee2cn/teleport
 The contents of every one packet:
 
 ```go
-// in socket package
+// in .../teleport/socket package
 type (
-    // Packet a socket data packet.
-    Packet struct {
-        // packet sequence
-        seq uint64
-        // packet type, such as PULL, PUSH, REPLY
-        ptype byte
-        // URI string
-        uri string
-        // URI object
-        uriObject *url.URL
-        // metadata
-        meta *utils.Args
-        // body codec type
-        bodyCodec byte
-        // body object
-        body interface{}
-        // newBodyFunc creates a new body by packet type and URI.
-        // Note:
-        //  only for writing packet;
-        //  should be nil when reading packet.
-        newBodyFunc NewBodyFunc
-        // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-        // Note: the length can not be bigger than 255!
-        xferPipe *xfer.XferPipe
-        // packet size
-        size uint32
-        // ctx is the packet handling context,
-        // carries a deadline, a cancelation signal,
-        // and other values across API boundaries.
-        ctx context.Context
-        // stack
-        next *Packet
+    type Packet struct {
+        // Has unexported fields.
     }
+        Packet a socket data packet.
+    
+    func GetPacket(settings ...PacketSetting) *Packet
+    func NewPacket(settings ...PacketSetting) *Packet
+    func (p *Packet) Body() interface{}
+    func (p *Packet) BodyCodec() byte
+    func (p *Packet) Context() context.Context
+    func (p *Packet) MarshalBody() ([]byte, error)
+    func (p *Packet) Meta() *utils.Args
+    func (p *Packet) Ptype() byte
+    func (p *Packet) Reset(settings ...PacketSetting)
+    func (p *Packet) Seq() uint64
+    func (p *Packet) SetBody(body interface{})
+    func (p *Packet) SetBodyCodec(bodyCodec byte)
+    func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
+    func (p *Packet) SetPtype(ptype byte)
+    func (p *Packet) SetSeq(seq uint64)
+    func (p *Packet) SetSize(size uint32) error
+    func (p *Packet) SetUri(uri string)
+    func (p *Packet) SetUriObject(uriObject *url.URL)
+    func (p *Packet) Size() uint32
+    func (p *Packet) String() string
+    func (p *Packet) UnmarshalBody(bodyBytes []byte) error
+    func (p *Packet) Uri() string
+    func (p *Packet) UriObject() *url.URL
+    func (p *Packet) XferPipe() *xfer.XferPipe
 
-    // NewBodyFunc creates a new body by header info.
-    NewBodyFunc func(seq uint64, ptype byte, uri string) interface{}
+    // NewBodyFunc creates a new body by header.
+    NewBodyFunc func(Header) interface{}
+)
+
+// in .../teleport/xfer package
+type (
+    // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
+    // Note: the length can not be bigger than 255!
+    XferPipe struct {
+        filters []XferFilter
+    }
+    // XferFilter handles byte stream of packet when transfer.
+    XferFilter interface {
+        Id() byte
+        OnPack([]byte) ([]byte, error)
+        OnUnpack([]byte) ([]byte, error)
+    }
 )
 ```
 

@@ -526,7 +526,7 @@ func (c *readHandleCtx) handlePull() {
 	c.output.SetPtype(TypeReply)
 	c.output.SetSeq(c.input.Seq())
 	c.output.SetUriObject(c.input.UriObject())
-	c.output.AppendXferPipeFrom(c.input)
+	c.output.XferPipe().AppendFrom(c.input.XferPipe())
 
 	if age := c.sess.ContextAge(); age > 0 {
 		ctxTimout, _ := context.WithTimeout(c.input.Context(), age)

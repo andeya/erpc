@@ -97,22 +97,13 @@ type (
 		SetBody(body interface{})
 		// SetNewBody resets the function of geting body.
 		SetNewBody(newBodyFunc NewBodyFunc)
-		// NewBody creates a new body by packet type and URI.
-		// Note:
-		//  only for writing packet;
-		//  should be nil when reading packet.
-		// NewBody(seq uint64, ptype byte, uri string) interface{}
-
 		// MarshalBody returns the encoding of body.
 		// Note: when the body is a stream of bytes, no marshalling is done.
 		MarshalBody() ([]byte, error)
-		// UnmarshalNewBody unmarshals the encoded data to a new body.
-		// Note:
-		// seq, ptype, uri must be setted already;
-		// when the body is a stream of bytes, no unmarshalling is done.
-		UnmarshalNewBody(bodyBytes []byte) error
 		// UnmarshalBody unmarshals the encoded data to the existed body.
-		// Note: when the body is a stream of bytes, no unmarshalling is done.
+		// Note:
+		//  seq, ptype, uri must be setted already;
+		//  when the body is a stream of bytes, no unmarshalling is done.
 		UnmarshalBody(bodyBytes []byte) error
 	}
 
@@ -196,11 +187,6 @@ func (p *Packet) doSetting(settings ...PacketSetting) {
 		}
 	}
 }
-
-// // HasContext returns true if the packet handling context is not nil.
-// func (p *Packet) HasContext() bool {
-// 	return p.ctx != nil
-// }
 
 // Context returns the packet handling context.
 func (p *Packet) Context() context.Context {
@@ -293,14 +279,6 @@ func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc) {
 	p.newBodyFunc = newBodyFunc
 }
 
-// // NewBody creates a new body by packet type and URI.
-// // Note:
-// //  only for writing packet;
-// //  should be nil when reading packet.
-// func (p *Packet) NewBody(seq uint64, ptype byte, uri string) interface{} {
-// 	return p.newBodyFunc(seq, ptype, uri)
-// }
-
 // MarshalBody returns the encoding of body.
 // Note: when the body is a stream of bytes, no marshalling is done.
 func (p *Packet) MarshalBody() ([]byte, error) {
@@ -323,22 +301,14 @@ func (p *Packet) MarshalBody() ([]byte, error) {
 	}
 }
 
-// UnmarshalNewBody unmarshals the encoded data to a new body.
-// Note:
-// seq, ptype, uri must be setted already;
-// when the body is a stream of bytes, no unmarshalling is done.
-func (p *Packet) UnmarshalNewBody(bodyBytes []byte) error {
-	if p.newBodyFunc == nil {
-		p.body = nil
-		return nil
-	}
-	p.body = p.newBodyFunc(p)
-	return p.UnmarshalBody(bodyBytes)
-}
-
 // UnmarshalBody unmarshals the encoded data to the existed body.
-// Note: when the body is a stream of bytes, no unmarshalling is done.
+// Note:
+//  seq, ptype, uri must be setted already;
+//  when the body is a stream of bytes, no unmarshalling is done.
 func (p *Packet) UnmarshalBody(bodyBytes []byte) error {
+	if p.body == nil && p.newBodyFunc != nil {
+		p.body = p.newBodyFunc(p)
+	}
 	if len(bodyBytes) == 0 {
 		return nil
 	}
@@ -364,11 +334,6 @@ func (p *Packet) UnmarshalBody(bodyBytes []byte) error {
 // Note: the length can not be bigger than 255!
 func (p *Packet) XferPipe() *xfer.XferPipe {
 	return p.xferPipe
-}
-
-// AppendXferPipeFrom appends transfer filters from a *Packet.
-func (p *Packet) AppendXferPipeFrom(src *Packet) {
-	p.xferPipe.AppendFrom(src.xferPipe)
 }
 
 // Size returns the size of packet.

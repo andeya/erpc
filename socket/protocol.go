@@ -262,5 +262,5 @@ func (f *fastProto) readHeader(data []byte, p *Packet) []byte {
 
 func (f *fastProto) readBody(data []byte, p *Packet) error {
 	p.SetBodyCodec(data[0])
-	return p.UnmarshalNewBody(data[1:])
+	return p.UnmarshalBody(data[1:])
 }
