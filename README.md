@@ -60,7 +60,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 **[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
 
-## 1 Version
+## Version
 
 | version | status  | branch                                   |
 | ------- | ------- | ---------------------------------------- |
@@ -69,13 +69,13 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 | v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
 
-## 2 Install
+## Install
 
 ```sh
 go get -u -f github.com/henrylee2cn/teleport
 ```
 
-## 3 Feature
+## Feature
 
 - Server and client are peer-to-peer, have the same API method
 - Support custom communication protocol
@@ -95,9 +95,9 @@ go get -u -f github.com/henrylee2cn/teleport
 - Client session support automatically redials after disconnection
 - Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and so on
 
-## 4 Design
+## Design
 
-### 4.1 Keywords
+### Keywords
 
 - **Peer:** A communication instance may be a server or a client
 - **Socket:** Base on the net.Conn package, add custom package protocol, transfer pipelines and other functions
@@ -115,7 +115,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - **Push-Handle:** Handle the push of peer
 - **Router:** Router that route the response handler by request information(such as a URI)
 
-### 4.2 Packet
+### Packet
 
 The contents of every one packet:
 
@@ -172,7 +172,7 @@ type (
 )
 ```
 
-### 4.3 Codec
+### Codec
 
 The body's codec set.
 
@@ -190,7 +190,7 @@ type Codec interface {
 }
 ```
 
-### 4.4 XferPipe
+### XferPipe
 
 Transfer filter pipe, handles byte stream of packet when transfer.
 
@@ -210,7 +210,7 @@ type (
 )
 ```
 
-### 4.5 Plugin
+### Plugin
 
 Plug-ins during runtime.
 
@@ -229,7 +229,7 @@ type (
 )
 ```
 
-### 4.6 Protocol
+### Protocol
 
 You can customize your own communication protocol by implementing the interface:
 
@@ -264,9 +264,9 @@ type Peer interface {
 }
 ```
 
-## 5 Usage
+## Usage
 
-### 5.1 Peer(server or client) Demo
+### Peer(server or client) Demo
 
 ```go
 // Start a server
@@ -282,7 +282,7 @@ var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
-### 5.2 Pull-Controller-Struct API template
+### Pull-Controller-Struct API template
 
 ```go
 type Aaa struct {
@@ -304,7 +304,7 @@ peer.RoutePull(new(Aaa))
 peer.RoutePullFunc((*Aaa).XxZz)
 ```
 
-### 5.3 Pull-Handler-Function API template
+### Pull-Handler-Function API template
 
 ```go
 func XxZz(ctx tp.PullCtx, args *<T>) (<T>, *tp.Rerror) {
@@ -320,7 +320,7 @@ func XxZz(ctx tp.PullCtx, args *<T>) (<T>, *tp.Rerror) {
 peer.RoutePullFunc(XxZz)
 ```
 
-### 5.4 Push-Controller-Struct API template
+### Push-Controller-Struct API template
 
 ```go
 type Bbb struct {
@@ -342,7 +342,7 @@ peer.RoutePush(new(Bbb))
 peer.RoutePushFunc((*Bbb).YyZz)
 ```
 
-### 5.5 Push-Handler-Function API template
+### Push-Handler-Function API template
 
 ```go
 // YyZz register the route: /yy_zz
@@ -359,7 +359,7 @@ func YyZz(ctx tp.PushCtx, args *<T>) *tp.Rerror {
 peer.RoutePushFunc(YyZz)
 ```
 
-### 5.6 Unknown-Pull-Handler-Function API template
+### Unknown-Pull-Handler-Function API template
 
 ```go
 func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
@@ -375,7 +375,7 @@ func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 peer.SetUnknownPull(XxxUnknownPull)
 ```
 
-### 5.7 Unknown-Push-Handler-Function API template
+### Unknown-Push-Handler-Function API template
 
 ```go
 func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
@@ -391,7 +391,7 @@ func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
-### 5.8 Plugin Demo
+### Plugin Demo
 
 ```go
 // NewIgnoreCase Returns a ignoreCase plugin.
@@ -423,7 +423,7 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 }
 ```
 
-### 5.9 Register above handler and plugin
+### Register above handler and plugin
 
 ```go
 // add router group
@@ -437,7 +437,7 @@ peer.SetUnknownPull(XxxUnknownPull)
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
-### 5.10 Config
+### Config
 
 ```go
 type PeerConfig struct {
@@ -454,7 +454,7 @@ type PeerConfig struct {
 }
 ```
 
-### 5.11 Optimize
+### Optimize
 
 - SetPacketSizeLimit sets max packet size.
   If maxSize<=0, set it to max uint32.
@@ -500,7 +500,7 @@ type PeerConfig struct {
     ```
 
 
-## 6 Example
+## Example
 
 ### server.go
 
@@ -586,7 +586,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
-## 7 Extensions
+## Extensions
 
 ### Codec
 
@@ -630,7 +630,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
 
-## 8 Projects based on Teleport
+## Projects based on Teleport
 
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
@@ -638,7 +638,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | [Ants](https://github.com/xiaoenai/ants) | Ants is a highly available micro service platform based on TP-Micro and Teleport|
 | [Pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus is a distributed, high concurrency and powerful web crawler software |
 
-## 9 Business Users
+## Business Users
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -646,6 +646,6 @@ func (p *push) Status(args *string) *tp.Rerror {
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 10 License
+## License
 
 Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text
