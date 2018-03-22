@@ -60,7 +60,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 **[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
 
 
-## 1 版本
+## 版本
 
 | 版本   | 状态      | 分支                                       |
 | ---- | ------- | ---------------------------------------- |
@@ -68,13 +68,13 @@ Teleport是一个通用、高效、灵活的Socket框架。
 | v2   | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
 | v1   | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
-## 2 安装
+## 安装
 
 ```sh
 go get -u -f github.com/henrylee2cn/teleport
 ```
 
-## 3 特性
+## 特性
 
 - 服务器和客户端之间对等通信，两者API方法基本一致
 - 支持定制通信协议
@@ -94,9 +94,9 @@ go get -u -f github.com/henrylee2cn/teleport
 - 客户端的Session支持断线后自动重连
 - 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket`等
 
-## 4 框架设计
+## 框架设计
 
-### 4.1 名称解释
+### 名称解释
 
 - **Peer：** 通信端点，可以是服务端或客户端
 - **Socket：** 对net.Conn的封装，增加自定义包协议、传输管道等功能
@@ -115,7 +115,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - **Router：** 通过请求信息（如URI）索引响应函数（Handler）的路由器
 
 
-### 4.2 数据包内容
+### 数据包内容
 
 每个数据包的内容如下:
 
@@ -172,7 +172,7 @@ type (
 )
 ```
 
-### 4.3 编解码器
+### 编解码器
 
 数据包中Body内容的编解码器。
 
@@ -190,7 +190,7 @@ type Codec interface {
 }
 ```
 
-### 4.4 过滤管道
+### 过滤管道
 
 传输数据的过滤管道。
 
@@ -210,7 +210,7 @@ type (
 )
 ```
 
-### 4.5 插件
+### 插件
 
 运行过程中以挂载方式执行的插件。
 
@@ -229,7 +229,7 @@ type (
 )
 ```
 
-### 4.6 通信协议
+### 通信协议
 
 支持通过接口定制自己的通信协议：
 
@@ -265,9 +265,9 @@ type Peer interface {
 }
 ```
 
-## 5 用法
+## 用法
 
-### 5.1 Peer端点（服务端或客户端）示例
+### Peer端点（服务端或客户端）示例
 
 ```go
 // Start a server
@@ -284,7 +284,7 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
 
-### 5.2 Pull-Controller-Struct 接口模板
+### Pull-Controller-Struct 接口模板
 
 ```go
 type Aaa struct {
@@ -306,7 +306,7 @@ peer.RoutePull(new(Aaa))
 peer.RoutePullFunc((*Aaa).XxZz)
 ```
 
-### 5.3 Pull-Handler-Function 接口模板
+### Pull-Handler-Function 接口模板
 
 ```go
 func XxZz(ctx tp.PullCtx, args *<T>) (<T>, *tp.Rerror) {
@@ -322,7 +322,7 @@ func XxZz(ctx tp.PullCtx, args *<T>) (<T>, *tp.Rerror) {
 peer.RoutePullFunc(XxZz)
 ```
 
-### 5.4 Push-Controller-Struct 接口模板
+### Push-Controller-Struct 接口模板
 
 ```go
 type Bbb struct {
@@ -344,7 +344,7 @@ peer.RoutePush(new(Bbb))
 peer.RoutePushFunc((*Bbb).YyZz)
 ```
 
-### 5.5 Push-Handler-Function 接口模板
+### Push-Handler-Function 接口模板
 
 ```go
 // YyZz register the route: /yy_zz
@@ -361,7 +361,7 @@ func YyZz(ctx tp.PushCtx, args *<T>) *tp.Rerror {
 peer.RoutePushFunc(YyZz)
 ```
 
-### 5.6 Unknown-Pull-Handler-Function 接口模板
+### Unknown-Pull-Handler-Function 接口模板
 
 ```go
 func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
@@ -377,7 +377,7 @@ func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 peer.SetUnknownPull(XxxUnknownPull)
 ```
 
-### 5.7 Unknown-Push-Handler-Function 接口模板
+### Unknown-Push-Handler-Function 接口模板
 
 ```go
 func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
@@ -393,7 +393,7 @@ func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
-### 5.8 插件示例
+### 插件示例
 
 ```go
 // NewIgnoreCase Returns a ignoreCase plugin.
@@ -425,7 +425,7 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 }
 ```
 
-### 5.9 注册以上操作和插件示例到路由
+### 注册以上操作和插件示例到路由
 
 ```go
 // add router group
@@ -439,7 +439,7 @@ peer.SetUnknownPull(XxxUnknownPull)
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
-### 5.10 配置信息
+### 配置信息
 
 ```go
 type PeerConfig struct {
@@ -456,7 +456,7 @@ type PeerConfig struct {
 }
 ```
 
-### 5.11 通信优化
+### 通信优化
 
 - SetPacketSizeLimit 设置包大小的上限，
   如果 maxSize<=0，上限默认为最大 uint32
@@ -497,7 +497,7 @@ type PeerConfig struct {
     ```
 
 
-## 6 完整示例
+## 完整示例
 
 ### server.go
 
@@ -584,7 +584,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
 
-## 7 扩展包
+## 扩展包
 
 ### 编解码器
 
@@ -628,7 +628,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [扩展库](https://github.com/henrylee2cn/tp-ext)
 
-## 8 基于Teleport的项目
+## 基于Teleport的项目
 
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
@@ -636,7 +636,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | [Ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 TP-Micro 和 Teleport 的、高可用的微服务平台解决方案 |
 | [Pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具 |
 
-## 9 企业用户
+## 企业用户
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -644,6 +644,6 @@ func (p *push) Status(args *string) *tp.Rerror {
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 10 开源协议
+## 开源协议
 
 Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) 协议发布
