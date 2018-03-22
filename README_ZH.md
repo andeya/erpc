@@ -60,7 +60,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 **[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
 
 
-## 1. 版本
+## 1 版本
 
 | 版本   | 状态      | 分支                                       |
 | ---- | ------- | ---------------------------------------- |
@@ -68,13 +68,13 @@ Teleport是一个通用、高效、灵活的Socket框架。
 | v2   | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
 | v1   | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
-## 2. 安装
+## 2 安装
 
 ```sh
 go get -u -f github.com/henrylee2cn/teleport
 ```
 
-## 3. 特性
+## 3 特性
 
 - 服务器和客户端之间对等通信，两者API方法基本一致
 - 支持定制通信协议
@@ -94,7 +94,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - 客户端的Session支持断线后自动重连
 - 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket`等
 
-## 4. 框架设计
+## 4 框架设计
 
 ### 4.1 名称解释
 
@@ -265,7 +265,7 @@ type Peer interface {
 }
 ```
 
-## 5. 用法
+## 5 用法
 
 ### 5.1 Peer端点（服务端或客户端）示例
 
@@ -497,7 +497,7 @@ type PeerConfig struct {
     ```
 
 
-## 6. 完整示例
+## 6 完整示例
 
 ### server.go
 
@@ -584,7 +584,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
 
-## 7. 扩展包
+## 7 扩展包
 
 ### 编解码器
 
@@ -628,7 +628,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [扩展库](https://github.com/henrylee2cn/tp-ext)
 
-## 8. 基于Teleport的项目
+## 8 基于Teleport的项目
 
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
@@ -636,7 +636,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | [Ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 TP-Micro 和 Teleport 的、高可用的微服务平台解决方案 |
 | [Pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具 |
 
-## 9. 企业用户
+## 9 企业用户
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -644,6 +644,6 @@ func (p *push) Status(args *string) *tp.Rerror {
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 10. 开源协议
+## 10 开源协议
 
 Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) 协议发布
