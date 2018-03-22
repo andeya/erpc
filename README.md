@@ -635,7 +635,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
 | [TP-Micro](https://github.com/henrylee2cn/tp-micro) | TP-Micro is a simple, powerful micro service framework based on Teleport |
-| [Ants](https://github.com/xiaoenai/ants) | Ants is a highly available micro service platform based on TP-Micro |
+| [Ants](https://github.com/xiaoenai/ants) | Ants is a highly available micro service platform based on TP-Micro and Teleport|
 | [Pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus is a distributed, high concurrency and powerful web crawler software |
 
 ## 9. Business Users

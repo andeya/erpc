@@ -633,7 +633,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
 | [TP-Micro](https://github.com/henrylee2cn/tp-micro) | TP-Micro 是一个基于 Teleport 定制的、简约而强大的微服务框架          |
-| [Ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 TP-Micro 的高可用的微服务平台解决方案 |
+| [Ants](https://github.com/xiaoenai/ants) | Ants 是一套基于 TP-Micro 和 Teleport 的、高可用的微服务平台解决方案 |
 | [Pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus（幽灵蛛）是一款纯Go语言编写的支持分布式的高并发、重量级爬虫软件，定位于互联网数据采集，为具备一定Go或JS编程基础的人提供一个只需关注规则定制的功能强大的爬虫工具 |
 
 ## 9. 企业用户
