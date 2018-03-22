@@ -60,7 +60,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 **[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
 
-## 1. Version
+## 1 Version
 
 | version | status  | branch                                   |
 | ------- | ------- | ---------------------------------------- |
@@ -69,13 +69,13 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 | v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
 
-## 2. Install
+## 2 Install
 
 ```sh
 go get -u -f github.com/henrylee2cn/teleport
 ```
 
-## 3. Feature
+## 3 Feature
 
 - Server and client are peer-to-peer, have the same API method
 - Support custom communication protocol
@@ -95,7 +95,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - Client session support automatically redials after disconnection
 - Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and so on
 
-## 4. Design
+## 4 Design
 
 ### 4.1 Keywords
 
@@ -264,7 +264,7 @@ type Peer interface {
 }
 ```
 
-## 5. Usage
+## 5 Usage
 
 ### 5.1 Peer(server or client) Demo
 
@@ -500,7 +500,7 @@ type PeerConfig struct {
     ```
 
 
-## 6. Example
+## 6 Example
 
 ### server.go
 
@@ -586,7 +586,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
-## 7. Extensions
+## 7 Extensions
 
 ### Codec
 
@@ -630,7 +630,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 
 [Extensions Repository](https://github.com/henrylee2cn/tp-ext)
 
-## 8. Projects based on Teleport
+## 8 Projects based on Teleport
 
 | project                                  | description                              |
 | ---------------------------------------- | ---------------------------------------- |
@@ -638,7 +638,7 @@ func (p *push) Status(args *string) *tp.Rerror {
 | [Ants](https://github.com/xiaoenai/ants) | Ants is a highly available micro service platform based on TP-Micro and Teleport|
 | [Pholcus](https://github.com/henrylee2cn/pholcus) | Pholcus is a distributed, high concurrency and powerful web crawler software |
 
-## 9. Business Users
+## 9 Business Users
 
 [![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
 &nbsp;&nbsp;
@@ -646,6 +646,6 @@ func (p *push) Status(args *string) *tp.Rerror {
 &nbsp;&nbsp;
 [![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
 
-## 10. License
+## 10 License
 
 Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text
