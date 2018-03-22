@@ -94,6 +94,93 @@ go get -u -f github.com/henrylee2cn/teleport
 - 客户端的Session支持断线后自动重连
 - 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket`等
 
+## 代码示例
+
+### server.go
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+
+    tp "github.com/henrylee2cn/teleport"
+)
+
+func main() {
+    svr := tp.NewPeer(tp.PeerConfig{
+        CountTime:     true,
+        ListenAddress: ":9090",
+    })
+    svr.RoutePull(new(math))
+    svr.Listen()
+}
+
+type math struct {
+    tp.PullCtx
+}
+
+func (m *math) Add(args *[]int) (int, *tp.Rerror) {
+    if m.Query().Get("push_status") == "yes" {
+        m.Session().Push(
+            "/push/status",
+            fmt.Sprintf("%d numbers are being added...", len(*args)),
+        )
+        time.Sleep(time.Millisecond * 10)
+    }
+    var r int
+    for _, a := range *args {
+        r += a
+    }
+    return r, nil
+}
+```
+
+### client.go
+
+```go
+package main
+
+import (
+    tp "github.com/henrylee2cn/teleport"
+)
+
+func main() {
+    tp.SetLoggerLevel("ERROR")
+    cli := tp.NewPeer(tp.PeerConfig{})
+    defer cli.Close()
+    cli.RoutePush(new(push))
+    sess, err := cli.Dial(":9090")
+    if err != nil {
+        tp.Fatalf("%v", err)
+    }
+
+    var reply int
+    rerr := sess.Pull("/math/add?push_status=yes",
+        []int{1, 2, 3, 4, 5},
+        &reply,
+    ).Rerror()
+
+    if rerr != nil {
+        tp.Fatalf("%v", rerr)
+    }
+    tp.Printf("reply: %d", reply)
+}
+
+type push struct {
+    tp.PushCtx
+}
+
+func (p *push) Status(args *string) *tp.Rerror {
+    tp.Printf("server status: %s", *args)
+    return nil
+}
+```
+
+[More](https://github.com/henrylee2cn/teleport/blob/master/samples)
+
+
 ## 框架设计
 
 ### 名称解释
@@ -495,93 +582,6 @@ type PeerConfig struct {
     ```go
     func SetSocketWriteBuffer(bytes int)
     ```
-
-
-## 完整示例
-
-### server.go
-
-```go
-package main
-
-import (
-    "fmt"
-    "time"
-
-    tp "github.com/henrylee2cn/teleport"
-)
-
-func main() {
-    svr := tp.NewPeer(tp.PeerConfig{
-        CountTime:     true,
-        ListenAddress: ":9090",
-    })
-    svr.RoutePull(new(math))
-    svr.Listen()
-}
-
-type math struct {
-    tp.PullCtx
-}
-
-func (m *math) Add(args *[]int) (int, *tp.Rerror) {
-    if m.Query().Get("push_status") == "yes" {
-        m.Session().Push(
-            "/push/status",
-            fmt.Sprintf("%d numbers are being added...", len(*args)),
-        )
-        time.Sleep(time.Millisecond * 10)
-    }
-    var r int
-    for _, a := range *args {
-        r += a
-    }
-    return r, nil
-}
-```
-
-### client.go
-
-```go
-package main
-
-import (
-    tp "github.com/henrylee2cn/teleport"
-)
-
-func main() {
-    tp.SetLoggerLevel("ERROR")
-    cli := tp.NewPeer(tp.PeerConfig{})
-    defer cli.Close()
-    cli.RoutePush(new(push))
-    sess, err := cli.Dial(":9090")
-    if err != nil {
-        tp.Fatalf("%v", err)
-    }
-
-    var reply int
-    rerr := sess.Pull("/math/add?push_status=yes",
-        []int{1, 2, 3, 4, 5},
-        &reply,
-    ).Rerror()
-
-    if rerr != nil {
-        tp.Fatalf("%v", rerr)
-    }
-    tp.Printf("reply: %d", reply)
-}
-
-type push struct {
-    tp.PushCtx
-}
-
-func (p *push) Status(args *string) *tp.Rerror {
-    tp.Printf("server status: %s", *args)
-    return nil
-}
-```
-
-[More](https://github.com/henrylee2cn/teleport/blob/master/samples)
 
 
 ## 扩展包

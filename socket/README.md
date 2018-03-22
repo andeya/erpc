@@ -42,6 +42,128 @@ darwin amd64 4CPU 8GB
 
 **[svg file](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.svg)**
 
+## Example
+
+### server.go
+
+```go
+package main
+
+import (
+	"log"
+	"net"
+
+	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport/socket/example/pb"
+)
+
+func main() {
+	socket.SetPacketSizeLimit(512)
+	lis, err := net.Listen("tcp", "0.0.0.0:8000")
+	if err != nil {
+		log.Fatalf("[SVR] listen err: %v", err)
+	}
+	log.Printf("listen tcp 0.0.0.0:8000")
+	for {
+		conn, err := lis.Accept()
+		if err != nil {
+			log.Fatalf("[SVR] accept err: %v", err)
+		}
+		go func(s socket.Socket) {
+			log.Printf("accept %s", s.Id())
+			defer s.Close()
+			var pbTest = new(pb.PbTest)
+			for {
+				// read request
+				var packet = socket.GetPacket(socket.WithNewBody(
+					func(header socket.Header) interface{} {
+						*pbTest = pb.PbTest{}
+						return pbTest
+					}),
+				)
+				err = s.ReadPacket(packet)
+				if err != nil {
+					log.Printf("[SVR] read request err: %v", err)
+					return
+				} else {
+					// log.Printf("[SVR] read request: %v", packet)
+				}
+
+				// write response
+				pbTest.A = pbTest.A + pbTest.B
+				pbTest.B = pbTest.A - pbTest.B*2
+				packet.SetBody(pbTest)
+
+				err = s.WritePacket(packet)
+				if err != nil {
+					log.Printf("[SVR] write response err: %v", err)
+				} else {
+					// log.Printf("[SVR] write response: %v", packet)
+				}
+				socket.PutPacket(packet)
+			}
+		}(socket.GetSocket(conn))
+	}
+}
+```
+
+### client.go
+
+```go
+package main
+
+import (
+	"log"
+	"net"
+
+	"github.com/henrylee2cn/teleport/codec"
+	"github.com/henrylee2cn/teleport/socket"
+
+	"github.com/henrylee2cn/teleport/socket/example/pb"
+)
+
+func main() {
+	conn, err := net.Dial("tcp", "127.0.0.1:8000")
+	if err != nil {
+		log.Fatalf("[CLI] dial err: %v", err)
+	}
+	s := socket.GetSocket(conn)
+	defer s.Close()
+	var packet = socket.GetPacket()
+	defer socket.PutPacket(packet)
+	for i := uint64(0); i < 1; i++ {
+		// write request
+		packet.Reset()
+		packet.SetPtype(0)
+		packet.SetBodyCodec(codec.ID_JSON)
+		packet.SetSeq(i)
+		packet.SetUri("/a/b")
+		packet.SetBody(&pb.PbTest{A: 10, B: 2})
+		err = s.WritePacket(packet)
+		if err != nil {
+			log.Printf("[CLI] write request err: %v", err)
+			continue
+		}
+		log.Printf("[CLI] write request: %v", packet)
+
+		// read response
+		packet.Reset(socket.WithNewBody(
+			func(header socket.Header) interface{} {
+				return new(pb.PbTest)
+			}),
+		)
+		err = s.ReadPacket(packet)
+		if err != nil {
+			log.Printf("[CLI] read response err: %v", err)
+		} else {
+			log.Printf("[CLI] read response: %v", packet)
+		}
+	}
+}
+```
+
+[More Example](https://github.com/henrylee2cn/teleport/tree/master/socket/example)
+
 ## Keyworks
 
 - **Packet:** The corresponding structure of the data package
@@ -181,124 +303,3 @@ transmit buffer associated with the connection.
 	```go
 	func SetWriteBuffer(bytes int)
 	```
-
-
-## Demo
-
-### server.go
-
-```go
-package main
-
-import (
-	"log"
-	"net"
-
-	"github.com/henrylee2cn/teleport/socket"
-	"github.com/henrylee2cn/teleport/socket/example/pb"
-)
-
-func main() {
-	socket.SetPacketSizeLimit(512)
-	lis, err := net.Listen("tcp", "0.0.0.0:8000")
-	if err != nil {
-		log.Fatalf("[SVR] listen err: %v", err)
-	}
-	log.Printf("listen tcp 0.0.0.0:8000")
-	for {
-		conn, err := lis.Accept()
-		if err != nil {
-			log.Fatalf("[SVR] accept err: %v", err)
-		}
-		go func(s socket.Socket) {
-			log.Printf("accept %s", s.Id())
-			defer s.Close()
-			var pbTest = new(pb.PbTest)
-			for {
-				// read request
-				var packet = socket.GetPacket(socket.WithNewBody(
-					func(header socket.Header) interface{} {
-						*pbTest = pb.PbTest{}
-						return pbTest
-					}),
-				)
-				err = s.ReadPacket(packet)
-				if err != nil {
-					log.Printf("[SVR] read request err: %v", err)
-					return
-				} else {
-					// log.Printf("[SVR] read request: %v", packet)
-				}
-
-				// write response
-				pbTest.A = pbTest.A + pbTest.B
-				pbTest.B = pbTest.A - pbTest.B*2
-				packet.SetBody(pbTest)
-
-				err = s.WritePacket(packet)
-				if err != nil {
-					log.Printf("[SVR] write response err: %v", err)
-				} else {
-					// log.Printf("[SVR] write response: %v", packet)
-				}
-				socket.PutPacket(packet)
-			}
-		}(socket.GetSocket(conn))
-	}
-}
-```
-
-### client.go
-
-```go
-package main
-
-import (
-	"log"
-	"net"
-
-	"github.com/henrylee2cn/teleport/codec"
-	"github.com/henrylee2cn/teleport/socket"
-
-	"github.com/henrylee2cn/teleport/socket/example/pb"
-)
-
-func main() {
-	conn, err := net.Dial("tcp", "127.0.0.1:8000")
-	if err != nil {
-		log.Fatalf("[CLI] dial err: %v", err)
-	}
-	s := socket.GetSocket(conn)
-	defer s.Close()
-	var packet = socket.GetPacket()
-	defer socket.PutPacket(packet)
-	for i := uint64(0); i < 1; i++ {
-		// write request
-		packet.Reset()
-		packet.SetPtype(0)
-		packet.SetBodyCodec(codec.ID_JSON)
-		packet.SetSeq(i)
-		packet.SetUri("/a/b")
-		packet.SetBody(&pb.PbTest{A: 10, B: 2})
-		err = s.WritePacket(packet)
-		if err != nil {
-			log.Printf("[CLI] write request err: %v", err)
-			continue
-		}
-		log.Printf("[CLI] write request: %v", packet)
-
-		// read response
-		packet.Reset(socket.WithNewBody(
-			func(header socket.Header) interface{} {
-				return new(pb.PbTest)
-			}),
-		)
-		err = s.ReadPacket(packet)
-		if err != nil {
-			log.Printf("[CLI] read response err: %v", err)
-		} else {
-			log.Printf("[CLI] read response: %v", packet)
-		}
-	}
-}
-```
