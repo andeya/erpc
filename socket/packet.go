@@ -390,7 +390,7 @@ func (p *Packet) String() string {
 	return goutil.BytesToString(dst.Bytes())
 }
 
-// PacketSetting sets Header field.
+// PacketSetting is a pipe function type for setting socket package.
 type PacketSetting func(*Packet)
 
 // WithContext sets the packet handling context.
