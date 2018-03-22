@@ -162,7 +162,7 @@ func main() {
 }
 ```
 
-[More Example](https://github.com/henrylee2cn/teleport/tree/master/socket/example)
+[More Examples](https://github.com/henrylee2cn/teleport/tree/master/socket/example)
 
 ## Keyworks
 
