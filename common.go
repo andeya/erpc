@@ -302,6 +302,17 @@ func NewFakePullCmd(uri string, args, reply interface{}, rerr *Rerror) PullCmd {
 	}
 }
 
+var closeChan = func() <-chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}()
+
+// Done returns the chan that indicates whether it has been completed.
+func (f *fakePullCmd) Done() <-chan struct{} {
+	return closeChan
+}
+
 // Output returns writed packet.
 func (f *fakePullCmd) Output() *socket.Packet {
 	return f.output
