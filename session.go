@@ -89,7 +89,13 @@ type (
 		Health() bool
 		// AsyncPull sends a packet and receives reply asynchronously.
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
-		AsyncPull(uri string, args interface{}, reply interface{}, done chan<- PullCmd, setting ...socket.PacketSetting) PullCmd
+		AsyncPull(
+			uri string,
+			args interface{},
+			reply interface{},
+			pullCmdChan chan<- PullCmd,
+			setting ...socket.PacketSetting,
+		) PullCmd
 		// Pull sends a packet and receives reply.
 		// Note:
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
@@ -314,16 +320,22 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 // Note:
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan<- PullCmd, setting ...socket.PacketSetting) PullCmd {
-	if done == nil {
-		done = make(chan PullCmd, 10) // buffered.
+func (s *session) AsyncPull(
+	uri string,
+	args interface{},
+	reply interface{},
+	pullCmdChan chan<- PullCmd,
+	setting ...socket.PacketSetting,
+) PullCmd {
+	if pullCmdChan == nil {
+		pullCmdChan = make(chan PullCmd, 10) // buffered.
 	} else {
-		// If caller passes done != nil, it must arrange that
-		// done has enough buffer for the number of simultaneous
+		// If caller passes pullCmdChan != nil, it must arrange that
+		// pullCmdChan has enough buffer for the number of simultaneous
 		// RPCs that will be using that channel. If the channel
 		// is totally unbuffered, it's best not to run at all.
-		if cap(done) == 0 {
-			Panicf("*session.AsyncPull(): done channel is unbuffered")
+		if cap(pullCmdChan) == 0 {
+			Panicf("*session.AsyncPull(): pullCmdChan channel is unbuffered")
 		}
 	}
 	s.seqLock.Lock()
@@ -351,7 +363,7 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 		sess:        s,
 		output:      output,
 		reply:       reply,
-		pullCmdChan: done,
+		pullCmdChan: pullCmdChan,
 		doneChan:    make(chan struct{}),
 		start:       s.peer.timeNow(),
 		public:      goutil.RwMap(),
