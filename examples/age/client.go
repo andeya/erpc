@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	tp.SetLoggerLevel("ERROR")
+	tp.SetLoggerLevel("INFO")
 	cli := tp.NewPeer(tp.PeerConfig{})
 	defer cli.Close()
 	sess, err := cli.Dial(":9090")
@@ -18,28 +18,29 @@ func main() {
 
 	var reply string
 	sess.Pull("/test/ok", "test1", &reply)
-	tp.Printf("test normal: %v", reply)
+	tp.Infof("test sync 1: %v", reply)
 
 	sess.Pull("/test/timeout", "test2", &reply).Rerror()
-	tp.Printf("test: server context timeout: %v", reply)
+	tp.Infof("test sync 2: server context timeout: %v", reply)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	ch := make(chan tp.PullCmd, 1)
-	sess.AsyncPull(
+
+	pullCmd := sess.AsyncPull(
 		"/test/timeout",
 		"test3",
 		&reply,
-		ch,
+		make(chan tp.PullCmd, 1),
 		tp.WithContext(ctx),
 	)
 	select {
-	case <-ch:
+	case <-pullCmd.Done():
 		cancel()
+		tp.Infof("test async: %v", reply)
 	case <-ctx.Done():
-		tp.Printf("test: client context timeout: %v", ctx.Err())
+		tp.Warnf("test async: client context timeout: %v", ctx.Err())
 	}
 
 	time.Sleep(time.Second * 5)
 	rerr := sess.Pull("/test/ok", "test4", &reply).Rerror()
-	tp.Printf("test: disconnect due to server session timeout: %v", rerr.ToError())
+	tp.Warnf("test sync 3: disconnect due to server session timeout: %v", rerr.ToError())
 }
