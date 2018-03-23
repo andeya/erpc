@@ -675,6 +675,8 @@ type (
 		Context() context.Context
 		// Output returns writed packet.
 		Output() *socket.Packet
+		// Rerror returns the pull error.
+		Rerror() *Rerror
 		// Done returns the chan that indicates whether it has been completed.
 		Done() <-chan struct{}
 		// Result returns the pull result.
@@ -682,11 +684,6 @@ type (
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the pull is completed!
 		Result() (interface{}, *Rerror)
-		// Rerror returns the pull error.
-		// Notes:
-		//  Inside, <-Done() is automatically called and blocked,
-		//  until the pull is completed!
-		Rerror() *Rerror
 		// InputBodyCodec gets the body codec type of the input packet.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
@@ -784,6 +781,16 @@ func (p *pullCmd) Context() context.Context {
 	return p.output.Context()
 }
 
+// Rerror returns the pull error.
+func (p *pullCmd) Rerror() *Rerror {
+	return p.rerr
+}
+
+// Done returns the chan that indicates whether it has been completed.
+func (p *pullCmd) Done() <-chan struct{} {
+	return p.doneChan
+}
+
 // Result returns the pull result.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
@@ -791,15 +798,6 @@ func (p *pullCmd) Context() context.Context {
 func (p *pullCmd) Result() (interface{}, *Rerror) {
 	<-p.Done()
 	return p.reply, p.rerr
-}
-
-// Rerror returns the pull error.
-// Notes:
-//  Inside, <-Done() is automatically called and blocked,
-//  until the pull is completed!
-func (p *pullCmd) Rerror() *Rerror {
-	<-p.Done()
-	return p.rerr
 }
 
 // InputBodyCodec gets the body codec type of the input packet.
@@ -828,11 +826,6 @@ func (p *pullCmd) InputMeta() *utils.Args {
 func (p *pullCmd) CostTime() time.Duration {
 	<-p.Done()
 	return p.cost
-}
-
-// Done returns the chan that indicates whether it has been completed.
-func (p *pullCmd) Done() <-chan struct{} {
-	return p.doneChan
 }
 
 func (p *pullCmd) done() {
