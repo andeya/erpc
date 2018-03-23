@@ -315,11 +315,16 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan PullCmd, setting ...socket.PacketSetting) {
-	if done == nil && cap(done) == 0 {
-		// It must arrange that done has enough buffer for the number of simultaneous
+	if done == nil {
+		done = make(chan PullCmd, 10) // buffered.
+	} else {
+		// If caller passes done != nil, it must arrange that
+		// done has enough buffer for the number of simultaneous
 		// RPCs that will be using that channel. If the channel
 		// is totally unbuffered, it's best not to run at all.
-		Panicf("*session.AsyncPull(): done channel is unbuffered")
+		if cap(done) == 0 {
+			Panicf("*session.AsyncPull(): done channel is unbuffered")
+		}
 	}
 	s.seqLock.Lock()
 	seq := s.seq
