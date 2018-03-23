@@ -89,7 +89,7 @@ type (
 		Health() bool
 		// AsyncPull sends a packet and receives reply asynchronously.
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
-		AsyncPull(uri string, args interface{}, reply interface{}, done chan PullCmd, setting ...socket.PacketSetting)
+		AsyncPull(uri string, args interface{}, reply interface{}, done chan<- PullCmd, setting ...socket.PacketSetting) PullCmd
 		// Pull sends a packet and receives reply.
 		// Note:
 		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
@@ -314,7 +314,7 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 // Note:
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan PullCmd, setting ...socket.PacketSetting) {
+func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, done chan<- PullCmd, setting ...socket.PacketSetting) PullCmd {
 	if done == nil {
 		done = make(chan PullCmd, 10) // buffered.
 	} else {
@@ -348,12 +348,13 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 	}
 
 	cmd := &pullCmd{
-		sess:     s,
-		output:   output,
-		reply:    reply,
-		doneChan: done,
-		start:    s.peer.timeNow(),
-		public:   goutil.RwMap(),
+		sess:        s,
+		output:      output,
+		reply:       reply,
+		pullCmdChan: done,
+		doneChan:    make(chan struct{}),
+		start:       s.peer.timeNow(),
+		public:      goutil.RwMap(),
 	}
 
 	// count pull-launch
@@ -380,7 +381,7 @@ func (s *session) AsyncPull(uri string, args interface{}, reply interface{}, don
 	cmd.rerr = s.peer.pluginContainer.PreWritePull(cmd)
 	if cmd.rerr != nil {
 		cmd.done()
-		return
+		return cmd
 	}
 	var usedConn net.Conn
 W:
@@ -389,10 +390,11 @@ W:
 			goto W
 		}
 		cmd.done()
-		return
+		return cmd
 	}
 
 	s.peer.pluginContainer.PostWritePull(cmd)
+	return cmd
 }
 
 // Pull sends a packet and receives reply.
@@ -400,10 +402,8 @@ W:
 // If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) PullCmd {
-	doneChan := make(chan PullCmd, 1)
-	s.AsyncPull(uri, args, reply, doneChan, setting...)
-	pullCmd := <-doneChan
-	close(doneChan)
+	pullCmd := s.AsyncPull(uri, args, reply, make(chan PullCmd, 1), setting...)
+	<-pullCmd.Done()
 	return pullCmd
 }
 

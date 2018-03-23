@@ -670,21 +670,38 @@ func (c *readHandleCtx) Bind(v interface{}) (byte, error) {
 type (
 	// PullCmd the command of the pulling operation's response.
 	PullCmd interface {
-		// Output returns writed packet.
-		Output() *socket.Packet
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
+		// Output returns writed packet.
+		Output() *socket.Packet
+		// Done returns the chan that indicates whether it has been completed.
+		Done() <-chan struct{}
 		// Result returns the pull result.
+		// Notes:
+		//  Inside, <-Done() is automatically called and blocked,
+		//  until the pull is completed!
 		Result() (interface{}, *Rerror)
 		// Rerror returns the pull error.
+		// Notes:
+		//  Inside, <-Done() is automatically called and blocked,
+		//  until the pull is completed!
 		Rerror() *Rerror
 		// InputBodyCodec gets the body codec type of the input packet.
+		// Notes:
+		//  Inside, <-Done() is automatically called and blocked,
+		//  until the pull is completed!
 		InputBodyCodec() byte
 		// InputMeta returns the header metadata of input packet.
+		// Notes:
+		//  Inside, <-Done() is automatically called and blocked,
+		//  until the pull is completed!
 		InputMeta() *utils.Args
 		// CostTime returns the pulled cost time.
 		// If PeerConfig.CountTime=false, always returns 0.
+		// Notes:
+		//  Inside, <-Done() is automatically called and blocked,
+		//  until the pull is completed!
 		CostTime() time.Duration
 	}
 	pullCmd struct {
@@ -694,11 +711,15 @@ type (
 		rerr           *Rerror
 		inputBodyCodec byte
 		inputMeta      *utils.Args
-		doneChan       chan PullCmd // Strobes when pull is complete.
 		start          time.Time
 		cost           time.Duration
 		public         goutil.Map
 		mu             sync.Mutex
+
+		// Send itself to the public channel when pull is complete.
+		pullCmdChan chan<- PullCmd
+		// Strobes when pull is complete.
+		doneChan chan struct{}
 	}
 )
 
@@ -764,35 +785,69 @@ func (p *pullCmd) Context() context.Context {
 }
 
 // Result returns the pull result.
+// Notes:
+//  Inside, <-Done() is automatically called and blocked,
+//  until the pull is completed!
 func (p *pullCmd) Result() (interface{}, *Rerror) {
+	<-p.Done()
 	return p.reply, p.rerr
 }
 
 // Rerror returns the pull error.
+// Notes:
+//  Inside, <-Done() is automatically called and blocked,
+//  until the pull is completed!
 func (p *pullCmd) Rerror() *Rerror {
+	<-p.Done()
 	return p.rerr
 }
 
 // InputBodyCodec gets the body codec type of the input packet.
+// Notes:
+//  Inside, <-Done() is automatically called and blocked,
+//  until the pull is completed!
 func (p *pullCmd) InputBodyCodec() byte {
+	<-p.Done()
 	return p.inputBodyCodec
 }
 
 // InputMeta returns the header metadata of input packet.
+// Notes:
+//  Inside, <-Done() is automatically called and blocked,
+//  until the pull is completed!
 func (p *pullCmd) InputMeta() *utils.Args {
+	<-p.Done()
 	return p.inputMeta
 }
 
 // CostTime returns the pulled cost time.
 // If PeerConfig.CountTime=false, always returns 0.
+// Notes:
+//  Inside, <-Done() is automatically called and blocked,
+//  until the pull is completed!
 func (p *pullCmd) CostTime() time.Duration {
+	<-p.Done()
 	return p.cost
+}
+
+// Done returns the chan that indicates whether it has been completed.
+func (p *pullCmd) Done() <-chan struct{} {
+	return p.doneChan
+}
+
+func (p *pullCmd) done() {
+	p.sess.pullCmdMap.Delete(p.output.Seq())
+	p.pullCmdChan <- p
+	close(p.doneChan)
+	// free count pull-launch
+	p.sess.gracepullCmdWaitGroup.Done()
 }
 
 func (p *pullCmd) cancel() {
 	p.sess.pullCmdMap.Delete(p.output.Seq())
 	p.rerr = rerrConnClosed
-	p.doneChan <- p
+	p.pullCmdChan <- p
+	close(p.doneChan)
 	// free count pull-launch
 	p.sess.gracepullCmdWaitGroup.Done()
 }
@@ -800,11 +855,4 @@ func (p *pullCmd) cancel() {
 // if pullCmd.inputMeta!=nil, means the pullCmd is replyed.
 func (p *pullCmd) hasReply() bool {
 	return p.inputMeta != nil
-}
-
-func (p *pullCmd) done() {
-	p.sess.pullCmdMap.Delete(p.output.Seq())
-	p.doneChan <- p
-	// free count pull-launch
-	p.sess.gracepullCmdWaitGroup.Done()
 }
