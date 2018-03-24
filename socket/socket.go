@@ -22,6 +22,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/henrylee2cn/goutil"
@@ -33,6 +34,12 @@ type (
 	//
 	// Multiple goroutines may invoke methods on a Socket simultaneously.
 	Socket interface {
+		// // Conn returns the real network connection.
+		// Conn() net.Conn
+
+		// SyscallConn returns a raw network connection.
+		// This implements the syscall.Conn interface.
+		SyscallConn() (syscall.RawConn, error)
 		// LocalAddr returns the local network address.
 		LocalAddr() net.Addr
 		// RemoteAddr returns the remote network address.
@@ -140,6 +147,21 @@ func newSocket(c net.Conn, protoFuncs []ProtoFunc) *socket {
 	}
 	s.optimize()
 	return s
+}
+
+// // Conn returns the real network connection.
+// func (s *socket) Conn() net.Conn {
+// 	return s.Conn
+// }
+
+// SyscallConn returns a raw network connection.
+// This implements the syscall.Conn interface.
+func (s *socket) SyscallConn() (syscall.RawConn, error) {
+	syscallConn, ok := s.Conn.(syscall.Conn)
+	if !ok {
+		return nil, syscall.EINVAL
+	}
+	return syscallConn.SyscallConn()
 }
 
 // WritePacket writes header and body to the connection.
