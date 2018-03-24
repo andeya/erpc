@@ -14,6 +14,7 @@ A concise, powerful and high-performance connection socket.
 - Each socket is assigned an id
 - Provides `Socket Hub`, `Socket` pool and `*Packet` stack
 - Support setting the size of the reading packet (if exceed disconnect it)
+- Provide an operating interface to control the connection file descriptor
 
 
 ## Benchmark
