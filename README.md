@@ -94,6 +94,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - Provide the context of the handler
 - Client session support automatically redials after disconnection
 - Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and so on
+- Provide an operating interface to control the connection file descriptor
 
 ## Example
 

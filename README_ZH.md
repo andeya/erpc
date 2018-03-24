@@ -93,6 +93,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - 提供Hander的上下文
 - 客户端的Session支持断线后自动重连
 - 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket`等
+- 提供对连接文件描述符（fd）的操作接口
 
 ## 代码示例
 
