@@ -34,11 +34,11 @@ type (
 	//
 	// Multiple goroutines may invoke methods on a Socket simultaneously.
 	Socket interface {
-		// Control invokes f on the underlying connection's file
+		// ControlFD invokes f on the underlying connection's file
 		// descriptor or handle.
 		// The file descriptor fd is guaranteed to remain valid while
 		// f executes but not after f returns.
-		Control(f func(fd uintptr)) error
+		ControlFD(f func(fd uintptr)) error
 		// LocalAddr returns the local network address.
 		LocalAddr() net.Addr
 		// RemoteAddr returns the remote network address.
@@ -148,11 +148,11 @@ func newSocket(c net.Conn, protoFuncs []ProtoFunc) *socket {
 	return s
 }
 
-// Control invokes f on the underlying connection's file
+// ControlFD invokes f on the underlying connection's file
 // descriptor or handle.
 // The file descriptor fd is guaranteed to remain valid while
 // f executes but not after f returns.
-func (s *socket) Control(f func(fd uintptr)) error {
+func (s *socket) ControlFD(f func(fd uintptr)) error {
 	syscallConn, ok := s.Conn.(syscall.Conn)
 	if !ok {
 		return syscall.EINVAL
