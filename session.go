@@ -52,8 +52,11 @@ type (
 		BaseSession
 		// SetId sets the session id.
 		SetId(newId string)
-		// Conn returns the connection.
-		Conn() net.Conn
+		// Control invokes f on the underlying connection's file
+		// descriptor or handle.
+		// The file descriptor fd is guaranteed to remain valid while
+		// f executes but not after f returns.
+		Control(f func(fd uintptr)) error
 		// ResetConn resets the connection.
 		// Note:
 		// only reset net.Conn, but not reset socket.ProtoFunc;
@@ -184,8 +187,17 @@ func (s *session) SetId(newId string) {
 	Tracef("session changes id: %s -> %s", oldId, newId)
 }
 
-// Conn returns the connection.
-func (s *session) Conn() net.Conn {
+// Control invokes f on the underlying connection's file
+// descriptor or handle.
+// The file descriptor fd is guaranteed to remain valid while
+// f executes but not after f returns.
+func (s *session) Control(f func(fd uintptr)) error {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return s.socket.Control(f)
+}
+
+func (s *session) getConn() net.Conn {
 	s.lock.RLock()
 	c := s.conn
 	s.lock.RUnlock()
@@ -641,7 +653,7 @@ func (s *session) startReadAndHandle() {
 
 	var (
 		err  error
-		conn = s.Conn()
+		conn = s.getConn()
 	)
 	defer func() {
 		if p := recover(); p != nil {
@@ -679,7 +691,7 @@ func (s *session) startReadAndHandle() {
 }
 
 func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
-	conn := s.Conn()
+	conn := s.getConn()
 	status := s.getStatus()
 	if status != statusOk &&
 		!(status == statusActiveClosing && packet.Ptype() == TypeReply) {
