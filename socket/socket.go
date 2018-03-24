@@ -34,12 +34,11 @@ type (
 	//
 	// Multiple goroutines may invoke methods on a Socket simultaneously.
 	Socket interface {
-		// // Conn returns the real network connection.
-		// Conn() net.Conn
-
-		// SyscallConn returns a raw network connection.
-		// This implements the syscall.Conn interface.
-		SyscallConn() (syscall.RawConn, error)
+		// Control invokes f on the underlying connection's file
+		// descriptor or handle.
+		// The file descriptor fd is guaranteed to remain valid while
+		// f executes but not after f returns.
+		Control(f func(fd uintptr)) error
 		// LocalAddr returns the local network address.
 		LocalAddr() net.Addr
 		// RemoteAddr returns the remote network address.
@@ -149,19 +148,20 @@ func newSocket(c net.Conn, protoFuncs []ProtoFunc) *socket {
 	return s
 }
 
-// // Conn returns the real network connection.
-// func (s *socket) Conn() net.Conn {
-// 	return s.Conn
-// }
-
-// SyscallConn returns a raw network connection.
-// This implements the syscall.Conn interface.
-func (s *socket) SyscallConn() (syscall.RawConn, error) {
+// Control invokes f on the underlying connection's file
+// descriptor or handle.
+// The file descriptor fd is guaranteed to remain valid while
+// f executes but not after f returns.
+func (s *socket) Control(f func(fd uintptr)) error {
 	syscallConn, ok := s.Conn.(syscall.Conn)
 	if !ok {
-		return nil, syscall.EINVAL
+		return syscall.EINVAL
 	}
-	return syscallConn.SyscallConn()
+	ctrl, err := syscallConn.SyscallConn()
+	if err != nil {
+		return err
+	}
+	return ctrl.Control(f)
 }
 
 // WritePacket writes header and body to the connection.
