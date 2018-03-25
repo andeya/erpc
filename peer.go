@@ -368,17 +368,6 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 	if strings.Contains(network, "udp") {
 		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
 	}
-	if c, ok := conn.(*tls.Conn); ok {
-		if p.defaultSessionAge > 0 {
-			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultSessionAge))
-		}
-		if p.defaultContextAge > 0 {
-			c.SetReadDeadline(coarsetime.CeilingTimeNow().Add(p.defaultContextAge))
-		}
-		if err := c.Handshake(); err != nil {
-			return nil, errors.Errorf("TLS handshake error from %s: %s", c.RemoteAddr(), err.Error())
-		}
-	}
 	var sess = newSession(p, conn, protoFunc)
 	if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
 		sess.Close()
