@@ -86,10 +86,10 @@ type (
 		// Close closes the connection socket.
 		// Any blocked Read or Write operations will be unblocked and return errors.
 		Close() error
-		// Public returns temporary public data of Socket.
-		Public() goutil.Map
-		// PublicLen returns the length of public data of Socket.
-		PublicLen() int
+		// Swap returns custom data swap of the socket.
+		Swap() goutil.Map
+		// SwapLen returns the amount of custom data of the socket.
+		SwapLen() int
 		// Id returns the socket id.
 		Id() string
 		// SetId sets the socket id.
@@ -99,13 +99,13 @@ type (
 	}
 	socket struct {
 		net.Conn
-		protocol  Proto
-		id        string
-		idMutex   sync.RWMutex
-		ctxPublic goutil.Map
-		mu        sync.RWMutex
-		curState  int32
-		fromPool  bool
+		protocol Proto
+		id       string
+		idMutex  sync.RWMutex
+		swap     goutil.Map
+		mu       sync.RWMutex
+		curState int32
+		fromPool bool
 	}
 )
 
@@ -192,20 +192,20 @@ func (s *socket) ReadPacket(packet *Packet) error {
 	return protocol.Unpack(packet)
 }
 
-// Public returns temporary public data of Socket.
-func (s *socket) Public() goutil.Map {
-	if s.ctxPublic == nil {
-		s.ctxPublic = goutil.RwMap()
+// Swap returns custom data swap of the socket.
+func (s *socket) Swap() goutil.Map {
+	if s.swap == nil {
+		s.swap = goutil.RwMap()
 	}
-	return s.ctxPublic
+	return s.swap
 }
 
-// PublicLen returns the length of public data of Socket.
-func (s *socket) PublicLen() int {
-	if s.ctxPublic == nil {
+// SwapLen returns the amount of custom data of the socket.
+func (s *socket) SwapLen() int {
+	if s.swap == nil {
 		return 0
 	}
-	return s.ctxPublic.Len()
+	return s.swap.Len()
 }
 
 // Id returns the socket id.
@@ -261,7 +261,7 @@ func (s *socket) Close() error {
 	}
 	if s.fromPool {
 		s.Conn = nil
-		s.ctxPublic = nil
+		s.swap = nil
 		s.protocol = nil
 		socketPool.Put(s)
 	}

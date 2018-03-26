@@ -39,10 +39,8 @@ type (
 		Ip() string
 		// RealIp returns the the current real remote addr.
 		RealIp() string
-		// Public returns temporary public data of context.
-		Public() goutil.Map
-		// PublicLen returns the length of public data of context.
-		PublicLen() int
+		// Swap returns custom data swap of context.
+		Swap() goutil.Map
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
@@ -167,7 +165,7 @@ type handlerCtx struct {
 	handler         *Handler
 	arg             reflect.Value
 	pullCmd         *pullCmd
-	public          goutil.Map
+	swap            goutil.Map
 	start           time.Time
 	cost            time.Duration
 	pluginContainer *PluginContainer
@@ -192,11 +190,11 @@ func newReadHandleCtx() *handlerCtx {
 
 func (c *handlerCtx) reInit(s *session) {
 	c.sess = s
-	count := s.socket.PublicLen()
-	c.public = goutil.RwMap(count)
+	count := s.socket.SwapLen()
+	c.swap = goutil.RwMap(count)
 	if count > 0 {
-		s.socket.Public().Range(func(key, value interface{}) bool {
-			c.public.Store(key, value)
+		s.socket.Swap().Range(func(key, value interface{}) bool {
+			c.swap.Store(key, value)
 			return true
 		})
 	}
@@ -207,7 +205,7 @@ func (c *handlerCtx) clean() {
 	c.handler = nil
 	c.arg = emptyValue
 	c.pullCmd = nil
-	c.public = nil
+	c.swap = nil
 	c.cost = 0
 	c.pluginContainer = nil
 	c.handleErr = nil
@@ -236,14 +234,9 @@ func (c *handlerCtx) Output() *socket.Packet {
 	return c.output
 }
 
-// Public returns temporary public data of context.
-func (c *handlerCtx) Public() goutil.Map {
-	return c.public
-}
-
-// PublicLen returns the length of public data of context.
-func (c *handlerCtx) PublicLen() int {
-	return c.public.Len()
+// Swap returns custom data swap of context.
+func (c *handlerCtx) Swap() goutil.Map {
+	return c.swap
 }
 
 // Seq returns the input packet sequence.
@@ -582,7 +575,7 @@ func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 	// unlock: handleReply
 	c.pullCmd.mu.Lock()
 
-	c.public = c.pullCmd.public
+	c.swap = c.pullCmd.swap
 	c.pullCmd.inputBodyCodec = c.GetBodyCodec()
 	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
 	c.pullCmd.inputMeta = c.CopyMeta()
@@ -694,7 +687,7 @@ type (
 		inputMeta      *utils.Args
 		start          time.Time
 		cost           time.Duration
-		public         goutil.Map
+		swap           goutil.Map
 		mu             sync.Mutex
 
 		// Send itself to the public channel when pull is complete.
@@ -730,14 +723,14 @@ func (p *pullCmd) RealIp() string {
 	return p.sess.RemoteAddr().String()
 }
 
-// Public returns temporary public data of context.
-func (p *pullCmd) Public() goutil.Map {
-	return p.public
+// Swap returns custom data swap of context.
+func (p *pullCmd) Swap() goutil.Map {
+	return p.swap
 }
 
-// PublicLen returns the length of public data of context.
-func (p *pullCmd) PublicLen() int {
-	return p.public.Len()
+// SwapLen returns the amount of recorded custom data of context.
+func (p *pullCmd) SwapLen() int {
+	return p.swap.Len()
 }
 
 // Output returns writed packet.

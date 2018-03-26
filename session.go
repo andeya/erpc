@@ -40,10 +40,8 @@ type (
 		LocalAddr() net.Addr
 		// RemoteAddr returns the remote network address.
 		RemoteAddr() net.Addr
-		// Public returns temporary public data of session(socket).
-		Public() goutil.Map
-		// PublicLen returns the length of public data of session(socket).
-		PublicLen() int
+		// Swap returns custom data swap of the session(socket).
+		Swap() goutil.Map
 		// SetId sets the session id.
 		SetId(newId string)
 		// ControlFD invokes f on the underlying connection's file
@@ -54,7 +52,7 @@ type (
 		// ModifySocket modifies the socket.
 		// Note:
 		// The connection fd is not allowed to change!
-		// Inherit the previous session id and temporary public data;
+		// Inherit the previous session id and custom data swap;
 		// If modifiedConn!=nil, reset the net.Conn of the socket;
 		// If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
 		ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc socket.ProtoFunc))
@@ -87,10 +85,8 @@ type (
 		LocalAddr() net.Addr
 		// RemoteAddr returns the remote network address.
 		RemoteAddr() net.Addr
-		// Public returns temporary public data of session(socket).
-		Public() goutil.Map
-		// PublicLen returns the length of public data of session(socket).
-		PublicLen() int
+		// Swap returns custom data swap of the session(socket).
+		Swap() goutil.Map
 	}
 	// Session a connection session.
 	Session interface {
@@ -218,7 +214,7 @@ func (s *session) getConn() net.Conn {
 // ModifySocket modifies the socket.
 // Note:
 // The connection fd is not allowed to change!
-// Inherit the previous session id and temporary public data;
+// Inherit the previous session id and custom data swap;
 // If modifiedConn!=nil, reset the net.Conn of the socket;
 // If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
 func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc socket.ProtoFunc)) {
@@ -239,15 +235,15 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 	}
 	var (
 		pub   goutil.Map
-		count = s.socket.PublicLen()
+		count = s.socket.SwapLen()
 		id    = s.Id()
 	)
 	if count > 0 {
-		pub = s.socket.Public()
+		pub = s.socket.Swap()
 	}
 	s.socket = socket.NewSocket(s.conn, s.protoFuncs...)
 	if count > 0 {
-		newPub := s.socket.Public()
+		newPub := s.socket.Swap()
 		pub.Range(func(key, value interface{}) bool {
 			newPub.Store(key, value)
 			return true
@@ -415,15 +411,15 @@ func (s *session) AsyncPull(
 		pullCmdChan: pullCmdChan,
 		doneChan:    make(chan struct{}),
 		start:       s.peer.timeNow(),
-		public:      goutil.RwMap(),
+		swap:        goutil.RwMap(),
 	}
 
 	// count pull-launch
 	s.gracePullCmdWaitGroup.Add(1)
 
-	if s.socket.PublicLen() > 0 {
-		s.socket.Public().Range(func(key, value interface{}) bool {
-			cmd.public.Store(key, value)
+	if s.socket.SwapLen() > 0 {
+		s.socket.Swap().Range(func(key, value interface{}) bool {
+			cmd.swap.Store(key, value)
 			return true
 		})
 	}
@@ -525,14 +521,9 @@ W:
 	return nil
 }
 
-// Public returns temporary public data of session(socket).
-func (s *session) Public() goutil.Map {
-	return s.socket.Public()
-}
-
-// PublicLen returns the length of public data of session(socket).
-func (s *session) PublicLen() int {
-	return s.socket.PublicLen()
+// Swap returns custom data swap of the session(socket).
+func (s *session) Swap() goutil.Map {
+	return s.socket.Swap()
 }
 
 const (
