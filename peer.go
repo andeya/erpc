@@ -86,7 +86,7 @@ type (
 		pluginContainer   *PluginContainer
 		sessHub           *SessionHub
 		closeCh           chan struct{}
-		freeContext       *readHandleCtx
+		freeContext       *handlerCtx
 		ctxLock           sync.Mutex
 		defaultSessionAge time.Duration // Default session max age, if less than or equal to 0, no time limit
 		defaultContextAge time.Duration // Default PULL or PUSH context max age, if less than or equal to 0, no time limit
@@ -241,20 +241,20 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 				// }
 			}
 			if err != nil {
-				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteIp(), sess.Id(), err.Error())
+				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteAddr().String(), sess.Id(), err.Error())
 			}
 			return false
 		}
 	}
 
-	sess.socket.SetId(sess.LocalIp())
+	sess.socket.SetId(sess.LocalAddr().String())
 	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
 		sess.Close()
 		return nil, rerr
 	}
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteIp(), sess.Id())
+	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
 	return sess, nil
 }
 
@@ -266,12 +266,12 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	oldIp := sess.LocalIp()
+	oldIp := sess.LocalAddr().String()
 	oldId := sess.Id()
 	sess.conn = conn
 	sess.socket.Reset(conn, protoFuncs...)
 	if oldIp == oldId {
-		sess.socket.SetId(sess.LocalIp())
+		sess.socket.SetId(sess.LocalAddr().String())
 	} else {
 		sess.socket.SetId(oldId)
 	}
@@ -282,7 +282,7 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	atomic.StoreInt32(&sess.status, statusOk)
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteIp(), sess.Id())
+	Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
 	return nil
 }
 
@@ -355,7 +355,7 @@ func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
 				sess.Close()
 				return
 			}
-			Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteIp(), sess.Id())
+			Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
 			p.sessHub.Set(sess)
 			sess.startReadAndHandle()
 		})
@@ -373,7 +373,7 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 		sess.Close()
 		return nil, rerr.ToError()
 	}
-	Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteIp(), sess.Id())
+	Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
 	p.sessHub.Set(sess)
 	AnywayGo(sess.startReadAndHandle)
 	return sess, nil
@@ -408,7 +408,7 @@ func (p *peer) Close() (err error) {
 	return err
 }
 
-func (p *peer) getContext(s *session, withWg bool) *readHandleCtx {
+func (p *peer) getContext(s *session, withWg bool) *handlerCtx {
 	p.ctxLock.Lock()
 	if withWg {
 		// count get context
@@ -425,7 +425,7 @@ func (p *peer) getContext(s *session, withWg bool) *readHandleCtx {
 	return ctx
 }
 
-func (p *peer) putContext(ctx *readHandleCtx, withWg bool) {
+func (p *peer) putContext(ctx *handlerCtx, withWg bool) {
 	p.ctxLock.Lock()
 	defer p.ctxLock.Unlock()
 	if withWg {

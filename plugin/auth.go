@@ -38,7 +38,6 @@ type (
 	// AuthSession auth session provides Public,Id and SetId methods in early session
 	AuthSession interface {
 		Public() goutil.Map
-		Id() string
 		SetId(string)
 	}
 	// GenerateAuthInfoFunc the function used to generate auth info
@@ -62,7 +61,7 @@ func (a *auth) Name() string {
 	return "auth"
 }
 
-func (a *auth) PostDial(sess tp.EarlySession) *tp.Rerror {
+func (a *auth) PostDial(sess tp.PreSession) *tp.Rerror {
 	if a.generateAuthInfoFunc == nil {
 		return nil
 	}
@@ -76,7 +75,7 @@ func (a *auth) PostDial(sess tp.EarlySession) *tp.Rerror {
 	return rerr
 }
 
-func (a *auth) PostAccept(sess tp.EarlySession) *tp.Rerror {
+func (a *auth) PostAccept(sess tp.PreSession) *tp.Rerror {
 	if a.verifyAuthInfoFunc == nil {
 		return nil
 	}

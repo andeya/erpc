@@ -21,7 +21,7 @@ func (e *earlyReply) Name() string {
 	return "early_reply"
 }
 
-func (e *earlyReply) PostAccept(sess tp.EarlySession) *tp.Rerror {
+func (e *earlyReply) PostAccept(sess tp.PreSession) *tp.Rerror {
 	var rigthUri bool
 	input, rerr := sess.Receive(func(header socket.Header) interface{} {
 		if header.Uri() == "/early/ping" {

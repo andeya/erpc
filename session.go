@@ -32,24 +32,18 @@ import (
 )
 
 type (
-	// BaseSession a connection session with the common method set.
-	BaseSession interface {
-		// Id returns the session id.
-		Id() string
+	// PreSession a connection session that has not started reading goroutine.
+	PreSession interface {
 		// Peer returns the peer.
 		Peer() Peer
-		// LocalIp returns the local peer ip.
-		LocalIp() string
-		// RemoteIp returns the remote peer ip.
-		RemoteIp() string
+		// LocalAddr returns the local network address.
+		LocalAddr() net.Addr
+		// RemoteAddr returns the remote network address.
+		RemoteAddr() net.Addr
 		// Public returns temporary public data of session(socket).
 		Public() goutil.Map
 		// PublicLen returns the length of public data of session(socket).
 		PublicLen() int
-	}
-	// EarlySession a connection session that has not started reading goroutine.
-	EarlySession interface {
-		BaseSession
 		// SetId sets the session id.
 		SetId(newId string)
 		// ControlFD invokes f on the underlying connection's file
@@ -57,12 +51,13 @@ type (
 		// The file descriptor fd is guaranteed to remain valid while
 		// f executes but not after f returns.
 		ControlFD(f func(fd uintptr)) error
-		// ResetSocket resets the socket.
+		// ModifySocket modifies the socket.
 		// Note:
+		// The connection fd is not allowed to change!
 		// Inherit the previous session id and temporary public data;
-		// If newNet!=nil, reset the net.Conn of the socket;
+		// If modifiedConn!=nil, reset the net.Conn of the socket;
 		// If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
-		ResetSocket(func(oldNet net.Conn) (newNet net.Conn, newProtoFunc socket.ProtoFunc))
+		ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc socket.ProtoFunc))
 		// GetProtoFunc returns the socket.ProtoFunc
 		GetProtoFunc() socket.ProtoFunc
 		// Send sends packet to peer, before the formal connection.
@@ -81,6 +76,21 @@ type (
 		SetSessionAge(duration time.Duration)
 		// SetContextAge sets PULL or PUSH context max age.
 		SetContextAge(duration time.Duration)
+	}
+	// BaseSession a connection session with the common method set.
+	BaseSession interface {
+		// Id returns the session id.
+		Id() string
+		// Peer returns the peer.
+		Peer() Peer
+		// LocalAddr returns the local network address.
+		LocalAddr() net.Addr
+		// RemoteAddr returns the remote network address.
+		RemoteAddr() net.Addr
+		// Public returns temporary public data of session(socket).
+		Public() goutil.Map
+		// PublicLen returns the length of public data of session(socket).
+		PublicLen() int
 	}
 	// Session a connection session.
 	Session interface {
@@ -130,7 +140,7 @@ type (
 		statusLock                     sync.Mutex
 		writeLock                      sync.Mutex
 		graceCtxWaitGroup              sync.WaitGroup
-		gracepullCmdWaitGroup          sync.WaitGroup
+		gracePullCmdWaitGroup          sync.WaitGroup
 		sessionAge                     time.Duration
 		contextAge                     time.Duration
 		sessionAgeLock                 sync.RWMutex
@@ -143,9 +153,9 @@ type (
 )
 
 var (
-	_ EarlySession = new(session)
-	_ Session      = new(session)
-	_ BaseSession  = new(session)
+	_ PreSession  = new(session)
+	_ Session     = new(session)
+	_ BaseSession = new(session)
 )
 
 func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
@@ -205,25 +215,26 @@ func (s *session) getConn() net.Conn {
 	return c
 }
 
-// ResetSocket resets the socket.
+// ModifySocket modifies the socket.
 // Note:
+// The connection fd is not allowed to change!
 // Inherit the previous session id and temporary public data;
-// If newNet!=nil, reset the net.Conn of the socket;
+// If modifiedConn!=nil, reset the net.Conn of the socket;
 // If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
-func (s *session) ResetSocket(fn func(oldNet net.Conn) (newNet net.Conn, newProtoFunc socket.ProtoFunc)) {
+func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc socket.ProtoFunc)) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	newNet, newProtoFunc := fn(s.conn)
-	isNewNet := newNet != nil
-	if isNewNet {
-		s.conn = newNet
+	modifiedConn, newProtoFunc := fn(s.conn)
+	isModifiedConn := modifiedConn != nil
+	if isModifiedConn {
+		s.conn = modifiedConn
 	}
 	isNewProtoFunc := newProtoFunc != nil
 	if isNewProtoFunc {
 		s.protoFuncs = s.protoFuncs[:0]
 		s.protoFuncs = append(s.protoFuncs, newProtoFunc)
 	}
-	if !isNewNet && !isNewProtoFunc {
+	if !isModifiedConn && !isNewProtoFunc {
 		return
 	}
 	pub := s.socket.Public()
@@ -245,14 +256,14 @@ func (s *session) GetProtoFunc() socket.ProtoFunc {
 	return socket.DefaultProtoFunc()
 }
 
-// RemoteIp returns the remote peer ip.
-func (s *session) RemoteIp() string {
-	return s.socket.RemoteAddr().String()
+// LocalAddr returns the local network address.
+func (s *session) LocalAddr() net.Addr {
+	return s.socket.LocalAddr()
 }
 
-// LocalIp returns the local peer ip.
-func (s *session) LocalIp() string {
-	return s.socket.LocalAddr().String()
+// RemoteAddr returns the remote network address.
+func (s *session) RemoteAddr() net.Addr {
+	return s.socket.RemoteAddr()
 }
 
 // SessionAge returns the session max age.
@@ -377,7 +388,9 @@ func (s *session) AsyncPull(
 		socket.WithBody(args),
 	)
 	for _, fn := range setting {
-		fn(output)
+		if fn != nil {
+			fn(output)
+		}
 	}
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
@@ -398,7 +411,7 @@ func (s *session) AsyncPull(
 	}
 
 	// count pull-launch
-	s.gracepullCmdWaitGroup.Add(1)
+	s.gracePullCmdWaitGroup.Add(1)
 
 	if s.socket.PublicLen() > 0 {
 		s.socket.Public().Range(func(key, value interface{}) bool {
@@ -467,7 +480,9 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	output.SetBody(args)
 
 	for _, fn := range setting {
-		fn(output)
+		if fn != nil {
+			fn(output)
+		}
 	}
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
@@ -497,7 +512,7 @@ W:
 		return rerr
 	}
 
-	s.runlog(s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+	s.runlog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
 	s.peer.pluginContainer.PostWritePush(ctx)
 	return nil
 }
@@ -587,7 +602,7 @@ func (s *session) Close() error {
 	s.peer.sessHub.Delete(s.Id())
 
 	s.graceCtxWaitGroup.Wait()
-	s.gracepullCmdWaitGroup.Wait()
+	s.gracePullCmdWaitGroup.Wait()
 
 	s.statusLock.Lock()
 	// Notice actively closed
@@ -617,7 +632,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	s.peer.sessHub.Delete(s.Id())
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
-		Debugf("disconnect(%s) when reading: %s", s.RemoteIp(), err.Error())
+		Debugf("disconnect(%s) when reading: %s", s.RemoteAddr().String(), err.Error())
 	}
 	s.graceCtxWaitGroup.Wait()
 
@@ -828,7 +843,11 @@ const (
 	typePullHandle int8 = 4
 )
 
-func (s *session) runlog(costTime time.Duration, input, output *socket.Packet, logType int8) {
+func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
+	var addr = s.RemoteAddr().String()
+	if realIp != "" && realIp != addr {
+		addr += "(real: " + realIp + ")"
+	}
 	if s.peer.countTime {
 		var (
 			printFunc func(string, ...interface{})
@@ -840,82 +859,81 @@ func (s *session) runlog(costTime time.Duration, input, output *socket.Packet, l
 			printFunc = Warnf
 			slowStr = "(slow)"
 		}
-
 		switch logType {
 		case typePushLaunch:
 			if s.peer.printBody {
-				logformat := "[push-launch] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
-				printFunc(logformat, s.RemoteIp(), output.Seq(), costTime, slowStr, output.Uri(), output.Size(), bodyLogBytes(output))
+				const logformat = "[push-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
+				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size(), bodyLogBytes(output))
 
 			} else {
-				logformat := "[push-launch] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n"
-				printFunc(logformat, s.RemoteIp(), output.Seq(), costTime, slowStr, output.Uri(), output.Size())
+				const logformat = "[push-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n"
+				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size())
 			}
 
 		case typePushHandle:
 			if s.peer.printBody {
-				logformat := "[push-handle] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
-				printFunc(logformat, s.RemoteIp(), input.Seq(), costTime, slowStr, input.Uri(), input.Size(), bodyLogBytes(input))
+				const logformat = "[push-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
+				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size(), bodyLogBytes(input))
 			} else {
-				logformat := "[push-handle] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n"
-				printFunc(logformat, s.RemoteIp(), input.Seq(), costTime, slowStr, input.Uri(), input.Size())
+				const logformat = "[push-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n"
+				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size())
 			}
 
 		case typePullLaunch:
 			if s.peer.printBody {
-				logformat := "[pull-launch] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s\n body[-json]: %s\n"
-				printFunc(logformat, s.RemoteIp(), output.Seq(), costTime, slowStr, output.Uri(), output.Size(), bodyLogBytes(output), input.Size(), getRerrorBytes(input.Meta()), bodyLogBytes(input))
+				const logformat = "[pull-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s\n body[-json]: %s\n"
+				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size(), bodyLogBytes(output), input.Size(), getRerrorBytes(input.Meta()), bodyLogBytes(input))
 			} else {
-				logformat := "[pull-launch] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n size: %d\n status: %s\n"
-				printFunc(logformat, s.RemoteIp(), output.Seq(), costTime, slowStr, output.Uri(), output.Size(), input.Size(), getRerrorBytes(input.Meta()))
+				const logformat = "[pull-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n size: %d\n status: %s\n"
+				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size(), input.Size(), getRerrorBytes(input.Meta()))
 			}
 
 		case typePullHandle:
 			if s.peer.printBody {
-				logformat := "[pull-handle] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s\n body[-json]: %s\n"
-				printFunc(logformat, s.RemoteIp(), input.Seq(), costTime, slowStr, input.Uri(), input.Size(), bodyLogBytes(input), output.Size(), getRerrorBytes(output.Meta()), bodyLogBytes(output))
+				const logformat = "[pull-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s\n body[-json]: %s\n"
+				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size(), bodyLogBytes(input), output.Size(), getRerrorBytes(output.Meta()), bodyLogBytes(output))
 			} else {
-				logformat := "[pull-handle] remote-ip: %s | seq: %d | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n size: %d\n status: %s\n"
-				printFunc(logformat, s.RemoteIp(), input.Seq(), costTime, slowStr, input.Uri(), input.Size(), output.Size(), getRerrorBytes(output.Meta()))
+				const logformat = "[pull-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n size: %d\n status: %s\n"
+				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size(), output.Size(), getRerrorBytes(output.Meta()))
 			}
 		}
 	} else {
 		switch logType {
 		case typePushLaunch:
 			if s.peer.printBody {
-				logformat := "[push-launch] remote-ip: %s | seq: %d | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
-				Infof(logformat, s.RemoteIp(), output.Seq(), output.Uri(), output.Size(), bodyLogBytes(output))
+				const logformat = "[push-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
+				Infof(logformat, addr, output.Uri(), output.Size(), bodyLogBytes(output))
 
 			} else {
-				logformat := "[push-launch] remote-ip: %s | seq: %d | uri: %-30s |\nSEND:\n size: %d\n"
-				Infof(logformat, s.RemoteIp(), output.Seq(), output.Uri(), output.Size())
+				const logformat = "[push-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\n"
+				Infof(logformat, addr, output.Uri(), output.Size())
 			}
 
 		case typePushHandle:
 			if s.peer.printBody {
-				logformat := "[push-handle] remote-ip: %s | seq: %d | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
-				Infof(logformat, s.RemoteIp(), input.Seq(), input.Uri(), input.Size(), bodyLogBytes(input))
+				const logformat = "[push-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
+				Infof(logformat, addr, input.Uri(), input.Size(), bodyLogBytes(input))
 			} else {
-				logformat := "[push-handle] remote-ip: %s | seq: %d | uri: %-30s |\nRECV:\n size: %d\n"
-				Infof(logformat, s.RemoteIp(), input.Seq(), input.Uri(), input.Size())
+				const logformat = "[push-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\n"
+				Infof(logformat, addr, input.Uri(), input.Size())
 			}
 
 		case typePullLaunch:
 			if s.peer.printBody {
-				logformat := "[pull-launch] remote-ip: %s | seq: %d | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s\n body[-json]: %s\n"
-				Infof(logformat, s.RemoteIp(), output.Seq(), output.Uri(), output.Size(), bodyLogBytes(output), input.Size(), getRerrorBytes(input.Meta()), bodyLogBytes(input))
+				const logformat = "[pull-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s\n body[-json]: %s\n"
+				Infof(logformat, addr, output.Uri(), output.Size(), bodyLogBytes(output), input.Size(), getRerrorBytes(input.Meta()), bodyLogBytes(input))
 			} else {
-				logformat := "[pull-launch] remote-ip: %s | seq: %d | uri: %-30s |\nSEND:\n size: %d\nRECV:\n size: %d\n status: %s\n"
-				Infof(logformat, s.RemoteIp(), output.Seq(), output.Uri(), output.Size(), input.Size(), getRerrorBytes(input.Meta()))
+				const logformat = "[pull-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n size: %d\n status: %s\n"
+				Infof(logformat, addr, output.Uri(), output.Size(), input.Size(), getRerrorBytes(input.Meta()))
 			}
 
 		case typePullHandle:
 			if s.peer.printBody {
-				logformat := "[pull-handle] remote-ip: %s | seq: %d | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s\n body[-json]: %s\n"
-				Infof(logformat, s.RemoteIp(), input.Seq(), input.Uri(), input.Size(), bodyLogBytes(input), output.Size(), getRerrorBytes(output.Meta()), bodyLogBytes(output))
+				const logformat = "[pull-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s\n body[-json]: %s\n"
+				Infof(logformat, addr, input.Uri(), input.Size(), bodyLogBytes(input), output.Size(), getRerrorBytes(output.Meta()), bodyLogBytes(output))
 			} else {
-				logformat := "[pull-handle] remote-ip: %s | seq: %d | uri: %-30s |\nRECV:\n size: %d\nSEND:\n size: %d\n status: %s\n"
-				Infof(logformat, s.RemoteIp(), input.Seq(), input.Uri(), input.Size(), output.Size(), getRerrorBytes(output.Meta()))
+				const logformat = "[pull-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n size: %d\n status: %s\n"
+				Infof(logformat, addr, input.Uri(), input.Size(), output.Size(), getRerrorBytes(output.Meta()))
 			}
 		}
 	}

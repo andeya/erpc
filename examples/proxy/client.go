@@ -34,7 +34,7 @@ func main() {
 	rerr = sess.Push(
 		"/chat/say",
 		fmt.Sprintf("I get result %d", reply),
-		socket.WithSetMeta(tp.MetaRealId, "client-001"),
+		socket.WithSetMeta("X-ID", "client-001"),
 	)
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)

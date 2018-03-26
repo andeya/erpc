@@ -35,10 +35,6 @@ type (
 		Peer() Peer
 		// Session returns the session.
 		Session() Session
-		// Id returns the session id.
-		Id() string
-		// RealId returns the real remote id.
-		RealId() string
 		// Ip returns the remote addr.
 		Ip() string
 		// RealIp returns the the current real remote addr.
@@ -47,14 +43,20 @@ type (
 		Public() goutil.Map
 		// PublicLen returns the length of public data of context.
 		PublicLen() int
-		// Rerror returns the handle error.
-		Rerror() *Rerror
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
 	}
-	// BaseCtx common context method set.
-	BaseCtx interface {
+	// WriteCtx context method set for writing packet.
+	WriteCtx interface {
+		PreCtx
+		// Output returns writed packet.
+		Output() *socket.Packet
+		// Rerror returns the handle error.
+		Rerror() *Rerror
+	}
+	// inputCtx common context method set.
+	inputCtx interface {
 		PreCtx
 		// Seq returns the input packet sequence.
 		Seq() uint64
@@ -78,23 +80,19 @@ type (
 		// Query returns the input packet uri query object.
 		Query() url.Values
 	}
-	// WriteCtx context method set for writing packet.
-	WriteCtx interface {
-		PreCtx
-		// Output returns writed packet.
-		Output() *socket.Packet
-	}
 	// ReadCtx context method set for reading packet.
 	ReadCtx interface {
-		BaseCtx
+		inputCtx
 		// Input returns readed packet.
 		Input() *socket.Packet
+		// Rerror returns the handle error.
+		Rerror() *Rerror
 	}
 	// PushCtx context method set for handling the pushed packet.
 	// For example:
 	//  type HomePush struct{ PushCtx }
 	PushCtx interface {
-		BaseCtx
+		inputCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
 	}
@@ -102,7 +100,7 @@ type (
 	// For example:
 	//  type HomePull struct{ PullCtx }
 	PullCtx interface {
-		BaseCtx
+		inputCtx
 		// Input returns readed packet.
 		Input() *socket.Packet
 		// GetBodyCodec gets the body codec type of the input packet.
@@ -121,7 +119,7 @@ type (
 	}
 	// UnknownPushCtx context method set for handling the unknown pushed packet.
 	UnknownPushCtx interface {
-		BaseCtx
+		inputCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
 		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
@@ -131,7 +129,7 @@ type (
 	}
 	// UnknownPullCtx context method set for handling the unknown pulled packet.
 	UnknownPullCtx interface {
-		BaseCtx
+		inputCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
 		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
@@ -148,51 +146,51 @@ type (
 		// AddXferPipe appends transfer filter pipe of reply packet.
 		AddXferPipe(filterId ...byte)
 	}
-
-	// readHandleCtx the underlying common instance of PullCtx and PushCtx.
-	readHandleCtx struct {
-		sess            *session
-		input           *socket.Packet
-		output          *socket.Packet
-		handler         *Handler
-		arg             reflect.Value
-		pullCmd         *pullCmd
-		public          goutil.Map
-		start           time.Time
-		cost            time.Duration
-		pluginContainer *PluginContainer
-		handleErr       *Rerror
-		context         context.Context
-		next            *readHandleCtx
-	}
 )
 
 var (
-	_ PreCtx         = new(readHandleCtx)
-	_ BaseCtx        = new(readHandleCtx)
-	_ WriteCtx       = new(readHandleCtx)
-	_ ReadCtx        = new(readHandleCtx)
-	_ PushCtx        = new(readHandleCtx)
-	_ PullCtx        = new(readHandleCtx)
-	_ UnknownPushCtx = new(readHandleCtx)
-	_ UnknownPullCtx = new(readHandleCtx)
+	_ PreCtx         = new(handlerCtx)
+	_ inputCtx       = new(handlerCtx)
+	_ WriteCtx       = new(handlerCtx)
+	_ ReadCtx        = new(handlerCtx)
+	_ PushCtx        = new(handlerCtx)
+	_ PullCtx        = new(handlerCtx)
+	_ UnknownPushCtx = new(handlerCtx)
+	_ UnknownPullCtx = new(handlerCtx)
 )
+
+// handlerCtx the underlying common instance of PullCtx and PushCtx.
+type handlerCtx struct {
+	sess            *session
+	input           *socket.Packet
+	output          *socket.Packet
+	handler         *Handler
+	arg             reflect.Value
+	pullCmd         *pullCmd
+	public          goutil.Map
+	start           time.Time
+	cost            time.Duration
+	pluginContainer *PluginContainer
+	handleErr       *Rerror
+	context         context.Context
+	next            *handlerCtx
+}
 
 var (
 	emptyValue  = reflect.Value{}
 	emptyMethod = reflect.Method{}
 )
 
-// newReadHandleCtx creates a readHandleCtx for one request/response or push.
-func newReadHandleCtx() *readHandleCtx {
-	c := new(readHandleCtx)
+// newReadHandleCtx creates a handlerCtx for one request/response or push.
+func newReadHandleCtx() *handlerCtx {
+	c := new(handlerCtx)
 	c.input = socket.NewPacket()
 	c.input.SetNewBody(c.binding)
 	c.output = socket.NewPacket()
 	return c
 }
 
-func (c *readHandleCtx) reInit(s *session) {
+func (c *handlerCtx) reInit(s *session) {
 	c.sess = s
 	count := s.socket.PublicLen()
 	c.public = goutil.RwMap(count)
@@ -204,7 +202,7 @@ func (c *readHandleCtx) reInit(s *session) {
 	}
 }
 
-func (c *readHandleCtx) clean() {
+func (c *handlerCtx) clean() {
 	c.sess = nil
 	c.handler = nil
 	c.arg = emptyValue
@@ -219,67 +217,67 @@ func (c *readHandleCtx) clean() {
 }
 
 // Peer returns the peer.
-func (c *readHandleCtx) Peer() Peer {
+func (c *handlerCtx) Peer() Peer {
 	return c.sess.peer
 }
 
 // Session returns the session.
-func (c *readHandleCtx) Session() Session {
+func (c *handlerCtx) Session() Session {
 	return c.sess
 }
 
 // Input returns readed packet.
-func (c *readHandleCtx) Input() *socket.Packet {
+func (c *handlerCtx) Input() *socket.Packet {
 	return c.input
 }
 
 // Output returns writed packet.
-func (c *readHandleCtx) Output() *socket.Packet {
+func (c *handlerCtx) Output() *socket.Packet {
 	return c.output
 }
 
 // Public returns temporary public data of context.
-func (c *readHandleCtx) Public() goutil.Map {
+func (c *handlerCtx) Public() goutil.Map {
 	return c.public
 }
 
 // PublicLen returns the length of public data of context.
-func (c *readHandleCtx) PublicLen() int {
+func (c *handlerCtx) PublicLen() int {
 	return c.public.Len()
 }
 
 // Seq returns the input packet sequence.
-func (c *readHandleCtx) Seq() uint64 {
+func (c *handlerCtx) Seq() uint64 {
 	return c.input.Seq()
 }
 
 // Uri returns the input packet uri string.
-func (c *readHandleCtx) Uri() string {
+func (c *handlerCtx) Uri() string {
 	return c.input.Uri()
 }
 
 // UriObject returns the input packet uri object.
-func (c *readHandleCtx) UriObject() *url.URL {
+func (c *handlerCtx) UriObject() *url.URL {
 	return c.input.UriObject()
 }
 
 // ResetUri resets the input packet uri.
-func (c *readHandleCtx) ResetUri(uri string) {
+func (c *handlerCtx) ResetUri(uri string) {
 	c.input.SetUri(uri)
 }
 
 // Path returns the input packet uri path.
-func (c *readHandleCtx) Path() string {
+func (c *handlerCtx) Path() string {
 	return c.input.UriObject().Path
 }
 
 // Query returns the input packet uri query object.
-func (c *readHandleCtx) Query() url.Values {
+func (c *handlerCtx) Query() url.Values {
 	return c.input.UriObject().Query()
 }
 
 // PeekMeta peeks the header metadata for the input packet.
-func (c *readHandleCtx) PeekMeta(key string) []byte {
+func (c *handlerCtx) PeekMeta(key string) []byte {
 	return c.input.Meta().Peek(key)
 }
 
@@ -287,12 +285,12 @@ func (c *readHandleCtx) PeekMeta(key string) []byte {
 //
 // f must not retain references to key and value after returning.
 // Make key and/or value copies if you need storing them after returning.
-func (c *readHandleCtx) VisitMeta(f func(key, value []byte)) {
+func (c *handlerCtx) VisitMeta(f func(key, value []byte)) {
 	c.input.Meta().VisitAll(f)
 }
 
 // CopyMeta returns the input packet metadata copy.
-func (c *readHandleCtx) CopyMeta() *utils.Args {
+func (c *handlerCtx) CopyMeta() *utils.Args {
 	dst := utils.AcquireArgs()
 	c.input.Meta().CopyTo(dst)
 	return dst
@@ -300,61 +298,47 @@ func (c *readHandleCtx) CopyMeta() *utils.Args {
 
 // AddMeta adds the header metadata 'key=value' for reply packet.
 // Multiple values for the same key may be added.
-func (c *readHandleCtx) AddMeta(key, value string) {
+func (c *handlerCtx) AddMeta(key, value string) {
 	c.output.Meta().Add(key, value)
 }
 
 // SetMeta sets the header metadata 'key=value' for reply packet.
-func (c *readHandleCtx) SetMeta(key, value string) {
+func (c *handlerCtx) SetMeta(key, value string) {
 	c.output.Meta().Set(key, value)
 }
 
 // GetBodyCodec gets the body codec type of the input packet.
-func (c *readHandleCtx) GetBodyCodec() byte {
+func (c *handlerCtx) GetBodyCodec() byte {
 	return c.input.BodyCodec()
 }
 
 // SetBodyCodec sets the body codec for reply packet.
-func (c *readHandleCtx) SetBodyCodec(bodyCodec byte) {
+func (c *handlerCtx) SetBodyCodec(bodyCodec byte) {
 	c.output.SetBodyCodec(bodyCodec)
 }
 
 // AddXferPipe appends transfer filter pipe of reply packet.
-func (c *readHandleCtx) AddXferPipe(filterId ...byte) {
+func (c *handlerCtx) AddXferPipe(filterId ...byte) {
 	c.output.XferPipe().Append(filterId...)
 }
 
-// Id returns the session id.
-func (c *readHandleCtx) Id() string {
-	return c.sess.Id()
-}
-
-// RealId returns the current real remote id.
-func (c *readHandleCtx) RealId() string {
-	realId := c.PeekMeta(MetaRealId)
-	if len(realId) > 0 {
-		return string(realId)
-	}
-	return c.sess.Id()
-}
-
 // Ip returns the remote addr.
-func (c *readHandleCtx) Ip() string {
-	return c.sess.RemoteIp()
+func (c *handlerCtx) Ip() string {
+	return c.sess.RemoteAddr().String()
 }
 
 // RealIp returns the the current real remote addr.
-func (c *readHandleCtx) RealIp() string {
+func (c *handlerCtx) RealIp() string {
 	realIp := c.PeekMeta(MetaRealIp)
 	if len(realIp) > 0 {
 		return string(realIp)
 	}
-	return c.sess.RemoteIp()
+	return c.sess.RemoteAddr().String()
 }
 
 // Context carries a deadline, a cancelation signal, and other values across
 // API boundaries.
-func (c *readHandleCtx) Context() context.Context {
+func (c *handlerCtx) Context() context.Context {
 	if c.context == nil {
 		return c.input.Context()
 	}
@@ -362,12 +346,12 @@ func (c *readHandleCtx) Context() context.Context {
 }
 
 // setContext sets the context for timeout.
-func (c *readHandleCtx) setContext(ctx context.Context) {
+func (c *handlerCtx) setContext(ctx context.Context) {
 	c.context = ctx
 }
 
 // Be executed synchronously when reading packet
-func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
+func (c *handlerCtx) binding(header socket.Header) (body interface{}) {
 	c.start = c.sess.timeNow()
 	c.pluginContainer = c.sess.peer.pluginContainer
 	switch header.Ptype() {
@@ -384,7 +368,7 @@ func (c *readHandleCtx) binding(header socket.Header) (body interface{}) {
 }
 
 // Be executed asynchronously after readed packet
-func (c *readHandleCtx) handle() {
+func (c *handlerCtx) handle() {
 	if c.handleErr != nil && c.handleErr.Code == CodePtypeNotAllowed {
 		goto E
 	}
@@ -419,7 +403,7 @@ E:
 	go c.sess.Close()
 }
 
-func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
+func (c *handlerCtx) bindPush(header socket.Header) interface{} {
 	c.handleErr = c.pluginContainer.PostReadPushHeader(c)
 	if c.handleErr != nil {
 		return nil
@@ -451,7 +435,7 @@ func (c *readHandleCtx) bindPush(header socket.Header) interface{} {
 }
 
 // handlePush handles push.
-func (c *readHandleCtx) handlePush() {
+func (c *handlerCtx) handlePush() {
 	if age := c.sess.ContextAge(); age > 0 {
 		ctxTimout, _ := context.WithTimeout(context.Background(), age)
 		c.setContext(ctxTimout)
@@ -459,7 +443,7 @@ func (c *readHandleCtx) handlePush() {
 
 	defer func() {
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.runlog(c.cost, c.input, nil, typePushHandle)
+		c.sess.runlog(c.RealIp(), c.cost, c.input, nil, typePushHandle)
 	}()
 
 	if c.handleErr == nil && c.handler != nil {
@@ -476,7 +460,7 @@ func (c *readHandleCtx) handlePush() {
 	}
 }
 
-func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
+func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 	c.handleErr = c.pluginContainer.PostReadPullHeader(c)
 	if c.handleErr != nil {
 		c.handleErr.SetToMeta(c.output.Meta())
@@ -517,10 +501,10 @@ func (c *readHandleCtx) bindPull(header socket.Header) interface{} {
 }
 
 // handlePull handles and replies pull.
-func (c *readHandleCtx) handlePull() {
+func (c *handlerCtx) handlePull() {
 	defer func() {
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.runlog(c.cost, c.input, c.output, typePullHandle)
+		c.sess.runlog(c.RealIp(), c.cost, c.input, c.output, typePullHandle)
 	}()
 
 	c.output.SetPtype(TypeReply)
@@ -572,7 +556,7 @@ func (c *readHandleCtx) handlePull() {
 	c.pluginContainer.PostWriteReply(c)
 }
 
-func (c *readHandleCtx) setReplyBody(body interface{}) {
+func (c *handlerCtx) setReplyBody(body interface{}) {
 	c.output.SetBody(body)
 	if c.output.BodyCodec() != codec.NilCodecId {
 		return
@@ -587,7 +571,7 @@ func (c *readHandleCtx) setReplyBody(body interface{}) {
 	c.output.SetBodyCodec(c.input.BodyCodec())
 }
 
-func (c *readHandleCtx) bindReply(header socket.Header) interface{} {
+func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 	_pullCmd, ok := c.sess.pullCmdMap.Load(header.Seq())
 	if !ok {
 		Warnf("not found pull cmd: %v", c.input)
@@ -618,7 +602,7 @@ func (c *readHandleCtx) bindReply(header socket.Header) interface{} {
 }
 
 // handleReply handles pull reply.
-func (c *readHandleCtx) handleReply() {
+func (c *handlerCtx) handleReply() {
 	if c.pullCmd == nil {
 		return
 	}
@@ -630,7 +614,7 @@ func (c *readHandleCtx) handleReply() {
 		c.handleErr = c.pullCmd.rerr
 		c.pullCmd.done()
 		c.pullCmd.cost = c.sess.timeSince(c.pullCmd.start)
-		c.sess.runlog(c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
+		c.sess.runlog(c.RealIp(), c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
 	}()
 	if c.pullCmd.rerr != nil {
 		return
@@ -643,12 +627,12 @@ func (c *readHandleCtx) handleReply() {
 }
 
 // Rerror returns the handle error.
-func (c *readHandleCtx) Rerror() *Rerror {
+func (c *handlerCtx) Rerror() *Rerror {
 	return c.handleErr
 }
 
 // InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
-func (c *readHandleCtx) InputBodyBytes() []byte {
+func (c *handlerCtx) InputBodyBytes() []byte {
 	b, ok := c.input.Body().(*[]byte)
 	if !ok {
 		return nil
@@ -657,7 +641,7 @@ func (c *readHandleCtx) InputBodyBytes() []byte {
 }
 
 // Bind when the raw body binder is []byte type, now binds the input body to v.
-func (c *readHandleCtx) Bind(v interface{}) (byte, error) {
+func (c *handlerCtx) Bind(v interface{}) (byte, error) {
 	b := c.InputBodyBytes()
 	if b == nil {
 		return codec.NilCodecId, nil
@@ -732,23 +716,9 @@ func (p *pullCmd) Session() Session {
 	return p.sess
 }
 
-// Id returns the session id.
-func (p *pullCmd) Id() string {
-	return p.sess.Id()
-}
-
-// RealId returns the current real remote id.
-func (p *pullCmd) RealId() string {
-	realId := p.inputMeta.Peek(MetaRealId)
-	if len(realId) > 0 {
-		return string(realId)
-	}
-	return p.sess.Id()
-}
-
 // Ip returns the remote addr.
 func (p *pullCmd) Ip() string {
-	return p.sess.RemoteIp()
+	return p.sess.RemoteAddr().String()
 }
 
 // RealIp returns the the current real remote addr.
@@ -757,7 +727,7 @@ func (p *pullCmd) RealIp() string {
 	if len(realIp) > 0 {
 		return string(realIp)
 	}
-	return p.sess.RemoteIp()
+	return p.sess.RemoteAddr().String()
 }
 
 // Public returns temporary public data of context.
@@ -833,7 +803,7 @@ func (p *pullCmd) done() {
 	p.pullCmdChan <- p
 	close(p.doneChan)
 	// free count pull-launch
-	p.sess.gracepullCmdWaitGroup.Done()
+	p.sess.gracePullCmdWaitGroup.Done()
 }
 
 func (p *pullCmd) cancel() {
@@ -842,7 +812,7 @@ func (p *pullCmd) cancel() {
 	p.pullCmdChan <- p
 	close(p.doneChan)
 	// free count pull-launch
-	p.sess.gracepullCmdWaitGroup.Done()
+	p.sess.gracePullCmdWaitGroup.Done()
 }
 
 // if pullCmd.inputMeta!=nil, means the pullCmd is replyed.

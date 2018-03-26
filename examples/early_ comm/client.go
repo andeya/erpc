@@ -25,7 +25,7 @@ func (e *earlyPull) Name() string {
 	return "early_pull"
 }
 
-func (e *earlyPull) PostDial(sess tp.EarlySession) *tp.Rerror {
+func (e *earlyPull) PostDial(sess tp.PreSession) *tp.Rerror {
 	rerr := sess.Send(
 		"/early/ping",
 		map[string]string{
