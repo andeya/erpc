@@ -36,7 +36,7 @@ func VerifyAuth(fn VerifyAuthInfoFunc) tp.Plugin {
 }
 
 type (
-	// AuthSession auth session provides Swap,Id and SetId methods in early session
+	// AuthSession auth session provides SetId, RemoteAddr and Swap methods in base session
 	AuthSession interface {
 		// SetId sets the session id.
 		SetId(newId string)
