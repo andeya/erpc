@@ -237,14 +237,22 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 	if !isModifiedConn && !isNewProtoFunc {
 		return
 	}
-	pub := s.socket.Public()
-	id := s.Id()
+	var (
+		pub   goutil.Map
+		count = s.socket.PublicLen()
+		id    = s.Id()
+	)
+	if count > 0 {
+		pub = s.socket.Public()
+	}
 	s.socket = socket.NewSocket(s.conn, s.protoFuncs...)
-	nebPub := s.socket.Public()
-	pub.Range(func(key, value interface{}) bool {
-		nebPub.Store(key, value)
-		return true
-	})
+	if count > 0 {
+		newPub := s.socket.Public()
+		pub.Range(func(key, value interface{}) bool {
+			newPub.Store(key, value)
+			return true
+		})
+	}
 	s.socket.SetId(id)
 }
 
