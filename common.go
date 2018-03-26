@@ -137,17 +137,19 @@ func IsConnRerror(rerr *Rerror) bool {
 const (
 	// MetaRerror reply error metadata key
 	MetaRerror = "X-Reply-Error"
-	// MetaRealId real ID metadata key
-	MetaRealId = "X-Real-ID"
 	// MetaRealIp real IP metadata key
 	MetaRealIp = "X-Real-IP"
 	// MetaAcceptBodyCodec the key of body codec that the sender wishes to accept
 	MetaAcceptBodyCodec = "X-Accept-Body-Codec"
 )
 
-// WithRealId sets the real ID to metadata.
-func WithRealId(id string) socket.PacketSetting {
-	return socket.WithAddMeta(MetaRealId, id)
+// WithRerror sets the real IP to metadata.
+func WithRerror(rerr *Rerror) socket.PacketSetting {
+	b, _ := rerr.MarshalJSON()
+	if len(b) == 0 {
+		return nil
+	}
+	return socket.WithAddMeta(MetaRerror, goutil.BytesToString(b))
 }
 
 // WithRealIp sets the real IP to metadata.

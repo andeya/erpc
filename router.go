@@ -136,8 +136,8 @@ type (
 		isUnknown         bool
 		argElem           reflect.Type
 		reply             reflect.Type // only for pull handler doc
-		handleFunc        func(*readHandleCtx, reflect.Value)
-		unknownHandleFunc func(*readHandleCtx)
+		handleFunc        func(*handlerCtx, reflect.Value)
+		unknownHandleFunc func(*handlerCtx)
 		pluginContainer   *PluginContainer
 		routerTypeName    string
 	}
@@ -278,7 +278,7 @@ func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), 
 		isUnknown:       true,
 		argElem:         reflect.TypeOf([]byte{}),
 		pluginContainer: pluginContainer,
-		unknownHandleFunc: func(ctx *readHandleCtx) {
+		unknownHandleFunc: func(ctx *handlerCtx) {
 			body, rerr := fn(ctx)
 			if rerr != nil {
 				ctx.handleErr = rerr
@@ -308,7 +308,7 @@ func (r *Router) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugi
 		isUnknown:       true,
 		argElem:         reflect.TypeOf([]byte{}),
 		pluginContainer: pluginContainer,
-		unknownHandleFunc: func(ctx *readHandleCtx) {
+		unknownHandleFunc: func(ctx *handlerCtx) {
 			ctx.handleErr = fn(ctx)
 		},
 	}
@@ -431,7 +431,7 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		}
 
 		var methodFunc = method.Func
-		var handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+		var handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			obj := pool.Get().(*PullCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
@@ -504,7 +504,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 		return nil, errors.Errorf("pull-handler: %s's first arg need implement tp.PullCtx: %s", typeString, ctxType)
 	}
 
-	var handleFunc func(*readHandleCtx, reflect.Value)
+	var handleFunc func(*handlerCtx, reflect.Value)
 
 	switch ctxType.Kind() {
 	default:
@@ -515,7 +515,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 			return nil, errors.Errorf("pull-handler: %s's first arg must be tp.PullCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
-		handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			rets := cValue.Call([]reflect.Value{reflect.ValueOf(ctx), argValue})
 			rerr, _ := rets[1].Interface().(*Rerror)
 			if rerr != nil {
@@ -554,7 +554,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 			},
 		}
 
-		handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			obj := pool.Get().(*PullCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := cValue.Call([]reflect.Value{obj.ctrl, argValue})
@@ -664,7 +664,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 		}
 
 		var methodFunc = method.Func
-		var handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+		var handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			obj := pool.Get().(*PushCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
@@ -723,7 +723,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 		return nil, errors.Errorf("push-handler: %s's first arg need implement tp.PushCtx: %s", typeString, ctxType)
 	}
 
-	var handleFunc func(*readHandleCtx, reflect.Value)
+	var handleFunc func(*handlerCtx, reflect.Value)
 
 	switch ctxType.Kind() {
 	default:
@@ -734,7 +734,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 			return nil, errors.Errorf("push-handler: %s's first arg must be tp.PushCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
-		handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			rets := cValue.Call([]reflect.Value{reflect.ValueOf(ctx), argValue})
 			ctx.handleErr, _ = rets[0].Interface().(*Rerror)
 		}
@@ -767,7 +767,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 			},
 		}
 
-		handleFunc = func(ctx *readHandleCtx, argValue reflect.Value) {
+		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			obj := pool.Get().(*PushCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := cValue.Call([]reflect.Value{obj.ctrl, argValue})
@@ -788,7 +788,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 }
 
 func isBelongToPullCtx(name string) bool {
-	ctype := reflect.TypeOf(PullCtx(new(readHandleCtx)))
+	ctype := reflect.TypeOf(PullCtx(new(handlerCtx)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
 			return true
@@ -798,7 +798,7 @@ func isBelongToPullCtx(name string) bool {
 }
 
 func isBelongToPushCtx(name string) bool {
-	ctype := reflect.TypeOf(PushCtx(new(readHandleCtx)))
+	ctype := reflect.TypeOf(PushCtx(new(handlerCtx)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
 			return true

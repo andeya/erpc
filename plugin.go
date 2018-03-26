@@ -50,12 +50,12 @@ type (
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
 		Plugin
-		PostDial(EarlySession) *Rerror
+		PostDial(PreSession) *Rerror
 	}
 	// PostAcceptPlugin is executed after accepting connection.
 	PostAcceptPlugin interface {
 		Plugin
-		PostAccept(EarlySession) *Rerror
+		PostAccept(PreSession) *Rerror
 	}
 	// PreWritePullPlugin is executed before writing PULL packet.
 	PreWritePullPlugin interface {
@@ -90,7 +90,7 @@ type (
 	// PreReadHeaderPlugin is executed before reading packet header.
 	PreReadHeaderPlugin interface {
 		Plugin
-		PreReadHeader(PreCtx) *Rerror
+		PreReadHeader(PreCtx) error
 	}
 	// PostReadPullHeaderPlugin is executed after reading PULL packet header.
 	PostReadPullHeaderPlugin interface {
@@ -298,12 +298,12 @@ func (p *PluginContainer) PostListen(addr net.Addr) {
 }
 
 // PostDial executes the defined plugins after dialing.
-func (p *PluginContainer) PostDial(sess EarlySession) *Rerror {
+func (p *PluginContainer) PostDial(sess PreSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
 			if rerr = _plugin.PostDial(sess); rerr != nil {
-				Debugf("[addr:%s, id:%s] %s-PostDialPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
+				Debugf("[network:%s, addr:%s] %s-PostDialPlugin(%s)", sess.RemoteAddr().Network(), sess.RemoteAddr().String(), plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -312,12 +312,12 @@ func (p *PluginContainer) PostDial(sess EarlySession) *Rerror {
 }
 
 // PostAccept executes the defined plugins after accepting connection.
-func (p *PluginContainer) PostAccept(sess EarlySession) *Rerror {
+func (p *PluginContainer) PostAccept(sess PreSession) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
 			if rerr = _plugin.PostAccept(sess); rerr != nil {
-				Debugf("[addr:%s, id:%s] %s-PostAcceptPlugin(%s)", sess.RemoteIp(), sess.Id(), plugin.Name(), rerr.String())
+				Debugf("[network:%s, addr:%s] %s-PostAcceptPlugin(%s)", sess.RemoteAddr().Network(), sess.RemoteAddr().String(), plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -408,13 +408,13 @@ func (p *PluginContainer) PostWritePush(ctx WriteCtx) *Rerror {
 }
 
 // PreReadHeader executes the defined plugins before reading packet header.
-func (p *PluginContainer) PreReadHeader(ctx PreCtx) *Rerror {
-	var rerr *Rerror
+func (p *PluginContainer) PreReadHeader(ctx PreCtx) error {
+	var err error
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
-			if rerr = _plugin.PreReadHeader(ctx); rerr != nil {
-				Debugf("disconnected when reading: %s-PreReadHeaderPlugin(%s)", plugin.Name(), rerr.String())
-				return rerr
+			if err = _plugin.PreReadHeader(ctx); err != nil {
+				Debugf("disconnected when reading: %s-PreReadHeaderPlugin(%s)", plugin.Name(), err.Error())
+				return err
 			}
 		}
 	}

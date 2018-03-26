@@ -31,6 +31,6 @@ type chat struct {
 }
 
 func (c *chat) Say(args *string) *tp.Rerror {
-	tp.Printf("%s say: %q", c.RealId(), *args)
+	tp.Printf("%s say: %q", c.PeekMeta("X-ID"), *args)
 	return nil
 }
