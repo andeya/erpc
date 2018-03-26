@@ -57,11 +57,12 @@ type (
 		// The file descriptor fd is guaranteed to remain valid while
 		// f executes but not after f returns.
 		ControlFD(f func(fd uintptr)) error
-		// ResetConn resets the connection.
+		// ResetSocket resets the socket.
 		// Note:
-		// only reset net.Conn, but not reset socket.ProtoFunc;
-		// inherit the previous session id.
-		ResetConn(net.Conn, ...socket.ProtoFunc)
+		// Inherit the previous session id and temporary public data;
+		// If newNet!=nil, reset the net.Conn of the socket;
+		// If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
+		ResetSocket(func(oldNet net.Conn) (newNet net.Conn, newProtoFunc socket.ProtoFunc))
 		// GetProtoFunc returns the socket.ProtoFunc
 		GetProtoFunc() socket.ProtoFunc
 		// Send sends packet to peer, before the formal connection.
@@ -204,20 +205,35 @@ func (s *session) getConn() net.Conn {
 	return c
 }
 
-// ResetConn resets the connection.
+// ResetSocket resets the socket.
 // Note:
-// only reset net.Conn, but not reset socket.ProtoFunc;
-// inherit the previous session id.
-func (s *session) ResetConn(conn net.Conn, protoFunc ...socket.ProtoFunc) {
+// Inherit the previous session id and temporary public data;
+// If newNet!=nil, reset the net.Conn of the socket;
+// If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
+func (s *session) ResetSocket(fn func(oldNet net.Conn) (newNet net.Conn, newProtoFunc socket.ProtoFunc)) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.conn = conn
-	id := s.Id()
-	if len(protoFunc) > 0 {
-		s.socket = socket.NewSocket(conn, protoFunc...)
-	} else {
-		s.socket = socket.NewSocket(conn, s.protoFuncs...)
+	newNet, newProtoFunc := fn(s.conn)
+	isNewNet := newNet != nil
+	if isNewNet {
+		s.conn = newNet
 	}
+	isNewProtoFunc := newProtoFunc != nil
+	if isNewProtoFunc {
+		s.protoFuncs = s.protoFuncs[:0]
+		s.protoFuncs = append(s.protoFuncs, newProtoFunc)
+	}
+	if !isNewNet && !isNewProtoFunc {
+		return
+	}
+	pub := s.socket.Public()
+	id := s.Id()
+	s.socket = socket.NewSocket(s.conn, s.protoFuncs...)
+	nebPub := s.socket.Public()
+	pub.Range(func(key, value interface{}) bool {
+		nebPub.Store(key, value)
+		return true
+	})
 	s.socket.SetId(id)
 }
 
