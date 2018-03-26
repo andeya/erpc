@@ -36,14 +36,14 @@ func VerifyAuth(fn VerifyAuthInfoFunc) tp.Plugin {
 }
 
 type (
-	// AuthSession auth session provides Public,Id and SetId methods in early session
+	// AuthSession auth session provides Swap,Id and SetId methods in early session
 	AuthSession interface {
 		// SetId sets the session id.
 		SetId(newId string)
 		// RemoteAddr returns the remote network address.
 		RemoteAddr() net.Addr
-		// Public returns temporary public data of session(socket).
-		Public() goutil.Map
+		// Swap returns custom data swap of the session(socket).
+		Swap() goutil.Map
 	}
 	// GenerateAuthInfoFunc the function used to generate auth info
 	GenerateAuthInfoFunc func() string

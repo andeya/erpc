@@ -81,34 +81,6 @@ type (
 		// ServeConn serves the connection and returns a session.
 		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
 	}
-	peer struct {
-		router            *Router
-		pluginContainer   *PluginContainer
-		sessHub           *SessionHub
-		closeCh           chan struct{}
-		freeContext       *handlerCtx
-		ctxLock           sync.Mutex
-		defaultSessionAge time.Duration // Default session max age, if less than or equal to 0, no time limit
-		defaultContextAge time.Duration // Default PULL or PUSH context max age, if less than or equal to 0, no time limit
-		tlsConfig         *tls.Config
-		slowCometDuration time.Duration
-		defaultBodyCodec  byte
-		printBody         bool
-		countTime         bool
-		timeNow           func() time.Time
-		timeSince         func(time.Time) time.Duration
-		mu                sync.Mutex
-
-		network string
-
-		// only for client role
-		defaultDialTimeout time.Duration
-		redialTimes        int32
-
-		// only for server role
-		listenAddr string
-		listen     net.Listener
-	}
 )
 
 var (
@@ -116,6 +88,35 @@ var (
 	_ EarlyPeer = new(peer)
 	_ Peer      = new(peer)
 )
+
+type peer struct {
+	router            *Router
+	pluginContainer   *PluginContainer
+	sessHub           *SessionHub
+	closeCh           chan struct{}
+	freeContext       *handlerCtx
+	ctxLock           sync.Mutex
+	defaultSessionAge time.Duration // Default session max age, if less than or equal to 0, no time limit
+	defaultContextAge time.Duration // Default PULL or PUSH context max age, if less than or equal to 0, no time limit
+	tlsConfig         *tls.Config
+	slowCometDuration time.Duration
+	defaultBodyCodec  byte
+	printBody         bool
+	countTime         bool
+	timeNow           func() time.Time
+	timeSince         func(time.Time) time.Duration
+	mu                sync.Mutex
+
+	network string
+
+	// only for client role
+	defaultDialTimeout time.Duration
+	redialTimes        int32
+
+	// only for server role
+	listenAddr string
+	listen     net.Listener
+}
 
 // NewPeer creates a new peer.
 func NewPeer(cfg PeerConfig, plugin ...Plugin) Peer {
