@@ -125,31 +125,6 @@ type (
 		// ContextAge returns PULL or PUSH context max age.
 		ContextAge() time.Duration
 	}
-
-	session struct {
-		peer                           *peer
-		getPullHandler, getPushHandler func(uriPath string) (*Handler, bool)
-		timeSince                      func(time.Time) time.Duration
-		timeNow                        func() time.Time
-		seq                            uint64
-		seqLock                        sync.Mutex
-		pullCmdMap                     goutil.Map
-		protoFuncs                     []socket.ProtoFunc
-		socket                         socket.Socket
-		status                         int32 // 0:ok, 1:active closed, 2:disconnect
-		statusLock                     sync.Mutex
-		writeLock                      sync.Mutex
-		graceCtxWaitGroup              sync.WaitGroup
-		gracePullCmdWaitGroup          sync.WaitGroup
-		sessionAge                     time.Duration
-		contextAge                     time.Duration
-		sessionAgeLock                 sync.RWMutex
-		contextAgeLock                 sync.RWMutex
-		conn                           net.Conn
-		lock                           sync.RWMutex
-		// only for client role
-		redialForClientLocked func(oldConn net.Conn) bool
-	}
 )
 
 var (
@@ -157,6 +132,31 @@ var (
 	_ Session     = new(session)
 	_ BaseSession = new(session)
 )
+
+type session struct {
+	peer                           *peer
+	getPullHandler, getPushHandler func(uriPath string) (*Handler, bool)
+	timeSince                      func(time.Time) time.Duration
+	timeNow                        func() time.Time
+	seq                            uint64
+	seqLock                        sync.Mutex
+	pullCmdMap                     goutil.Map
+	protoFuncs                     []socket.ProtoFunc
+	socket                         socket.Socket
+	status                         int32 // 0:ok, 1:active closed, 2:disconnect
+	statusLock                     sync.Mutex
+	writeLock                      sync.Mutex
+	graceCtxWaitGroup              sync.WaitGroup
+	gracePullCmdWaitGroup          sync.WaitGroup
+	sessionAge                     time.Duration
+	contextAge                     time.Duration
+	sessionAgeLock                 sync.RWMutex
+	contextAgeLock                 sync.RWMutex
+	conn                           net.Conn
+	lock                           sync.RWMutex
+	// only for client role
+	redialForClientLocked func(oldConn net.Conn) bool
+}
 
 func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
 	var s = &session{
