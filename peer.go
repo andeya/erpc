@@ -38,16 +38,10 @@ type (
 		Close() (err error)
 		// CountSession returns the number of sessions.
 		CountSession() int
-		// Dial connects with the peer of the destination address.
-		Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
-		// DialContext connects with the peer of the destination address, using the provided context.
-		DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
 		// GetSession gets the session by id.
 		GetSession(sessionId string) (Session, bool)
 		// RangeSession ranges all sessions. If fn returns false, stop traversing.
 		RangeSession(fn func(sess Session) bool)
-		// ServeConn serves the connection and returns a session.
-		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
 		// SetTlsConfig sets the TLS config.
 		SetTlsConfig(tlsConfig *tls.Config)
 		// SetTlsConfigFromFile sets the TLS config from file.
@@ -80,6 +74,12 @@ type (
 		EarlyPeer
 		// Listen turns on the listening service.
 		Listen(protoFunc ...socket.ProtoFunc) error
+		// Dial connects with the peer of the destination address.
+		Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
+		// DialContext connects with the peer of the destination address, using the provided context.
+		DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
+		// ServeConn serves the connection and returns a session.
+		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
 	}
 	peer struct {
 		router            *Router
