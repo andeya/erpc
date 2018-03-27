@@ -72,14 +72,16 @@ type (
 	// Peer the communication peer which is server or client role
 	Peer interface {
 		EarlyPeer
-		// Listen turns on the listening service.
-		Listen(protoFunc ...socket.ProtoFunc) error
+		// ListenAndServe turns on the listening service.
+		ListenAndServe(protoFunc ...socket.ProtoFunc) error
 		// Dial connects with the peer of the destination address.
 		Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
 		// DialContext connects with the peer of the destination address, using the provided context.
 		DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
 		// ServeConn serves the connection and returns a session.
 		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
+		// ServeListener serves the listener.
+		ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) error
 	}
 )
 
@@ -115,7 +117,6 @@ type peer struct {
 
 	// only for server role
 	listenAddr string
-	listen     net.Listener
 }
 
 // NewPeer creates a new peer.
@@ -287,24 +288,33 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	return nil
 }
 
+// ServeConn serves the connection and returns a session.
+func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
+	network := conn.LocalAddr().Network()
+	if strings.Contains(network, "udp") {
+		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
+	}
+	var sess = newSession(p, conn, protoFunc)
+	if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
+		sess.Close()
+		return nil, rerr.ToError()
+	}
+	Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
+	p.sessHub.Set(sess)
+	AnywayGo(sess.startReadAndHandle)
+	return sess, nil
+}
+
 // ErrListenClosed listener is closed error.
 var ErrListenClosed = errors.New("listener is closed")
 
-// Listen turns on the listening service.
-func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
-	if len(p.listenAddr) == 0 {
-		Fatalf("listenAddress can not be empty")
-	}
-	lis, err := NewInheritListener(p.network, p.listenAddr, p.tlsConfig)
-	if err != nil {
-		Fatalf("%v", err)
-	}
+// ServeListener serves the listener.
+func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) error {
 	defer lis.Close()
-	p.listen = lis
 
 	network := lis.Addr().Network()
 	addr := lis.Addr().String()
-	Printf("listen ok (network:%s, addr:%s)", network, addr)
+	Printf("listen and serve (network:%s, addr:%s)", network, addr)
 
 	p.pluginContainer.PostListen(lis.Addr())
 
@@ -363,21 +373,16 @@ func (p *peer) Listen(protoFunc ...socket.ProtoFunc) error {
 	}
 }
 
-// ServeConn serves the connection and returns a session.
-func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
-	network := conn.LocalAddr().Network()
-	if strings.Contains(network, "udp") {
-		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
+// ListenAndServe turns on the listening service.
+func (p *peer) ListenAndServe(protoFunc ...socket.ProtoFunc) error {
+	if len(p.listenAddr) == 0 {
+		Fatalf("listenAddress can not be empty")
 	}
-	var sess = newSession(p, conn, protoFunc)
-	if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
-		sess.Close()
-		return nil, rerr.ToError()
+	lis, err := NewInheritListener(p.network, p.listenAddr, p.tlsConfig)
+	if err != nil {
+		Fatalf("%v", err)
 	}
-	Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
-	p.sessHub.Set(sess)
-	AnywayGo(sess.startReadAndHandle)
-	return sess, nil
+	return p.ServeListener(lis, protoFunc...)
 }
 
 // Close closes peer.

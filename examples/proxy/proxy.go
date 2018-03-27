@@ -13,10 +13,11 @@ func main() {
 		tp.Fatalf("%v", err)
 	}
 
-	svr := tp.NewPeer(tp.PeerConfig{
-		ListenAddress: ":8080",
-	},
+	srv := tp.NewPeer(
+		tp.PeerConfig{
+			ListenAddress: ":8080",
+		},
 		plugin.Proxy(sess),
 	)
-	svr.Listen()
+	srv.ListenAndServe()
 }

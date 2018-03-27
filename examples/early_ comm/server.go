@@ -6,13 +6,14 @@ import (
 )
 
 func main() {
-	svr := tp.NewPeer(tp.PeerConfig{
-		PrintBody:     false,
-		ListenAddress: ":9090",
-	},
+	srv := tp.NewPeer(
+		tp.PeerConfig{
+			PrintBody:     false,
+			ListenAddress: ":9090",
+		},
 		new(earlyReply),
 	)
-	svr.Listen()
+	srv.ListenAndServe()
 }
 
 type earlyReply struct{}

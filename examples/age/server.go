@@ -8,14 +8,14 @@ import (
 )
 
 func main() {
-	svr := tp.NewPeer(tp.PeerConfig{
+	srv := tp.NewPeer(tp.PeerConfig{
 		CountTime:         true,
 		ListenAddress:     ":9090",
 		DefaultSessionAge: time.Second * 7,
 		DefaultContextAge: time.Second * 2,
 	})
-	svr.RoutePull(new(test))
-	svr.Listen()
+	srv.RoutePull(new(test))
+	srv.ListenAndServe()
 }
 
 type test struct {

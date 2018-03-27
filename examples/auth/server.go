@@ -6,10 +6,13 @@ import (
 )
 
 func main() {
-	svr := tp.NewPeer(tp.PeerConfig{
-		ListenAddress: ":9090",
-	}, plugin.VerifyAuth(verifyAuthInfo))
-	svr.Listen()
+	srv := tp.NewPeer(
+		tp.PeerConfig{
+			ListenAddress: ":9090",
+		},
+		plugin.VerifyAuth(verifyAuthInfo),
+	)
+	srv.ListenAndServe()
 }
 
 const (

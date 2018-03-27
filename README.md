@@ -111,12 +111,12 @@ import (
 )
 
 func main() {
-    svr := tp.NewPeer(tp.PeerConfig{
+    srv := tp.NewPeer(tp.PeerConfig{
         CountTime:     true,
         ListenAddress: ":9090",
     })
-    svr.RoutePull(new(math))
-    svr.Listen()
+    srv.RoutePull(new(math))
+    srv.ListenAndServe()
 }
 
 type math struct {

@@ -8,13 +8,13 @@ import (
 )
 
 func main() {
-	svr := tp.NewPeer(tp.PeerConfig{
+	srv := tp.NewPeer(tp.PeerConfig{
 		CountTime:     true,
 		ListenAddress: ":9090",
 	})
-	group := svr.SubRoute("/srv")
+	group := srv.SubRoute("/srv")
 	group.RoutePull(new(math))
-	svr.Listen()
+	srv.ListenAndServe()
 }
 
 type math struct {
