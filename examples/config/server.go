@@ -14,9 +14,9 @@ func main() {
 	// auto create and sync config/config.yaml
 	cfgo.MustGet("config/config.yaml", true).MustReg("cfg_srv", &cfg)
 
-	svr := tp.NewPeer(cfg)
-	svr.RoutePull(new(math))
-	svr.Listen()
+	srv := tp.NewPeer(cfg)
+	srv.RoutePull(new(math))
+	srv.ListenAndServe()
 }
 
 type math struct {

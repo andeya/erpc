@@ -25,7 +25,7 @@ func main() {
 		group := peer.SubRoute("group")
 		group.RoutePull(new(Home))
 	}
-	peer.Listen()
+	peer.ListenAndServe()
 }
 
 // Home controller

@@ -8,13 +8,13 @@ import (
 )
 
 func main() {
-	svr := tp.NewPeer(tp.PeerConfig{
+	srv := tp.NewPeer(tp.PeerConfig{
 		CountTime:     true,
 		ListenAddress: ":9090",
 	})
-	svr.RoutePullFunc((*ctrl).MathAdd1)
-	svr.RoutePullFunc(mathAdd2)
-	svr.Listen()
+	srv.RoutePullFunc((*ctrl).MathAdd1)
+	srv.RoutePullFunc(mathAdd2)
+	srv.ListenAndServe()
 }
 
 type ctrl struct {

@@ -7,12 +7,12 @@ import (
 )
 
 func main() {
-	svr := tp.NewPeer(tp.PeerConfig{
+	srv := tp.NewPeer(tp.PeerConfig{
 		CountTime:     true,
 		ListenAddress: ":9090",
 	})
-	svr.RoutePull(new(test))
-	svr.Listen()
+	srv.RoutePull(new(test))
+	srv.ListenAndServe()
 }
 
 type test struct {

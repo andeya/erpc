@@ -17,7 +17,7 @@ func main() {
 	group := peer.SubRoute("group")
 	group.RoutePull(new(Home))
 	peer.SetUnknownPull(UnknownPullHandle)
-	peer.Listen()
+	peer.ListenAndServe()
 }
 
 // Home controller
