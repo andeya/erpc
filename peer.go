@@ -79,8 +79,10 @@ type (
 		// DialContext connects with the peer of the destination address, using the provided context.
 		DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
 		// ServeConn serves the connection and returns a session.
+		// Note: Does not support disconnection.
 		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
 		// ServeListener serves the listener.
+		// Note: The caller ensures that the listener supports graceful shutdown.
 		ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) error
 	}
 )
@@ -289,6 +291,7 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 }
 
 // ServeConn serves the connection and returns a session.
+// Note: Does not support disconnection.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
 	network := conn.LocalAddr().Network()
 	if strings.Contains(network, "udp") {
@@ -309,6 +312,7 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 var ErrListenClosed = errors.New("listener is closed")
 
 // ServeListener serves the listener.
+// Note: The caller ensures that the listener supports graceful shutdown.
 func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) error {
 	defer lis.Close()
 
