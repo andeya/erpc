@@ -298,11 +298,7 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session,
 		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
 	}
 	var sess = newSession(p, conn, protoFunc)
-	if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
-		sess.Close()
-		return nil, rerr.ToError()
-	}
-	Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
+	Tracef("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
 	p.sessHub.Set(sess)
 	AnywayGo(sess.startReadAndHandle)
 	return sess, nil
@@ -370,7 +366,7 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) er
 				sess.Close()
 				return
 			}
-			Tracef("accept session(network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
+			Tracef("accept ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
 			p.sessHub.Set(sess)
 			sess.startReadAndHandle()
 		})
