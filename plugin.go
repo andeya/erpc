@@ -29,117 +29,94 @@ type (
 	}
 	// PreNewPeerPlugin is executed before creating peer.
 	PreNewPeerPlugin interface {
-		Plugin
 		PreNewPeer(*PeerConfig, *PluginContainer) error
 	}
 	// PostNewPeerPlugin is executed after creating peer.
 	PostNewPeerPlugin interface {
-		Plugin
 		PostNewPeer(EarlyPeer) error
 	}
 	// PostRegPlugin is executed after registering handler.
 	PostRegPlugin interface {
-		Plugin
 		PostReg(*Handler) error
 	}
 	// PostListenPlugin is executed between listening and accepting.
 	PostListenPlugin interface {
-		Plugin
 		PostListen() error
 	}
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
-		Plugin
 		PostDial(PreSession) *Rerror
 	}
 	// PostAcceptPlugin is executed after accepting connection.
 	PostAcceptPlugin interface {
-		Plugin
 		PostAccept(PreSession) *Rerror
 	}
 	// PreWritePullPlugin is executed before writing PULL packet.
 	PreWritePullPlugin interface {
-		Plugin
 		PreWritePull(WriteCtx) *Rerror
 	}
 	// PostWritePullPlugin is executed after successful writing PULL packet.
 	PostWritePullPlugin interface {
-		Plugin
 		PostWritePull(WriteCtx) *Rerror
 	}
 	// PreWriteReplyPlugin is executed before writing REPLY packet.
 	PreWriteReplyPlugin interface {
-		Plugin
 		PreWriteReply(WriteCtx) *Rerror
 	}
 	// PostWriteReplyPlugin is executed after successful writing REPLY packet.
 	PostWriteReplyPlugin interface {
-		Plugin
 		PostWriteReply(WriteCtx) *Rerror
 	}
 	// PreWritePushPlugin is executed before writing PUSH packet.
 	PreWritePushPlugin interface {
-		Plugin
 		PreWritePush(WriteCtx) *Rerror
 	}
 	// PostWritePushPlugin is executed after successful writing PUSH packet.
 	PostWritePushPlugin interface {
-		Plugin
 		PostWritePush(WriteCtx) *Rerror
 	}
 	// PreReadHeaderPlugin is executed before reading packet header.
 	PreReadHeaderPlugin interface {
-		Plugin
 		PreReadHeader(PreCtx) error
 	}
 	// PostReadPullHeaderPlugin is executed after reading PULL packet header.
 	PostReadPullHeaderPlugin interface {
-		Plugin
 		PostReadPullHeader(ReadCtx) *Rerror
 	}
 	// PreReadPullBodyPlugin is executed before reading PULL packet body.
 	PreReadPullBodyPlugin interface {
-		Plugin
 		PreReadPullBody(ReadCtx) *Rerror
 	}
 	// PostReadPullBodyPlugin is executed after reading PULL packet body.
 	PostReadPullBodyPlugin interface {
-		Plugin
 		PostReadPullBody(ReadCtx) *Rerror
 	}
 	// PostReadPushHeaderPlugin is executed after reading PUSH packet header.
 	PostReadPushHeaderPlugin interface {
-		Plugin
 		PostReadPushHeader(ReadCtx) *Rerror
 	}
 	// PreReadPushBodyPlugin is executed before reading PUSH packet body.
 	PreReadPushBodyPlugin interface {
-		Plugin
 		PreReadPushBody(ReadCtx) *Rerror
 	}
 	// PostReadPushBodyPlugin is executed after reading PUSH packet body.
 	PostReadPushBodyPlugin interface {
-		Plugin
 		PostReadPushBody(ReadCtx) *Rerror
 	}
 	// PostReadReplyHeaderPlugin is executed after reading REPLY packet header.
 	PostReadReplyHeaderPlugin interface {
-		Plugin
 		PostReadReplyHeader(ReadCtx) *Rerror
 	}
 	// PreReadReplyBodyPlugin is executed before reading REPLY packet body.
 	PreReadReplyBodyPlugin interface {
-		Plugin
 		PreReadReplyBody(ReadCtx) *Rerror
 	}
 	// PostReadReplyBodyPlugin is executed after reading REPLY packet body.
 	PostReadReplyBodyPlugin interface {
-		Plugin
 		PostReadReplyBody(ReadCtx) *Rerror
 	}
 	// PostDisconnectPlugin is executed after disconnection.
 	PostDisconnectPlugin interface {
-		Plugin
 		PostDisconnect(BaseSession) *Rerror
 	}
 )
@@ -565,27 +542,27 @@ func warnInvaildHandlerHooks(plugin []Plugin) {
 	for _, p := range plugin {
 		switch p.(type) {
 		case PreNewPeerPlugin:
-			Warnf("invalid PreNewPeerPlugin in router: %s", p.Name())
+			Debugf("invalid PreNewPeerPlugin in router: %s", p.Name())
 		case PostNewPeerPlugin:
-			Warnf("invalid PostNewPeerPlugin in router: %s", p.Name())
+			Debugf("invalid PostNewPeerPlugin in router: %s", p.Name())
 		case PostDialPlugin:
-			Warnf("invalid PostDialPlugin in router: %s", p.Name())
+			Debugf("invalid PostDialPlugin in router: %s", p.Name())
 		case PostAcceptPlugin:
-			Warnf("invalid PostAcceptPlugin in router: %s", p.Name())
+			Debugf("invalid PostAcceptPlugin in router: %s", p.Name())
 		case PreWritePullPlugin:
-			Warnf("invalid PreWritePullPlugin in router: %s", p.Name())
+			Debugf("invalid PreWritePullPlugin in router: %s", p.Name())
 		case PostWritePullPlugin:
-			Warnf("invalid PostWritePullPlugin in router: %s", p.Name())
+			Debugf("invalid PostWritePullPlugin in router: %s", p.Name())
 		case PreWritePushPlugin:
-			Warnf("invalid PreWritePushPlugin in router: %s", p.Name())
+			Debugf("invalid PreWritePushPlugin in router: %s", p.Name())
 		case PostWritePushPlugin:
-			Warnf("invalid PostWritePushPlugin in router: %s", p.Name())
+			Debugf("invalid PostWritePushPlugin in router: %s", p.Name())
 		case PreReadHeaderPlugin:
-			Warnf("invalid PreReadHeaderPlugin in router: %s", p.Name())
+			Debugf("invalid PreReadHeaderPlugin in router: %s", p.Name())
 		case PostReadPullHeaderPlugin:
-			Warnf("invalid PostReadPullHeaderPlugin in router: %s", p.Name())
+			Debugf("invalid PostReadPullHeaderPlugin in router: %s", p.Name())
 		case PostReadPushHeaderPlugin:
-			Warnf("invalid PostReadPushHeaderPlugin in router: %s", p.Name())
+			Debugf("invalid PostReadPushHeaderPlugin in router: %s", p.Name())
 		}
 	}
 }
