@@ -580,6 +580,7 @@ func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
 	c.pullCmd.inputMeta = c.CopyMeta()
 	c.setContext(c.pullCmd.output.Context())
+	c.input.SetBody(c.pullCmd.reply)
 
 	rerr := c.pluginContainer.PostReadReplyHeader(c)
 	if rerr != nil {
@@ -591,7 +592,7 @@ func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 		c.pullCmd.rerr = rerr
 		return nil
 	}
-	return c.pullCmd.reply
+	return c.input.Body()
 }
 
 // handleReply handles pull reply.
@@ -604,6 +605,7 @@ func (c *handlerCtx) handleReply() {
 	defer c.pullCmd.mu.Unlock()
 
 	defer func() {
+		c.pullCmd.reply = c.input.Body()
 		c.handleErr = c.pullCmd.rerr
 		c.pullCmd.done()
 		c.pullCmd.cost = c.sess.timeSince(c.pullCmd.start)
