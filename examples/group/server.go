@@ -13,18 +13,18 @@ func main() {
 		ListenAddress: ":9090",
 	})
 	group := srv.SubRoute("/srv")
-	group.RoutePull(new(math))
+	group.RoutePull(new(math_v2))
 	srv.ListenAndServe()
 }
 
-type math struct {
+type math_v2 struct {
 	tp.PullCtx
 }
 
-func (m *math) Add(args *[]int) (int, *tp.Rerror) {
+func (m *math_v2) Add__2(args *[]int) (int, *tp.Rerror) {
 	if m.Query().Get("push_status") == "yes" {
 		m.Session().Push(
-			"/cli/push/status",
+			"/cli/push/server_status",
 			fmt.Sprintf("%d numbers are being added...", len(*args)),
 		)
 		time.Sleep(time.Millisecond * 10)

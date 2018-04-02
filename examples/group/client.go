@@ -20,7 +20,7 @@ func main() {
 	}
 
 	var reply int
-	rerr := sess.Pull("/srv/math/add?push_status=yes",
+	rerr := sess.Pull("/srv/math/v2/add_2?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
 		&reply,
 	).Rerror()
@@ -35,7 +35,7 @@ type push struct {
 	tp.PushCtx
 }
 
-func (p *push) Status(args *string) *tp.Rerror {
+func (p *push) ServerStatus(args *string) *tp.Rerror {
 	tp.Printf("server status: %s", *args)
 	return nil
 }
