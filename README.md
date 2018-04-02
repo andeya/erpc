@@ -478,6 +478,17 @@ func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
+### The mapping rule of struct(func) name to URI path:
+
+- `AaBb` -> `/aa_bb`
+- `Aa_Bb` -> `/aa/bb`
+- `aa_bb` -> `/aa/bb`
+- `Aa__Bb` -> `/aa_bb`
+- `aa__bb` -> `/aa_bb`
+- `ABC_XYZ` -> `/abc/xyz`
+- `ABcXYz` -> `/abc_xyz`
+- `ABC__XYZ` -> `/abc_xyz`
+
 ### Plugin Demo
 
 ```go

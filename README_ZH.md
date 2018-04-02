@@ -481,6 +481,17 @@ func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
+### 结构体（函数）名称映射到URI路径的规则：
+
+- `AaBb` -> `/aa_bb`
+- `Aa_Bb` -> `/aa/bb`
+- `aa_bb` -> `/aa/bb`
+- `Aa__Bb` -> `/aa_bb`
+- `aa__bb` -> `/aa_bb`
+- `ABC_XYZ` -> `/abc/xyz`
+- `ABcXYz` -> `/abc_xyz`
+- `ABC__XYZ` -> `/abc_xyz`
+
 ### 插件示例
 
 ```go

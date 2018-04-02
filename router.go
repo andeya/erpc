@@ -113,6 +113,17 @@ import (
  *
  *  // register the unknown push route: /*
  *  peer.SetUnknownPush(XxxUnknownPush)
+ *
+ * 7. The mapping rule of struct(func) name to URI path:
+ *
+ * - `AaBb` -> `/aa_bb`
+ * - `Aa_Bb` -> `/aa/bb`
+ * - `aa_bb` -> `/aa/bb`
+ * - `Aa__Bb` -> `/aa_bb`
+ * - `aa__bb` -> `/aa_bb`
+ * - `ABC_XYZ` -> `/abc/xyz`
+ * - `ABcXYz` -> `/abc_xyz`
+ * - `ABC__XYZ` -> `/abc_xyz`
  **/
 
 type (
@@ -446,7 +457,7 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		}
 
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
+			name:            path.Join(pathPrefix, toUriPath(ctrlStructName(ctype)), toUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			reply:           replyType,
@@ -573,7 +584,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 		pluginContainer = newPluginContainer()
 	}
 	return []*Handler{&Handler{
-		name:            path.Join(pathPrefix, fnHandlerSnakeName(cValue)),
+		name:            path.Join(pathPrefix, toUriPath(handlerFuncName(cValue))),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),
 		reply:           replyType,
@@ -672,7 +683,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 			pool.Put(obj)
 		}
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, ctrlStructSnakeName(ctype), goutil.SnakeString(mname)),
+			name:            path.Join(pathPrefix, toUriPath(ctrlStructName(ctype)), toUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			pluginContainer: pluginContainer,
@@ -780,7 +791,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 		pluginContainer = newPluginContainer()
 	}
 	return []*Handler{&Handler{
-		name:            path.Join(pathPrefix, fnHandlerSnakeName(cValue)),
+		name:            path.Join(pathPrefix, toUriPath(handlerFuncName(cValue))),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),
 		pluginContainer: pluginContainer,
@@ -811,17 +822,15 @@ func isRerrorType(s string) bool {
 	return strings.HasPrefix(s, "*") && strings.HasSuffix(s, ".Rerror")
 }
 
-func ctrlStructSnakeName(ctype reflect.Type) string {
+func ctrlStructName(ctype reflect.Type) string {
 	split := strings.Split(ctype.String(), ".")
-	tName := split[len(split)-1]
-	return goutil.SnakeString(tName)
+	return split[len(split)-1]
 }
 
-func fnHandlerSnakeName(v reflect.Value) string {
+func handlerFuncName(v reflect.Value) string {
 	str := objectName(v)
 	split := strings.Split(str, ".")
-	tName := split[len(split)-1]
-	return goutil.SnakeString(tName)
+	return split[len(split)-1]
 }
 
 func objectName(v reflect.Value) string {
@@ -830,6 +839,17 @@ func objectName(v reflect.Value) string {
 		return runtime.FuncForPC(v.Pointer()).Name()
 	}
 	return t.String()
+}
+
+func toUriPath(name string) string {
+	p := strings.Replace(name, "__", ".", -1)
+	a := strings.Split(p, "_")
+	for k, v := range a {
+		a[k] = goutil.SnakeString(v)
+	}
+	p = path.Join(a...)
+	p = path.Join("/", p)
+	return strings.Replace(p, ".", "_", -1)
 }
 
 // Name returns the handler name.
