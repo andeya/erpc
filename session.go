@@ -350,8 +350,7 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 	s.socket.SetReadDeadline(deadline)
 
 	if err := s.socket.ReadPacket(input); err != nil {
-		rerr := rerrConnClosed.Copy()
-		rerr.Detail = err.Error()
+		rerr := rerrConnClosed.Copy().SetDetail(err.Error())
 		socket.PutPacket(input)
 		return nil, rerr
 	}
@@ -764,8 +763,7 @@ func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
 	Debugf("write error: %s", err.Error())
 
 ERR:
-	rerr = rerrWriteFailed.Copy()
-	rerr.Detail = err.Error()
+	rerr = rerrWriteFailed.Copy().SetDetail(err.Error())
 	return conn, rerr
 }
 
