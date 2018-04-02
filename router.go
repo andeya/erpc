@@ -457,7 +457,7 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		}
 
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, toUriPath(ctrlStructName(ctype)), toUriPath(mname)),
+			name:            path.Join(pathPrefix, ToUriPath(ctrlStructName(ctype)), ToUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			reply:           replyType,
@@ -584,7 +584,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 		pluginContainer = newPluginContainer()
 	}
 	return []*Handler{&Handler{
-		name:            path.Join(pathPrefix, toUriPath(handlerFuncName(cValue))),
+		name:            path.Join(pathPrefix, ToUriPath(handlerFuncName(cValue))),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),
 		reply:           replyType,
@@ -683,7 +683,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 			pool.Put(obj)
 		}
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, toUriPath(ctrlStructName(ctype)), toUriPath(mname)),
+			name:            path.Join(pathPrefix, ToUriPath(ctrlStructName(ctype)), ToUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			pluginContainer: pluginContainer,
@@ -791,7 +791,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 		pluginContainer = newPluginContainer()
 	}
 	return []*Handler{&Handler{
-		name:            path.Join(pathPrefix, toUriPath(handlerFuncName(cValue))),
+		name:            path.Join(pathPrefix, ToUriPath(handlerFuncName(cValue))),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),
 		pluginContainer: pluginContainer,
@@ -841,7 +841,8 @@ func objectName(v reflect.Value) string {
 	return t.String()
 }
 
-func toUriPath(name string) string {
+// ToUriPath maps struct(func) name to URI path.
+func ToUriPath(name string) string {
 	p := strings.Replace(name, "__", ".", -1)
 	a := strings.Split(p, "_")
 	for k, v := range a {
