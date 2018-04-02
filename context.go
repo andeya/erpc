@@ -404,8 +404,7 @@ func (c *handlerCtx) bindPush(header socket.Header) interface{} {
 
 	u := header.UriObject()
 	if len(u.Path) == 0 {
-		c.handleErr = rerrBadPacket.Copy()
-		c.handleErr.Detail = "invalid URI for packet"
+		c.handleErr = rerrBadPacket.Copy().SetDetail("invalid URI for packet")
 		return nil
 	}
 
@@ -462,8 +461,7 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 
 	u := header.UriObject()
 	if len(u.Path) == 0 {
-		c.handleErr = rerrBadPacket.Copy()
-		c.handleErr.Detail = "invalid URI for packet"
+		c.handleErr = rerrBadPacket.Copy().SetDetail("invalid URI for packet")
 		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
@@ -538,9 +536,10 @@ func (c *handlerCtx) handlePull() {
 		}
 		if rerr != rerrConnClosed {
 			c.output.SetBody(nil)
-			rerr2 := rerrInternalServerError.Copy()
-			rerr2.Detail = rerr.Detail
-			rerr2.SetToMeta(c.output.Meta())
+			rerrInternalServerError.
+				Copy().
+				SetDetail(rerr.Detail).
+				SetToMeta(c.output.Meta())
 			c.sess.write(c.output)
 		}
 		return

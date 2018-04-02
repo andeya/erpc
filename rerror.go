@@ -56,20 +56,6 @@ func NewRerrorFromMeta(meta *utils.Args) *Rerror {
 	return r
 }
 
-// String prints error info.
-func (r *Rerror) String() string {
-	if r == nil {
-		return "<nil>"
-	}
-	b, _ := r.MarshalJSON()
-	return goutil.BytesToString(b)
-}
-
-// Copy returns the copy of Rerror
-func (r Rerror) Copy() *Rerror {
-	return &r
-}
-
 // SetToMeta sets self to 'X-Reply-Error' metadata.
 func (r *Rerror) SetToMeta(meta *utils.Args) {
 	b, _ := r.MarshalJSON()
@@ -77,6 +63,32 @@ func (r *Rerror) SetToMeta(meta *utils.Args) {
 		return
 	}
 	meta.Set(MetaRerror, goutil.BytesToString(b))
+}
+
+// Copy returns the copy of Rerror
+func (r Rerror) Copy() *Rerror {
+	return &r
+}
+
+// SetMessage sets the message field.
+func (r *Rerror) SetMessage(message string) *Rerror {
+	r.Message = message
+	return r
+}
+
+// SetDetail sets the detail field.
+func (r *Rerror) SetDetail(detail string) *Rerror {
+	r.Detail = detail
+	return r
+}
+
+// String prints error info.
+func (r *Rerror) String() string {
+	if r == nil {
+		return "<nil>"
+	}
+	b, _ := r.MarshalJSON()
+	return goutil.BytesToString(b)
 }
 
 // MarshalJSON marshals Rerror into JSON, implements json.Marshaler interface.
@@ -136,8 +148,7 @@ func ToRerror(err error) *Rerror {
 	if ok {
 		return r.toRerror()
 	}
-	rerr := rerrUnknownError.Copy()
-	rerr.Detail = err.Error()
+	rerr := rerrUnknownError.Copy().SetDetail(err.Error())
 	return rerr
 }
 
