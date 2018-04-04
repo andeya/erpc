@@ -68,7 +68,7 @@ func ProtoMarshal(v interface{}) ([]byte, error) {
 	if v == nil || v == emptyStruct {
 		return proto.Marshal(EmptyStruct)
 	}
-	return nil, fmt.Errorf("%T does not implement proto.Message", v)
+	return nil, fmt.Errorf("protobuf codec: %T does not implement proto.Message", v)
 }
 
 // ProtoUnmarshal parses the Protobuf-encoded data and stores the result
@@ -80,5 +80,5 @@ func ProtoUnmarshal(data []byte, v interface{}) error {
 	if v == nil || v == emptyStruct {
 		return nil
 	}
-	return fmt.Errorf("%T does not implement proto.Message", v)
+	return fmt.Errorf("protobuf codec: %T does not implement proto.Message", v)
 }
