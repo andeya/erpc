@@ -23,6 +23,12 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
+// json codec name and id
+const (
+	NAME_JSON = "json"
+	ID_JSON   = 'j'
+)
+
 func init() {
 	Reg(new(JsoniterCodec))
 }
@@ -30,13 +36,12 @@ func init() {
 // JsoniterCodec json codec
 type JsoniterCodec struct{}
 
-// Name returns codec name
+// Name returns codec name.
 func (j *JsoniterCodec) Name() string {
 	return "json"
 }
 
-//
-// Id returns codec id
+// Id returns codec id.
 func (j *JsoniterCodec) Id() byte {
 	return 'j'
 }
