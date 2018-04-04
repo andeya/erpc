@@ -57,7 +57,7 @@ func (StringCodec) Marshal(v interface{}) ([]byte, error) {
 	case *[]byte:
 		b = *s
 	default:
-		return nil, fmt.Errorf("%T can not be directly converted to []byte type", v)
+		return nil, fmt.Errorf("string codec: %T can not be directly converted to []byte type", v)
 	}
 	return b, nil
 }
@@ -76,7 +76,7 @@ func (StringCodec) Unmarshal(data []byte, v interface{}) error {
 		*s = make([]byte, len(data))
 		copy(*s, data)
 	default:
-		return fmt.Errorf("[]byte can not be directly converted to %T type", v)
+		return fmt.Errorf("string codec: []byte can not be directly converted to %T type", v)
 	}
 	return nil
 }
