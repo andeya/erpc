@@ -48,53 +48,53 @@ func (PlainCodec) Id() byte {
 // Marshal returns the string encoding of v.
 func (PlainCodec) Marshal(v interface{}) ([]byte, error) {
 	var b []byte
-	switch s := v.(type) {
+	switch vv := v.(type) {
 	case nil:
 	case string:
-		b = goutil.StringToBytes(s)
+		b = goutil.StringToBytes(vv)
 	case *string:
-		b = goutil.StringToBytes(*s)
+		b = goutil.StringToBytes(*vv)
 	case []byte:
-		b = s
+		b = vv
 	case *[]byte:
-		b = *s
+		b = *vv
 	default:
-		var ok bool
-		b, ok = formatProperType(reflect.ValueOf(v))
+		s, ok := formatProperType(reflect.ValueOf(v))
 		if !ok {
 			return nil, fmt.Errorf("plain codec: %T can not be directly converted to []byte type", v)
 		}
+		b = goutil.StringToBytes(s)
 	}
 	return b, nil
 }
 
-func formatProperType(v reflect.Value) ([]byte, bool) {
+func formatProperType(v reflect.Value) (string, bool) {
 	for v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
 	switch v.Kind() {
 	case reflect.String:
-		return goutil.StringToBytes(v.String()), true
+		return v.String(), true
 	case reflect.Bool:
-		return goutil.StringToBytes(strconv.FormatBool(v.Bool())), true
+		return strconv.FormatBool(v.Bool()), true
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return goutil.StringToBytes(strconv.FormatInt(v.Int(), 10)), true
+		return strconv.FormatInt(v.Int(), 10), true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return goutil.StringToBytes(strconv.FormatUint(v.Uint(), 10)), true
+		return strconv.FormatUint(v.Uint(), 10), true
 	case reflect.Float32:
-		return goutil.StringToBytes(strconv.FormatFloat(v.Float(), 'f', -1, 32)), true
+		return strconv.FormatFloat(v.Float(), 'f', -1, 32), true
 	case reflect.Float64:
-		return goutil.StringToBytes(strconv.FormatFloat(v.Float(), 'f', -1, 64)), true
+		return strconv.FormatFloat(v.Float(), 'f', -1, 64), true
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 {
-			return v.Bytes(), true
+			return goutil.BytesToString(v.Bytes()), true
 		} else {
-			return nil, false
+			return "", false
 		}
 	case reflect.Invalid:
-		return []byte{}, true
+		return "", true
 	default:
-		return nil, false
+		return "", false
 	}
 }
 
