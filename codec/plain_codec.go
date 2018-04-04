@@ -20,31 +20,31 @@ import (
 	"github.com/henrylee2cn/goutil"
 )
 
-// protobuf codec id
+// plain codec name and id
 const (
-	NAME_STRING = "string"
-	ID_STRING   = 's'
+	NAME_PLAIN = "plain"
+	ID_PLAIN   = 's'
 )
 
 func init() {
-	Reg(new(StringCodec))
+	Reg(new(PlainCodec))
 }
 
-// StringCodec string codec
-type StringCodec struct{}
+// PlainCodec plain codec
+type PlainCodec struct{}
 
-// Name returns codec string
-func (StringCodec) Name() string {
-	return NAME_STRING
+// Name returns codec name.
+func (PlainCodec) Name() string {
+	return NAME_PLAIN
 }
 
-// Id returns codec id
-func (StringCodec) Id() byte {
-	return ID_STRING
+// Id returns codec id.
+func (PlainCodec) Id() byte {
+	return ID_PLAIN
 }
 
 // Marshal returns the string encoding of v.
-func (StringCodec) Marshal(v interface{}) ([]byte, error) {
+func (PlainCodec) Marshal(v interface{}) ([]byte, error) {
 	var b []byte
 	switch s := v.(type) {
 	case nil:
@@ -64,7 +64,7 @@ func (StringCodec) Marshal(v interface{}) ([]byte, error) {
 
 // Unmarshal parses the string-encoded data and stores the result
 // in the value pointed to by v.
-func (StringCodec) Unmarshal(data []byte, v interface{}) error {
+func (PlainCodec) Unmarshal(data []byte, v interface{}) error {
 	switch s := v.(type) {
 	case nil:
 		return nil
