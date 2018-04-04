@@ -22,7 +22,7 @@ import (
 	"github.com/henrylee2cn/goutil"
 )
 
-// plain codec name and id
+// plain text codec name and id
 const (
 	NAME_PLAIN = "plain"
 	ID_PLAIN   = 's'
@@ -32,7 +32,7 @@ func init() {
 	Reg(new(PlainCodec))
 }
 
-// PlainCodec plain codec
+// PlainCodec plain text codec
 type PlainCodec struct{}
 
 // Name returns codec name.
