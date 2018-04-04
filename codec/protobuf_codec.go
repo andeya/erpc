@@ -20,7 +20,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-//  protobuf codec id
+//  protobuf codec name and id
 const (
 	NAME_PROTOBUF = "protobuf"
 	ID_PROTOBUF   = 'p'
@@ -33,12 +33,12 @@ func init() {
 // ProtoCodec protobuf codec
 type ProtoCodec struct{}
 
-// Name returns codec string
+// Name returns codec name.
 func (ProtoCodec) Name() string {
 	return NAME_PROTOBUF
 }
 
-// Id returns codec id
+// Id returns codec id.
 func (ProtoCodec) Id() byte {
 	return ID_PROTOBUF
 }
