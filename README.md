@@ -223,7 +223,7 @@ type (
     func (p *Packet) Meta() *utils.Args
     func (p *Packet) Ptype() byte
     func (p *Packet) Reset(settings ...PacketSetting)
-    func (p *Packet) Seq() uint64
+    func (p *Packet) Seq() string
     func (p *Packet) SetBody(body interface{})
     func (p *Packet) SetBodyCodec(bodyCodec byte)
     func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
