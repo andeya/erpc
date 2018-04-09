@@ -75,7 +75,8 @@ func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
 }
 
 func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
-	var settings = make([]socket.PacketSetting, 0, 8)
+	var settings = make([]socket.PacketSetting, 1, 8)
+	settings[0] = tp.WithSeq(ctx.Session().Id() + "@" + ctx.Seq())
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
@@ -96,7 +97,8 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 }
 
 func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
-	var settings = make([]socket.PacketSetting, 0, 8)
+	var settings = make([]socket.PacketSetting, 1, 8)
+	settings[0] = tp.WithSeq(ctx.Session().Id() + "@" + ctx.Seq())
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
