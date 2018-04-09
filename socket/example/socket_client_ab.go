@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,7 +36,7 @@ func main() {
 	for j := 0; j < loop; j++ {
 		count.Add(group)
 		for i := 0; i < group; i++ {
-			go func(a uint64) {
+			go func(a int) {
 				var packet = socket.GetPacket()
 				defer func() {
 					socket.PutPacket(packet)
@@ -44,7 +45,7 @@ func main() {
 				// write request
 				packet.Reset()
 				packet.SetBodyCodec(codec.ID_PROTOBUF)
-				packet.SetSeq(a)
+				packet.SetSeq(strconv.Itoa(a))
 				packet.SetUri("/a/b")
 				packet.SetBody(&pb.PbTest{A: 10, B: 2})
 				err = s.WritePacket(packet)
@@ -63,7 +64,7 @@ func main() {
 					atomic.AddUint32(&failNum, 1)
 					log.Printf("[CLI] read response err: %v", err)
 				}
-			}(uint64(i * group))
+			}(i * group)
 		}
 		count.Wait()
 	}
