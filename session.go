@@ -850,10 +850,10 @@ const (
 )
 
 const (
-	logFormatPushLaunch = "PUSH-> %s %s %s\nSEND(%s)"
-	logFormatPushHandle = "PUSH<- %s %s %s\nRECV(%s)"
-	logFormatPullLaunch = "PULL-> %s %s %s\nSEND(%s)\nRECV(%s)"
-	logFormatPullHandle = "PULL<- %s %s %s\nRECV(%s)\nSEND(%s)"
+	logFormatPushLaunch = "PUSH-> %s %s %s %q\nSEND(%s)"
+	logFormatPushHandle = "PUSH<- %s %s %s %q\nRECV(%s)"
+	logFormatPullLaunch = "PULL-> %s %s %s %q\nSEND(%s)\nRECV(%s)"
+	logFormatPullHandle = "PULL<- %s %s %s %q\nRECV(%s)\nSEND(%s)"
 
 	bodyJsonFormat = `{"size":%d,"error":%q,"body":%q}`
 )
@@ -879,13 +879,13 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 
 	switch logType {
 	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), packetLogBytes(output, s.peer.printBody))
+		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printBody))
 	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), packetLogBytes(input, s.peer.printBody))
+		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printBody))
 	case typePullLaunch:
-		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), packetLogBytes(output, s.peer.printBody), packetLogBytes(input, s.peer.printBody))
+		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printBody), packetLogBytes(input, s.peer.printBody))
 	case typePullHandle:
-		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), packetLogBytes(input, s.peer.printBody), packetLogBytes(output, s.peer.printBody))
+		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printBody), packetLogBytes(output, s.peer.printBody))
 	}
 }
 
