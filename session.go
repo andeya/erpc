@@ -854,8 +854,6 @@ const (
 	logFormatPushHandle = "PUSH<- %s %s %s %q\nRECV(%s)"
 	logFormatPullLaunch = "PULL-> %s %s %s %q\nSEND(%s)\nRECV(%s)"
 	logFormatPullHandle = "PULL<- %s %s %s %q\nRECV(%s)\nSEND(%s)"
-
-	bodyJsonFormat = `{"size":%d,"error":%q,"body":%q}`
 )
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
@@ -890,15 +888,29 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 }
 
 func packetLogBytes(packet *socket.Packet, printBody bool) []byte {
-	var bodyStr string
-	if printBody {
-		bodyStr = goutil.BytesToString(bodyLogBytes(packet))
+	var b = make([]byte, 0, 32)
+	b = append(b, '{')
+	b = append(b, '"', 's', 'i', 'z', 'e', '"', ':')
+	b = append(b, strconv.FormatUint(uint64(packet.Size()), 10)...)
+	if rerrBytes := getRerrorBytes(packet.Meta()); len(rerrBytes) > 0 {
+		b = append(b, ',', '"', 'e', 'r', 'r', 'o', 'r', '"', ':', '"')
+		rerrBytes = bytes.Replace(rerrBytes, []byte{'"'}, []byte{'\\', '"'}, -1)
+		b = append(b, rerrBytes...)
+		b = append(b, '"')
 	}
-	s := fmt.Sprintf(bodyJsonFormat, packet.Size(), goutil.BytesToString(getRerrorBytes(packet.Meta())), bodyStr)
+	if printBody {
+		if bodyBytes := bodyLogBytes(packet); len(bodyBytes) > 0 {
+			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':', '"')
+			bodyBytes = bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1)
+			b = append(b, bodyBytes...)
+			b = append(b, '"')
+		}
+	}
+	b = append(b, '}')
 	buf := bytes.NewBuffer(nil)
-	err := json.Indent(buf, goutil.StringToBytes(s), "", "  ")
+	err := json.Indent(buf, b, "", "  ")
 	if err != nil {
-		return goutil.StringToBytes(s)
+		return b
 	}
 	return buf.Bytes()
 }
