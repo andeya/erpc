@@ -30,6 +30,7 @@ import (
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 type (
@@ -419,6 +420,7 @@ func (s *session) AsyncPull(
 		doneChan:    make(chan struct{}),
 		start:       s.peer.timeNow(),
 		swap:        goutil.RwMap(),
+		inputMeta:   utils.AcquireArgs(),
 	}
 
 	// count pull-launch

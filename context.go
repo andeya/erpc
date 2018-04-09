@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/goutil"
-
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 	"github.com/henrylee2cn/teleport/utils"
@@ -577,7 +576,7 @@ func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 	c.swap = c.pullCmd.swap
 	c.pullCmd.inputBodyCodec = c.GetBodyCodec()
 	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
-	c.pullCmd.inputMeta = c.CopyMeta()
+	c.input.Meta().CopyTo(c.pullCmd.inputMeta)
 	c.setContext(c.pullCmd.output.Context())
 	c.input.SetBody(c.pullCmd.reply)
 
