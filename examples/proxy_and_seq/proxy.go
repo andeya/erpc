@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := tp.NewPeer(tp.PeerConfig{RedialTimes: 3})
 	defer cli.Close()
 	sess, err := cli.Dial(":9090")
 	if err != nil {

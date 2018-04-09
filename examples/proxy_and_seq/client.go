@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/socket"
 )
@@ -24,6 +25,7 @@ func main() {
 	rerr := sess.Pull("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&reply,
+		tp.WithSeq(newRequestId()),
 	).Rerror()
 
 	if rerr != nil {
@@ -35,8 +37,13 @@ func main() {
 		"/chat/say",
 		fmt.Sprintf("I get result %d", reply),
 		socket.WithSetMeta("X-ID", "client-001"),
+		tp.WithSeq(newRequestId()),
 	)
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)
 	}
+}
+
+func newRequestId() string {
+	return "uid@" + goutil.URLRandomString(8)
 }
