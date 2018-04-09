@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -311,10 +312,12 @@ func (s *session) SetContextAge(duration time.Duration) {
 // does not support automatic redial after disconnection.
 func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) *Rerror {
 	output := socket.GetPacket(setting...)
-	s.seqLock.Lock()
-	output.SetSeq(s.seq)
-	s.seq++
-	s.seqLock.Unlock()
+	if len(output.Seq()) == 0 {
+		s.seqLock.Lock()
+		output.SetSeq(strconv.FormatUint(s.seq, 10))
+		s.seq++
+		s.seqLock.Unlock()
+	}
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
@@ -380,12 +383,7 @@ func (s *session) AsyncPull(
 			Panicf("*session.AsyncPull(): pullCmdChan channel is unbuffered")
 		}
 	}
-	s.seqLock.Lock()
-	seq := s.seq
-	s.seq++
-	s.seqLock.Unlock()
 	output := socket.NewPacket(
-		socket.WithSeq(seq),
 		socket.WithPtype(TypePull),
 		socket.WithUri(uri),
 		socket.WithBody(args),
@@ -395,6 +393,16 @@ func (s *session) AsyncPull(
 			fn(output)
 		}
 	}
+
+	seq := output.Seq()
+	if len(seq) == 0 {
+		s.seqLock.Lock()
+		seq = strconv.FormatUint(s.seq, 10)
+		output.SetSeq(seq)
+		s.seq++
+		s.seqLock.Unlock()
+	}
+
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
@@ -471,13 +479,6 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 	ctx := s.peer.getContext(s, true)
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
-
-	s.seqLock.Lock()
-	seq := s.seq
-	s.seq++
-	s.seqLock.Unlock()
-
-	output.SetSeq(seq)
 	output.SetPtype(TypePush)
 	output.SetUri(uri)
 	output.SetBody(args)
@@ -487,6 +488,14 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 			fn(output)
 		}
 	}
+
+	if len(output.Seq()) == 0 {
+		s.seqLock.Lock()
+		output.SetSeq(strconv.FormatUint(s.seq, 10))
+		s.seq++
+		s.seqLock.Unlock()
+	}
+
 	if output.BodyCodec() == codec.NilCodecId {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}

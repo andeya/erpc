@@ -38,7 +38,7 @@ func main() {
 					log.Printf("[SVR] read request err: %v", err)
 					return
 					// } else {
-					// log.Printf("[SVR] read request: %v", packet)
+					// log.Printf("[SVR] read request: %s", packet.String())
 				}
 
 				// write response
@@ -50,7 +50,7 @@ func main() {
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 					// } else {
-					// log.Printf("[SVR] write response: %v", packet)
+					// log.Printf("[SVR] write response: %s", packet.String())
 				}
 				socket.PutPacket(packet)
 			}

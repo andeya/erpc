@@ -148,7 +148,9 @@ func (f *fastProto) Pack(p *Packet) error {
 }
 
 func (f *fastProto) writeHeader(bb *utils.ByteBuffer, p *Packet) error {
-	binary.Write(bb, binary.BigEndian, p.Seq())
+	seqBytes := goutil.StringToBytes(p.Seq())
+	binary.Write(bb, binary.BigEndian, uint32(len(seqBytes)))
+	bb.Write(seqBytes)
 
 	bb.WriteByte(p.Ptype())
 
@@ -242,8 +244,10 @@ func (f *fastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 
 func (f *fastProto) readHeader(data []byte, p *Packet) []byte {
 	// seq
-	p.SetSeq(binary.BigEndian.Uint64(data))
-	data = data[8:]
+	seqLen := binary.BigEndian.Uint32(data)
+	data = data[4:]
+	p.SetSeq(string(data[:seqLen]))
+	data = data[seqLen:]
 	// type
 	p.SetPtype(data[0])
 	data = data[1:]

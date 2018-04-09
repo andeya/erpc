@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"strconv"
 
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
@@ -19,12 +20,12 @@ func main() {
 	defer s.Close()
 	var packet = socket.GetPacket()
 	defer socket.PutPacket(packet)
-	for i := uint64(0); i < 1; i++ {
+	for i := 0; i < 1; i++ {
 		// write request
 		packet.Reset()
 		packet.SetPtype(0)
 		packet.SetBodyCodec(codec.ID_JSON)
-		packet.SetSeq(i)
+		packet.SetSeq(strconv.Itoa(i))
 		packet.SetUri("/a/b")
 		packet.SetBody(&pb.PbTest{A: 10, B: 2})
 		err = s.WritePacket(packet)
@@ -32,7 +33,7 @@ func main() {
 			log.Printf("[CLI] write request err: %v", err)
 			continue
 		}
-		log.Printf("[CLI] write request: %v", packet)
+		log.Printf("[CLI] write request: %s", packet.String())
 
 		// read response
 		packet.Reset(socket.WithNewBody(
@@ -44,7 +45,7 @@ func main() {
 		if err != nil {
 			log.Printf("[CLI] read response err: %v", err)
 		} else {
-			log.Printf("[CLI] read response: %v", packet)
+			log.Printf("[CLI] read response: %s", packet.String())
 		}
 	}
 	// select {}

@@ -57,7 +57,7 @@ type (
 	inputCtx interface {
 		PreCtx
 		// Seq returns the input packet sequence.
-		Seq() uint64
+		Seq() string
 		// PeekMeta peeks the header metadata for the input packet.
 		PeekMeta(key string) []byte
 		// VisitMeta calls f for each existing metadata.
@@ -240,7 +240,7 @@ func (c *handlerCtx) Swap() goutil.Map {
 }
 
 // Seq returns the input packet sequence.
-func (c *handlerCtx) Seq() uint64 {
+func (c *handlerCtx) Seq() string {
 	return c.input.Seq()
 }
 

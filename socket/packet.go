@@ -34,7 +34,7 @@ type (
 	// Packet a socket data packet.
 	Packet struct {
 		// packet sequence
-		seq uint64
+		seq string
 		// packet type, such as PULL, PUSH, REPLY
 		ptype byte
 		// URI string
@@ -67,9 +67,9 @@ type (
 	// Header packet header interface
 	Header interface {
 		// Ptype returns the packet sequence
-		Seq() uint64
+		Seq() string
 		// SetSeq sets the packet sequence
-		SetSeq(uint64)
+		SetSeq(string)
 		// Ptype returns the packet type, such as PULL, PUSH, REPLY
 		Ptype() byte
 		// Ptype sets the packet type
@@ -171,7 +171,7 @@ func (p *Packet) Reset(settings ...PacketSetting) {
 	p.meta.Reset()
 	p.xferPipe.Reset()
 	p.newBodyFunc = nil
-	p.seq = 0
+	p.seq = ""
 	p.ptype = 0
 	p.uri = ""
 	p.uriObject = nil
@@ -198,12 +198,12 @@ func (p *Packet) Context() context.Context {
 }
 
 // Seq returns the packet sequence
-func (p *Packet) Seq() uint64 {
+func (p *Packet) Seq() string {
 	return p.seq
 }
 
 // SetSeq sets the packet sequence
-func (p *Packet) SetSeq(seq uint64) {
+func (p *Packet) SetSeq(seq string) {
 	p.seq = seq
 }
 
@@ -356,7 +356,7 @@ func (p *Packet) SetSize(size uint32) error {
 
 const packetFormat = `
 {
-  "seq": %d,
+  "seq": %q,
   "ptype": %d,
   "uri": %q,
   "meta": %q,
@@ -401,7 +401,7 @@ func WithContext(ctx context.Context) PacketSetting {
 }
 
 // WithSeq sets the packet sequence.
-func WithSeq(seq uint64) PacketSetting {
+func WithSeq(seq string) PacketSetting {
 	return func(p *Packet) {
 		p.seq = seq
 	}
