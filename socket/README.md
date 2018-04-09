@@ -200,7 +200,7 @@ type (
 	func (p *Packet) SetBodyCodec(bodyCodec byte)
 	func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
 	func (p *Packet) SetPtype(ptype byte)
-	func (p *Packet) SetSeq(seq uint64)
+	func (p *Packet) SetSeq(seq string)
 	func (p *Packet) SetSize(size uint32) error
 	func (p *Packet) SetUri(uri string)
 	func (p *Packet) SetUriObject(uriObject *url.URL)
