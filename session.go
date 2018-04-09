@@ -849,133 +849,67 @@ const (
 	typePullHandle int8 = 4
 )
 
+const (
+	logFormatPushLaunch = "PUSH-> %s %s %s\nSEND(%s)"
+	logFormatPushHandle = "PUSH<- %s %s %s\nRECV(%s)"
+	logFormatPullLaunch = "PULL-> %s %s %s\nSEND(%s)\nRECV(%s)"
+	logFormatPullHandle = "PULL<- %s %s %s\nRECV(%s)\nSEND(%s)"
+
+	bodyJsonFormat = `{"size":%d,"error":%q,"body":%q}`
+)
+
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
 	var addr = s.RemoteAddr().String()
 	if realIp != "" && realIp != addr {
 		addr += "(real: " + realIp + ")"
 	}
+	var (
+		costTimeStr string
+		printFunc   = Infof
+	)
 	if s.peer.countTime {
-		var (
-			printFunc func(string, ...interface{})
-			slowStr   string
-		)
-		if costTime < s.peer.slowCometDuration {
-			printFunc = Infof
-		} else {
+		costTimeStr = costTime.String()
+		if costTime >= s.peer.slowCometDuration {
+			costTimeStr += "(slow)"
 			printFunc = Warnf
-			slowStr = "(slow)"
-		}
-		switch logType {
-		case typePushLaunch:
-			if s.peer.printBody {
-				const logformat = "[push-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
-				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size(), bodyLogBytes(output))
-
-			} else {
-				const logformat = "[push-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n"
-				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size())
-			}
-
-		case typePushHandle:
-			if s.peer.printBody {
-				const logformat = "[push-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
-				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size(), bodyLogBytes(input))
-			} else {
-				const logformat = "[push-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n"
-				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size())
-			}
-
-		case typePullLaunch:
-			if s.peer.printBody {
-				const logformat = "[pull-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s\n body[-json]: %s\n"
-				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size(), bodyLogBytes(output), input.Size(), getRerrorBytes(input.Meta()), bodyLogBytes(input))
-			} else {
-				const logformat = "[pull-launch] remote: %s | cost-time: %s%s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n size: %d\n status: %s\n"
-				printFunc(logformat, addr, costTime, slowStr, output.Uri(), output.Size(), input.Size(), getRerrorBytes(input.Meta()))
-			}
-
-		case typePullHandle:
-			if s.peer.printBody {
-				const logformat = "[pull-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s\n body[-json]: %s\n"
-				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size(), bodyLogBytes(input), output.Size(), getRerrorBytes(output.Meta()), bodyLogBytes(output))
-			} else {
-				const logformat = "[pull-handle] remote: %s | cost-time: %s%s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n size: %d\n status: %s\n"
-				printFunc(logformat, addr, costTime, slowStr, input.Uri(), input.Size(), output.Size(), getRerrorBytes(output.Meta()))
-			}
 		}
 	} else {
-		switch logType {
-		case typePushLaunch:
-			if s.peer.printBody {
-				const logformat = "[push-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\n"
-				Infof(logformat, addr, output.Uri(), output.Size(), bodyLogBytes(output))
-
-			} else {
-				const logformat = "[push-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\n"
-				Infof(logformat, addr, output.Uri(), output.Size())
-			}
-
-		case typePushHandle:
-			if s.peer.printBody {
-				const logformat = "[push-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
-				Infof(logformat, addr, input.Uri(), input.Size(), bodyLogBytes(input))
-			} else {
-				const logformat = "[push-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\n"
-				Infof(logformat, addr, input.Uri(), input.Size())
-			}
-
-		case typePullLaunch:
-			if s.peer.printBody {
-				const logformat = "[pull-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\n body[-json]: %s\nRECV:\n size: %d\n status: %s\n body[-json]: %s\n"
-				Infof(logformat, addr, output.Uri(), output.Size(), bodyLogBytes(output), input.Size(), getRerrorBytes(input.Meta()), bodyLogBytes(input))
-			} else {
-				const logformat = "[pull-launch] remote: %s | uri: %-30s |\nSEND:\n size: %d\nRECV:\n size: %d\n status: %s\n"
-				Infof(logformat, addr, output.Uri(), output.Size(), input.Size(), getRerrorBytes(input.Meta()))
-			}
-
-		case typePullHandle:
-			if s.peer.printBody {
-				const logformat = "[pull-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\nSEND:\n size: %d\n status: %s\n body[-json]: %s\n"
-				Infof(logformat, addr, input.Uri(), input.Size(), bodyLogBytes(input), output.Size(), getRerrorBytes(output.Meta()), bodyLogBytes(output))
-			} else {
-				const logformat = "[pull-handle] remote: %s | uri: %-30s |\nRECV:\n size: %d\nSEND:\n size: %d\n status: %s\n"
-				Infof(logformat, addr, input.Uri(), input.Size(), output.Size(), getRerrorBytes(output.Meta()))
-			}
-		}
+		costTimeStr = "-"
 	}
+
+	switch logType {
+	case typePushLaunch:
+		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), packetLogBytes(output, s.peer.printBody))
+	case typePushHandle:
+		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), packetLogBytes(input, s.peer.printBody))
+	case typePullLaunch:
+		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), packetLogBytes(output, s.peer.printBody), packetLogBytes(input, s.peer.printBody))
+	case typePullHandle:
+		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), packetLogBytes(input, s.peer.printBody), packetLogBytes(output, s.peer.printBody))
+	}
+}
+
+func packetLogBytes(packet *socket.Packet, printBody bool) []byte {
+	var bodyStr string
+	if printBody {
+		bodyStr = goutil.BytesToString(bodyLogBytes(packet))
+	}
+	s := fmt.Sprintf(bodyJsonFormat, packet.Size(), goutil.BytesToString(getRerrorBytes(packet.Meta())), bodyStr)
+	buf := bytes.NewBuffer(nil)
+	err := json.Indent(buf, goutil.StringToBytes(s), "", "  ")
+	if err != nil {
+		return goutil.StringToBytes(s)
+	}
+	return buf.Bytes()
 }
 
 func bodyLogBytes(packet *socket.Packet) []byte {
 	switch v := packet.Body().(type) {
 	case []byte:
-		if len(v) == 0 || !isJsonBody(packet) {
-			return v
-		}
-		buf := bytes.NewBuffer(make([]byte, 0, len(v)-1))
-		err := json.Indent(buf, v[1:], "", "  ")
-		if err != nil {
-			return v
-		}
-		return buf.Bytes()
+		return v
 	case *[]byte:
-		if len(*v) == 0 || !isJsonBody(packet) {
-			return *v
-		}
-		buf := bytes.NewBuffer(make([]byte, 0, len(*v)-1))
-		err := json.Indent(buf, (*v)[1:], "", "  ")
-		if err != nil {
-			return *v
-		}
-		return buf.Bytes()
-	default:
-		b, _ := json.MarshalIndent(v, " ", "  ")
-		return b
+		return *v
 	}
-}
-
-func isJsonBody(packet *socket.Packet) bool {
-	if packet != nil && packet.BodyCodec() == codec.ID_JSON {
-		return true
-	}
-	return false
+	b, _ := json.Marshal(packet.Body())
+	return b
 }
