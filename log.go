@@ -112,6 +112,11 @@ func (l *defaultLogger) SetLevel(level string) {
 	l.newSet()
 }
 
+// GetLogger gets global logger.
+func GetLogger() Logger {
+	return globalLogger
+}
+
 // SetLogger sets global logger.
 // Note: Concurrent is not safe!
 func SetLogger(logger Logger) {
@@ -120,6 +125,11 @@ func SetLogger(logger Logger) {
 	}
 	globalLogger = logger
 	graceful.SetLog(logger)
+}
+
+// GetLoggerLevel gets the logger's level.
+func GetLoggerLevel() string {
+	return globalLogger.Level()
 }
 
 // SetLoggerLevel sets the logger's level.
