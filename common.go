@@ -275,6 +275,12 @@ TRYGO:
 	}
 }
 
+// TryGo tries to execute the function via goroutine.
+// If there are no concurrent resources, execute it synchronously.
+func TryGo(fn func()) {
+	_gopool.TryGo(fn)
+}
+
 var printPidOnce sync.Once
 
 func doPrintPid() {
