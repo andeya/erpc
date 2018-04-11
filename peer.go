@@ -48,6 +48,8 @@ type (
 		SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error
 		// TlsConfig returns the TLS config.
 		TlsConfig() *tls.Config
+		// PluginContainer returns the global plugin container.
+		PluginContainer() *PluginContainer
 	}
 	// EarlyPeer the communication peer that has just been created
 	EarlyPeer interface {
@@ -122,11 +124,11 @@ type peer struct {
 }
 
 // NewPeer creates a new peer.
-func NewPeer(cfg PeerConfig, plugin ...Plugin) Peer {
+func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	doPrintPid()
 	pluginContainer := newPluginContainer()
-	pluginContainer.AppendRight(plugin...)
-	pluginContainer.PreNewPeer(&cfg)
+	pluginContainer.AppendLeft(globalLeftPlugin...)
+	pluginContainer.preNewPeer(&cfg)
 	if err := cfg.check(); err != nil {
 		Fatalf("%v", err)
 	}
@@ -159,8 +161,13 @@ func NewPeer(cfg PeerConfig, plugin ...Plugin) Peer {
 		p.timeSince = func(time.Time) time.Duration { return 0 }
 	}
 	addPeer(p)
-	p.pluginContainer.PostNewPeer(p)
+	p.pluginContainer.postNewPeer(p)
 	return p
+}
+
+// PluginContainer returns the global plugin container.
+func (p *peer) PluginContainer() *PluginContainer {
+	return p.pluginContainer
 }
 
 // TlsConfig returns the TLS config.
@@ -251,7 +258,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	}
 
 	sess.socket.SetId(sess.LocalAddr().String())
-	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
+	if rerr := p.pluginContainer.postDial(sess); rerr != nil {
 		sess.Close()
 		return nil, rerr
 	}
@@ -278,7 +285,7 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	} else {
 		sess.socket.SetId(oldId)
 	}
-	if rerr := p.pluginContainer.PostDial(sess); rerr != nil {
+	if rerr := p.pluginContainer.postDial(sess); rerr != nil {
 		sess.Close()
 		return rerr.ToError()
 	}
@@ -315,7 +322,7 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) er
 	addr := lis.Addr().String()
 	Printf("listen and serve (network:%s, addr:%s)", network, addr)
 
-	p.pluginContainer.PostListen(lis.Addr())
+	p.pluginContainer.postListen(lis.Addr())
 
 	var (
 		tempDelay time.Duration // how long to sleep on accept failure
@@ -361,7 +368,7 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) er
 				}
 			}
 			var sess = newSession(p, conn, protoFunc)
-			if rerr := p.pluginContainer.PostAccept(sess); rerr != nil {
+			if rerr := p.pluginContainer.postAccept(sess); rerr != nil {
 				sess.Close()
 				return
 			}

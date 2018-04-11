@@ -396,7 +396,7 @@ E:
 }
 
 func (c *handlerCtx) bindPush(header socket.Header) interface{} {
-	c.handleErr = c.pluginContainer.PostReadPushHeader(c)
+	c.handleErr = c.pluginContainer.postReadPushHeader(c)
 	if c.handleErr != nil {
 		return nil
 	}
@@ -414,10 +414,12 @@ func (c *handlerCtx) bindPush(header socket.Header) interface{} {
 		return nil
 	}
 
+	// reset plugin container
 	c.pluginContainer = c.handler.pluginContainer
+
 	c.arg = c.handler.NewArgValue()
 	c.input.SetBody(c.arg.Interface())
-	c.handleErr = c.pluginContainer.PreReadPushBody(c)
+	c.handleErr = c.pluginContainer.preReadPushBody(c)
 	if c.handleErr != nil {
 		return nil
 	}
@@ -438,7 +440,7 @@ func (c *handlerCtx) handlePush() {
 	}()
 
 	if c.handleErr == nil && c.handler != nil {
-		if c.pluginContainer.PostReadPushBody(c) == nil {
+		if c.pluginContainer.postReadPushBody(c) == nil {
 			if c.handler.isUnknown {
 				c.handler.unknownHandleFunc(c)
 			} else {
@@ -452,7 +454,7 @@ func (c *handlerCtx) handlePush() {
 }
 
 func (c *handlerCtx) bindPull(header socket.Header) interface{} {
-	c.handleErr = c.pluginContainer.PostReadPullHeader(c)
+	c.handleErr = c.pluginContainer.postReadPullHeader(c)
 	if c.handleErr != nil {
 		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
@@ -473,7 +475,9 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 		return nil
 	}
 
+	// reset plugin container
 	c.pluginContainer = c.handler.pluginContainer
+
 	if c.handler.isUnknown {
 		c.input.SetBody(new([]byte))
 	} else {
@@ -481,7 +485,7 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 		c.input.SetBody(c.arg.Interface())
 	}
 
-	c.handleErr = c.pluginContainer.PreReadPullBody(c)
+	c.handleErr = c.pluginContainer.preReadPullBody(c)
 	if c.handleErr != nil {
 		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
@@ -514,7 +518,7 @@ func (c *handlerCtx) handlePull() {
 
 	// handle pull
 	if c.handleErr == nil {
-		c.handleErr = c.pluginContainer.PostReadPullBody(c)
+		c.handleErr = c.pluginContainer.postReadPullBody(c)
 		if c.handleErr != nil {
 			c.handleErr.SetToMeta(c.output.Meta())
 		} else {
@@ -527,7 +531,7 @@ func (c *handlerCtx) handlePull() {
 	}
 
 	// reply pull
-	c.pluginContainer.PreWriteReply(c)
+	c.pluginContainer.preWriteReply(c)
 	_, rerr := c.sess.write(c.output)
 	if rerr != nil {
 		if c.handleErr == nil {
@@ -544,7 +548,7 @@ func (c *handlerCtx) handlePull() {
 		return
 	}
 
-	c.pluginContainer.PostWriteReply(c)
+	c.pluginContainer.postWriteReply(c)
 }
 
 func (c *handlerCtx) setReplyBody(body interface{}) {
@@ -580,12 +584,12 @@ func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 	c.setContext(c.pullCmd.output.Context())
 	c.input.SetBody(c.pullCmd.reply)
 
-	rerr := c.pluginContainer.PostReadReplyHeader(c)
+	rerr := c.pluginContainer.postReadReplyHeader(c)
 	if rerr != nil {
 		c.pullCmd.rerr = rerr
 		return nil
 	}
-	rerr = c.pluginContainer.PreReadReplyBody(c)
+	rerr = c.pluginContainer.preReadReplyBody(c)
 	if rerr != nil {
 		c.pullCmd.rerr = rerr
 		return nil
@@ -614,7 +618,7 @@ func (c *handlerCtx) handleReply() {
 	}
 	rerr := NewRerrorFromMeta(c.input.Meta())
 	if rerr == nil {
-		rerr = c.pluginContainer.PostReadReplyBody(c)
+		rerr = c.pluginContainer.postReadReplyBody(c)
 	}
 	c.pullCmd.rerr = rerr
 }

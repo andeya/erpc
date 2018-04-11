@@ -444,7 +444,7 @@ func (s *session) AsyncPull(
 		}
 	}()
 
-	cmd.rerr = s.peer.pluginContainer.PreWritePull(cmd)
+	cmd.rerr = s.peer.pluginContainer.preWritePull(cmd)
 	if cmd.rerr != nil {
 		cmd.done()
 		return cmd
@@ -459,7 +459,7 @@ W:
 		return cmd
 	}
 
-	s.peer.pluginContainer.PostWritePull(cmd)
+	s.peer.pluginContainer.postWritePull(cmd)
 	return cmd
 }
 
@@ -512,7 +512,7 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 		}
 		s.peer.putContext(ctx, true)
 	}()
-	rerr := s.peer.pluginContainer.PreWritePush(ctx)
+	rerr := s.peer.pluginContainer.preWritePush(ctx)
 	if rerr != nil {
 		return rerr
 	}
@@ -527,7 +527,7 @@ W:
 	}
 
 	s.runlog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
-	s.peer.pluginContainer.PostWritePush(ctx)
+	s.peer.pluginContainer.postWritePush(ctx)
 	return nil
 }
 
@@ -623,7 +623,7 @@ func (s *session) Close() error {
 	err := s.socket.Close()
 	s.lock.Unlock()
 
-	s.peer.pluginContainer.PostDisconnect(s)
+	s.peer.pluginContainer.postDisconnect(s)
 	return err
 }
 
@@ -663,7 +663,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	s.socket.Close()
 
 	if !s.redialForClient(oldConn) {
-		s.peer.pluginContainer.PostDisconnect(s)
+		s.peer.pluginContainer.postDisconnect(s)
 	}
 }
 
@@ -706,7 +706,7 @@ func (s *session) startReadAndHandle() {
 	for s.goonRead() {
 		var ctx = s.peer.getContext(s, false)
 		withContext(ctx.input)
-		if s.peer.pluginContainer.PreReadHeader(ctx) != nil {
+		if s.peer.pluginContainer.preReadHeader(ctx) != nil {
 			s.peer.putContext(ctx, false)
 			return
 		}

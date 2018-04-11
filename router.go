@@ -196,7 +196,7 @@ func (r *Router) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 
 // SubRoute adds handler group.
 func (r *SubRouter) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
-	pluginContainer := r.pluginContainer.cloneAppendRight(plugin...)
+	pluginContainer := r.pluginContainer.cloneAndAppendMiddle(plugin...)
 	warnInvaildHandlerHooks(plugin)
 	return &SubRouter{
 		root:            r.root,
@@ -254,7 +254,7 @@ func (r *SubRouter) reg(
 	ctrlStruct interface{},
 	plugins []Plugin,
 ) []string {
-	pluginContainer := r.pluginContainer.cloneAppendRight(plugins...)
+	pluginContainer := r.pluginContainer.cloneAndAppendMiddle(plugins...)
 	warnInvaildHandlerHooks(plugins)
 	handlers, err := handlerMaker(
 		r.pathPrefix,
@@ -271,7 +271,7 @@ func (r *SubRouter) reg(
 		}
 		h.routerTypeName = routerTypeName
 		r.handlers[h.name] = h
-		pluginContainer.PostReg(h)
+		pluginContainer.postReg(h)
 		Printf("register %s handler: %s", routerTypeName, h.name)
 		names = append(names, h.name)
 	}
@@ -281,7 +281,7 @@ func (r *SubRouter) reg(
 // SetUnknownPull sets the default handler,
 // which is called when no handler for PULL is found.
 func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
-	pluginContainer := r.subRouter.pluginContainer.cloneAppendRight(plugin...)
+	pluginContainer := r.subRouter.pluginContainer.cloneAndAppendMiddle(plugin...)
 	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
@@ -311,7 +311,7 @@ func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), 
 // SetUnknownPush sets the default handler,
 // which is called when no handler for PUSH is found.
 func (r *Router) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
-	pluginContainer := r.subRouter.pluginContainer.cloneAppendRight(plugin...)
+	pluginContainer := r.subRouter.pluginContainer.cloneAndAppendMiddle(plugin...)
 	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
