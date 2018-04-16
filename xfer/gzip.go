@@ -25,16 +25,18 @@ import (
 )
 
 func init() {
-	Reg(newGzip('g', 5))
+	Reg(NewGzip('g', "gzip", 5))
 }
 
-func newGzip(id byte, level int) *Gzip {
+// NewGzip creates a new gizp filter.
+func NewGzip(id byte, name string, level int) *Gzip {
 	if level < gzip.HuffmanOnly || level > gzip.BestCompression {
 		panic(fmt.Sprintf("gzip: invalid compression level: %d", level))
 	}
 	g := new(Gzip)
 	g.level = level
 	g.id = id
+	g.name = name
 	g.wPool = sync.Pool{
 		New: func() interface{} {
 			gw, _ := gzip.NewWriterLevel(nil, g.level)
@@ -52,6 +54,7 @@ func newGzip(id byte, level int) *Gzip {
 // Gzip compression filter
 type Gzip struct {
 	id    byte
+	name  string
 	level int
 	wPool sync.Pool
 	rPool sync.Pool
@@ -60,6 +63,11 @@ type Gzip struct {
 // Id returns transfer filter id.
 func (g *Gzip) Id() byte {
 	return g.id
+}
+
+// Id returns transfer filter name.
+func (g *Gzip) Name() string {
+	return g.name
 }
 
 // OnPack performs filtering on packing.

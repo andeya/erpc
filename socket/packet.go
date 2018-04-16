@@ -155,7 +155,7 @@ func PutPacket(p *Packet) {
 func NewPacket(settings ...PacketSetting) *Packet {
 	var p = &Packet{
 		meta:     new(utils.Args),
-		xferPipe: new(xfer.XferPipe),
+		xferPipe: xfer.NewXferPipe(),
 	}
 	p.doSetting(settings...)
 	return p
