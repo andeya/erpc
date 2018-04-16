@@ -38,6 +38,8 @@ func VerifyAuth(fn VerifyAuthInfoFunc) tp.Plugin {
 type (
 	// AuthSession auth session provides SetId, RemoteAddr and Swap methods in base session
 	AuthSession interface {
+		// Peer returns the peer.
+		Peer() tp.Peer
 		// SetId sets the session id.
 		SetId(newId string)
 		// RemoteAddr returns the remote network address.
