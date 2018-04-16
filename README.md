@@ -208,55 +208,39 @@ The contents of every one packet:
 
 ```go
 // in .../teleport/socket package
-type (
-    type Packet struct {
-        // Has unexported fields.
-    }
-        Packet a socket data packet.
-    
-    func GetPacket(settings ...PacketSetting) *Packet
-    func NewPacket(settings ...PacketSetting) *Packet
-    func (p *Packet) Body() interface{}
-    func (p *Packet) BodyCodec() byte
-    func (p *Packet) Context() context.Context
-    func (p *Packet) MarshalBody() ([]byte, error)
-    func (p *Packet) Meta() *utils.Args
-    func (p *Packet) Ptype() byte
-    func (p *Packet) Reset(settings ...PacketSetting)
-    func (p *Packet) Seq() string
-    func (p *Packet) SetBody(body interface{})
-    func (p *Packet) SetBodyCodec(bodyCodec byte)
-    func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
-    func (p *Packet) SetPtype(ptype byte)
-    func (p *Packet) SetSeq(seq string)
-    func (p *Packet) SetSize(size uint32) error
-    func (p *Packet) SetUri(uri string)
-    func (p *Packet) SetUriObject(uriObject *url.URL)
-    func (p *Packet) Size() uint32
-    func (p *Packet) String() string
-    func (p *Packet) UnmarshalBody(bodyBytes []byte) error
-    func (p *Packet) Uri() string
-    func (p *Packet) UriObject() *url.URL
-    func (p *Packet) XferPipe() *xfer.XferPipe
 
-    // NewBodyFunc creates a new body by header.
-    NewBodyFunc func(Header) interface{}
-)
+// Packet a socket data packet.
+type Packet struct {
+    // Has unexported fields.
+}
 
-// in .../teleport/xfer package
-type (
-    // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-    // Note: the length can not be bigger than 255!
-    XferPipe struct {
-        filters []XferFilter
-    }
-    // XferFilter handles byte stream of packet when transfer.
-    XferFilter interface {
-        Id() byte
-        OnPack([]byte) ([]byte, error)
-        OnUnpack([]byte) ([]byte, error)
-    }
-)
+func GetPacket(settings ...PacketSetting) *Packet
+func NewPacket(settings ...PacketSetting) *Packet
+func (p *Packet) Body() interface{}
+func (p *Packet) BodyCodec() byte
+func (p *Packet) Context() context.Context
+func (p *Packet) MarshalBody() ([]byte, error)
+func (p *Packet) Meta() *utils.Args
+func (p *Packet) Ptype() byte
+func (p *Packet) Reset(settings ...PacketSetting)
+func (p *Packet) Seq() string
+func (p *Packet) SetBody(body interface{})
+func (p *Packet) SetBodyCodec(bodyCodec byte)
+func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
+func (p *Packet) SetPtype(ptype byte)
+func (p *Packet) SetSeq(seq string)
+func (p *Packet) SetSize(size uint32) error
+func (p *Packet) SetUri(uri string)
+func (p *Packet) SetUriObject(uriObject *url.URL)
+func (p *Packet) Size() uint32
+func (p *Packet) String() string
+func (p *Packet) UnmarshalBody(bodyBytes []byte) error
+func (p *Packet) Uri() string
+func (p *Packet) UriObject() *url.URL
+func (p *Packet) XferPipe() *xfer.XferPipe
+
+// NewBodyFunc creates a new body by header.
+type NewBodyFunc func(Header) interface{}
 ```
 
 ### Codec
@@ -282,19 +266,37 @@ type Codec interface {
 Transfer filter pipe, handles byte stream of packet when transfer.
 
 ```go
-type (
-    // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-    // Note: the length can not be bigger than 255!
-    XferPipe struct {
-        filters []XferFilter
-    }
-    // XferFilter handles byte stream of packet when transfer.
-    XferFilter interface {
-        Id() byte
-        OnPack([]byte) ([]byte, error)
-        OnUnpack([]byte) ([]byte, error)
-    }
-)
+// XferFilter handles byte stream of packet when transfer.
+type XferFilter interface {
+    // Id returns transfer filter id.
+    Id() byte
+    // Name returns transfer filter name.
+    Name() string
+    // OnPack performs filtering on packing.
+    OnPack([]byte) ([]byte, error)
+    // OnUnpack performs filtering on unpacking.
+    OnUnpack([]byte) ([]byte, error)
+}
+// Get returns transfer filter by id.
+func Get(id byte) (XferFilter, error)
+// GetByName returns transfer filter by name.
+func GetByName(name string) (XferFilter, error)
+
+// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
+// Note: the length can not be bigger than 255!
+type XferPipe struct {
+    // Has unexported fields.
+}
+func NewXferPipe() *XferPipe
+func (x *XferPipe) Append(filterId ...byte) error
+func (x *XferPipe) AppendFrom(src *XferPipe)
+func (x *XferPipe) Ids() []byte
+func (x *XferPipe) Len() int
+func (x *XferPipe) Names() []string
+func (x *XferPipe) OnPack(data []byte) ([]byte, error)
+func (x *XferPipe) OnUnpack(data []byte) ([]byte, error)
+func (x *XferPipe) Range(callback func(idx int, filter XferFilter) bool)
+func (x *XferPipe) Reset()
 ```
 
 ### Plugin
