@@ -34,11 +34,11 @@ type Codec interface {
 }
 
 var codecMap = struct {
-	nameMap map[string]Codec
 	idMap   map[byte]Codec
+	nameMap map[string]Codec
 }{
-	nameMap: make(map[string]Codec),
 	idMap:   make(map[byte]Codec),
+	nameMap: make(map[string]Codec),
 }
 
 const (
@@ -48,22 +48,22 @@ const (
 	NilCodecName string = ""
 )
 
-// Reg registers Codec
+// Reg registers Codec.
 func Reg(codec Codec) {
 	if codec.Id() == NilCodecId {
 		panic(fmt.Sprintf("codec id can not be %d", NilCodecId))
 	}
-	if _, ok := codecMap.nameMap[codec.Name()]; ok {
-		panic("multi-register codec name: " + codec.Name())
-	}
 	if _, ok := codecMap.idMap[codec.Id()]; ok {
 		panic(fmt.Sprintf("multi-register codec id: %d", codec.Id()))
 	}
-	codecMap.nameMap[codec.Name()] = codec
+	if _, ok := codecMap.nameMap[codec.Name()]; ok {
+		panic("multi-register codec name: " + codec.Name())
+	}
 	codecMap.idMap[codec.Id()] = codec
+	codecMap.nameMap[codec.Name()] = codec
 }
 
-// Get returns Codec
+// Get returns Codec by id.
 func Get(id byte) (Codec, error) {
 	codec, ok := codecMap.idMap[id]
 	if !ok {
@@ -72,7 +72,7 @@ func Get(id byte) (Codec, error) {
 	return codec, nil
 }
 
-// GetByName returns Codec
+// GetByName returns Codec by name.
 func GetByName(name string) (Codec, error) {
 	codec, ok := codecMap.nameMap[name]
 	if !ok {
