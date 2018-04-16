@@ -22,22 +22,71 @@ import (
 	"math"
 )
 
-type (
-	// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-	// Note: the length can not be bigger than 255!
-	XferPipe struct {
-		filters []XferFilter
+// XferFilter handles byte stream of packet when transfer.
+type XferFilter interface {
+	// Id returns transfer filter id.
+	Id() byte
+	// Name returns transfer filter name.
+	Name() string
+	// OnPack performs filtering on packing.
+	OnPack([]byte) ([]byte, error)
+	// OnUnpack performs filtering on unpacking.
+	OnUnpack([]byte) ([]byte, error)
+}
+
+var xferFilterMap = struct {
+	idMap   map[byte]XferFilter
+	nameMap map[string]XferFilter
+}{
+	idMap:   make(map[byte]XferFilter),
+	nameMap: make(map[string]XferFilter),
+}
+
+// ErrXferPipeTooLong error
+var ErrXferPipeTooLong = errors.New("The length of transfer pipe cannot be bigger than 255")
+
+// Reg registers transfer filter.
+func Reg(xferFilter XferFilter) {
+	id := xferFilter.Id()
+	name := xferFilter.Name()
+	if _, ok := xferFilterMap.idMap[id]; ok {
+		panic(fmt.Sprintf("multi-register transfer filter id: %d", xferFilter.Id()))
 	}
-	// XferFilter handles byte stream of packet when transfer.
-	XferFilter interface {
-		// Id returns transfer filter id.
-		Id() byte
-		// OnPack performs filtering on packing.
-		OnPack([]byte) ([]byte, error)
-		// OnUnpack performs filtering on unpacking.
-		OnUnpack([]byte) ([]byte, error)
+	if _, ok := xferFilterMap.nameMap[name]; ok {
+		panic("multi-register transfer filter name: " + xferFilter.Name())
 	}
-)
+	xferFilterMap.idMap[id] = xferFilter
+	xferFilterMap.nameMap[name] = xferFilter
+}
+
+// Get returns transfer filter by id.
+func Get(id byte) (XferFilter, error) {
+	xferFilter, ok := xferFilterMap.idMap[id]
+	if !ok {
+		return nil, fmt.Errorf("unsupported transfer filter id: %d", id)
+	}
+	return xferFilter, nil
+}
+
+// GetByName returns transfer filter by name.
+func GetByName(name string) (XferFilter, error) {
+	xferFilter, ok := xferFilterMap.nameMap[name]
+	if !ok {
+		return nil, fmt.Errorf("unsupported transfer filter name: %s", name)
+	}
+	return xferFilter, nil
+}
+
+// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
+// Note: the length can not be bigger than 255!
+type XferPipe struct {
+	filters []XferFilter
+}
+
+// NewXferPipe creates a new transfer filter pipe.
+func NewXferPipe() *XferPipe {
+	return new(XferPipe)
+}
 
 // Reset resets transfer filter pipe.
 func (x *XferPipe) Reset() {
@@ -90,6 +139,18 @@ func (x *XferPipe) Ids() []byte {
 	return ids
 }
 
+// Names returns the name list of transfer filters.
+func (x *XferPipe) Names() []string {
+	var names = make([]string, x.Len())
+	if x.Len() == 0 {
+		return names
+	}
+	for i, filter := range x.filters {
+		names[i] = filter.Name()
+	}
+	return names
+}
+
 // Range calls f sequentially for each XferFilter present in the XferPipe.
 // If f returns false, range stops the iteration.
 func (x *XferPipe) Range(callback func(idx int, filter XferFilter) bool) {
@@ -121,30 +182,4 @@ func (x *XferPipe) OnUnpack(data []byte) ([]byte, error) {
 		}
 	}
 	return data, err
-}
-
-var xferFilterMap = struct {
-	idMap map[byte]XferFilter
-}{
-	idMap: make(map[byte]XferFilter),
-}
-
-// ErrXferPipeTooLong error
-var ErrXferPipeTooLong = errors.New("The length of transfer pipe cannot be bigger than 255")
-
-// Reg registers transfer filter.
-func Reg(xferFilter XferFilter) {
-	if _, ok := xferFilterMap.idMap[xferFilter.Id()]; ok {
-		panic(fmt.Sprintf("multi-register transfer filter id: %d", xferFilter.Id()))
-	}
-	xferFilterMap.idMap[xferFilter.Id()] = xferFilter
-}
-
-// Get returns transfer filter.
-func Get(id byte) (XferFilter, error) {
-	xferFilter, ok := xferFilterMap.idMap[id]
-	if !ok {
-		return nil, fmt.Errorf("unsupported transfer filter id: %d", id)
-	}
-	return xferFilter, nil
 }
