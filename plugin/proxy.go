@@ -60,7 +60,7 @@ type (
 	}
 	// ProxyLabel proxy label information
 	ProxyLabel struct {
-		SessId, RealIp, Uri string
+		SessionId, RealIp, Uri string
 	}
 	proxy struct {
 		pullCaller func(*ProxyLabel) PullCaller
@@ -91,8 +91,8 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 		label    ProxyLabel
 		settings = make([]socket.PacketSetting, 1, 8)
 	)
-	label.SessId = ctx.Session().Id()
-	settings[0] = tp.WithSeq(label.SessId + "@" + ctx.Seq())
+	label.SessionId = ctx.Session().Id()
+	settings[0] = tp.WithSeq(label.SessionId + "@" + ctx.Seq())
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
@@ -124,8 +124,8 @@ func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 		label    ProxyLabel
 		settings = make([]socket.PacketSetting, 1, 8)
 	)
-	label.SessId = ctx.Session().Id()
-	settings[0] = tp.WithSeq(label.SessId + "@" + ctx.Seq())
+	label.SessionId = ctx.Session().Id()
+	settings[0] = tp.WithSeq(label.SessionId + "@" + ctx.Seq())
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
