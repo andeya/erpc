@@ -23,36 +23,48 @@ import (
 // A proxy plugin for handling unknown pulling or pushing.
 
 // Proxy creates a proxy plugin for handling unknown pulling and pushing.
-func Proxy(caller Caller) tp.Plugin {
+func Proxy(fn func(*ProxyLabel) Caller) tp.Plugin {
 	return &proxy{
-		pullFunc: caller.Pull,
-		pushFunc: caller.Push,
+		pullCaller: func(label *ProxyLabel) PullCaller {
+			return fn(label)
+		},
+		pushCaller: func(label *ProxyLabel) PushCaller {
+			return fn(label)
+		},
 	}
 }
 
 // ProxyPull creates a proxy plugin for handling unknown pulling.
-func ProxyPull(fn PullFunc) tp.Plugin {
-	return &proxy{pullFunc: fn}
+func ProxyPull(fn func(*ProxyLabel) PullCaller) tp.Plugin {
+	return &proxy{pullCaller: fn}
 }
 
 // ProxyPush creates a proxy plugin for handling unknown pushing.
-func ProxyPush(fn PushFunc) tp.Plugin {
-	return &proxy{pushFunc: fn}
+func ProxyPush(fn func(*ProxyLabel) PushCaller) tp.Plugin {
+	return &proxy{pushCaller: fn}
 }
 
 type (
 	// Caller the object used to pull and push
 	Caller interface {
+		PullCaller
+		PushCaller
+	}
+	// PullCaller the object used to pull
+	PullCaller interface {
 		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) tp.PullCmd
+	}
+	// PushCaller the object used to push
+	PushCaller interface {
 		Push(uri string, args interface{}, setting ...socket.PacketSetting) *tp.Rerror
 	}
-	// PullFunc the function used to pull
-	PullFunc func(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) tp.PullCmd
-	// PushFunc the function used to push
-	PushFunc func(uri string, args interface{}, setting ...socket.PacketSetting) *tp.Rerror
-	proxy    struct {
-		pullFunc PullFunc
-		pushFunc PushFunc
+	// ProxyLabel proxy label information
+	ProxyLabel struct {
+		SessId, RealIp, Uri string
+	}
+	proxy struct {
+		pullCaller func(*ProxyLabel) PullCaller
+		pushCaller func(*ProxyLabel) PushCaller
 	}
 )
 
@@ -65,26 +77,37 @@ func (p *proxy) Name() string {
 }
 
 func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
-	if p.pullFunc != nil {
+	if p.pullCaller != nil {
 		peer.SetUnknownPull(p.pull)
 	}
-	if p.pushFunc != nil {
+	if p.pushCaller != nil {
 		peer.SetUnknownPush(p.push)
 	}
 	return nil
 }
 
 func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
-	var settings = make([]socket.PacketSetting, 1, 8)
-	settings[0] = tp.WithSeq(ctx.Session().Id() + "@" + ctx.Seq())
+	var (
+		label    ProxyLabel
+		settings = make([]socket.PacketSetting, 1, 8)
+	)
+	label.SessId = ctx.Session().Id()
+	settings[0] = tp.WithSeq(label.SessId + "@" + ctx.Seq())
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
-	if len(ctx.PeekMeta(tp.MetaRealIp)) == 0 {
-		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, ctx.Ip()))
+	var (
+		reply       []byte
+		realIpBytes = ctx.PeekMeta(tp.MetaRealIp)
+	)
+	if len(realIpBytes) == 0 {
+		label.RealIp = ctx.Ip()
+		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, label.RealIp))
+	} else {
+		label.RealIp = goutil.BytesToString(realIpBytes)
 	}
-	var reply []byte
-	pullcmd := p.pullFunc(ctx.Uri(), ctx.InputBodyBytes(), &reply, settings...)
+	label.Uri = ctx.Uri()
+	pullcmd := p.pullCaller(&label).Pull(label.Uri, ctx.InputBodyBytes(), &reply, settings...)
 	pullcmd.InputMeta().VisitAll(func(key, value []byte) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
@@ -97,15 +120,23 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 }
 
 func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
-	var settings = make([]socket.PacketSetting, 1, 8)
-	settings[0] = tp.WithSeq(ctx.Session().Id() + "@" + ctx.Seq())
+	var (
+		label    ProxyLabel
+		settings = make([]socket.PacketSetting, 1, 8)
+	)
+	label.SessId = ctx.Session().Id()
+	settings[0] = tp.WithSeq(label.SessId + "@" + ctx.Seq())
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
-	if len(ctx.PeekMeta(tp.MetaRealIp)) == 0 {
-		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, ctx.Ip()))
+	if realIpBytes := ctx.PeekMeta(tp.MetaRealIp); len(realIpBytes) == 0 {
+		label.RealIp = ctx.Ip()
+		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, label.RealIp))
+	} else {
+		label.RealIp = goutil.BytesToString(realIpBytes)
 	}
-	rerr := p.pushFunc(ctx.Uri(), ctx.InputBodyBytes(), settings...)
+	label.Uri = ctx.Uri()
+	rerr := p.pushCaller(&label).Push(label.Uri, ctx.InputBodyBytes(), settings...)
 	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
 		rerr.Code = tp.CodeBadGateway
 		rerr.Message = tp.CodeText(tp.CodeBadGateway)
