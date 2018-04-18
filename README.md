@@ -353,7 +353,7 @@ type Peer interface {
 }
 ```
 
-Default protocol `FastProto`:
+Default protocol `FastProto`(Big Endian):
 
 ```sh
 {4 bytes packet length}
