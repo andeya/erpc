@@ -92,7 +92,13 @@ func NewPeer(cfg *PeerConfig, plugin ...Plugin) *Peer {
 		p.timeNow = func() time.Time { return t0 }
 		p.timeSince = func(time.Time) time.Duration { return 0 }
 	}
-
+	if cfg.TlsCertFile != "" && cfg.TlsKeyFile != "" {
+		var err error
+		p.tlsConfig, err = NewTlsConfigFromFile(cfg.TlsCertFile, cfg.TlsKeyFile)
+		if err != nil {
+			Fatalf("%v", err)
+		}
+	}
 	addPeer(p)
 	return p
 }

@@ -86,6 +86,34 @@ func Go(fn func()) bool {
 	return true
 }
 
+// NewTlsConfigFromFile creates a new TLS config.
+func NewTlsConfigFromFile(tlsCertFile, tlsKeyFile string) (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
+	if err != nil {
+		return nil, err
+	}
+	return &tls.Config{
+		Certificates:             []tls.Certificate{cert},
+		NextProtos:               []string{"http/1.1", "h2"},
+		PreferServerCipherSuites: true,
+		CurvePreferences: []tls.CurveID{
+			tls.CurveP256,
+			tls.X25519,
+		},
+		MinVersion: tls.VersionTLS12,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+		},
+	}, nil
+}
+
 func newTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	var tlsConfig *tls.Config
 	if len(certFile) > 0 && len(keyFile) > 0 {
