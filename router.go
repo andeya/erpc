@@ -133,10 +133,11 @@ type (
 	}
 	// SubRouter without the SetUnknownPull and SetUnknownPush methods
 	SubRouter struct {
-		root        *Router
-		handlers    map[string]*Handler
-		unknownPull **Handler
-		unknownPush **Handler
+		root         *Router
+		pullHandlers map[string]*Handler
+		pushHandlers map[string]*Handler
+		unknownPull  **Handler
+		unknownPush  **Handler
 		// only for register router
 		pathPrefix      string
 		pluginContainer *PluginContainer
@@ -168,7 +169,8 @@ func newRouter(rootGroup string, pluginContainer *PluginContainer) *Router {
 	rootGroup = path.Join("/", rootGroup)
 	root := &Router{
 		subRouter: &SubRouter{
-			handlers:        make(map[string]*Handler),
+			pullHandlers:    make(map[string]*Handler),
+			pushHandlers:    make(map[string]*Handler),
 			unknownPull:     new(*Handler),
 			unknownPush:     new(*Handler),
 			pathPrefix:      rootGroup,
@@ -200,7 +202,8 @@ func (r *SubRouter) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 	warnInvaildHandlerHooks(plugin)
 	return &SubRouter{
 		root:            r.root,
-		handlers:        r.handlers,
+		pullHandlers:    r.pullHandlers,
+		pushHandlers:    r.pushHandlers,
 		unknownPull:     r.unknownPull,
 		unknownPush:     r.unknownPush,
 		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
@@ -265,12 +268,18 @@ func (r *SubRouter) reg(
 		Fatalf("%v", err)
 	}
 	var names []string
+	var hadHandlers map[string]*Handler
+	if routerTypeName == pnPull {
+		hadHandlers = r.pullHandlers
+	} else {
+		hadHandlers = r.pushHandlers
+	}
 	for _, h := range handlers {
-		if _, ok := r.handlers[h.name]; ok {
+		if _, ok := hadHandlers[h.name]; ok {
 			Fatalf("there is a handler conflict: %s", h.name)
 		}
 		h.routerTypeName = routerTypeName
-		r.handlers[h.name] = h
+		hadHandlers[h.name] = h
 		pluginContainer.postReg(h)
 		Printf("register %s handler: %s", routerTypeName, h.name)
 		names = append(names, h.name)
@@ -333,7 +342,7 @@ func (r *Router) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugi
 }
 
 func (r *SubRouter) getPull(uriPath string) (*Handler, bool) {
-	t, ok := r.handlers[uriPath]
+	t, ok := r.pullHandlers[uriPath]
 	if ok {
 		return t, true
 	}
@@ -344,7 +353,7 @@ func (r *SubRouter) getPull(uriPath string) (*Handler, bool) {
 }
 
 func (r *SubRouter) getPush(uriPath string) (*Handler, bool) {
-	t, ok := r.handlers[uriPath]
+	t, ok := r.pushHandlers[uriPath]
 	if ok {
 		return t, true
 	}
