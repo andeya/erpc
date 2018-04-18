@@ -353,6 +353,26 @@ type Peer interface {
 }
 ```
 
+Default protocol `FastProto`:
+
+```sh
+{4 bytes packet length}
+{1 byte protocol version}
+{4 bytes transfer pipe length}
+{transfer pipe IDs}
+# The following is handled data by transfer pipe
+{4 bytes sequence length}
+{sequence}
+{1 byte packet type}
+{4 bytes URI length}
+{URI}
+{4 bytes metadata length}
+{metadata(urlencoded)}
+{1 byte body codec id}
+{body}
+```
+
+
 ## Usage
 
 ### Peer(server or client) Demo
