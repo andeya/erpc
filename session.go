@@ -719,9 +719,6 @@ func (s *session) startReadAndHandle() {
 		if !Go(func() {
 			defer func() {
 				s.peer.putContext(ctx, true)
-				if p := recover(); p != nil {
-					Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
-				}
 			}()
 			ctx.handle()
 		}) {
