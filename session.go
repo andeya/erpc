@@ -711,9 +711,12 @@ func (s *session) startReadAndHandle() {
 			return
 		}
 		err = s.socket.ReadPacket(ctx.input)
-		if err != nil || !s.goonRead() {
+		if (err != nil && ctx.GetBodyCodec() == codec.NilCodecId) || !s.goonRead() {
 			s.peer.putContext(ctx, false)
 			return
+		}
+		if err != nil {
+			ctx.handleErr = rerrBadPacket.Copy().SetDetail(err.Error())
 		}
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
