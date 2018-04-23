@@ -6,7 +6,7 @@ cfg_cli:
   default_session_age: 0s
   listen_address: ""
   network: tcp
-  print_body: false
+  print_detail: false
   redial_times: 0
   slow_comet_duration: 0s
 
@@ -19,5 +19,5 @@ cfg_srv:
   default_session_age: 0s
   default_context_age: 0s
   slow_comet_duration: 0s
-  print_body: false
+  print_detail: false
   count_time: true
