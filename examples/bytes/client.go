@@ -11,7 +11,7 @@ func main() {
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var peer = tp.NewPeer(tp.PeerConfig{
 		SlowCometDuration: time.Millisecond * 500,
-		PrintBody:         true,
+		PrintDetail:       true,
 	})
 	defer peer.Close()
 	peer.RoutePush(new(Push))

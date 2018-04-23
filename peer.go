@@ -107,7 +107,7 @@ type peer struct {
 	tlsConfig         *tls.Config
 	slowCometDuration time.Duration
 	defaultBodyCodec  byte
-	printBody         bool
+	printDetail       bool
 	countTime         bool
 	timeNow           func() time.Time
 	timeSince         func(time.Time) time.Duration
@@ -143,7 +143,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		defaultDialTimeout: cfg.DefaultDialTimeout,
 		network:            cfg.Network,
 		listenAddr:         cfg.ListenAddress,
-		printBody:          cfg.PrintBody,
+		printDetail:        cfg.PrintDetail,
 		countTime:          cfg.CountTime,
 		redialTimes:        cfg.RedialTimes,
 	}

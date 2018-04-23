@@ -8,7 +8,7 @@ import (
 func main() {
 	srv := tp.NewPeer(
 		tp.PeerConfig{
-			PrintBody:     false,
+			PrintDetail:   false,
 			ListenAddress: ":9090",
 		},
 		new(earlyReply),
