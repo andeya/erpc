@@ -8,7 +8,7 @@ import (
 func main() {
 	cli := tp.NewPeer(
 		tp.PeerConfig{
-			PrintBody: false,
+			PrintDetail: false,
 		},
 		new(earlyPull),
 	)

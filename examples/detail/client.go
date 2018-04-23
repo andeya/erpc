@@ -15,7 +15,7 @@ func main() {
 		SlowCometDuration: time.Millisecond * 500,
 		// DefaultBodyCodec:    "json",
 		// DefaultContextAge: time.Second * 5,
-		PrintBody:   true,
+		PrintDetail: true,
 		CountTime:   true,
 		RedialTimes: 3,
 	})

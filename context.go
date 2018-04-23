@@ -386,7 +386,7 @@ func (c *handlerCtx) handle() {
 E:
 	// if unsupported, disconnected.
 	rerrCodePtypeNotAllowed.SetToMeta(c.output.Meta())
-	if c.sess.peer.printBody {
+	if c.sess.peer.printDetail {
 		logformat := "disconnect(%s) due to unsupported packet type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
 		Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size(), bodyLogBytes(c.input))
 	} else {

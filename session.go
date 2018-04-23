@@ -879,17 +879,17 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 
 	switch logType {
 	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printBody))
+		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail))
 	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printBody))
+		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail))
 	case typePullLaunch:
-		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printBody), packetLogBytes(input, s.peer.printBody))
+		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail), packetLogBytes(input, s.peer.printDetail))
 	case typePullHandle:
-		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printBody), packetLogBytes(output, s.peer.printBody))
+		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail), packetLogBytes(output, s.peer.printDetail))
 	}
 }
 
-func packetLogBytes(packet *socket.Packet, printBody bool) []byte {
+func packetLogBytes(packet *socket.Packet, printDetail bool) []byte {
 	var b = make([]byte, 0, 32)
 	b = append(b, '{')
 	b = append(b, '"', 's', 'i', 'z', 'e', '"', ':')
@@ -900,7 +900,12 @@ func packetLogBytes(packet *socket.Packet, printBody bool) []byte {
 		b = append(b, rerrBytes...)
 		b = append(b, '"')
 	}
-	if printBody {
+	if printDetail {
+		if packet.Meta().Len() > 0 {
+			b = append(b, ',', '"', 'm', 'e', 't', 'a', '"', ':', '"')
+			b = append(b, packet.Meta().QueryString()...)
+			b = append(b, '"')
+		}
 		if bodyBytes := bodyLogBytes(packet); len(bodyBytes) > 0 {
 			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':', '"')
 			bodyBytes = bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1)
@@ -919,6 +924,8 @@ func packetLogBytes(packet *socket.Packet, printBody bool) []byte {
 
 func bodyLogBytes(packet *socket.Packet) []byte {
 	switch v := packet.Body().(type) {
+	case nil:
+		return nil
 	case []byte:
 		return v
 	case *[]byte:

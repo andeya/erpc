@@ -571,7 +571,7 @@ type PeerConfig struct {
     DefaultSessionAge  time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
     DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default PULL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
     SlowCometDuration  time.Duration `yaml:"slow_comet_duration"  ini:"slow_comet_duration"  comment:"Slow operation alarm threshold; ns,µs,ms,s ..."`
-    PrintBody          bool          `yaml:"print_body"           ini:"print_body"           comment:"Is print body or not"`
+    PrintDetail          bool          `yaml:"print_body"           ini:"print_body"           comment:"Is print body or not"`
     CountTime          bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
 }
 ```

@@ -9,7 +9,7 @@ import (
 
 func main() {
 	tp.SetLoggerLevel("INFO")
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := tp.NewPeer(tp.PeerConfig{PrintDetail: true})
 	defer cli.Close()
 	sess, err := cli.Dial(":9090")
 	if err != nil {
