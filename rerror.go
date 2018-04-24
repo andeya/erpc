@@ -1,7 +1,6 @@
 package tp
 
 import (
-	"bytes"
 	"encoding/json"
 	"strconv"
 	"unsafe"
@@ -29,10 +28,8 @@ var (
 	_ json.Unmarshaler = new(Rerror)
 
 	reA = []byte(`{"code":`)
-	reB = []byte(`,"message":"`)
-	reC = []byte(`,"detail":"`)
-	reD = []byte(`"`)
-	reE = []byte(`\"`)
+	reB = []byte(`,"message":`)
+	reC = []byte(`,"detail":`)
 )
 
 // NewRerror creates a *Rerror.
@@ -99,13 +96,11 @@ func (r *Rerror) MarshalJSON() ([]byte, error) {
 	var b = append(reA, strconv.FormatInt(int64(r.Code), 10)...)
 	if len(r.Message) > 0 {
 		b = append(b, reB...)
-		b = append(b, bytes.Replace(goutil.StringToBytes(r.Message), reD, reE, -1)...)
-		b = append(b, '"')
+		b = append(b, utils.ToJsonStr(goutil.StringToBytes(r.Message), false)...)
 	}
 	if len(r.Detail) > 0 {
 		b = append(b, reC...)
-		b = append(b, bytes.Replace(goutil.StringToBytes(r.Detail), reD, reE, -1)...)
-		b = append(b, '"')
+		b = append(b, utils.ToJsonStr(goutil.StringToBytes(r.Detail), false)...)
 	}
 	b = append(b, '}')
 	return b, nil
