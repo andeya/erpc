@@ -359,7 +359,7 @@ type Peer interface {
 ```sh
 {4 bytes packet length}
 {1 byte protocol version}
-{4 bytes transfer pipe length}
+{1 bytes transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
 {4 bytes sequence length}
