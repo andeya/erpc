@@ -47,12 +47,15 @@ func deletePeer(p *peer) {
 func shutdown() error {
 	peers.rwmu.RLock()
 	var (
-		list  = peers.list
+		list  []*peer
 		count int
 		errCh = make(chan error, len(list))
 	)
+	for p := range peers.list {
+		list = append(list, p)
+	}
 	peers.rwmu.RUnlock()
-	for p := range list {
+	for _, p := range list {
 		count++
 		go func(peer *peer) {
 			errCh <- peer.Close()
