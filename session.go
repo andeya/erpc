@@ -315,6 +315,7 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 	defer func() {
 		if p := recover(); p != nil {
 			replyErr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
+			Debugf("%v\n%s", p, goutil.PanicTrace(1))
 		}
 	}()
 
@@ -353,6 +354,7 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 		if p := recover(); p != nil {
 			rerr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
 			socket.PutPacket(input)
+			Debugf("%v\n%s", p, goutil.PanicTrace(1))
 		}
 	}()
 
