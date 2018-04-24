@@ -905,27 +905,22 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 }
 
 func packetLogBytes(packet *socket.Packet, printDetail bool) []byte {
-	var b = make([]byte, 0, 32)
+	var b = make([]byte, 0, 128)
 	b = append(b, '{')
 	b = append(b, '"', 's', 'i', 'z', 'e', '"', ':')
 	b = append(b, strconv.FormatUint(uint64(packet.Size()), 10)...)
 	if rerrBytes := getRerrorBytes(packet.Meta()); len(rerrBytes) > 0 {
-		b = append(b, ',', '"', 'e', 'r', 'r', 'o', 'r', '"', ':', '"')
-		rerrBytes = bytes.Replace(rerrBytes, []byte{'"'}, []byte{'\\', '"'}, -1)
-		b = append(b, rerrBytes...)
-		b = append(b, '"')
+		b = append(b, ',', '"', 'e', 'r', 'r', 'o', 'r', '"', ':')
+		b = append(b, utils.ToJsonStr(rerrBytes, false)...)
 	}
 	if printDetail {
 		if packet.Meta().Len() > 0 {
-			b = append(b, ',', '"', 'm', 'e', 't', 'a', '"', ':', '"')
-			b = append(b, packet.Meta().QueryString()...)
-			b = append(b, '"')
+			b = append(b, ',', '"', 'm', 'e', 't', 'a', '"', ':')
+			b = append(b, utils.ToJsonStr(packet.Meta().QueryString(), false)...)
 		}
 		if bodyBytes := bodyLogBytes(packet); len(bodyBytes) > 0 {
-			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':', '"')
-			bodyBytes = bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1)
-			b = append(b, bodyBytes...)
-			b = append(b, '"')
+			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':')
+			b = append(b, utils.ToJsonStr(bodyBytes, false)...)
 		}
 	}
 	b = append(b, '}')
