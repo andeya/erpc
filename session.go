@@ -311,7 +311,13 @@ func (s *session) SetContextAge(duration time.Duration) {
 // Note:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) *Rerror {
+func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) (replyErr *Rerror) {
+	defer func() {
+		if p := recover(); p != nil {
+			replyErr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
+		}
+	}()
+
 	output := socket.GetPacket(setting...)
 	if len(output.Seq()) == 0 {
 		s.seqLock.Lock()
@@ -335,15 +341,22 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 		ctxTimout, _ := context.WithTimeout(output.Context(), age)
 		socket.WithContext(ctxTimout)(output)
 	}
-	_, rerr = s.write(output)
+	_, replyErr = s.write(output)
 	socket.PutPacket(output)
-	return rerr
+	return replyErr
 }
 
 // Receive receives a packet from peer, before the formal connection.
 // Note: does not support automatic redial after disconnection.
-func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.PacketSetting) (*socket.Packet, *Rerror) {
-	input := socket.GetPacket(setting...)
+func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.PacketSetting) (input *socket.Packet, rerr *Rerror) {
+	defer func() {
+		if p := recover(); p != nil {
+			rerr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
+			socket.PutPacket(input)
+		}
+	}()
+
+	input = socket.GetPacket(setting...)
 	input.SetNewBody(newBodyFunc)
 
 	if age := s.ContextAge(); age > 0 {
@@ -358,7 +371,7 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 		socket.PutPacket(input)
 		return nil, rerr
 	}
-	rerr := NewRerrorFromMeta(input.Meta())
+	rerr = NewRerrorFromMeta(input.Meta())
 	return input, rerr
 }
 
