@@ -732,6 +732,7 @@ func (s *session) startReadAndHandle() {
 		}
 		if err != nil {
 			ctx.handleErr = rerrBadPacket.Copy().SetDetail(err.Error())
+			ctx.handleErr.SetToMeta(ctx.output.Meta())
 		}
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
