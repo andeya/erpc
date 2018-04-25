@@ -460,14 +460,12 @@ func (c *handlerCtx) handlePush() {
 func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 	c.handleErr = c.pluginContainer.postReadPullHeader(c)
 	if c.handleErr != nil {
-		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
 	u := header.UriObject()
 	if len(u.Path) == 0 {
 		c.handleErr = rerrBadPacket.Copy().SetDetail("invalid URI for packet")
-		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
@@ -475,7 +473,6 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 	c.handler, ok = c.sess.getPullHandler(u.Path)
 	if !ok {
 		c.handleErr = rerrNotFound
-		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
@@ -491,7 +488,6 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 
 	c.handleErr = c.pluginContainer.preReadPullBody(c)
 	if c.handleErr != nil {
-		c.handleErr.SetToMeta(c.output.Meta())
 		return nil
 	}
 
@@ -506,12 +502,9 @@ func (c *handlerCtx) handlePull() {
 			Debugf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
 			if !writed {
 				if c.handleErr == nil {
-					c.output.SetBody(nil)
 					c.handleErr = rerrInternalServerError.Copy().SetDetail(fmt.Sprint(p))
-					rerrInternalServerError.SetToMeta(c.output.Meta())
 				}
-				c.fillReplyBodyCodec()
-				c.sess.write(c.output)
+				c.writeReply(c.handleErr)
 			}
 		}
 		c.cost = c.sess.timeSince(c.start)
@@ -536,9 +529,7 @@ func (c *handlerCtx) handlePull() {
 	// handle pull
 	if c.handleErr == nil {
 		c.handleErr = c.pluginContainer.postReadPullBody(c)
-		if c.handleErr != nil {
-			c.handleErr.SetToMeta(c.output.Meta())
-		} else {
+		if c.handleErr == nil {
 			if c.handler.isUnknown {
 				c.handler.unknownHandleFunc(c)
 			} else {
@@ -549,19 +540,13 @@ func (c *handlerCtx) handlePull() {
 
 	// reply pull
 	c.pluginContainer.preWriteReply(c)
-	c.fillReplyBodyCodec()
-	_, rerr := c.sess.write(c.output)
+	rerr := c.writeReply(c.handleErr)
 	if rerr != nil {
 		if c.handleErr == nil {
 			c.handleErr = rerr
 		}
 		if rerr != rerrConnClosed {
-			c.output.SetBody(nil)
-			rerrInternalServerError.
-				Copy().
-				SetDetail(rerr.Detail).
-				SetToMeta(c.output.Meta())
-			c.sess.write(c.output)
+			c.writeReply(rerrInternalServerError.Copy().SetDetail(rerr.Detail))
 		}
 		return
 	}
@@ -569,18 +554,32 @@ func (c *handlerCtx) handlePull() {
 	c.pluginContainer.postWriteReply(c)
 }
 
-func (c *handlerCtx) fillReplyBodyCodec() {
-	if c.output.BodyCodec() != codec.NilCodecId {
-		return
+func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
+	if rerr != nil {
+		rerr.SetToMeta(c.output.Meta())
+		c.output.SetBody(nil)
+		c.output.SetBodyCodec(codec.NilCodecId)
+		_, rerr = c.sess.write(c.output)
+		return rerr
 	}
+
+	if c.output.BodyCodec() != codec.NilCodecId {
+		_, rerr = c.sess.write(c.output)
+		return rerr
+	}
+
 	acceptBodyCodec, ok := GetAcceptBodyCodec(c.input.Meta())
 	if ok {
 		if _, err := codec.Get(acceptBodyCodec); err == nil {
 			c.output.SetBodyCodec(acceptBodyCodec)
-			return
+			_, rerr = c.sess.write(c.output)
+			return rerr
 		}
 	}
+
 	c.output.SetBodyCodec(c.input.BodyCodec())
+	_, rerr = c.sess.write(c.output)
+	return rerr
 }
 
 func (c *handlerCtx) bindReply(header socket.Header) interface{} {
