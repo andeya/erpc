@@ -510,6 +510,7 @@ func (c *handlerCtx) handlePull() {
 					c.handleErr = rerrInternalServerError.Copy().SetDetail(fmt.Sprint(p))
 					rerrInternalServerError.SetToMeta(c.output.Meta())
 				}
+				c.fillReplyBodyCodec()
 				c.sess.write(c.output)
 			}
 		}
@@ -548,6 +549,7 @@ func (c *handlerCtx) handlePull() {
 
 	// reply pull
 	c.pluginContainer.preWriteReply(c)
+	c.fillReplyBodyCodec()
 	_, rerr := c.sess.write(c.output)
 	if rerr != nil {
 		if c.handleErr == nil {
@@ -567,8 +569,7 @@ func (c *handlerCtx) handlePull() {
 	c.pluginContainer.postWriteReply(c)
 }
 
-func (c *handlerCtx) setReplyBody(body interface{}) {
-	c.output.SetBody(body)
+func (c *handlerCtx) fillReplyBodyCodec() {
 	if c.output.BodyCodec() != codec.NilCodecId {
 		return
 	}

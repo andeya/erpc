@@ -304,7 +304,7 @@ func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), 
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
 			} else {
-				ctx.setReplyBody(body)
+				ctx.output.SetBody(body)
 			}
 		},
 	}
@@ -460,7 +460,7 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
 			} else {
-				ctx.setReplyBody(rets[0].Interface())
+				ctx.output.SetBody(rets[0].Interface())
 			}
 			pool.Put(obj)
 		}
@@ -542,7 +542,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
 			} else {
-				ctx.setReplyBody(rets[0].Interface())
+				ctx.output.SetBody(rets[0].Interface())
 			}
 		}
 
@@ -583,7 +583,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
 			} else {
-				ctx.setReplyBody(rets[0].Interface())
+				ctx.output.SetBody(rets[0].Interface())
 			}
 			pool.Put(obj)
 		}
