@@ -539,6 +539,7 @@ func (c *handlerCtx) handlePull() {
 	}
 
 	// reply pull
+	c.setReplyBodyCodec()
 	c.pluginContainer.preWriteReply(c)
 	rerr := c.writeReply(c.handleErr)
 	if rerr != nil {
@@ -554,6 +555,20 @@ func (c *handlerCtx) handlePull() {
 	c.pluginContainer.postWriteReply(c)
 }
 
+func (c *handlerCtx) setReplyBodyCodec() {
+	if c.output.BodyCodec() != codec.NilCodecId {
+		return
+	}
+	acceptBodyCodec, ok := GetAcceptBodyCodec(c.input.Meta())
+	if ok {
+		if _, err := codec.Get(acceptBodyCodec); err == nil {
+			c.output.SetBodyCodec(acceptBodyCodec)
+			return
+		}
+	}
+	c.output.SetBodyCodec(c.input.BodyCodec())
+}
+
 func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
 	if rerr != nil {
 		rerr.SetToMeta(c.output.Meta())
@@ -562,22 +577,6 @@ func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
 		_, rerr = c.sess.write(c.output)
 		return rerr
 	}
-
-	if c.output.BodyCodec() != codec.NilCodecId {
-		_, rerr = c.sess.write(c.output)
-		return rerr
-	}
-
-	acceptBodyCodec, ok := GetAcceptBodyCodec(c.input.Meta())
-	if ok {
-		if _, err := codec.Get(acceptBodyCodec); err == nil {
-			c.output.SetBodyCodec(acceptBodyCodec)
-			_, rerr = c.sess.write(c.output)
-			return rerr
-		}
-	}
-
-	c.output.SetBodyCodec(c.input.BodyCodec())
 	_, rerr = c.sess.write(c.output)
 	return rerr
 }
