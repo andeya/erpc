@@ -80,8 +80,8 @@ go get -u -f github.com/henrylee2cn/teleport
 - 支持定制通信协议
 - 可设置底层套接字读写缓冲区的大小
 - 底层通信数据包包含`Header`和`Body`两部分
-- 支持单独定制`Header`和`Body`编码类型，例如`JSON` `Protobuf` `string`
 - 数据包`Header`包含与HTTP header相同格式的元信息
+- 支持单独定制`Body`编码类型，例如`JSON` `Protobuf` `string`
 - 支持推、拉、回复等通信方法
 - 支持插件机制，可以自定义认证、心跳、微服务注册中心、统计信息插件等
 - 无论服务器或客户端，均支持优雅重启、优雅关闭
