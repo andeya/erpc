@@ -539,7 +539,7 @@ func (c *handlerCtx) handlePull() {
 	}
 
 	// reply pull
-	c.setReplyBodyCodec()
+	c.setReplyBodyCodec(c.handleErr != nil)
 	c.pluginContainer.preWriteReply(c)
 	rerr := c.writeReply(c.handleErr)
 	if rerr != nil {
@@ -555,7 +555,10 @@ func (c *handlerCtx) handlePull() {
 	c.pluginContainer.postWriteReply(c)
 }
 
-func (c *handlerCtx) setReplyBodyCodec() {
+func (c *handlerCtx) setReplyBodyCodec(hasError bool) {
+	if hasError {
+		return
+	}
 	if c.output.BodyCodec() != codec.NilCodecId {
 		return
 	}
