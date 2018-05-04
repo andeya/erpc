@@ -360,6 +360,8 @@ func (c *handlerCtx) binding(header socket.Header) (body interface{}) {
 	}
 }
 
+const logFormatDisconnected = "disconnected due to unsupported packet type: %d\n%s %s %q\nRECV(%s)"
+
 // Be executed asynchronously after readed packet
 func (c *handlerCtx) handle() {
 	if c.handleErr != nil && c.handleErr.Code == CodePtypeNotAllowed {
@@ -386,13 +388,7 @@ func (c *handlerCtx) handle() {
 E:
 	// if unsupported, disconnected.
 	rerrCodePtypeNotAllowed.SetToMeta(c.output.Meta())
-	if c.sess.peer.printDetail {
-		logformat := "disconnect(%s) due to unsupported packet type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n body[-json]: %s\n"
-		Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size(), bodyLogBytes(c.input))
-	} else {
-		logformat := "disconnect(%s) due to unsupported packet type: %d |\nseq: %d |uri: %-30s |\nRECV:\n size: %d\n"
-		Errorf(logformat, c.Ip(), c.input.Ptype(), c.input.Seq(), c.input.Uri(), c.input.Size())
-	}
+	Errorf(logFormatDisconnected, c.input.Ptype(), c.Ip(), c.input.Uri(), c.input.Seq(), packetLogBytes(c.input, c.sess.peer.printDetail))
 	go c.sess.Close()
 }
 

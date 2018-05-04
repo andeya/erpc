@@ -11,6 +11,7 @@ func main() {
 	srv := tp.NewPeer(tp.PeerConfig{
 		CountTime:     true,
 		ListenAddress: ":9090",
+		PrintDetail:   true,
 	})
 	srv.RoutePull(new(math))
 	srv.ListenAndServe()
