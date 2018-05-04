@@ -395,7 +395,7 @@ func (p *peer) ListenAndServe(protoFunc ...socket.ProtoFunc) error {
 func (p *peer) Close() (err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			err = errors.Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(2))
+			err = errors.Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 	close(p.closeCh)

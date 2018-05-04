@@ -315,7 +315,7 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 	defer func() {
 		if p := recover(); p != nil {
 			replyErr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
-			Debugf("%v\n%s", p, goutil.PanicTrace(1))
+			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 
@@ -354,7 +354,7 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 		if p := recover(); p != nil {
 			rerr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
 			socket.PutPacket(input)
-			Debugf("%v\n%s", p, goutil.PanicTrace(1))
+			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 
@@ -455,7 +455,7 @@ func (s *session) AsyncPull(
 
 	defer func() {
 		if p := recover(); p != nil {
-			Errorf("panic:\n%v\n%s", p, goutil.PanicTrace(1))
+			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 
@@ -523,7 +523,7 @@ func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSet
 
 	defer func() {
 		if p := recover(); p != nil {
-			Errorf("panic when pushing:\n%v\n%s", p, goutil.PanicTrace(1))
+			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 		s.peer.putContext(ctx, true)
 	}()
@@ -712,7 +712,7 @@ func (s *session) startReadAndHandle() {
 	)
 	defer func() {
 		if p := recover(); p != nil {
-			err = fmt.Errorf("%v\n%s", p, goutil.PanicTrace(2))
+			err = fmt.Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 		s.readDisconnected(conn, err)
 	}()
