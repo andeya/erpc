@@ -158,10 +158,10 @@ type (
 )
 
 const (
-	pnPush        = "push"
-	pnPull        = "pull"
-	pnUnknownPush = "unknown_push"
-	pnUnknownPull = "unknown_pull"
+	pnPush        = "PUSH"
+	pnPull        = "PULL"
+	pnUnknownPush = "UNKNOWN_PUSH"
+	pnUnknownPull = "UNKNOWN_PULL"
 )
 
 // newRouter creates root router.
