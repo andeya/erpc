@@ -13,6 +13,12 @@
 			"path": "github.com/tidwall/gjson",
 			"revision": "67e2a63ac70d273b6bc7589f12f07180bc9fc189",
 			"revisionTime": "2017-11-20T18:50:05Z"
+		},
+		{
+			"checksumSHA1": "Tk+aXpWRuTQhURlO79bd7YogcU0=",
+			"path": "github.com/tidwall/match",
+			"revision": "1731857f09b1f38450e2c12409748407822dc6be",
+			"revisionTime": "2017-10-02T07:59:45Z"
 		}
 	],
 	"rootPath": "github.com/henrylee2cn/teleport"
