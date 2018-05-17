@@ -64,19 +64,57 @@ func Reg(codec Codec) {
 }
 
 // Get returns Codec by id.
-func Get(id byte) (Codec, error) {
-	codec, ok := codecMap.idMap[id]
+func Get(codecId byte) (Codec, error) {
+	codec, ok := codecMap.idMap[codecId]
 	if !ok {
-		return nil, fmt.Errorf("unsupported codec id: %d", id)
+		return nil, fmt.Errorf("unsupported codec id: %d", codecId)
 	}
 	return codec, nil
 }
 
 // GetByName returns Codec by name.
-func GetByName(name string) (Codec, error) {
-	codec, ok := codecMap.nameMap[name]
+func GetByName(codecName string) (Codec, error) {
+	codec, ok := codecMap.nameMap[codecName]
 	if !ok {
-		return nil, fmt.Errorf("unsupported codec name: %s", name)
+		return nil, fmt.Errorf("unsupported codec name: %s", codecName)
 	}
 	return codec, nil
+}
+
+// Marshal returns the encoding of v.
+func Marshal(codecId byte, v interface{}) ([]byte, error) {
+	codec, err := Get(codecId)
+	if err != nil {
+		return nil, err
+	}
+	return codec.Marshal(v)
+}
+
+// Unmarshal parses the encoded data and stores the result
+// in the value pointed to by v.
+func Unmarshal(codecId byte, data []byte, v interface{}) error {
+	codec, err := Get(codecId)
+	if err != nil {
+		return err
+	}
+	return codec.Unmarshal(data, v)
+}
+
+// MarshalByName returns the encoding of v.
+func MarshalByName(codecName string, v interface{}) ([]byte, error) {
+	codec, err := GetByName(codecName)
+	if err != nil {
+		return nil, err
+	}
+	return codec.Marshal(v)
+}
+
+// UnmarshalByName parses the encoded data and stores the result
+// in the value pointed to by v.
+func UnmarshalByName(codecName string, data []byte, v interface{}) error {
+	codec, err := GetByName(codecName)
+	if err != nil {
+		return err
+	}
+	return codec.Unmarshal(data, v)
 }
