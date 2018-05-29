@@ -121,6 +121,7 @@ type peer struct {
 
 	// only for server role
 	listenAddr string
+	listeners  map[net.Listener]struct{}
 }
 
 // NewPeer creates a new peer.
@@ -146,6 +147,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		printDetail:        cfg.PrintDetail,
 		countTime:          cfg.CountTime,
 		redialTimes:        cfg.RedialTimes,
+		listeners:          make(map[net.Listener]struct{}),
 	}
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
 		Fatalf("%v", err)
@@ -317,6 +319,7 @@ var ErrListenClosed = errors.New("listener is closed")
 // Note: The caller ensures that the listener supports graceful shutdown.
 func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) error {
 	defer lis.Close()
+	p.listeners[lis] = struct{}{}
 
 	network := lis.Addr().Network()
 	addr := lis.Addr().String()
@@ -399,6 +402,9 @@ func (p *peer) Close() (err error) {
 		}
 	}()
 	close(p.closeCh)
+	for lis := range p.listeners {
+		lis.Close()
+	}
 	deletePeer(p)
 	var (
 		count int
