@@ -104,7 +104,7 @@ func (l *defaultLogger) Level() string {
 // SetLevel sets the logger's level.
 // Note:
 // Concurrent is not safe!
-// the teleport default logger's level list: PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
+// the teleport default logger's level list: OFF PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
 func (l *defaultLogger) SetLevel(level string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
