@@ -90,7 +90,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - 支持设置慢操作报警阈值
 - 端点间通信使用I/O多路复用技术
 - 支持设置读取包的大小限制（如果超出则断开连接）
-- 提供Hander的上下文
+- 提供Handler的上下文
 - 客户端的Session支持断线后自动重连
 - 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket`等
 - 提供对连接文件描述符（fd）的操作接口
