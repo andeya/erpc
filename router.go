@@ -363,6 +363,19 @@ func (r *SubRouter) getPush(uriPath string) (*Handler, bool) {
 	return nil, false
 }
 
+func getStructNameFromStruct(ctrlStruct interface{})string{
+	var structName string
+	ctype := reflect.TypeOf(ctrlStruct)
+	if method, ok := ctype.MethodByName("Name"); ok {
+		result := method.Func.Call([]reflect.Value{reflect.ValueOf(ctrlStruct)})
+		structName = result[0].Interface().(string)
+	} else {
+		structName = ToUriPath(ctrlStructName(ctype))
+	}
+
+	return structName
+}
+
 // Note: pullCtrlStruct needs to implement PullCtx interface.
 func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
@@ -415,7 +428,7 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" || isBelongToPullCtx(mname) {
+		if method.PkgPath != "" || mname == "Name" || isBelongToPullCtx(mname) {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
@@ -466,7 +479,7 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		}
 
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, ToUriPath(ctrlStructName(ctype)), ToUriPath(mname)),
+			name:            path.Join(pathPrefix, getStructNameFromStruct(pullCtrlStruct), ToUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			reply:           replyType,
@@ -652,7 +665,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" || isBelongToPushCtx(mname) {
+		if method.PkgPath != "" || mname == "Name" || isBelongToPushCtx(mname) {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
@@ -691,8 +704,9 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 			ctx.handleErr, _ = rets[0].Interface().(*Rerror)
 			pool.Put(obj)
 		}
+
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, ToUriPath(ctrlStructName(ctype)), ToUriPath(mname)),
+			name:            path.Join(pathPrefix, getStructNameFromStruct(pushCtrlStruct), ToUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			pluginContainer: pluginContainer,
