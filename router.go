@@ -379,10 +379,6 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		return nil, errors.Errorf("pull-handler: the type is not struct point: %s", ctype.String())
 	}
 
-	if _, ok := pullCtrlStruct.(PullCtx); !ok {
-		return nil, errors.Errorf("pull-handler: the type is not implemented tp.PullCtx interface: %s", ctype.String())
-	}
-
 	iType, ok := ctypeElem.FieldByName("PullCtx")
 	if !ok || !iType.Anonymous {
 		return nil, errors.Errorf("pull-handler: the struct do not have anonymous field tp.PullCtx: %s", ctype.String())
@@ -520,7 +516,6 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 	// first agr need be a PullCtx (struct pointer or PullCtx).
 	ctxType := ctype.In(0)
 	if !ctxType.Implements(reflect.TypeOf((*PullCtx)(nil)).Elem()) {
-
 		return nil, errors.Errorf("pull-handler: %s's first arg need implement tp.PullCtx: %s", typeString, ctxType)
 	}
 
@@ -615,10 +610,6 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 	var ctypeElem = ctype.Elem()
 	if ctypeElem.Kind() != reflect.Struct {
 		return nil, errors.Errorf("push-handler: the type is not struct point: %s", ctype.String())
-	}
-
-	if _, ok := pushCtrlStruct.(PushCtx); !ok {
-		return nil, errors.Errorf("push-handler: the type is not implemented tp.PushCtx interface: %s", ctype.String())
 	}
 
 	iType, ok := ctypeElem.FieldByName("PushCtx")
@@ -739,7 +730,6 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 	// first agr need be a PushCtx (struct pointer or PushCtx).
 	ctxType := ctype.In(0)
 	if !ctxType.Implements(reflect.TypeOf((*PushCtx)(nil)).Elem()) {
-
 		return nil, errors.Errorf("push-handler: %s's first arg need implement tp.PushCtx: %s", typeString, ctxType)
 	}
 
