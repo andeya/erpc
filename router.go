@@ -411,38 +411,59 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" || isBelongToPullCtx(mname) {
+		if method.PkgPath != "" {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
 		if mtype.NumIn() != 2 {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("pull-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("pull-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
 		}
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("pull-handler: %s.%s args type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("pull-handler: %s.%s args type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 		// Method needs two outs: reply, *Rerror.
 		if mtype.NumOut() != 2 {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("pull-handler: %s.%s needs two out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 		// Reply type must be exported.
 		replyType := mtype.Out(0)
 		if !goutil.IsExportedOrBuiltinType(replyType) {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("pull-handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
 		}
 
 		// The return type of the method must be *Rerror.
 		if returnType := mtype.Out(1); !isRerrorType(returnType.String()) {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("pull-handler: %s.%s second out argument %s is not *tp.Rerror", ctype.String(), mname, returnType)
 		}
 
@@ -515,9 +536,6 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 
 	// first agr need be a PullCtx (struct pointer or PullCtx).
 	ctxType := ctype.In(0)
-	if !ctxType.Implements(reflect.TypeOf((*PullCtx)(nil)).Elem()) {
-		return nil, errors.Errorf("pull-handler: %s's first arg need implement tp.PullCtx: %s", typeString, ctxType)
-	}
 
 	var handleFunc func(*handlerCtx, reflect.Value)
 
@@ -526,7 +544,9 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 		return nil, errors.Errorf("pull-handler: %s's first arg must be tp.PullCtx type or struct pointer: %s", typeString, ctxType)
 
 	case reflect.Interface:
-		if !reflect.TypeOf((*PullCtx)(nil)).Elem().Implements(reflect.New(ctxType).Type().Elem()) {
+		iface := reflect.TypeOf((*PullCtx)(nil)).Elem()
+		if !ctxType.Implements(iface) ||
+			!iface.Implements(reflect.New(ctxType).Type().Elem()) {
 			return nil, errors.Errorf("pull-handler: %s's first arg must be tp.PullCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
@@ -643,34 +663,52 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 		mtype := method.Type
 		mname := method.Name
 		// Method must be exported.
-		if method.PkgPath != "" || isBelongToPushCtx(mname) {
+		if method.PkgPath != "" {
 			continue
 		}
 		// Method needs two ins: receiver, *args.
 		if mtype.NumIn() != 2 {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("push-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("push-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
 		}
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("push-handler: %s.%s args type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("push-handler: %s.%s args type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 
 		// Method needs one out: *Rerror.
 		if mtype.NumOut() != 1 {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("push-handler: %s.%s needs one out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 
 		// The return type of the method must be *Rerror.
 		if returnType := mtype.Out(0); !isRerrorType(returnType.String()) {
+			if isBelongToPullCtx(mname) {
+				continue
+			}
 			return nil, errors.Errorf("push-handler: %s.%s out argument %s is not *tp.Rerror", ctype.String(), mname, returnType)
 		}
 
@@ -729,9 +767,6 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 
 	// first agr need be a PushCtx (struct pointer or PushCtx).
 	ctxType := ctype.In(0)
-	if !ctxType.Implements(reflect.TypeOf((*PushCtx)(nil)).Elem()) {
-		return nil, errors.Errorf("push-handler: %s's first arg need implement tp.PushCtx: %s", typeString, ctxType)
-	}
 
 	var handleFunc func(*handlerCtx, reflect.Value)
 
@@ -740,8 +775,10 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 		return nil, errors.Errorf("push-handler: %s's first arg must be tp.PushCtx type or struct pointer: %s", typeString, ctxType)
 
 	case reflect.Interface:
-		if !reflect.TypeOf((*PushCtx)(nil)).Elem().Implements(reflect.New(ctxType).Type().Elem()) {
-			return nil, errors.Errorf("push-handler: %s's first arg must be tp.PushCtx type or struct pointer: %s", typeString, ctxType)
+		iface := reflect.TypeOf((*PushCtx)(nil)).Elem()
+		if !ctxType.Implements(iface) ||
+			!iface.Implements(reflect.New(ctxType).Type().Elem()) {
+			return nil, errors.Errorf("push-handler: %s's first arg need implement tp.PushCtx: %s", typeString, ctxType)
 		}
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
