@@ -260,6 +260,25 @@ func GetSocket(net.Conn, ...ProtoFunc) Socket
 func NewSocket(net.Conn, ...ProtoFunc) Socket
 ```
 
+Default protocol `FastProto`(Big Endian):
+
+```sh
+{4 bytes packet length}
+{1 byte protocol version}
+{1 byte transfer pipe length}
+{transfer pipe IDs}
+# The following is handled data by transfer pipe
+{4 bytes sequence length}
+{sequence}
+{1 byte packet type} // e.g. PULL:1; REPLY:2; PUSH:3
+{4 bytes URI length}
+{URI}
+{4 bytes metadata length}
+{metadata(urlencoded)}
+{1 byte body codec id}
+{body}
+```
+
 ## Optimize
 
 - SetPacketSizeLimit sets max packet size.
