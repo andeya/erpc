@@ -19,14 +19,14 @@ func main() {
 		tp.Fatalf("%v", err)
 	}
 
-	var reply int
+	var result int
 	rerr := sess.Pull("/math/add?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
-		&reply,
+		&result,
 	).Rerror()
 
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)
 	}
-	tp.Printf("reply: 1+2+3+4+5 = %d", reply)
+	tp.Printf("result: 1+2+3+4+5 = %d", result)
 }

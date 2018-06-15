@@ -21,16 +21,16 @@ type math struct {
 	tp.PullCtx
 }
 
-func (m *math) Add(args *[]int) (int, *tp.Rerror) {
+func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
 	if m.Query().Get("push_status") == "yes" {
 		m.Session().Push(
 			"/push/status",
-			fmt.Sprintf("numbers %+v are being added...", args),
+			fmt.Sprintf("numbers %+v are being added...", arg),
 		)
 		time.Sleep(time.Millisecond * 10)
 	}
 	var r int
-	for _, a := range *args {
+	for _, a := range *arg {
 		r += a
 	}
 	return r, nil

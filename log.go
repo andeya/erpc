@@ -32,25 +32,25 @@ type Logger interface {
 	SetLevel(level string)
 	// Printf formats according to a format specifier and writes to standard output.
 	// It returns the number of bytes written and any write error encountered.
-	Printf(format string, args ...interface{})
+	Printf(format string, a ...interface{})
 	// Fatalf is equivalent to Criticalf followed by a call to os.Exit(1).
-	Fatalf(format string, args ...interface{})
+	Fatalf(format string, a ...interface{})
 	// Panicf is equivalent to Criticalf followed by a call to panic().
-	Panicf(format string, args ...interface{})
+	Panicf(format string, a ...interface{})
 	// Criticalf logs a message using CRITICAL as log level.
-	Criticalf(format string, args ...interface{})
+	Criticalf(format string, a ...interface{})
 	// Errorf logs a message using ERROR as log level.
-	Errorf(format string, args ...interface{})
+	Errorf(format string, a ...interface{})
 	// Warnf logs a message using WARNING as log level.
-	Warnf(format string, args ...interface{})
+	Warnf(format string, a ...interface{})
 	// Noticef logs a message using NOTICE as log level.
-	Noticef(format string, args ...interface{})
+	Noticef(format string, a ...interface{})
 	// Infof logs a message using INFO as log level.
-	Infof(format string, args ...interface{})
+	Infof(format string, a ...interface{})
 	// Debugf logs a message using DEBUG as log level.
-	Debugf(format string, args ...interface{})
+	Debugf(format string, a ...interface{})
 	// Tracef logs a message using TRACE as log level.
-	Tracef(format string, args ...interface{})
+	Tracef(format string, a ...interface{})
 }
 
 var (
@@ -139,52 +139,52 @@ func SetLoggerLevel(level string) {
 
 // Printf formats according to a format specifier and writes to standard output.
 // It returns the number of bytes written and any write error encountered.
-func Printf(format string, args ...interface{}) {
-	globalLogger.Printf(format, args...)
+func Printf(format string, a ...interface{}) {
+	globalLogger.Printf(format, a...)
 }
 
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
-func Fatalf(format string, args ...interface{}) {
-	globalLogger.Fatalf(format, args...)
+func Fatalf(format string, a ...interface{}) {
+	globalLogger.Fatalf(format, a...)
 	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
-func Panicf(format string, args ...interface{}) {
-	globalLogger.Panicf(format, args...)
+func Panicf(format string, a ...interface{}) {
+	globalLogger.Panicf(format, a...)
 }
 
 // Criticalf logs a message using CRITICAL as log level.
-func Criticalf(format string, args ...interface{}) {
-	globalLogger.Criticalf(format, args...)
+func Criticalf(format string, a ...interface{}) {
+	globalLogger.Criticalf(format, a...)
 }
 
 // Errorf logs a message using ERROR as log level.
-func Errorf(format string, args ...interface{}) {
-	globalLogger.Errorf(format, args...)
+func Errorf(format string, a ...interface{}) {
+	globalLogger.Errorf(format, a...)
 }
 
 // Warnf logs a message using WARNING as log level.
-func Warnf(format string, args ...interface{}) {
-	globalLogger.Warnf(format, args...)
+func Warnf(format string, a ...interface{}) {
+	globalLogger.Warnf(format, a...)
 }
 
 // Noticef logs a message using NOTICE as log level.
-func Noticef(format string, args ...interface{}) {
-	globalLogger.Noticef(format, args...)
+func Noticef(format string, a ...interface{}) {
+	globalLogger.Noticef(format, a...)
 }
 
 // Infof logs a message using INFO as log level.
-func Infof(format string, args ...interface{}) {
-	globalLogger.Infof(format, args...)
+func Infof(format string, a ...interface{}) {
+	globalLogger.Infof(format, a...)
 }
 
 // Debugf logs a message using DEBUG as log level.
-func Debugf(format string, args ...interface{}) {
-	globalLogger.Debugf(format, args...)
+func Debugf(format string, a ...interface{}) {
+	globalLogger.Debugf(format, a...)
 }
 
 // Tracef logs a message using TRACE as log level.
-func Tracef(format string, args ...interface{}) {
-	globalLogger.Tracef(format, args...)
+func Tracef(format string, a ...interface{}) {
+	globalLogger.Tracef(format, a...)
 }

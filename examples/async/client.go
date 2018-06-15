@@ -17,18 +17,18 @@ func main() {
 	}
 
 	// Single asynchronous pull
-	var reply string
+	var result string
 	pullCmd := sess.AsyncPull(
 		"/test/wait3s",
 		"Single asynchronous pull",
-		&reply,
+		&result,
 		make(chan tp.PullCmd, 1),
 	)
 WAIT:
 	for {
 		select {
 		case <-pullCmd.Done():
-			tp.Infof("test 1: reply: %#v, error: %v", reply, pullCmd.Rerror())
+			tp.Infof("test 1: result: %#v, error: %v", result, pullCmd.Rerror())
 			break WAIT
 		default:
 			tp.Warnf("test 1: Not yet returned to the result, try again later...")
@@ -48,11 +48,11 @@ WAIT:
 		)
 	}
 	for pullCmd := range pullCmdChan {
-		reply, rerr := pullCmd.Result()
+		result, rerr := pullCmd.Reply()
 		if rerr != nil {
 			tp.Errorf("test 2: error: %v", rerr)
 		} else {
-			tp.Infof("test 2: reply: %v", *reply.(*string))
+			tp.Infof("test 2: result: %v", *result.(*string))
 		}
 		batch--
 		if batch == 0 {

@@ -100,24 +100,24 @@ type (
 		// Health checks if the session is usable.
 		Health() bool
 		// AsyncPull sends a packet and receives reply asynchronously.
-		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name.
+		// If the  is []byte or *[]byte type, it can automatically fill in the body codec name.
 		AsyncPull(
 			uri string,
-			args interface{},
-			reply interface{},
+			arg interface{},
+			result interface{},
 			pullCmdChan chan<- PullCmd,
 			setting ...socket.PacketSetting,
 		) PullCmd
 		// Pull sends a packet and receives reply.
 		// Note:
-		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) PullCmd
+		Pull(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) PullCmd
 		// Push sends a packet, but do not receives reply.
 		// Note:
-		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Push(uri string, args interface{}, setting ...socket.PacketSetting) *Rerror
+		Push(uri string, arg interface{}, setting ...socket.PacketSetting) *Rerror
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns PULL or PUSH context max age.
@@ -379,12 +379,12 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 
 // AsyncPull sends a packet and receives reply asynchronously.
 // Note:
-// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) AsyncPull(
 	uri string,
-	args interface{},
-	reply interface{},
+	arg interface{},
+	result interface{},
 	pullCmdChan chan<- PullCmd,
 	setting ...socket.PacketSetting,
 ) PullCmd {
@@ -402,7 +402,7 @@ func (s *session) AsyncPull(
 	output := socket.NewPacket(
 		socket.WithPtype(TypePull),
 		socket.WithUri(uri),
-		socket.WithBody(args),
+		socket.WithBody(arg),
 	)
 	for _, fn := range setting {
 		if fn != nil {
@@ -430,7 +430,7 @@ func (s *session) AsyncPull(
 	cmd := &pullCmd{
 		sess:        s,
 		output:      output,
-		reply:       reply,
+		result:      result,
 		pullCmdChan: pullCmdChan,
 		doneChan:    make(chan struct{}),
 		start:       s.peer.timeNow(),
@@ -480,25 +480,25 @@ W:
 
 // Pull sends a packet and receives reply.
 // Note:
-// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) PullCmd {
-	pullCmd := s.AsyncPull(uri, args, reply, make(chan PullCmd, 1), setting...)
+func (s *session) Pull(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) PullCmd {
+	pullCmd := s.AsyncPull(uri, arg, result, make(chan PullCmd, 1), setting...)
 	<-pullCmd.Done()
 	return pullCmd
 }
 
 // Push sends a packet, but do not receives reply.
 // Note:
-// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Push(uri string, args interface{}, setting ...socket.PacketSetting) *Rerror {
+func (s *session) Push(uri string, arg interface{}, setting ...socket.PacketSetting) *Rerror {
 	ctx := s.peer.getContext(s, true)
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
 	output.SetPtype(TypePush)
 	output.SetUri(uri)
-	output.SetBody(args)
+	output.SetBody(arg)
 
 	for _, fn := range setting {
 		if fn != nil {

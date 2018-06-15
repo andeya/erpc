@@ -46,11 +46,11 @@ func main() {
 		for i := 0; i < group; i++ {
 			go func() {
 				defer count.Done()
-				var reply = new(pb.PbTest)
+				var result = new(pb.PbTest)
 				if rerr := sess.Pull(
 					"/group/home/test",
 					&pb.PbTest{A: 10, B: 2},
-					reply,
+					result,
 				).Rerror(); rerr != nil {
 					atomic.AddUint32(&failNum, 1)
 					tp.Errorf("pull error: %v", rerr)

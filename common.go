@@ -295,20 +295,20 @@ func doPrintPid() {
 
 type fakePullCmd struct {
 	output    *socket.Packet
-	reply     interface{}
+	result    interface{}
 	rerr      *Rerror
 	inputMeta *utils.Args
 }
 
 // NewFakePullCmd creates a fake PullCmd.
-func NewFakePullCmd(uri string, args, reply interface{}, rerr *Rerror) PullCmd {
+func NewFakePullCmd(uri string, arg, result interface{}, rerr *Rerror) PullCmd {
 	return &fakePullCmd{
 		output: socket.NewPacket(
 			socket.WithPtype(TypePull),
 			socket.WithUri(uri),
-			socket.WithBody(args),
+			socket.WithBody(arg),
 		),
-		reply:     reply,
+		result:    result,
 		rerr:      rerr,
 		inputMeta: utils.AcquireArgs(),
 	}
@@ -336,9 +336,9 @@ func (f *fakePullCmd) Context() context.Context {
 	return f.output.Context()
 }
 
-// Result returns the pull result.
-func (f *fakePullCmd) Result() (interface{}, *Rerror) {
-	return f.reply, f.rerr
+// Reply returns the pull reply.
+func (f *fakePullCmd) Reply() (interface{}, *Rerror) {
+	return f.result, f.rerr
 }
 
 // Rerror returns the pull error.

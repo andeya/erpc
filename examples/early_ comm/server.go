@@ -11,18 +11,18 @@ func main() {
 			PrintDetail:   false,
 			ListenAddress: ":9090",
 		},
-		new(earlyReply),
+		new(earlyResult),
 	)
 	srv.ListenAndServe()
 }
 
-type earlyReply struct{}
+type earlyResult struct{}
 
-func (e *earlyReply) Name() string {
-	return "early_reply"
+func (e *earlyResult) Name() string {
+	return "early_result"
 }
 
-func (e *earlyReply) PostAccept(sess tp.PreSession) *tp.Rerror {
+func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Rerror {
 	var rigthUri bool
 	input, rerr := sess.Receive(func(header socket.Header) interface{} {
 		if header.Uri() == "/early/ping" {
@@ -35,7 +35,7 @@ func (e *earlyReply) PostAccept(sess tp.PreSession) *tp.Rerror {
 		return rerr
 	}
 
-	var reply string
+	var result string
 	if !rigthUri {
 		rerr = tp.NewRerror(10005, "unexpected request", "")
 	} else {
@@ -44,12 +44,12 @@ func (e *earlyReply) PostAccept(sess tp.PreSession) *tp.Rerror {
 			rerr = tp.NewRerror(10005, "incorrect author", body["author"])
 		} else {
 			rerr = nil
-			reply = "OK"
+			result = "OK"
 		}
 	}
 	return sess.Send(
 		"/early/pong",
-		reply,
+		result,
 		rerr,
 	)
 }

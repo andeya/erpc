@@ -21,21 +21,21 @@ func main() {
 		tp.Fatalf("%v", err)
 	}
 
-	var reply int
+	var result int
 	rerr := sess.Pull("/math/add",
 		[]int{1, 2, 3, 4, 5},
-		&reply,
+		&result,
 		tp.WithSeq(newRequestId()),
 	).Rerror()
 
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)
 	}
-	tp.Printf("reply: %d", reply)
+	tp.Printf("result: %d", result)
 
 	rerr = sess.Push(
 		"/chat/say",
-		fmt.Sprintf("I get result %d", reply),
+		fmt.Sprintf("I get result %d", result),
 		socket.WithSetMeta("X-ID", "client-001"),
 		tp.WithSeq(newRequestId()),
 	)

@@ -23,11 +23,11 @@ type test struct {
 	tp.PullCtx
 }
 
-func (t *test) Ok(args *string) (string, *tp.Rerror) {
-	return *args + " -> OK", nil
+func (t *test) Ok(arg *string) (string, *tp.Rerror) {
+	return *arg + " -> OK", nil
 }
 
-func (t *test) Timeout(args *string) (string, *tp.Rerror) {
+func (t *test) Timeout(arg *string) (string, *tp.Rerror) {
 	tCtx, _ := context.WithTimeout(t.Context(), time.Second)
 	time.Sleep(time.Second)
 	select {
@@ -39,5 +39,5 @@ func (t *test) Timeout(args *string) (string, *tp.Rerror) {
 		)
 	default:
 	}
-	return *args + " -> Not Timeout", nil
+	return *arg + " -> Not Timeout", nil
 }

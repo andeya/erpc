@@ -34,7 +34,7 @@ import (
  *  type Aaa struct {
  *      tp.PullCtx
  *  }
- *  func (x *Aaa) XxZz(args *<T>) (<T>, *tp.Rerror) {
+ *  func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
  *      ...
  *      return r, nil
  *  }
@@ -49,7 +49,7 @@ import (
  *
  * 2. Pull-Handler-Function API template
  *
- *  func XxZz(ctx tp.PullCtx, args *<T>) (<T>, *tp.Rerror) {
+ *  func XxZz(ctx tp.PullCtx, arg *<T>) (<T>, *tp.Rerror) {
  *      ...
  *      return r, nil
  *  }
@@ -64,7 +64,7 @@ import (
  *  type Bbb struct {
  *      tp.PushCtx
  *  }
- *  func (b *Bbb) YyZz(args *<T>) *tp.Rerror {
+ *  func (b *Bbb) YyZz(arg *<T>) *tp.Rerror {
  *      ...
  *      return nil
  *  }
@@ -80,7 +80,7 @@ import (
  * 4. Push-Handler-Function API template
  *
  *  // YyZz register the route: /yy_zz
- *  func YyZz(ctx tp.PushCtx, args *<T>) *tp.Rerror {
+ *  func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
  *      ...
  *      return nil
  *  }
@@ -414,7 +414,7 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		if method.PkgPath != "" {
 			continue
 		}
-		// Method needs two ins: receiver, *args.
+		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
 			if isBelongToPullCtx(mname) {
 				continue
@@ -435,13 +435,13 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 			if isBelongToPullCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s args type not exported: %s", ctype.String(), mname, argType)
+			return nil, errors.Errorf("pull-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
 			if isBelongToPullCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s args type need be a pointer: %s", ctype.String(), mname, argType)
+			return nil, errors.Errorf("pull-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 		// Method needs two outs: reply, *Rerror.
 		if mtype.NumOut() != 2 {
@@ -520,7 +520,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 		return nil, errors.Errorf("pull-handler: %s second out argument %s is not *tp.Rerror", typeString, returnType)
 	}
 
-	// needs two ins: PullCtx, *args.
+	// needs two ins: PullCtx, *<T>.
 	if ctype.NumIn() != 2 {
 		return nil, errors.Errorf("pull-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
 	}
@@ -528,10 +528,10 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 	// First arg need be exported or builtin, and need be a pointer.
 	argType := ctype.In(1)
 	if !goutil.IsExportedOrBuiltinType(argType) {
-		return nil, errors.Errorf("pull-handler: %s args type not exported: %s", typeString, argType)
+		return nil, errors.Errorf("pull-handler: %s arg type not exported: %s", typeString, argType)
 	}
 	if argType.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("pull-handler: %s args type need be a pointer: %s", typeString, argType)
+		return nil, errors.Errorf("pull-handler: %s arg type need be a pointer: %s", typeString, argType)
 	}
 
 	// first agr need be a PullCtx (struct pointer or PullCtx).
@@ -666,7 +666,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 		if method.PkgPath != "" {
 			continue
 		}
-		// Method needs two ins: receiver, *args.
+		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
 			if isBelongToPullCtx(mname) {
 				continue
@@ -687,13 +687,13 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 			if isBelongToPullCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("push-handler: %s.%s args type not exported: %s", ctype.String(), mname, argType)
+			return nil, errors.Errorf("push-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
 			if isBelongToPullCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("push-handler: %s.%s args type need be a pointer: %s", ctype.String(), mname, argType)
+			return nil, errors.Errorf("push-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 
 		// Method needs one out: *Rerror.
@@ -751,7 +751,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 		return nil, errors.Errorf("push-handler: %s out argument %s is not *tp.Rerror", typeString, returnType)
 	}
 
-	// needs two ins: PushCtx, *args.
+	// needs two ins: PushCtx, *<T>.
 	if ctype.NumIn() != 2 {
 		return nil, errors.Errorf("push-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
 	}
@@ -759,10 +759,10 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 	// First arg need be exported or builtin, and need be a pointer.
 	argType := ctype.In(1)
 	if !goutil.IsExportedOrBuiltinType(argType) {
-		return nil, errors.Errorf("push-handler: %s args type not exported: %s", typeString, argType)
+		return nil, errors.Errorf("push-handler: %s arg type not exported: %s", typeString, argType)
 	}
 	if argType.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("push-handler: %s args type need be a pointer: %s", typeString, argType)
+		return nil, errors.Errorf("push-handler: %s arg type need be a pointer: %s", typeString, argType)
 	}
 
 	// first agr need be a PushCtx (struct pointer or PushCtx).

@@ -47,6 +47,6 @@ func (e *earlyPull) PostDial(sess tp.PreSession) *tp.Rerror {
 	if rerr != nil {
 		return rerr
 	}
-	tp.Infof("reply: %v", input.String())
+	tp.Infof("result: %v", input.String())
 	return nil
 }

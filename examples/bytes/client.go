@@ -20,12 +20,12 @@ func main() {
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)
 	}
-	var reply []byte
+	var result []byte
 	for {
 		if rerr = sess.Pull(
 			"/group/home/test?peer_id=call-1",
 			[]byte("pull text"),
-			&reply,
+			&result,
 			tp.WithQuery("a", "1"),
 		).Rerror(); rerr != nil {
 			tp.Errorf("pull error: %v", rerr)
@@ -34,12 +34,12 @@ func main() {
 			break
 		}
 	}
-	tp.Infof("test reply: %s", reply)
+	tp.Infof("test result: %s", result)
 
 	rerr = sess.Pull(
 		"/group/home/test_unknown?peer_id=call-2",
 		[]byte("unknown pull text"),
-		&reply,
+		&result,
 		tp.WithQuery("b", "2"),
 	).Rerror()
 	if tp.IsConnRerror(rerr) {
@@ -48,7 +48,7 @@ func main() {
 	if rerr != nil {
 		tp.Fatalf("pull error: %v", rerr)
 	}
-	tp.Infof("test_unknown: %s", reply)
+	tp.Infof("test_unknown: %s", result)
 }
 
 // Push controller
@@ -57,7 +57,7 @@ type Push struct {
 }
 
 // Test handler
-func (p *Push) Test(args *[]byte) *tp.Rerror {
-	tp.Infof("receive push(%s):\nargs: %s\nquery: %#v\n", p.Ip(), *args, p.Query())
+func (p *Push) Test(arg *[]byte) *tp.Rerror {
+	tp.Infof("receive push(%s):\narg: %s\nquery: %#v\n", p.Ip(), *arg, p.Query())
 	return nil
 }
