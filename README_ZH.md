@@ -122,16 +122,16 @@ type math struct {
     tp.PullCtx
 }
 
-func (m *math) Add(args *[]int) (int, *tp.Rerror) {
+func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
     if m.Query().Get("push_status") == "yes" {
         m.Session().Push(
             "/push/status",
-            fmt.Sprintf("%d numbers are being added...", len(*args)),
+            fmt.Sprintf("%d numbers are being added...", len(*arg)),
         )
         time.Sleep(time.Millisecond * 10)
     }
     var r int
-    for _, a := range *args {
+    for _, a := range *arg {
         r += a
     }
     return r, nil
@@ -157,24 +157,24 @@ func main() {
         tp.Fatalf("%v", err)
     }
 
-    var reply int
+    var result int
     rerr := sess.Pull("/math/add?push_status=yes",
         []int{1, 2, 3, 4, 5},
-        &reply,
+        &result,
     ).Rerror()
 
     if rerr != nil {
         tp.Fatalf("%v", rerr)
     }
-    tp.Printf("reply: %d", reply)
+    tp.Printf("result: %d", result)
 }
 
 type push struct {
     tp.PushCtx
 }
 
-func (p *push) Status(args *string) *tp.Rerror {
-    tp.Printf("server status: %s", *args)
+func (p *push) Status(arg *string) *tp.Rerror {
+    tp.Printf("server status: %s", *arg)
     return nil
 }
 ```
@@ -399,7 +399,7 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 type Aaa struct {
     tp.PullCtx
 }
-func (x *Aaa) XxZz(args *<T>) (<T>, *tp.Rerror) {
+func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -418,7 +418,7 @@ peer.RoutePullFunc((*Aaa).XxZz)
 ### Pull-Handler-Function 接口模板
 
 ```go
-func XxZz(ctx tp.PullCtx, args *<T>) (<T>, *tp.Rerror) {
+func XxZz(ctx tp.PullCtx, arg *<T>) (<T>, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -437,7 +437,7 @@ peer.RoutePullFunc(XxZz)
 type Bbb struct {
     tp.PushCtx
 }
-func (b *Bbb) YyZz(args *<T>) *tp.Rerror {
+func (b *Bbb) YyZz(arg *<T>) *tp.Rerror {
     ...
     return nil
 }
@@ -457,7 +457,7 @@ peer.RoutePushFunc((*Bbb).YyZz)
 
 ```go
 // YyZz register the route: /yy_zz
-func YyZz(ctx tp.PushCtx, args *<T>) *tp.Rerror {
+func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
     ...
     return nil
 }

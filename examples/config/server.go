@@ -23,9 +23,9 @@ type math struct {
 	tp.PullCtx
 }
 
-func (m *math) Add(args *[]int) (int, *tp.Rerror) {
+func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
 	var r int
-	for _, a := range *args {
+	for _, a := range *arg {
 		r += a
 	}
 	return r, nil

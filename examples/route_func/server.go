@@ -21,24 +21,24 @@ type ctrl struct {
 	tp.PullCtx
 }
 
-func (c *ctrl) math_add1(args *[]int) (int, *tp.Rerror) {
-	return math_add2(c, args)
+func (c *ctrl) math_add1(arg *[]int) (int, *tp.Rerror) {
+	return math_add2(c, arg)
 }
 
-func math_add2(ctx tp.PullCtx, args *[]int) (int, *tp.Rerror) {
+func math_add2(ctx tp.PullCtx, arg *[]int) (int, *tp.Rerror) {
 	if ctx.Query().Get("push_status") == "yes" {
 		ctx.Session().Push(
 			"/server/status1",
-			fmt.Sprintf("%d numbers are being added...", len(*args)),
+			fmt.Sprintf("%d numbers are being added...", len(*arg)),
 		)
 		ctx.Session().Push(
 			"/server/status2",
-			fmt.Sprintf("%d numbers are being added...", len(*args)),
+			fmt.Sprintf("%d numbers are being added...", len(*arg)),
 		)
 		time.Sleep(time.Millisecond * 10)
 	}
 	var r int
-	for _, a := range *args {
+	for _, a := range *arg {
 		r += a
 	}
 	return r, nil

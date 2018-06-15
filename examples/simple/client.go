@@ -14,24 +14,24 @@ func main() {
 		tp.Fatalf("%v", err)
 	}
 
-	var reply int
+	var result int
 	rerr := sess.Pull("/math/add?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
-		&reply,
+		&result,
 		// tp.WithAcceptBodyCodec('s'),
 	).Rerror()
 
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)
 	}
-	tp.Printf("reply: %d", reply)
+	tp.Printf("result: %d", result)
 }
 
 type push struct {
 	tp.PushCtx
 }
 
-func (p *push) Status(args *string) *tp.Rerror {
-	tp.Printf("server status: %s", *args)
+func (p *push) Status(arg *string) *tp.Rerror {
+	tp.Printf("server status: %s", *arg)
 	return nil
 }

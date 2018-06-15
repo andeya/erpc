@@ -29,7 +29,7 @@ type Home struct {
 }
 
 // Test handler
-func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
+func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
 	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
 		"your_id": h.Query().Get("peer_id"),
 	})
@@ -39,7 +39,7 @@ func (h *Home) Test(args *map[string]interface{}) (map[string]interface{}, *tp.R
 	})
 	time.Sleep(5e9)
 	return map[string]interface{}{
-		"your_args":   *args,
+		"your_arg":    *arg,
 		"server_time": time.Now(),
 		"meta":        meta.String(),
 	}, nil
@@ -63,7 +63,7 @@ func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 		"your_id": ctx.Query().Get("peer_id"),
 	})
 	return map[string]interface{}{
-		"your_args":   v,
+		"your_arg":    v,
 		"server_time": time.Now(),
 		"meta":        ctx.CopyMeta().String(),
 	}, nil

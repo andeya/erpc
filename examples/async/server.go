@@ -19,7 +19,7 @@ type test struct {
 	tp.PullCtx
 }
 
-func (t *test) Wait3s(args *string) (string, *tp.Rerror) {
+func (t *test) Wait3s(arg *string) (string, *tp.Rerror) {
 	time.Sleep(3 * time.Second)
-	return *args + " -> OK", nil
+	return *arg + " -> OK", nil
 }

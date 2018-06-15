@@ -28,14 +28,14 @@ func main() {
 	}
 	sess.SetId("testId")
 
-	var reply interface{}
+	var result interface{}
 	for {
 		if rerr = sess.Pull(
 			"/group/home/test?peer_id=call-1",
 			map[string]interface{}{
 				"bytes": []byte("test bytes"),
 			},
-			&reply,
+			&result,
 			socket.WithXferPipe('g'),
 			socket.WithSetMeta("set", "0"),
 			socket.WithAddMeta("add", "1"),
@@ -47,7 +47,7 @@ func main() {
 			break
 		}
 	}
-	tp.Infof("test: %#v", reply)
+	tp.Infof("test: %#v", result)
 
 	// sess.Close()
 
@@ -60,7 +60,7 @@ func main() {
 			json.RawMessage(`{"RawMessage":"test_unknown"}`),
 			[]byte("test bytes"),
 		},
-		&reply,
+		&result,
 		socket.WithXferPipe('g'),
 	).Rerror()
 	if tp.IsConnRerror(rerr) {
@@ -69,7 +69,7 @@ func main() {
 	if rerr != nil {
 		tp.Fatalf("pull error: %v", rerr)
 	}
-	tp.Infof("test_unknown: %#v", reply)
+	tp.Infof("test_unknown: %#v", result)
 }
 
 // Push controller
@@ -78,7 +78,7 @@ type Push struct {
 }
 
 // Test handler
-func (p *Push) Test(args *map[string]interface{}) *tp.Rerror {
-	tp.Infof("receive push(%s):\nargs: %#v\nquery: %#v\n", p.Ip(), args, p.Query())
+func (p *Push) Test(arg *map[string]interface{}) *tp.Rerror {
+	tp.Infof("receive push(%s):\narg: %#v\nquery: %#v\n", p.Ip(), arg, p.Query())
 	return nil
 }

@@ -52,11 +52,11 @@ type (
 	}
 	// PullCaller the object used to pull
 	PullCaller interface {
-		Pull(uri string, args interface{}, reply interface{}, setting ...socket.PacketSetting) tp.PullCmd
+		Pull(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.PullCmd
 	}
 	// PushCaller the object used to push
 	PushCaller interface {
-		Push(uri string, args interface{}, setting ...socket.PacketSetting) *tp.Rerror
+		Push(uri string, arg interface{}, setting ...socket.PacketSetting) *tp.Rerror
 	}
 	// ProxyLabel proxy label information
 	ProxyLabel struct {
@@ -97,7 +97,7 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
 	var (
-		reply       []byte
+		result      []byte
 		realIpBytes = ctx.PeekMeta(tp.MetaRealIp)
 	)
 	if len(realIpBytes) == 0 {
@@ -107,7 +107,7 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 		label.RealIp = goutil.BytesToString(realIpBytes)
 	}
 	label.Uri = ctx.Uri()
-	pullcmd := p.pullCaller(&label).Pull(label.Uri, ctx.InputBodyBytes(), &reply, settings...)
+	pullcmd := p.pullCaller(&label).Pull(label.Uri, ctx.InputBodyBytes(), &result, settings...)
 	pullcmd.InputMeta().VisitAll(func(key, value []byte) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
@@ -116,7 +116,7 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 		rerr.Code = tp.CodeBadGateway
 		rerr.Message = tp.CodeText(tp.CodeBadGateway)
 	}
-	return reply, rerr
+	return result, rerr
 }
 
 func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {

@@ -596,7 +596,7 @@ func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
 	c.input.Meta().CopyTo(c.pullCmd.inputMeta)
 	c.setContext(c.pullCmd.output.Context())
-	c.input.SetBody(c.pullCmd.reply)
+	c.input.SetBody(c.pullCmd.result)
 
 	rerr := c.pluginContainer.postReadReplyHeader(c)
 	if rerr != nil {
@@ -624,7 +624,7 @@ func (c *handlerCtx) handleReply() {
 		if p := recover(); p != nil {
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
-		c.pullCmd.reply = c.input.Body()
+		c.pullCmd.result = c.input.Body()
 		c.handleErr = c.pullCmd.rerr
 		c.pullCmd.done()
 		c.pullCmd.cost = c.sess.timeSince(c.pullCmd.start)
@@ -677,11 +677,11 @@ type (
 		Rerror() *Rerror
 		// Done returns the chan that indicates whether it has been completed.
 		Done() <-chan struct{}
-		// Result returns the pull result.
+		// Reply returns the pull reply.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the pull is completed!
-		Result() (interface{}, *Rerror)
+		Reply() (interface{}, *Rerror)
 		// InputBodyCodec gets the body codec type of the input packet.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
@@ -702,7 +702,7 @@ type (
 	pullCmd struct {
 		sess           *session
 		output         *socket.Packet
-		reply          interface{}
+		result         interface{}
 		rerr           *Rerror
 		inputBodyCodec byte
 		inputMeta      *utils.Args
@@ -775,13 +775,13 @@ func (p *pullCmd) Done() <-chan struct{} {
 	return p.doneChan
 }
 
-// Result returns the pull result.
+// Reply returns the pull reply.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the pull is completed!
-func (p *pullCmd) Result() (interface{}, *Rerror) {
+func (p *pullCmd) Reply() (interface{}, *Rerror) {
 	<-p.Done()
-	return p.reply, p.rerr
+	return p.result, p.rerr
 }
 
 // InputBodyCodec gets the body codec type of the input packet.
