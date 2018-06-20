@@ -131,13 +131,11 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	pluginContainer := newPluginContainer()
 	pluginContainer.AppendLeft(globalLeftPlugin...)
 	pluginContainer.preNewPeer(&cfg)
-	if err := cfg.check(); err != nil {
-		Fatalf("%v", err)
-	}
-	localAddr, err := net.ResolveTCPAddr(cfg.Network, cfg.LocalAddress)
+	err := cfg.check()
 	if err != nil {
 		Fatalf("%v", err)
 	}
+
 	var p = &peer{
 		router:             newRouter("/", pluginContainer),
 		pluginContainer:    pluginContainer,
@@ -147,13 +145,21 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		closeCh:            make(chan struct{}),
 		slowCometDuration:  cfg.slowCometDuration,
 		defaultDialTimeout: cfg.DefaultDialTimeout,
-		localAddr:          localAddr,
 		network:            cfg.Network,
 		listenAddr:         cfg.ListenAddress,
 		printDetail:        cfg.PrintDetail,
 		countTime:          cfg.CountTime,
 		redialTimes:        cfg.RedialTimes,
 		listeners:          make(map[net.Listener]struct{}),
+	}
+	switch p.network {
+	case "unix", "unixpacket":
+		p.localAddr, err = net.ResolveUnixAddr(p.network, cfg.LocalAddress)
+	default:
+		p.localAddr, err = net.ResolveTCPAddr(p.network, cfg.LocalAddress)
+	}
+	if err != nil {
+		Fatalf("%v", err)
 	}
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
 		Fatalf("%v", err)
