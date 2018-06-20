@@ -118,6 +118,7 @@ type peer struct {
 	// only for client role
 	defaultDialTimeout time.Duration
 	redialTimes        int32
+	localAddr          net.Addr
 
 	// only for server role
 	listenAddr string
@@ -133,6 +134,10 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	if err := cfg.check(); err != nil {
 		Fatalf("%v", err)
 	}
+	localAddr, err := net.ResolveTCPAddr(cfg.Network, cfg.LocalAddress)
+	if err != nil {
+		Fatalf("%v", err)
+	}
 	var p = &peer{
 		router:             newRouter("/", pluginContainer),
 		pluginContainer:    pluginContainer,
@@ -142,6 +147,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		closeCh:            make(chan struct{}),
 		slowCometDuration:  cfg.slowCometDuration,
 		defaultDialTimeout: cfg.DefaultDialTimeout,
+		localAddr:          localAddr,
 		network:            cfg.Network,
 		listenAddr:         cfg.ListenAddress,
 		printDetail:        cfg.PrintDetail,
@@ -210,7 +216,11 @@ func (p *peer) CountSession() int {
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
-		return net.DialTimeout(p.network, addr, p.defaultDialTimeout)
+		d := net.Dialer{
+			LocalAddr: p.localAddr,
+			Timeout:   p.defaultDialTimeout,
+		}
+		return d.Dial(p.network, addr)
 	}, addr, protoFunc)
 }
 
@@ -218,7 +228,9 @@ func (p *peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerro
 // using the provided context.
 func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
-		var d net.Dialer
+		d := net.Dialer{
+			LocalAddr: p.localAddr,
+		}
 		return d.DialContext(ctx, p.network, addr)
 	}, addr, protoFunc)
 }
