@@ -17,6 +17,7 @@ package tp
 import (
 	"errors"
 	"math"
+	"net"
 	"time"
 
 	"github.com/henrylee2cn/cfgo"
@@ -40,6 +41,7 @@ type PeerConfig struct {
 	PrintDetail        bool          `yaml:"print_detail"         ini:"print_detail"         comment:"Is print body and metadata or not"`
 	CountTime          bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
 
+	localAddr         net.Addr
 	slowCometDuration time.Duration
 }
 
@@ -55,12 +57,20 @@ func (p *PeerConfig) Reload(bind cfgo.BindFunc) error {
 }
 
 func (p *PeerConfig) check() error {
+	var err error
 	switch p.Network {
 	default:
 		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix or unixpacket.")
 	case "":
 		p.Network = "tcp"
-	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
+		fallthrough
+	case "tcp", "tcp4", "tcp6":
+		p.localAddr, err = net.ResolveTCPAddr(p.Network, p.LocalAddress)
+	case "unix", "unixpacket":
+		p.localAddr, err = net.ResolveUnixAddr(p.Network, p.LocalAddress)
+	}
+	if err != nil {
+		return err
 	}
 	p.slowCometDuration = math.MaxInt64
 	if p.SlowCometDuration > 0 {
