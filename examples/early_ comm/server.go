@@ -8,8 +8,8 @@ import (
 func main() {
 	srv := tp.NewPeer(
 		tp.PeerConfig{
-			PrintDetail:   false,
-			ListenAddress: ":9090",
+			PrintDetail: false,
+			ListenPort:  9090,
 		},
 		new(earlyResult),
 	)

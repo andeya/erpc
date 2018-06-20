@@ -15,7 +15,7 @@ func main() {
 		SlowCometDuration: time.Millisecond * 500,
 		PrintDetail:       true,
 		CountTime:         true,
-		ListenAddress:     "0.0.0.0:9090",
+		ListenPort:        9090,
 	})
 	group := peer.SubRoute("group")
 	group.RoutePull(new(Home))

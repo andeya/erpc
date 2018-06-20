@@ -8,7 +8,7 @@ import (
 func main() {
 	srv := tp.NewPeer(
 		tp.PeerConfig{
-			ListenAddress: ":9090",
+			ListenPort: 9090,
 		},
 		plugin.VerifyAuth(verifyAuthInfo),
 	)

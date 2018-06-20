@@ -8,8 +8,8 @@ import (
 
 func main() {
 	srv := tp.NewPeer(tp.PeerConfig{
-		CountTime:     true,
-		ListenAddress: ":9090",
+		CountTime:  true,
+		ListenPort: 9090,
 	})
 	srv.RoutePull(new(test))
 	srv.ListenAndServe()

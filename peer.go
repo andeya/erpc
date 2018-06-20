@@ -145,7 +145,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		slowCometDuration:  cfg.slowCometDuration,
 		defaultDialTimeout: cfg.DefaultDialTimeout,
 		network:            cfg.Network,
-		listenAddr:         cfg.ListenAddress,
+		listenAddr:         cfg.listenAddrStr,
 		localAddr:          cfg.localAddr,
 		printDetail:        cfg.PrintDetail,
 		countTime:          cfg.CountTime,
