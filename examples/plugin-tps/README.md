@@ -37,7 +37,7 @@ func (*Push) Test(*struct{}) *tp.Rerror {
 func TestTPS(t *testing.T) {
 	tp.SetLoggerLevel("OFF")
 	// Server
-	srv := tp.NewPeer(tp.PeerConfig{ListenAddress: ":9090"}, NewTPS(5))
+	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090}, NewTPS(5))
 	srv.RoutePull(new(Pull))
 	srv.RoutePush(new(Push))
 	go srv.ListenAndServe()

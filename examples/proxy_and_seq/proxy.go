@@ -10,7 +10,7 @@ import (
 func main() {
 	srv := tp.NewPeer(
 		tp.PeerConfig{
-			ListenAddress: ":8080",
+			ListenPort: 8080,
 		},
 		newProxyPlugin(),
 	)

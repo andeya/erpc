@@ -19,7 +19,7 @@ func main() {
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var peer = tp.NewPeer(tp.PeerConfig{
 		DefaultBodyCodec: "protobuf",
-		ListenAddress:    "0.0.0.0:9090",
+		ListenPort:       9090,
 	})
 	{
 		group := peer.SubRoute("group")

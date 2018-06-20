@@ -7,7 +7,7 @@ import (
 func main() {
 	tp.SetLoggerLevel("ERROR")
 	cli := tp.NewPeer(tp.PeerConfig{})
-	// cli := tp.NewPeer(tp.PeerConfig{LocalAddress: "0.0.0.0:6555"})
+	// cli := tp.NewPeer(tp.PeerConfig{LocalIP: "0.0.0.0"})
 	defer cli.Close()
 	cli.RoutePush(new(push))
 	sess, err := cli.Dial(":9090")

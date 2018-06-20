@@ -7,8 +7,8 @@ import (
 
 func main() {
 	cfg := tp.PeerConfig{
-		CountTime:     true,
-		ListenAddress: ":9090",
+		CountTime:  true,
+		ListenPort: 9090,
 	}
 
 	// auto create and sync config/config.yaml

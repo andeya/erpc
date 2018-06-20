@@ -17,8 +17,8 @@ func panic_push(tp.PushCtx, *interface{}) *tp.Rerror {
 
 func TestPanic(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{
-		CountTime:     true,
-		ListenAddress: ":9090",
+		CountTime:  true,
+		ListenPort: 9090,
 	})
 	srv.RoutePullFunc(panic_pull)
 	srv.RoutePushFunc(panic_push)

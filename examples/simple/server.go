@@ -9,9 +9,9 @@ import (
 
 func main() {
 	srv := tp.NewPeer(tp.PeerConfig{
-		CountTime:     true,
-		ListenAddress: ":9090",
-		PrintDetail:   true,
+		CountTime:   true,
+		ListenPort:  9090,
+		PrintDetail: true,
 	})
 	srv.RoutePull(new(math))
 	srv.ListenAndServe()

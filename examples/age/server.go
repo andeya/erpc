@@ -11,7 +11,7 @@ func main() {
 	srv := tp.NewPeer(tp.PeerConfig{
 		PrintDetail:       true,
 		CountTime:         true,
-		ListenAddress:     ":9090",
+		ListenPort:        9090,
 		DefaultSessionAge: time.Second * 7,
 		DefaultContextAge: time.Second * 2,
 	})
