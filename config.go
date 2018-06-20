@@ -45,6 +45,7 @@ type PeerConfig struct {
 	localAddr         net.Addr
 	listenAddrStr     string
 	slowCometDuration time.Duration
+	checked           bool
 }
 
 var _ cfgo.Config = new(PeerConfig)
@@ -55,10 +56,15 @@ func (p *PeerConfig) Reload(bind cfgo.BindFunc) error {
 	if err != nil {
 		return err
 	}
+	p.checked = false
 	return p.check()
 }
 
 func (p *PeerConfig) check() error {
+	if p.checked {
+		return nil
+	}
+	p.checked = true
 	if len(p.LocalIP) == 0 {
 		p.LocalIP = "0.0.0.0"
 	}
