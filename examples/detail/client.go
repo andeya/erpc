@@ -5,7 +5,6 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
@@ -36,10 +35,12 @@ func main() {
 				"bytes": []byte("test bytes"),
 			},
 			&result,
-			socket.WithXferPipe('g'),
-			socket.WithSetMeta("set", "0"),
-			socket.WithAddMeta("add", "1"),
-			socket.WithAddMeta("add", "2"),
+			tp.WithBodyCodec('j'),
+			tp.WithAcceptBodyCodec('j'),
+			tp.WithXferPipe('g'),
+			tp.WithSetMeta("set", "0"),
+			tp.WithAddMeta("add", "1"),
+			tp.WithAddMeta("add", "2"),
 		).Rerror(); rerr != nil {
 			tp.Errorf("pull error: %v", rerr)
 			time.Sleep(time.Second * 2)
@@ -61,7 +62,7 @@ func main() {
 			[]byte("test bytes"),
 		},
 		&result,
-		socket.WithXferPipe('g'),
+		tp.WithXferPipe('g'),
 	).Rerror()
 	if tp.IsConnRerror(rerr) {
 		tp.Fatalf("has conn rerror: %v", rerr)
