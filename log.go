@@ -78,8 +78,9 @@ type defaultLogger struct {
 
 func (l *defaultLogger) newSet() {
 	var consoleLogBackend = &logging.LogBackend{
-		Logger: log.New(color.NewColorableStdout(), "", 0),
-		Color:  true,
+		Logger:    log.New(color.NewColorableStdout(), "", 0),
+		ErrLogger: log.New(color.NewColorableStderr(), "", 0),
+		Color:     true,
 	}
 	consoleFormat := logging.MustStringFormatter("[%{time:2006/01/02 15:04:05.000}] [%{color:bold}%{level:.4s}%{color:reset}] %{message} <%{longfile}>")
 	consoleBackendLevel := logging.AddModuleLevel(logging.NewBackendFormatter(consoleLogBackend, consoleFormat))
