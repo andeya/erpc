@@ -97,6 +97,8 @@ type (
 		SetId(newId string)
 		// Close closes the session.
 		Close() error
+		// CloseNotify returns a channel that closes when the connection has gone away.
+		CloseNotify() <-chan struct{}
 		// Health checks if the session is usable.
 		Health() bool
 		// AsyncPull sends a packet and receives reply asynchronously.
@@ -141,7 +143,9 @@ type session struct {
 	pullCmdMap                     goutil.Map
 	protoFuncs                     []socket.ProtoFunc
 	socket                         socket.Socket
-	status                         int32 // 0:ok, 1:active closed, 2:disconnect
+	status                         int32         // 0:ok, 1:active closed, 2:disconnect
+	closeNotifyCh                  chan struct{} // closeNotifyCh is the channel returned by CloseNotify.
+	didCloseNotify                 int32
 	statusLock                     sync.Mutex
 	writeLock                      sync.Mutex
 	graceCtxWaitGroup              sync.WaitGroup
@@ -166,6 +170,7 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 		conn:           conn,
 		protoFuncs:     protoFuncs,
 		socket:         socket.NewSocket(conn, protoFuncs...),
+		closeNotifyCh:  make(chan struct{}),
 		pullCmdMap:     goutil.AtomicMap(),
 		sessionAge:     peer.defaultSessionAge,
 		contextAge:     peer.defaultContextAge,
@@ -609,6 +614,17 @@ func (s *session) getStatus() int32 {
 	return atomic.LoadInt32(&s.status)
 }
 
+// CloseNotify returns a channel that closes when the connection has gone away.
+func (s *session) CloseNotify() <-chan struct{} {
+	return s.closeNotifyCh
+}
+
+func (s *session) notifyClosed() {
+	if atomic.CompareAndSwapInt32(&s.didCloseNotify, 0, 1) {
+		close(s.closeNotifyCh)
+	}
+}
+
 // Close closes the session.
 func (s *session) Close() error {
 	s.lock.Lock()
@@ -624,6 +640,7 @@ func (s *session) Close() error {
 	s.statusLock.Unlock()
 
 	s.peer.sessHub.Delete(s.Id())
+	s.notifyClosed()
 
 	s.graceCtxWaitGroup.Wait()
 	s.gracePullCmdWaitGroup.Wait()
@@ -654,6 +671,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	s.statusLock.Unlock()
 
 	s.peer.sessHub.Delete(s.Id())
+	s.notifyClosed()
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteAddr().String(), err.Error())
