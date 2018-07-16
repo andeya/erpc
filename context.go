@@ -594,6 +594,7 @@ func (c *handlerCtx) bindReply(header socket.Header) interface{} {
 	c.swap = c.pullCmd.swap
 	c.pullCmd.inputBodyCodec = c.GetBodyCodec()
 	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
+	c.pullCmd.inputMeta = utils.AcquireArgs()
 	c.input.Meta().CopyTo(c.pullCmd.inputMeta)
 	c.setContext(c.pullCmd.output.Context())
 	c.input.SetBody(c.pullCmd.result)
