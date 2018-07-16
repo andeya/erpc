@@ -335,7 +335,7 @@ func (p *pluginSingleContainer) postDial(sess PreSession) (rerr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
 			Errorf("[PostDialPlugin:%s] network:%s, addr:%s, panic:%v\n%s", pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), p, goutil.PanicTrace(2))
-			rerr = rerrDialFailed.Copy().SetDetail(fmt.Sprint(p))
+			rerr = rerrDialFailed.Copy().SetReason(fmt.Sprint(p))
 		}
 	}()
 	for _, plugin := range p.plugins {
@@ -356,7 +356,7 @@ func (p *pluginSingleContainer) postAccept(sess PreSession) (rerr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
 			Errorf("[PostAcceptPlugin:%s] network:%s, addr:%s, panic:%v\n%s", pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), p, goutil.PanicTrace(2))
-			rerr = rerrInternalServerError.Copy().SetDetail(fmt.Sprint(p))
+			rerr = rerrInternalServerError.Copy().SetReason(fmt.Sprint(p))
 		}
 	}()
 	for _, plugin := range p.plugins {
