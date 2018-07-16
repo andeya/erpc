@@ -440,7 +440,6 @@ func (s *session) AsyncPull(
 		doneChan:    make(chan struct{}),
 		start:       s.peer.timeNow(),
 		swap:        goutil.RwMap(),
-		inputMeta:   utils.AcquireArgs(),
 	}
 
 	// count pull-launch

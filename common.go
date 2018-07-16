@@ -308,9 +308,8 @@ func NewFakePullCmd(uri string, arg, result interface{}, rerr *Rerror) PullCmd {
 			socket.WithUri(uri),
 			socket.WithBody(arg),
 		),
-		result:    result,
-		rerr:      rerr,
-		inputMeta: utils.AcquireArgs(),
+		result: result,
+		rerr:   rerr,
 	}
 }
 
@@ -353,6 +352,9 @@ func (f *fakePullCmd) InputBodyCodec() byte {
 
 // InputMeta returns the header metadata of input packet.
 func (f *fakePullCmd) InputMeta() *utils.Args {
+	if f.inputMeta == nil {
+		f.inputMeta = utils.AcquireArgs()
+	}
 	return f.inputMeta
 }
 
