@@ -236,7 +236,7 @@ func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...socket
 func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) (*session, *Rerror) {
 	var conn, dialErr = dialFunc()
 	if dialErr != nil {
-		rerr := rerrDialFailed.Copy().SetDetail(dialErr.Error())
+		rerr := rerrDialFailed.Copy().SetReason(dialErr.Error())
 		return nil, rerr
 	}
 	if p.tlsConfig != nil {

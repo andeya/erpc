@@ -319,7 +319,7 @@ func (s *session) SetContextAge(duration time.Duration) {
 func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) (replyErr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
-			replyErr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
+			replyErr = rerrBadPacket.Copy().SetReason(fmt.Sprintf("%v", p))
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
@@ -357,7 +357,7 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.PacketSetting) (input *socket.Packet, rerr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
-			rerr = rerrBadPacket.Copy().SetDetail(fmt.Sprintf("%v", p))
+			rerr = rerrBadPacket.Copy().SetReason(fmt.Sprintf("%v", p))
 			socket.PutPacket(input)
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
@@ -374,7 +374,7 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 	s.socket.SetReadDeadline(deadline)
 
 	if err := s.socket.ReadPacket(input); err != nil {
-		rerr := rerrConnClosed.Copy().SetDetail(err.Error())
+		rerr := rerrConnClosed.Copy().SetReason(err.Error())
 		socket.PutPacket(input)
 		return nil, rerr
 	}
@@ -749,7 +749,7 @@ func (s *session) startReadAndHandle() {
 			return
 		}
 		if err != nil {
-			ctx.handleErr = rerrBadPacket.Copy().SetDetail(err.Error())
+			ctx.handleErr = rerrBadPacket.Copy().SetReason(err.Error())
 		}
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
@@ -807,7 +807,7 @@ func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
 	Debugf("write error: %s", err.Error())
 
 ERR:
-	rerr = rerrWriteFailed.Copy().SetDetail(err.Error())
+	rerr = rerrWriteFailed.Copy().SetReason(err.Error())
 	return conn, rerr
 }
 

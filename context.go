@@ -400,7 +400,7 @@ func (c *handlerCtx) bindPush(header socket.Header) interface{} {
 
 	u := header.UriObject()
 	if len(u.Path) == 0 {
-		c.handleErr = rerrBadPacket.Copy().SetDetail("invalid URI for packet")
+		c.handleErr = rerrBadPacket.Copy().SetReason("invalid URI for packet")
 		return nil
 	}
 
@@ -461,7 +461,7 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 
 	u := header.UriObject()
 	if len(u.Path) == 0 {
-		c.handleErr = rerrBadPacket.Copy().SetDetail("invalid URI for packet")
+		c.handleErr = rerrBadPacket.Copy().SetReason("invalid URI for packet")
 		return nil
 	}
 
@@ -498,7 +498,7 @@ func (c *handlerCtx) handlePull() {
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 			if !writed {
 				if c.handleErr == nil {
-					c.handleErr = rerrInternalServerError.Copy().SetDetail(fmt.Sprint(p))
+					c.handleErr = rerrInternalServerError.Copy().SetReason(fmt.Sprint(p))
 				}
 				c.writeReply(c.handleErr)
 			}
@@ -543,7 +543,7 @@ func (c *handlerCtx) handlePull() {
 			c.handleErr = rerr
 		}
 		if rerr != rerrConnClosed {
-			c.writeReply(rerrInternalServerError.Copy().SetDetail(rerr.Detail))
+			c.writeReply(rerrInternalServerError.Copy().SetReason(rerr.Reason))
 		}
 		return
 	}

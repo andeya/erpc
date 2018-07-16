@@ -16,10 +16,10 @@ type (
 	Rerror struct {
 		// Code error code
 		Code int32
-		// Message error message to the user (optional)
+		// Message the error message displayed to the user (optional)
 		Message string
-		// Detail error's detailed reason (optional)
-		Detail string
+		// Reason the cause of the error for debugging (optional)
+		Reason string
 	}
 )
 
@@ -29,15 +29,15 @@ var (
 
 	reA = []byte(`{"code":`)
 	reB = []byte(`,"message":`)
-	reC = []byte(`,"detail":`)
+	reC = []byte(`,"reason":`)
 )
 
 // NewRerror creates a *Rerror.
-func NewRerror(code int32, message, detail string) *Rerror {
+func NewRerror(code int32, message, reason string) *Rerror {
 	return &Rerror{
 		Code:    code,
 		Message: message,
-		Detail:  detail,
+		Reason:  reason,
 	}
 }
 
@@ -67,15 +67,15 @@ func (r Rerror) Copy() *Rerror {
 	return &r
 }
 
-// SetMessage sets the message field.
+// SetMessage sets the error message displayed to the user.
 func (r *Rerror) SetMessage(message string) *Rerror {
 	r.Message = message
 	return r
 }
 
-// SetDetail sets the detail field.
-func (r *Rerror) SetDetail(detail string) *Rerror {
-	r.Detail = detail
+// SetReason sets the cause of the error for debugging.
+func (r *Rerror) SetReason(reason string) *Rerror {
+	r.Reason = reason
 	return r
 }
 
@@ -98,9 +98,9 @@ func (r *Rerror) MarshalJSON() ([]byte, error) {
 		b = append(b, reB...)
 		b = append(b, utils.ToJsonStr(goutil.StringToBytes(r.Message), false)...)
 	}
-	if len(r.Detail) > 0 {
+	if len(r.Reason) > 0 {
 		b = append(b, reC...)
-		b = append(b, utils.ToJsonStr(goutil.StringToBytes(r.Detail), false)...)
+		b = append(b, utils.ToJsonStr(goutil.StringToBytes(r.Reason), false)...)
 	}
 	b = append(b, '}')
 	return b, nil
@@ -114,7 +114,7 @@ func (r *Rerror) UnmarshalJSON(b []byte) error {
 	s := goutil.BytesToString(b)
 	r.Code = int32(gjson.Get(s, "code").Int())
 	r.Message = gjson.Get(s, "message").String()
-	r.Detail = gjson.Get(s, "detail").String()
+	r.Reason = gjson.Get(s, "reason").String()
 	return nil
 }
 
@@ -143,7 +143,7 @@ func ToRerror(err error) *Rerror {
 	if ok {
 		return r.toRerror()
 	}
-	rerr := rerrUnknownError.Copy().SetDetail(err.Error())
+	rerr := rerrUnknownError.Copy().SetReason(err.Error())
 	return rerr
 }
 
