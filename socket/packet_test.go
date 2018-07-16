@@ -6,7 +6,7 @@ import (
 
 func TestPacketString(t *testing.T) {
 	var p = NewPacket()
-	p.SetSeq(21)
+	p.SetSeq("21")
 	p.XferPipe().Append('g')
 	p.SetPtype(3)
 	p.SetSize(300)
