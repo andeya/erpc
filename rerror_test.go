@@ -13,7 +13,7 @@ func TestRerror(t *testing.T) {
 	rerr.Code = 400
 	rerr.Message = "msg"
 	t.Logf("%v", rerr)
-	rerr.Detail = `"bala...bala..."`
+	rerr.Reason = `"bala...bala..."`
 	t.Logf("%v", rerr)
 	meta := new(utils.Args)
 	rerr.SetToMeta(meta)
