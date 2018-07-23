@@ -15,7 +15,6 @@
 package tp
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -884,10 +883,10 @@ const (
 )
 
 const (
-	logFormatPushLaunch = "PUSH-> %s %s %s %q\nSEND(%s)"
-	logFormatPushHandle = "PUSH<- %s %s %s %q\nRECV(%s)"
-	logFormatPullLaunch = "PULL-> %s %s %s %q\nSEND(%s)\nRECV(%s)"
-	logFormatPullHandle = "PULL<- %s %s %s %q\nRECV(%s)\nSEND(%s)"
+	logFormatPushLaunch = "PUSH-> %s %s %s %q SEND(%s)"
+	logFormatPushHandle = "PUSH<- %s %s %s %q RECV(%s)"
+	logFormatPullLaunch = "PULL-> %s %s %s %q SEND(%s) RECV(%s)"
+	logFormatPullHandle = "PULL<- %s %s %s %q RECV(%s) SEND(%s)"
 )
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
@@ -941,12 +940,13 @@ func packetLogBytes(packet *socket.Packet, printDetail bool) []byte {
 		}
 	}
 	b = append(b, '}')
-	buf := bytes.NewBuffer(nil)
-	err := json.Indent(buf, b, "", "  ")
-	if err != nil {
-		return b
-	}
-	return buf.Bytes()
+	return b
+	// buf := bytes.NewBuffer(nil)
+	// err := json.Indent(buf, b, "", "  ")
+	// if err != nil {
+	// 	return b
+	// }
+	// return buf.Bytes()
 }
 
 func bodyLogBytes(packet *socket.Packet) []byte {
