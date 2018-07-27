@@ -670,9 +670,9 @@ type (
 	// CallCmd the command of the calling operation's response.
 	CallCmd interface {
 		// TracePeer trace back the peer.
-		TracePeer() (Peer, bool)
+		TracePeer() (peer Peer, found bool)
 		// TraceSession trace back the session.
-		TraceSession() (Session, bool)
+		TraceSession() (sess Session, found bool)
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
