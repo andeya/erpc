@@ -232,6 +232,8 @@ var WithNewBody = socket.WithNewBody
 
 // WithXferPipe sets transfer filter pipe.
 //  func WithXferPipe(filterId ...byte) socket.PacketSetting
+// NOTE:
+//  panic if the filterId is not registered
 var WithXferPipe = socket.WithXferPipe
 
 // GetPacket gets a *Packet form packet stack.

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package pb;
+
+message payload {
+    string seq        = 1;
+    int32  ptype      = 2;
+    string uri        = 3;
+    bytes  meta       = 4;
+    int32  body_codec = 5;
+    bytes  body       = 6;
+}

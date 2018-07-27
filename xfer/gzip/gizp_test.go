@@ -1,24 +1,24 @@
-package xfer_test
+package gzip_test
 
 import (
 	"testing"
 
 	"github.com/henrylee2cn/teleport/xfer"
+	"github.com/henrylee2cn/teleport/xfer/gzip"
 )
 
 func TestGzip(t *testing.T) {
-	gzip := xfer.NewGzip('0', "gzip-5", 5)
-
 	// test register
-	xfer.Reg(gzip)
-	if _, err := xfer.Get('0'); err != nil {
+	gzip.Reg('g', "gzip-5", 5)
+
+	if _, err := xfer.Get('g'); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := xfer.GetByName("gzip-5"); err != nil {
 		t.Fatal(err)
 	}
 	xferPipe := xfer.NewXferPipe()
-	xferPipe.Append('0')
+	xferPipe.Append('g')
 	t.Logf("transfer filter: ids:%v, names:%v", xferPipe.Ids(), xferPipe.Names())
 
 	// test logic
