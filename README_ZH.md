@@ -7,7 +7,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 可用于Peer-Peer对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
 
 
-![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_framework.png)
+![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/v4/doc/teleport_framework.png)
 
 
 ## 性能测试
@@ -45,7 +45,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 | 2000     | 8       | 6       | 64      | 0       | 183351   |
 | 5000     | 21      | 18      | 651     | 0       | 133886   |
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/v4/teleport)**
+**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
 - CPU耗时火焰图 teleport/socket
 
@@ -65,7 +65,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 | 版本   | 状态      | 分支                                       |
 | ---- | ------- | ---------------------------------------- |
 | v4      | release | [v4](https://github.com/henrylee2cn/teleport/tree/v4) |
-| v3      | release | [master(or v3)](https://github.com/henrylee2cn/teleport/tree/master) |
+| v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/v3) |
 | v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
 | v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
@@ -83,7 +83,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - 底层通信数据包包含`Header`和`Body`两部分
 - 数据包`Header`包含与HTTP header相同格式的元信息
 - 支持单独定制`Body`编码类型，例如`JSON` `Protobuf` `string`
-- 支持请求、回复、推送等通信方法
+- 支持推、拉、回复等通信方法
 - 支持插件机制，可以自定义认证、心跳、微服务注册中心、统计信息插件等
 - 无论服务器或客户端，均支持优雅重启、优雅关闭
 - 支持实现反向代理功能
@@ -115,12 +115,12 @@ func main() {
         CountTime:  true,
         ListenPort: 9090,
     })
-    srv.RouteCall(new(math))
+    srv.RoutePull(new(math))
     srv.ListenAndServe()
 }
 
 type math struct {
-    tp.CallCtx
+    tp.PullCtx
 }
 
 func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
@@ -159,7 +159,7 @@ func main() {
     }
 
     var result int
-    rerr := sess.Call("/math/add?push_status=yes",
+    rerr := sess.Pull("/math/add?push_status=yes",
         []int{1, 2, 3, 4, 5},
         &result,
     ).Rerror()
@@ -180,7 +180,7 @@ func (p *push) Status(arg *string) *tp.Rerror {
 }
 ```
 
-[更多示例](https://github.com/henrylee2cn/teleport/tree/v4/examples)
+[更多示例](https://github.com/henrylee2cn/teleport/blob/master/examples)
 
 
 ## 框架设计
@@ -195,10 +195,10 @@ func (p *push) Status(arg *string) *tp.Rerror {
 - **XferPipe：** 数据包字节流的编码处理管道，如压缩、加密、校验等
 - **XferFilter：** 一个在数据包传输前，对数据进行加工的接口
 - **Plugin：** 贯穿于通信各个环节的插件
-- **Session：** 基于Socket封装的连接会话，提供的请求、回复、推送、关闭等会话操作
-- **Context：** 连接会话中一次通信（如CALL-REPLY, PUSH）的上下文对象
-- **Call-Launch：** 从对端Peer请求数据
-- **Call-Handle：** 处理和回复对端Peer的请求
+- **Session：** 基于Socket封装的连接会话，提供的推、拉、回复、关闭等会话操作
+- **Context：** 连接会话中一次通信（如PULL-REPLY, PUSH）的上下文对象
+- **Pull-Launch：** 从对端Peer拉数据
+- **Pull-Handle：** 处理和回复对端Peer的拉请求
 - **Push-Launch：** 将数据推送到对端Peer
 - **Push-Handle：** 处理同伴的推送
 - **Router：** 通过请求信息（如URI）索引响应函数（Handler）的路由器
@@ -355,7 +355,7 @@ type Peer interface {
 }
 ```
 
-默认的协议`RawProto`(Big Endian)：
+默认的协议`FastProto`(Big Endian)：
 
 ```sh
 {4 bytes packet length}
@@ -365,7 +365,7 @@ type Peer interface {
 # The following is handled data by transfer pipe
 {4 bytes sequence length}
 {sequence}
-{1 byte packet type} // e.g. CALL:1; REPLY:2; PUSH:3
+{1 byte packet type} // e.g. PULL:1; REPLY:2; PUSH:3
 {4 bytes URI length}
 {URI}
 {4 bytes metadata length}
@@ -394,11 +394,11 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
 
-### Call-Controller-Struct 接口模板
+### Pull-Controller-Struct 接口模板
 
 ```go
 type Aaa struct {
-    tp.CallCtx
+    tp.PullCtx
 }
 func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
     ...
@@ -409,17 +409,17 @@ func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
 - 注册到根路由：
 
 ```go
-// register the call route: /aaa/xx_zz
-peer.RouteCall(new(Aaa))
+// register the pull route: /aaa/xx_zz
+peer.RoutePull(new(Aaa))
 
-// or register the call route: /xx_zz
-peer.RouteCallFunc((*Aaa).XxZz)
+// or register the pull route: /xx_zz
+peer.RoutePullFunc((*Aaa).XxZz)
 ```
 
-### Call-Handler-Function 接口模板
+### Pull-Handler-Function 接口模板
 
 ```go
-func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
+func XxZz(ctx tp.PullCtx, arg *<T>) (<T>, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -428,8 +428,8 @@ func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
 - 注册到根路由：
 
 ```go
-// register the call route: /xx_zz
-peer.RouteCallFunc(XxZz)
+// register the pull route: /xx_zz
+peer.RoutePullFunc(XxZz)
 ```
 
 ### Push-Controller-Struct 接口模板
@@ -471,10 +471,10 @@ func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
 peer.RoutePushFunc(YyZz)
 ```
 
-### Unknown-Call-Handler-Function 接口模板
+### Unknown-Pull-Handler-Function 接口模板
 
 ```go
-func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
+func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -483,8 +483,8 @@ func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 - 注册到根路由：
 
 ```go
-// register the unknown call route: /*
-peer.SetUnknownCall(XxxUnknownCall)
+// register the unknown pull route: /*
+peer.SetUnknownPull(XxxUnknownPull)
 ```
 
 ### Unknown-Push-Handler-Function 接口模板
@@ -525,7 +525,7 @@ func NewIgnoreCase() *ignoreCase {
 type ignoreCase struct{}
 
 var (
-    _ tp.PostReadCallHeaderPlugin = new(ignoreCase)
+    _ tp.PostReadPullHeaderPlugin = new(ignoreCase)
     _ tp.PostReadPushHeaderPlugin = new(ignoreCase)
 )
 
@@ -533,7 +533,7 @@ func (i *ignoreCase) Name() string {
     return "ignoreCase"
 }
 
-func (i *ignoreCase) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (i *ignoreCase) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
     // Dynamic transformation path is lowercase
     ctx.UriObject().Path = strings.ToLower(ctx.UriObject().Path)
     return nil
@@ -552,11 +552,11 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 // add router group
 group := peer.SubRoute("test")
 // register to test group
-group.RouteCall(new(Aaa), NewIgnoreCase())
-peer.RouteCallFunc(XxZz, NewIgnoreCase())
+group.RoutePull(new(Aaa), NewIgnoreCase())
+peer.RoutePullFunc(XxZz, NewIgnoreCase())
 group.RoutePush(new(Bbb))
 peer.RoutePushFunc(YyZz)
-peer.SetUnknownCall(XxxUnknownCall)
+peer.SetUnknownPull(XxxUnknownPull)
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
@@ -571,7 +571,7 @@ type PeerConfig struct {
     RedialTimes        int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; for client role"`
     DefaultBodyCodec   string        `yaml:"default_body_codec"   ini:"default_body_codec"   comment:"Default body codec type id"`
     DefaultSessionAge  time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
-    DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default CALL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
+    DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default PULL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
     SlowCometDuration  time.Duration `yaml:"slow_comet_duration"  ini:"slow_comet_duration"  comment:"Slow operation alarm threshold; ns,µs,ms,s ..."`
     PrintDetail        bool          `yaml:"print_detail"         ini:"print_detail"         comment:"Is print body and metadata or not"`
     CountTime          bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
@@ -625,44 +625,46 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                  |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------- |
-| [json](https://github.com/henrylee2cn/teleport/blob/v4/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
-| [protobuf](https://github.com/henrylee2cn/teleport/blob/v4/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
-| [plain](https://github.com/henrylee2cn/teleport/blob/v4/codec/plain_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Plain text codec(teleport own)   |
-| [form](https://github.com/henrylee2cn/teleport/blob/v4/codec/form_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
-
+| [json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
+| [protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
+| [plain](https://github.com/henrylee2cn/teleport/blob/master/codec/plain_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Plain text codec(teleport own)   |
+| [form](https://github.com/henrylee2cn/teleport/blob/master/codec/form_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
 
 ### 插件
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [auth](https://github.com/henrylee2cn/teleport/tree/v4/plugin/auth) | `import "github.com/henrylee2cn/teleport/plugin/auth"` | A auth plugin for verifying peer at the first time |
-| [binder](https://github.com/henrylee2cn/teleport/tree/v4/plugin/binder) | `import binder "github.com/henrylee2cn/teleport/plugin/binder"` | Parameter Binding Verification for Struct Handler |
-| [heartbeat](https://github.com/henrylee2cn/teleport/tree/v4/plugin/heartbeat) | `import heartbeat "github.com/henrylee2cn/teleport/plugin/heartbeat"` | A generic timing heartbeat plugin        |
-| [proxy](https://github.com/henrylee2cn/teleport/tree/v4/plugin/proxy) | `import "github.com/henrylee2cn/teleport/plugin/proxy"` | A proxy plugin for handling unknown calling or pushing |
-[secure](https://github.com/henrylee2cn/teleport/tree/v4/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the packet body
+| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
+| [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder) | `import binder "github.com/henrylee2cn/tp-ext/plugin-binder"` | Parameter Binding Verification for Struct Handler |
+| [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat) | `import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"` | A generic timing heartbeat plugin        |
+| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+[secure](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-secure)|`import secure "github.com/henrylee2cn/tp-ext/plugin-secure"`|Encrypting/decrypting the packet body
 
 ### 协议
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [rawproto](https://github.com/henrylee2cn/teleport/tree/v4/proto/rawproto) | `import "github.com/henrylee2cn/teleport/proto/rawproto` | A fast socket communication protocol(teleport default protocol) |
-| [jsonproto](https://github.com/henrylee2cn/teleport/tree/v4/proto/jsonproto) | `import "github.com/henrylee2cn/teleport/proto/jsonproto"` | A JSON socket communication protocol     |
-| [pbproto](https://github.com/henrylee2cn/teleport/tree/v4/proto/pbproto) | `import "github.com/henrylee2cn/teleport/proto/pbproto"` | A Protobuf socket communication protocol     |
+| [fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70) | `import "github.com/henrylee2cn/teleport/socket` | A fast socket communication protocol(teleport default protocol) |
+| [jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto) | `import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"` | A JSON socket communication protocol     |
+| [pbproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-pbproto) | `import pbproto "github.com/henrylee2cn/tp-ext/proto-pbproto"` | A Protobuf socket communication protocol     |
 
 ### 传输过滤器
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [gzip](https://github.com/henrylee2cn/teleport/tree/v4/xfer/gzip) | `import "github.com/henrylee2cn/teleport/xfer/gzip"` | Gzip(teleport own)                       |
-| [md5](https://github.com/henrylee2cn/teleport/tree/v4/xfer/md5) | `import "github.com/henrylee2cn/teleport/xfer/md5"` | Provides a integrity check transfer filter |
+| [gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go) | `import "github.com/henrylee2cn/teleport/xfer"` | Gzip(teleport own)                       |
+| [md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash) | `import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"` | Provides a integrity check transfer filter |
 
 ### 其他模块
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [clientsession](https://github.com/henrylee2cn/teleport/tree/v4/mixer/clientsession) | `import "github.com/henrylee2cn/teleport/mixer/clientsession"` | Client session with a high efficient and load balanced connection pool |
-| [websocket](https://github.com/henrylee2cn/teleport/tree/v4/mixer/websocket) | `import "github.com/henrylee2cn/teleport/mixer/websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
-| [html](https://github.com/xiaoenai/tp-micro/tree/master/helper/mod-html) | `html "github.com/xiaoenai/tp-micro/helper/mod-html"` | HTML render for http client |
+| [cliSession](https://github.com/henrylee2cn/tp-ext/blob/master/mod-cliSession) | `import cliSession "github.com/henrylee2cn/tp-ext/mod-cliSession"` | Client session with a high efficient and load balanced connection pool |
+| [websocket](https://github.com/henrylee2cn/tp-ext/blob/master/mod-websocket) | `import websocket "github.com/henrylee2cn/tp-ext/mod-websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
+| [html](https://github.com/xiaoenai/ants/blob/master/helper/mod-html) | `html "github.com/xiaoenai/ants/helper/mod-html"` | HTML render for http client |
+
+
+[扩展库](https://github.com/henrylee2cn/tp-ext)
 
 ## 基于Teleport的项目
 
@@ -681,4 +683,4 @@ type PeerConfig struct {
 
 ## 开源协议
 
-Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/v4/LICENSE) file for the full license text
+Teleport 项目采用商业应用友好的 [Apache2.0](https://github.com/henrylee2cn/teleport/raw/v4/LICENSE) 协议发布

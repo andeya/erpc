@@ -27,21 +27,21 @@ darwin amd64 4CPU 8GB
 
 - teleport-socket
 
-![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_benchmark.png)
+![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/v4/doc/tp_socket_benchmark.png)
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
 - contrast rpcx
 
-![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/develop/doc/rpcx_benchmark.jpg)
+![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/v4/doc/rpcx_benchmark.jpg)
 
 **[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
 
 - torch of teleport-socket
 
-![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.png)
+![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/v4/doc/tp_socket_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/develop/doc/tp_socket_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/v4/doc/tp_socket_torch.svg)**
 
 ## Example
 
@@ -163,7 +163,7 @@ func main() {
 }
 ```
 
-[More Examples](https://github.com/henrylee2cn/teleport/tree/master/socket/example)
+[More Examples](https://github.com/henrylee2cn/teleport/tree/v4/socket/example)
 
 ## Keyworks
 
