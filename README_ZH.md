@@ -64,9 +64,10 @@ Teleport是一个通用、高效、灵活的Socket框架。
 
 | 版本   | 状态      | 分支                                       |
 | ---- | ------- | ---------------------------------------- |
-| v3   | release | [v3](https://github.com/henrylee2cn/teleport/tree/master) |
-| v2   | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
-| v1   | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
+| v4      | release | [v4](https://github.com/henrylee2cn/teleport/tree/v4) |
+| v3      | release | [master(or v3)](https://github.com/henrylee2cn/teleport/tree/master) |
+| v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
+| v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
 ## 安装
 

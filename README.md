@@ -64,7 +64,8 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 | version | status  | branch                                   |
 | ------- | ------- | ---------------------------------------- |
-| v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/master) |
+| v4      | release | [v4](https://github.com/henrylee2cn/teleport/tree/v4) |
+| v3      | release | [master(or v3)](https://github.com/henrylee2cn/teleport/tree/master) |
 | v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
 | v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
