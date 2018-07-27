@@ -23,14 +23,14 @@ func main() {
 	})
 	{
 		group := peer.SubRoute("group")
-		group.RoutePull(new(Home))
+		group.RouteCall(new(Home))
 	}
 	peer.ListenAndServe()
 }
 
 // Home controller
 type Home struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 // Test handler

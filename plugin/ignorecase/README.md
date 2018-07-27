@@ -20,7 +20,7 @@ import (
 )
 
 type Home struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
@@ -39,7 +39,7 @@ func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Re
 func TestIngoreCase(t *testing.T) {
 	// Server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090}, ignorecase.NewIgnoreCase())
-	srv.RoutePull(new(Home))
+	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
@@ -53,7 +53,7 @@ func TestIngoreCase(t *testing.T) {
 		}
 	}
 	var result interface{}
-	rerr := sess.Pull("/home/tesT?peer_id=110",
+	rerr := sess.Call("/home/tesT?peer_id=110",
 		map[string]interface{}{
 			"bytes": []byte("test bytes"),
 		},

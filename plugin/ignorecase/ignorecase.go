@@ -15,7 +15,7 @@ func NewIgnoreCase() *ignoreCase {
 type ignoreCase struct{}
 
 var (
-	_ tp.PostReadPullHeaderPlugin = new(ignoreCase)
+	_ tp.PostReadCallHeaderPlugin = new(ignoreCase)
 	_ tp.PostReadPushHeaderPlugin = new(ignoreCase)
 )
 
@@ -23,7 +23,7 @@ func (i *ignoreCase) Name() string {
 	return "ignoreCase"
 }
 
-func (i *ignoreCase) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (i *ignoreCase) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
 	// Dynamic transformation path is lowercase
 	ctx.UriObject().Path = strings.ToLower(ctx.UriObject().Path)
 	return nil

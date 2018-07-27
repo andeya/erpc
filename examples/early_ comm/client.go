@@ -10,7 +10,7 @@ func main() {
 		tp.PeerConfig{
 			PrintDetail: false,
 		},
-		new(earlyPull),
+		new(earlyCall),
 	)
 	defer cli.Close()
 	_, err := cli.Dial(":9090")
@@ -19,13 +19,13 @@ func main() {
 	}
 }
 
-type earlyPull struct{}
+type earlyCall struct{}
 
-func (e *earlyPull) Name() string {
-	return "early_pull"
+func (e *earlyCall) Name() string {
+	return "early_call"
 }
 
-func (e *earlyPull) PostDial(sess tp.PreSession) *tp.Rerror {
+func (e *earlyCall) PostDial(sess tp.PreSession) *tp.Rerror {
 	rerr := sess.Send(
 		"/early/ping",
 		map[string]string{

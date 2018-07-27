@@ -73,7 +73,7 @@ type (
 	}
 )
 
-type P struct{ tp.PullCtx }
+type P struct{ tp.CallCtx }
 
 func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
 	tp.Infof("query arg _x: %s, xy_z: %s, swap_value: %v", arg.Query.X, arg.XyZ, arg.SwapValue)
@@ -85,7 +85,7 @@ type SwapPlugin struct{}
 func (s *SwapPlugin) Name() string {
 	return "swap_plugin"
 }
-func (s *SwapPlugin) PostReadPullBody(ctx tp.ReadCtx) *tp.Rerror {
+func (s *SwapPlugin) PostReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 	ctx.Swap().Store("swap_value", 123)
 	return nil
 }
@@ -96,7 +96,7 @@ func TestBinder(t *testing.T) {
 		tp.PeerConfig{ListenPort: 9090},
 	)
 	srv.PluginContainer().AppendRight(bplugin)
-	srv.RoutePull(new(P), new(SwapPlugin))
+	srv.RouteCall(new(P), new(SwapPlugin))
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
@@ -106,7 +106,7 @@ func TestBinder(t *testing.T) {
 		t.Fatal(err)
 	}
 	var result int
-	rerr := sess.Pull("/p/divide?_x=testquery_x&xy_z=testquery_xy_z", &Arg{
+	rerr := sess.Call("/p/divide?_x=testquery_x&xy_z=testquery_xy_z", &Arg{
 		A: 10,
 		B: 2,
 	}, &result).Rerror()
@@ -114,7 +114,7 @@ func TestBinder(t *testing.T) {
 		t.Fatal(rerr)
 	}
 	t.Logf("10/2=%d", result)
-	rerr = sess.Pull("/p/divide", &Arg{
+	rerr = sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 5,
 	}, &result).Rerror()
@@ -122,7 +122,7 @@ func TestBinder(t *testing.T) {
 		t.Fatal(rerr)
 	}
 	t.Logf("10/5 error:%v", rerr)
-	rerr = sess.Pull("/p/divide", &Arg{
+	rerr = sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 0,
 	}, &result).Rerror()

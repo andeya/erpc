@@ -69,11 +69,11 @@ type (
 		Receive(socket.NewBodyFunc, ...socket.PacketSetting) (*socket.Packet, *Rerror)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
-		// ContextAge returns PULL or PUSH context max age.
+		// ContextAge returns CALL or PUSH context max age.
 		ContextAge() time.Duration
 		// SetSessionAge sets the session max age.
 		SetSessionAge(duration time.Duration)
-		// SetContextAge sets PULL or PUSH context max age.
+		// SetContextAge sets CALL or PUSH context max age.
 		SetContextAge(duration time.Duration)
 	}
 	// BaseSession a connection session with the common method set.
@@ -100,20 +100,20 @@ type (
 		CloseNotify() <-chan struct{}
 		// Health checks if the session is usable.
 		Health() bool
-		// AsyncPull sends a packet and receives reply asynchronously.
+		// AsyncCall sends a packet and receives reply asynchronously.
 		// If the  is []byte or *[]byte type, it can automatically fill in the body codec name.
-		AsyncPull(
+		AsyncCall(
 			uri string,
 			arg interface{},
 			result interface{},
-			pullCmdChan chan<- PullCmd,
+			callCmdChan chan<- CallCmd,
 			setting ...socket.PacketSetting,
-		) PullCmd
-		// Pull sends a packet and receives reply.
+		) CallCmd
+		// Call sends a packet and receives reply.
 		// Note:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Pull(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) PullCmd
+		Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) CallCmd
 		// Push sends a packet, but do not receives reply.
 		// Note:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
@@ -121,7 +121,7 @@ type (
 		Push(uri string, arg interface{}, setting ...socket.PacketSetting) *Rerror
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
-		// ContextAge returns PULL or PUSH context max age.
+		// ContextAge returns CALL or PUSH context max age.
 		ContextAge() time.Duration
 	}
 )
@@ -134,12 +134,12 @@ var (
 
 type session struct {
 	peer                           *peer
-	getPullHandler, getPushHandler func(uriPath string) (*Handler, bool)
+	getCallHandler, getPushHandler func(uriPath string) (*Handler, bool)
 	timeSince                      func(time.Time) time.Duration
 	timeNow                        func() time.Time
 	seq                            uint64
 	seqLock                        sync.Mutex
-	pullCmdMap                     goutil.Map
+	callCmdMap                     goutil.Map
 	protoFuncs                     []socket.ProtoFunc
 	socket                         socket.Socket
 	status                         int32         // 0:ok, 1:active closed, 2:disconnect
@@ -148,7 +148,7 @@ type session struct {
 	statusLock                     sync.Mutex
 	writeLock                      sync.Mutex
 	graceCtxWaitGroup              sync.WaitGroup
-	gracePullCmdWaitGroup          sync.WaitGroup
+	graceCallCmdWaitGroup          sync.WaitGroup
 	sessionAge                     time.Duration
 	contextAge                     time.Duration
 	sessionAgeLock                 sync.RWMutex
@@ -162,7 +162,7 @@ type session struct {
 func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
 	var s = &session{
 		peer:           peer,
-		getPullHandler: peer.router.subRouter.getPull,
+		getCallHandler: peer.router.subRouter.getCall,
 		getPushHandler: peer.router.subRouter.getPush,
 		timeSince:      peer.timeSince,
 		timeNow:        peer.timeNow,
@@ -170,7 +170,7 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *sessi
 		protoFuncs:     protoFuncs,
 		socket:         socket.NewSocket(conn, protoFuncs...),
 		closeNotifyCh:  make(chan struct{}),
-		pullCmdMap:     goutil.AtomicMap(),
+		callCmdMap:     goutil.AtomicMap(),
 		sessionAge:     peer.defaultSessionAge,
 		contextAge:     peer.defaultContextAge,
 	}
@@ -296,7 +296,7 @@ func (s *session) SetSessionAge(duration time.Duration) {
 	s.sessionAgeLock.Unlock()
 }
 
-// ContextAge returns PULL or PUSH context max age.
+// ContextAge returns CALL or PUSH context max age.
 func (s *session) ContextAge() time.Duration {
 	s.contextAgeLock.RLock()
 	age := s.contextAge
@@ -304,7 +304,7 @@ func (s *session) ContextAge() time.Duration {
 	return age
 }
 
-// SetContextAge sets PULL or PUSH context max age.
+// SetContextAge sets CALL or PUSH context max age.
 func (s *session) SetContextAge(duration time.Duration) {
 	s.contextAgeLock.Lock()
 	s.contextAge = duration
@@ -381,30 +381,30 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 	return input, rerr
 }
 
-// AsyncPull sends a packet and receives reply asynchronously.
+// AsyncCall sends a packet and receives reply asynchronously.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) AsyncPull(
+func (s *session) AsyncCall(
 	uri string,
 	arg interface{},
 	result interface{},
-	pullCmdChan chan<- PullCmd,
+	callCmdChan chan<- CallCmd,
 	setting ...socket.PacketSetting,
-) PullCmd {
-	if pullCmdChan == nil {
-		pullCmdChan = make(chan PullCmd, 10) // buffered.
+) CallCmd {
+	if callCmdChan == nil {
+		callCmdChan = make(chan CallCmd, 10) // buffered.
 	} else {
-		// If caller passes pullCmdChan != nil, it must arrange that
-		// pullCmdChan has enough buffer for the number of simultaneous
+		// If caller passes callCmdChan != nil, it must arrange that
+		// callCmdChan has enough buffer for the number of simultaneous
 		// RPCs that will be using that channel. If the channel
 		// is totally unbuffered, it's best not to run at all.
-		if cap(pullCmdChan) == 0 {
-			Panicf("*session.AsyncPull(): pullCmdChan channel is unbuffered")
+		if cap(callCmdChan) == 0 {
+			Panicf("*session.AsyncCall(): callCmdChan channel is unbuffered")
 		}
 	}
 	output := socket.NewPacket(
-		socket.WithPtype(TypePull),
+		socket.WithPtype(TypeCall),
 		socket.WithUri(uri),
 		socket.WithBody(arg),
 	)
@@ -431,18 +431,18 @@ func (s *session) AsyncPull(
 		socket.WithContext(ctxTimout)(output)
 	}
 
-	cmd := &pullCmd{
+	cmd := &callCmd{
 		sess:        s,
 		output:      output,
 		result:      result,
-		pullCmdChan: pullCmdChan,
+		callCmdChan: callCmdChan,
 		doneChan:    make(chan struct{}),
 		start:       s.peer.timeNow(),
 		swap:        goutil.RwMap(),
 	}
 
-	// count pull-launch
-	s.gracePullCmdWaitGroup.Add(1)
+	// count call-launch
+	s.graceCallCmdWaitGroup.Add(1)
 
 	if s.socket.SwapLen() > 0 {
 		s.socket.Swap().Range(func(key, value interface{}) bool {
@@ -454,7 +454,7 @@ func (s *session) AsyncPull(
 	cmd.mu.Lock()
 	defer cmd.mu.Unlock()
 
-	s.pullCmdMap.Store(seq, cmd)
+	s.callCmdMap.Store(seq, cmd)
 
 	defer func() {
 		if p := recover(); p != nil {
@@ -462,7 +462,7 @@ func (s *session) AsyncPull(
 		}
 	}()
 
-	cmd.rerr = s.peer.pluginContainer.preWritePull(cmd)
+	cmd.rerr = s.peer.pluginContainer.preWriteCall(cmd)
 	if cmd.rerr != nil {
 		cmd.done()
 		return cmd
@@ -477,18 +477,18 @@ W:
 		return cmd
 	}
 
-	s.peer.pluginContainer.postWritePull(cmd)
+	s.peer.pluginContainer.postWriteCall(cmd)
 	return cmd
 }
 
-// Pull sends a packet and receives reply.
+// Call sends a packet and receives reply.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Pull(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) PullCmd {
-	pullCmd := s.AsyncPull(uri, arg, result, make(chan PullCmd, 1), setting...)
-	<-pullCmd.Done()
-	return pullCmd
+func (s *session) Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) CallCmd {
+	callCmd := s.AsyncCall(uri, arg, result, make(chan CallCmd, 1), setting...)
+	<-callCmd.Done()
+	return callCmd
 }
 
 // Push sends a packet, but do not receives reply.
@@ -641,7 +641,7 @@ func (s *session) Close() error {
 	s.notifyClosed()
 
 	s.graceCtxWaitGroup.Wait()
-	s.gracePullCmdWaitGroup.Wait()
+	s.graceCallCmdWaitGroup.Wait()
 
 	s.statusLock.Lock()
 	// Notice actively closed
@@ -676,14 +676,14 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	}
 	s.graceCtxWaitGroup.Wait()
 
-	// cancel the pullCmd that is waiting for a reply
-	s.pullCmdMap.Range(func(_, v interface{}) bool {
-		pullCmd := v.(*pullCmd)
-		pullCmd.mu.Lock()
-		if !pullCmd.hasReply() && pullCmd.rerr == nil {
-			pullCmd.cancel()
+	// cancel the callCmd that is waiting for a reply
+	s.callCmdMap.Range(func(_, v interface{}) bool {
+		callCmd := v.(*callCmd)
+		callCmd.mu.Lock()
+		if !callCmd.hasReply() && callCmd.rerr == nil {
+			callCmd.cancel()
 		}
-		pullCmd.mu.Unlock()
+		callCmd.mu.Unlock()
 		return true
 	})
 
@@ -733,7 +733,7 @@ func (s *session) startReadAndHandle() {
 		s.readDisconnected(conn, err)
 	}()
 
-	// read pull, pull reple or push
+	// read call, call reple or push
 	for s.goonRead() {
 		var ctx = s.peer.getContext(s, false)
 		withContext(ctx.input)
@@ -878,15 +878,15 @@ func (sh *SessionHub) Delete(id string) {
 const (
 	typePushLaunch int8 = 1
 	typePushHandle int8 = 2
-	typePullLaunch int8 = 3
-	typePullHandle int8 = 4
+	typeCallLaunch int8 = 3
+	typeCallHandle int8 = 4
 )
 
 const (
 	logFormatPushLaunch = "PUSH-> %s %s %s %q SEND(%s)"
 	logFormatPushHandle = "PUSH<- %s %s %s %q RECV(%s)"
-	logFormatPullLaunch = "PULL-> %s %s %s %q SEND(%s) RECV(%s)"
-	logFormatPullHandle = "PULL<- %s %s %s %q RECV(%s) SEND(%s)"
+	logFormatCallLaunch = "CALL-> %s %s %s %q SEND(%s) RECV(%s)"
+	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
 )
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
@@ -913,10 +913,10 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail))
 	case typePushHandle:
 		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail))
-	case typePullLaunch:
-		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail), packetLogBytes(input, s.peer.printDetail))
-	case typePullHandle:
-		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail), packetLogBytes(output, s.peer.printDetail))
+	case typeCallLaunch:
+		printFunc(logFormatCallLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail), packetLogBytes(input, s.peer.printDetail))
+	case typeCallHandle:
+		printFunc(logFormatCallHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail), packetLogBytes(output, s.peer.printDetail))
 	}
 }
 

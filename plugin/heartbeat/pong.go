@@ -35,12 +35,12 @@ type (
 		Name() string
 		// PostNewPeer runs ping woker.
 		PostNewPeer(peer tp.EarlyPeer) error
-		// PostWritePull updates heartbeat information.
-		PostWritePull(ctx tp.WriteCtx) *tp.Rerror
+		// PostWriteCall updates heartbeat information.
+		PostWriteCall(ctx tp.WriteCtx) *tp.Rerror
 		// PostWritePush updates heartbeat information.
 		PostWritePush(ctx tp.WriteCtx) *tp.Rerror
-		// PostReadPullHeader updates heartbeat information.
-		PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror
+		// PostReadCallHeader updates heartbeat information.
+		PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror
 		// PostReadPushHeader updates heartbeat information.
 		PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror
 	}
@@ -49,9 +49,9 @@ type (
 
 var (
 	_ tp.PostNewPeerPlugin        = Pong(nil)
-	_ tp.PostWritePullPlugin      = Pong(nil)
+	_ tp.PostWriteCallPlugin      = Pong(nil)
 	_ tp.PostWritePushPlugin      = Pong(nil)
-	_ tp.PostReadPullHeaderPlugin = Pong(nil)
+	_ tp.PostReadCallHeaderPlugin = Pong(nil)
 	_ tp.PostReadPushHeaderPlugin = Pong(nil)
 )
 
@@ -60,7 +60,7 @@ func (h *heartPong) Name() string {
 }
 
 func (h *heartPong) PostNewPeer(peer tp.EarlyPeer) error {
-	peer.RoutePullFunc((*pongPull).heartbeat)
+	peer.RouteCallFunc((*pongCall).heartbeat)
 	peer.RoutePushFunc((*pongPush).heartbeat)
 	rangeSession := peer.RangeSession
 	const initial = time.Second*minRateSecond - 1
@@ -87,7 +87,7 @@ func (h *heartPong) PostNewPeer(peer tp.EarlyPeer) error {
 	return nil
 }
 
-func (h *heartPong) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (h *heartPong) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
 	h.update(ctx)
 	return nil
 }
@@ -97,7 +97,7 @@ func (h *heartPong) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 	return nil
 }
 
-func (h *heartPong) PostWritePull(ctx tp.WriteCtx) *tp.Rerror {
+func (h *heartPong) PostWriteCall(ctx tp.WriteCtx) *tp.Rerror {
 	return h.PostWritePush(ctx)
 }
 
@@ -121,11 +121,11 @@ func (h *heartPong) update(ctx tp.ReadCtx) {
 	updateHeartbeatInfo(sess.Swap(), 0)
 }
 
-type pongPull struct {
-	tp.PullCtx
+type pongCall struct {
+	tp.CallCtx
 }
 
-func (ctx *pongPull) heartbeat(_ *struct{}) (*struct{}, *tp.Rerror) {
+func (ctx *pongCall) heartbeat(_ *struct{}) (*struct{}, *tp.Rerror) {
 	return nil, handelHeartbeat(ctx.Session(), ctx.Query())
 }
 

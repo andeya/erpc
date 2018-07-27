@@ -20,7 +20,7 @@ func main() {
 	}
 
 	var result int
-	rerr := sess.Pull("/srv/math/v2/add_2?push_status=yes",
+	rerr := sess.Call("/srv/math/v2/add_2?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 	).Rerror()

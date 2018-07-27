@@ -29,7 +29,7 @@ func main() {
 
 	var result interface{}
 	for {
-		if rerr = sess.Pull(
+		if rerr = sess.Call(
 			"/group/home/test?peer_id=call-1",
 			map[string]interface{}{
 				"bytes": []byte("test bytes"),
@@ -42,7 +42,7 @@ func main() {
 			tp.WithAddMeta("add", "1"),
 			tp.WithAddMeta("add", "2"),
 		).Rerror(); rerr != nil {
-			tp.Errorf("pull error: %v", rerr)
+			tp.Errorf("call error: %v", rerr)
 			time.Sleep(time.Second * 2)
 		} else {
 			break
@@ -52,7 +52,7 @@ func main() {
 
 	// sess.Close()
 
-	rerr = sess.Pull(
+	rerr = sess.Call(
 		"/group/home/test_unknown?peer_id=call-2",
 		struct {
 			RawMessage json.RawMessage
@@ -68,7 +68,7 @@ func main() {
 		tp.Fatalf("has conn rerror: %v", rerr)
 	}
 	if rerr != nil {
-		tp.Fatalf("pull error: %v", rerr)
+		tp.Fatalf("call error: %v", rerr)
 	}
 	tp.Infof("test_unknown: %#v", result)
 }

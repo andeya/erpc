@@ -15,12 +15,12 @@ func main() {
 	cfgo.MustGet("config/config.yaml", true).MustReg("cfg_srv", &cfg)
 
 	srv := tp.NewPeer(cfg)
-	srv.RoutePull(new(math))
+	srv.RouteCall(new(math))
 	srv.ListenAndServe()
 }
 
 type math struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (m *math) Add(arg *[]int) (int, *tp.Rerror) {

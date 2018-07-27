@@ -19,7 +19,7 @@ func main() {
 	}
 
 	var result int
-	rerr := sess.Pull("/math/add1?push_status=yes",
+	rerr := sess.Call("/math/add1?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 	).Rerror()
@@ -29,7 +29,7 @@ func main() {
 	}
 	tp.Printf("result1: %d", result)
 
-	rerr = sess.Pull("/math/add2?push_status=yes",
+	rerr = sess.Call("/math/add2?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 	).Rerror()

@@ -8,7 +8,7 @@ import (
 	"github.com/henrylee2cn/teleport/plugin/heartbeat"
 )
 
-func TestHeartbeatPull1(t *testing.T) {
+func TestHeartbeatCall1(t *testing.T) {
 	srv := tp.NewPeer(
 		tp.PeerConfig{ListenPort: 9090},
 		heartbeat.NewPong(),
@@ -24,7 +24,7 @@ func TestHeartbeatPull1(t *testing.T) {
 	time.Sleep(time.Second * 10)
 }
 
-func TestHeartbeatPull2(t *testing.T) {
+func TestHeartbeatCall2(t *testing.T) {
 	srv := tp.NewPeer(
 		tp.PeerConfig{ListenPort: 9090},
 		heartbeat.NewPong(),
@@ -38,7 +38,7 @@ func TestHeartbeatPull2(t *testing.T) {
 	)
 	sess, _ := cli.Dial(":9090")
 	for i := 0; i < 8; i++ {
-		sess.Pull("/", nil, nil)
+		sess.Call("/", nil, nil)
 		time.Sleep(time.Second)
 	}
 	time.Sleep(time.Second * 5)

@@ -11,12 +11,12 @@ func main() {
 		CountTime:  true,
 		ListenPort: 9090,
 	})
-	srv.RoutePull(new(test))
+	srv.RouteCall(new(test))
 	srv.ListenAndServe()
 }
 
 type test struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (t *test) Wait3s(arg *string) (string, *tp.Rerror) {

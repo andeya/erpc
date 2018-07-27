@@ -7,11 +7,11 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
-type Pull struct {
-	tp.PullCtx
+type Call struct {
+	tp.CallCtx
 }
 
-func (*Pull) Test(*struct{}) (*struct{}, *tp.Rerror) {
+func (*Call) Test(*struct{}) (*struct{}, *tp.Rerror) {
 	return nil, nil
 }
 
@@ -27,7 +27,7 @@ func TestTPS(t *testing.T) {
 	tp.SetLoggerLevel("OFF")
 	// Server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090}, NewTPS(5))
-	srv.RoutePull(new(Pull))
+	srv.RouteCall(new(Call))
 	srv.RoutePush(new(Push))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
@@ -46,7 +46,7 @@ func TestTPS(t *testing.T) {
 	)
 	for i := 0; i < 1<<10; i++ {
 		<-ticker.C
-		rerr = sess.Pull("/pull/test", nil, nil).Rerror()
+		rerr = sess.Call("/call/test", nil, nil).Rerror()
 		if rerr != nil {
 			t.Error(rerr)
 		}

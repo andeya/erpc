@@ -16,7 +16,7 @@ type Arg struct {
 	B int `param:"<range:1:>"`
 }
 
-type P struct{ tp.PullCtx }
+type P struct{ tp.CallCtx }
 
 func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
 	return arg.A / arg.B, nil
@@ -26,7 +26,7 @@ func TestJsonSubWebsocket(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{})
 	http.Handle("/ws", ws.NewJsonServeHandler(srv, nil))
 	go http.ListenAndServe("0.0.0.0:9090", nil)
-	srv.RoutePull(new(P))
+	srv.RouteCall(new(P))
 	time.Sleep(time.Second * 1)
 
 	cli := tp.NewPeer(tp.PeerConfig{}, ws.NewDialPlugin("/ws"))
@@ -35,7 +35,7 @@ func TestJsonSubWebsocket(t *testing.T) {
 		t.Fatal(err)
 	}
 	var result int
-	rerr := sess.Pull("/p/divide", &Arg{
+	rerr := sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 2,
 	}, &result,
@@ -51,7 +51,7 @@ func TestPbSubWebsocket(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{})
 	http.Handle("/ws", ws.NewPbServeHandler(srv, nil))
 	go http.ListenAndServe("0.0.0.0:9090", nil)
-	srv.RoutePull(new(P))
+	srv.RouteCall(new(P))
 	time.Sleep(time.Second * 1)
 
 	cli := tp.NewPeer(tp.PeerConfig{}, ws.NewDialPlugin("/ws"))
@@ -60,7 +60,7 @@ func TestPbSubWebsocket(t *testing.T) {
 		t.Fatal(err)
 	}
 	var result int
-	rerr := sess.Pull("/p/divide", &Arg{
+	rerr := sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 2,
 	}, &result,

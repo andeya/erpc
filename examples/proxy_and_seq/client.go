@@ -22,7 +22,7 @@ func main() {
 	}
 
 	var result int
-	rerr := sess.Pull("/math/add",
+	rerr := sess.Call("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 		tp.WithSeq(newRequestId()),

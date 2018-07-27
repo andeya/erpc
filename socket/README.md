@@ -270,7 +270,7 @@ Default protocol `FastProto`(Big Endian):
 # The following is handled data by transfer pipe
 {4 bytes sequence length}
 {sequence}
-{1 byte packet type} // e.g. PULL:1; REPLY:2; PUSH:3
+{1 byte packet type} // e.g. CALL:1; REPLY:2; PUSH:3
 {4 bytes URI length}
 {URI}
 {4 bytes metadata length}
