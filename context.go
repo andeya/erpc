@@ -669,6 +669,10 @@ func (c *handlerCtx) Bind(v interface{}) (byte, error) {
 type (
 	// PullCmd the command of the pulling operation's response.
 	PullCmd interface {
+		// TracePeer trace back the peer.
+		TracePeer() (peer Peer, found bool)
+		// TraceSession trace back the session.
+		TraceSession() (sess Session, found bool)
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
@@ -721,9 +725,19 @@ type (
 
 var _ WriteCtx = new(pullCmd)
 
+// TracePeer trace back the peer.
+func (p *pullCmd) TracePeer() (Peer, bool) {
+	return p.Peer(), true
+}
+
 // Peer returns the peer.
 func (p *pullCmd) Peer() Peer {
 	return p.sess.peer
+}
+
+// TraceSession trace back the session.
+func (p *pullCmd) TraceSession() (Session, bool) {
+	return p.Session(), true
 }
 
 // Session returns the session.
