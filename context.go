@@ -726,95 +726,95 @@ type (
 var _ WriteCtx = new(callCmd)
 
 // TracePeer trace back the peer.
-func (p *callCmd) TracePeer() (Peer, bool) {
-	return p.Peer(), true
+func (c *callCmd) TracePeer() (Peer, bool) {
+	return c.Peer(), true
 }
 
 // Peer returns the peer.
-func (p *callCmd) Peer() Peer {
-	return p.sess.peer
+func (c *callCmd) Peer() Peer {
+	return c.sess.peer
 }
 
 // TraceSession trace back the session.
-func (p *callCmd) TraceSession() (Session, bool) {
-	return p.Session(), true
+func (c *callCmd) TraceSession() (Session, bool) {
+	return c.Session(), true
 }
 
 // Session returns the session.
-func (p *callCmd) Session() Session {
-	return p.sess
+func (c *callCmd) Session() Session {
+	return c.sess
 }
 
 // Ip returns the remote addr.
-func (p *callCmd) Ip() string {
-	return p.sess.RemoteAddr().String()
+func (c *callCmd) Ip() string {
+	return c.sess.RemoteAddr().String()
 }
 
 // RealIp returns the the current real remote addr.
-func (p *callCmd) RealIp() string {
-	realIp := p.inputMeta.Peek(MetaRealIp)
+func (c *callCmd) RealIp() string {
+	realIp := c.inputMeta.Peek(MetaRealIp)
 	if len(realIp) > 0 {
 		return string(realIp)
 	}
-	return p.sess.RemoteAddr().String()
+	return c.sess.RemoteAddr().String()
 }
 
 // Swap returns custom data swap of context.
-func (p *callCmd) Swap() goutil.Map {
-	return p.swap
+func (c *callCmd) Swap() goutil.Map {
+	return c.swap
 }
 
 // SwapLen returns the amount of recorded custom data of context.
-func (p *callCmd) SwapLen() int {
-	return p.swap.Len()
+func (c *callCmd) SwapLen() int {
+	return c.swap.Len()
 }
 
 // Output returns writed packet.
-func (p *callCmd) Output() *socket.Packet {
-	return p.output
+func (c *callCmd) Output() *socket.Packet {
+	return c.output
 }
 
 // Context carries a deadline, a cancelation signal, and other values across
 // API boundaries.
-func (p *callCmd) Context() context.Context {
-	return p.output.Context()
+func (c *callCmd) Context() context.Context {
+	return c.output.Context()
 }
 
 // Rerror returns the call error.
-func (p *callCmd) Rerror() *Rerror {
-	return p.rerr
+func (c *callCmd) Rerror() *Rerror {
+	return c.rerr
 }
 
 // Done returns the chan that indicates whether it has been completed.
-func (p *callCmd) Done() <-chan struct{} {
-	return p.doneChan
+func (c *callCmd) Done() <-chan struct{} {
+	return c.doneChan
 }
 
 // Reply returns the call reply.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
-func (p *callCmd) Reply() (interface{}, *Rerror) {
-	<-p.Done()
-	return p.result, p.rerr
+func (c *callCmd) Reply() (interface{}, *Rerror) {
+	<-c.Done()
+	return c.result, c.rerr
 }
 
 // InputBodyCodec gets the body codec type of the input packet.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
-func (p *callCmd) InputBodyCodec() byte {
-	<-p.Done()
-	return p.inputBodyCodec
+func (c *callCmd) InputBodyCodec() byte {
+	<-c.Done()
+	return c.inputBodyCodec
 }
 
 // InputMeta returns the header metadata of input packet.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
-func (p *callCmd) InputMeta() *utils.Args {
-	<-p.Done()
-	return p.inputMeta
+func (c *callCmd) InputMeta() *utils.Args {
+	<-c.Done()
+	return c.inputMeta
 }
 
 // CostTime returns the called cost time.
@@ -822,29 +822,29 @@ func (p *callCmd) InputMeta() *utils.Args {
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
-func (p *callCmd) CostTime() time.Duration {
-	<-p.Done()
-	return p.cost
+func (c *callCmd) CostTime() time.Duration {
+	<-c.Done()
+	return c.cost
 }
 
-func (p *callCmd) done() {
-	p.sess.callCmdMap.Delete(p.output.Seq())
-	p.callCmdChan <- p
-	close(p.doneChan)
+func (c *callCmd) done() {
+	c.sess.callCmdMap.Delete(c.output.Seq())
+	c.callCmdChan <- c
+	close(c.doneChan)
 	// free count call-launch
-	p.sess.graceCallCmdWaitGroup.Done()
+	c.sess.graceCallCmdWaitGroup.Done()
 }
 
-func (p *callCmd) cancel() {
-	p.sess.callCmdMap.Delete(p.output.Seq())
-	p.rerr = rerrConnClosed
-	p.callCmdChan <- p
-	close(p.doneChan)
+func (c *callCmd) cancel() {
+	c.sess.callCmdMap.Delete(c.output.Seq())
+	c.rerr = rerrConnClosed
+	c.callCmdChan <- c
+	close(c.doneChan)
 	// free count call-launch
-	p.sess.graceCallCmdWaitGroup.Done()
+	c.sess.graceCallCmdWaitGroup.Done()
 }
 
 // if callCmd.inputMeta!=nil, means the callCmd is replyed.
-func (p *callCmd) hasReply() bool {
-	return p.inputMeta != nil
+func (c *callCmd) hasReply() bool {
+	return c.inputMeta != nil
 }
