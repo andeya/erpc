@@ -19,29 +19,42 @@ A concise, powerful and high-performance connection socket.
 
 ## Benchmark
 
-- Test server configuration
+**Test Case**
 
-```
-darwin amd64 4CPU 8GB
-```
+- A server and a client process, running on the same machine
+- CPU:    Intel Xeon E312xx (Sandy Bridge) 16 cores 2.53GHz
+- Memory: 16G
+- OS:     Linux 2.6.32-696.16.1.el6.centos.plus.x86_64, CentOS 6.4
+- Go:     1.9.2
+- Message size: 581 bytes
+- Message codec: protobuf
+- Sent total 1000000 messages
 
-- teleport-socket
+**Test Results**
 
-![tp_socket_benchmark](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_benchmark.png)
+- teleport/socket
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
+| client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
+| ------------------ | -------- | ---------- | ------- | ------- | --------------- |
+| 100                | 0        | 0          | 14      | 0       | 225682          |
+| 500                | 2        | 1          | 24      | 0       | 212630          |
+| 1000               | 4        | 3          | 51      | 0       | 180733          |
+| 2000               | 8        | 6          | 64      | 0       | 183351          |
+| 5000               | 21       | 18         | 651     | 0       | 133886          |
 
-- contrast rpcx
+**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/v4/teleport)**
 
-![rpcx_benchmark](https://github.com/henrylee2cn/teleport/raw/v3/doc/rpcx_benchmark.jpg)
+- Profile torch of teleport/socket
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/rpcx)**
+![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_profile_torch.png)
 
-- torch of teleport-socket
+**[svg file](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_profile_torch.svg)**
 
-![tp_socket_torch](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_torch.png)
+- Heap torch of teleport/socket
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_torch.svg)**
+![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_heap_torch.png)
+
+**[svg file](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_heap_torch.svg)**
 
 ## Example
 
