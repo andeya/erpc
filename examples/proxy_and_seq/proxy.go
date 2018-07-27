@@ -4,7 +4,7 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/plugin"
+	"github.com/henrylee2cn/teleport/plugin/proxy"
 )
 
 func main() {
@@ -28,7 +28,7 @@ DIAL:
 		time.Sleep(time.Second * 3)
 		goto DIAL
 	}
-	return plugin.Proxy(func(*plugin.ProxyLabel) plugin.Caller {
+	return proxy.Proxy(func(*proxy.ProxyLabel) proxy.Caller {
 		return sess
 	})
 }

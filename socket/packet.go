@@ -475,9 +475,13 @@ func WithNewBody(newBodyFunc NewBodyFunc) PacketSetting {
 }
 
 // WithXferPipe sets transfer filter pipe.
+// NOTE:
+//  panic if the filterId is not registered
 func WithXferPipe(filterId ...byte) PacketSetting {
 	return func(p *Packet) {
-		p.xferPipe.Append(filterId...)
+		if err := p.xferPipe.Append(filterId...); err != nil {
+			panic(err)
+		}
 	}
 }
 

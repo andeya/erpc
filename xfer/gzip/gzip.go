@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xfer
+package gzip
 
 import (
 	"bytes"
@@ -22,14 +22,16 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/teleport/utils"
+	"github.com/henrylee2cn/teleport/xfer"
 )
 
-func init() {
-	Reg(NewGzip('g', "gzip", 5))
+// Reg registers a gzip filter for transfer.
+func Reg(id byte, name string, level int) {
+	xfer.Reg(newGzip(id, name, level))
 }
 
-// NewGzip creates a new gizp filter.
-func NewGzip(id byte, name string, level int) *Gzip {
+// newGzip creates a new gizp filter.
+func newGzip(id byte, name string, level int) *Gzip {
 	if level < gzip.HuffmanOnly || level > gzip.BestCompression {
 		panic(fmt.Sprintf("gzip: invalid compression level: %d", level))
 	}

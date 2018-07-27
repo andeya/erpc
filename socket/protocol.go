@@ -42,7 +42,7 @@ type (
 )
 
 // default builder of socket communication protocol.
-var defaultProtoFunc = NewFastProtoFunc
+var defaultProtoFunc = NewRawProtoFunc
 
 // DefaultProtoFunc gets the default builder of socket communication protocol
 func DefaultProtoFunc() ProtoFunc {
@@ -56,8 +56,8 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 
 // default protocol
 
-// fastProto fast socket communication protocol.
-type fastProto struct {
+// rawProto fast socket communication protocol.
+type rawProto struct {
 	id   byte
 	name string
 	r    io.Reader
@@ -65,36 +65,36 @@ type fastProto struct {
 	rMu  sync.Mutex
 }
 
-// NewFastProtoFunc is creation function of fast socket protocol.
+// NewRawProtoFunc is creation function of fast socket protocol.
 // NOTE: it is the default protocol.
-var NewFastProtoFunc = func(rw io.ReadWriter) Proto {
+var NewRawProtoFunc = func(rw io.ReadWriter) Proto {
 	var (
-		fastProtoReadBufioSize    int
+		rawProtoReadBufioSize     int
 		readBufferSize, isDefault = ReadBuffer()
 	)
 	if isDefault {
-		fastProtoReadBufioSize = 1024 * 4
+		rawProtoReadBufioSize = 1024 * 4
 	} else if readBufferSize == 0 {
-		fastProtoReadBufioSize = 1024 * 35
+		rawProtoReadBufioSize = 1024 * 35
 	} else {
-		fastProtoReadBufioSize = readBufferSize / 2
+		rawProtoReadBufioSize = readBufferSize / 2
 	}
-	return &fastProto{
-		id:   'f',
-		name: "fast",
-		r:    bufio.NewReaderSize(rw, fastProtoReadBufioSize),
+	return &rawProto{
+		id:   'r',
+		name: "raw",
+		r:    bufio.NewReaderSize(rw, rawProtoReadBufioSize),
 		w:    rw,
 	}
 }
 
 // Version returns the protocol's id and name.
-func (f *fastProto) Version() (byte, string) {
-	return f.id, f.name
+func (r *rawProto) Version() (byte, string) {
+	return r.id, r.name
 }
 
 // Pack writes the Packet into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (f *fastProto) Pack(p *Packet) error {
+func (r *rawProto) Pack(p *Packet) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
@@ -102,7 +102,7 @@ func (f *fastProto) Pack(p *Packet) error {
 	err := binary.Write(bb, binary.BigEndian, uint32(0))
 
 	// protocol version
-	bb.WriteByte(f.id)
+	bb.WriteByte(r.id)
 
 	// transfer pipe
 	bb.WriteByte(byte(p.XferPipe().Len()))
@@ -111,13 +111,13 @@ func (f *fastProto) Pack(p *Packet) error {
 	prefixLen := bb.Len()
 
 	// header
-	err = f.writeHeader(bb, p)
+	err = r.writeHeader(bb, p)
 	if err != nil {
 		return err
 	}
 
 	// body
-	err = f.writeBody(bb, p)
+	err = r.writeBody(bb, p)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (f *fastProto) Pack(p *Packet) error {
 	binary.BigEndian.PutUint32(bb.B, p.Size())
 
 	// real write
-	_, err = f.w.Write(bb.B)
+	_, err = r.w.Write(bb.B)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (f *fastProto) Pack(p *Packet) error {
 	return err
 }
 
-func (f *fastProto) writeHeader(bb *utils.ByteBuffer, p *Packet) error {
+func (r *rawProto) writeHeader(bb *utils.ByteBuffer, p *Packet) error {
 	seqBytes := goutil.StringToBytes(p.Seq())
 	binary.Write(bb, binary.BigEndian, uint32(len(seqBytes)))
 	bb.Write(seqBytes)
@@ -164,7 +164,7 @@ func (f *fastProto) writeHeader(bb *utils.ByteBuffer, p *Packet) error {
 	return nil
 }
 
-func (f *fastProto) writeBody(bb *utils.ByteBuffer, p *Packet) error {
+func (r *rawProto) writeBody(bb *utils.ByteBuffer, p *Packet) error {
 	bb.WriteByte(p.BodyCodec())
 	bodyBytes, err := p.MarshalBody()
 	if err != nil {
@@ -176,12 +176,12 @@ func (f *fastProto) writeBody(bb *utils.ByteBuffer, p *Packet) error {
 
 // Unpack reads bytes from the connection to the Packet.
 // Note: Concurrent unsafe!
-func (f *fastProto) Unpack(p *Packet) error {
+func (r *rawProto) Unpack(p *Packet) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
 	// read packet
-	err := f.readPacket(bb, p)
+	err := r.readPacket(bb, p)
 	if err != nil {
 		return err
 	}
@@ -191,19 +191,19 @@ func (f *fastProto) Unpack(p *Packet) error {
 		return err
 	}
 	// header
-	data = f.readHeader(data, p)
+	data = r.readHeader(data, p)
 	// body
-	return f.readBody(data, p)
+	return r.readBody(data, p)
 }
 
 var errProtoUnmatch = errors.New("mismatched protocol")
 
-func (f *fastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
-	f.rMu.Lock()
-	defer f.rMu.Unlock()
+func (r *rawProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
+	r.rMu.Lock()
+	defer r.rMu.Unlock()
 	// size
 	var size uint32
-	err := binary.Read(f.r, binary.BigEndian, &size)
+	err := binary.Read(r.r, binary.BigEndian, &size)
 	if err != nil {
 		return err
 	}
@@ -212,21 +212,21 @@ func (f *fastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 	}
 	// protocol
 	bb.ChangeLen(1024)
-	_, err = io.ReadFull(f.r, bb.B[:1])
+	_, err = io.ReadFull(r.r, bb.B[:1])
 	if err != nil {
 		return err
 	}
-	if bb.B[0] != f.id {
+	if bb.B[0] != r.id {
 		return errProtoUnmatch
 	}
 	// transfer pipe
-	_, err = io.ReadFull(f.r, bb.B[:1])
+	_, err = io.ReadFull(r.r, bb.B[:1])
 	if err != nil {
 		return err
 	}
 	var xferLen = bb.B[0]
 	if xferLen > 0 {
-		_, err = io.ReadFull(f.r, bb.B[:xferLen])
+		_, err = io.ReadFull(r.r, bb.B[:xferLen])
 		if err != nil {
 			return err
 		}
@@ -238,11 +238,11 @@ func (f *fastProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 	// read last all
 	var lastLen = int(size) - 4 - 1 - 1 - int(xferLen)
 	bb.ChangeLen(lastLen)
-	_, err = io.ReadFull(f.r, bb.B)
+	_, err = io.ReadFull(r.r, bb.B)
 	return err
 }
 
-func (f *fastProto) readHeader(data []byte, p *Packet) []byte {
+func (r *rawProto) readHeader(data []byte, p *Packet) []byte {
 	// seq
 	seqLen := binary.BigEndian.Uint32(data)
 	data = data[4:]
@@ -264,7 +264,7 @@ func (f *fastProto) readHeader(data []byte, p *Packet) []byte {
 	return data
 }
 
-func (f *fastProto) readBody(data []byte, p *Packet) error {
+func (r *rawProto) readBody(data []byte, p *Packet) error {
 	p.SetBodyCodec(data[0])
 	return p.UnmarshalBody(data[1:])
 }
