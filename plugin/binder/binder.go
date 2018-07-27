@@ -83,7 +83,7 @@ type (
 
 var (
 	_ tp.PostRegPlugin          = new(StructArgsBinder)
-	_ tp.PostReadPullBodyPlugin = new(StructArgsBinder)
+	_ tp.PostReadCallBodyPlugin = new(StructArgsBinder)
 )
 
 // NewStructArgsBinder creates a plugin that binds and validates structure type parameters.
@@ -98,7 +98,7 @@ func NewStructArgsBinder(fn ErrorFunc) *StructArgsBinder {
 
 var (
 	_ tp.PostRegPlugin          = new(StructArgsBinder)
-	_ tp.PostReadPullBodyPlugin = new(StructArgsBinder)
+	_ tp.PostReadCallBodyPlugin = new(StructArgsBinder)
 )
 
 // SetErrorFunc sets the binding or balidating error function.
@@ -136,8 +136,8 @@ func (s *StructArgsBinder) PostReg(h *tp.Handler) error {
 	return nil
 }
 
-// PostReadPullBody binds and validates the registered struct handler.
-func (s *StructArgsBinder) PostReadPullBody(ctx tp.ReadCtx) *tp.Rerror {
+// PostReadCallBody binds and validates the registered struct handler.
+func (s *StructArgsBinder) PostReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 	params, ok := s.binders[ctx.Path()]
 	if !ok {
 		return nil

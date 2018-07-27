@@ -20,12 +20,12 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-// A proxy plugin for handling unknown pulling or pushing.
+// A proxy plugin for handling unknown calling or pushing.
 
-// Proxy creates a proxy plugin for handling unknown pulling and pushing.
+// Proxy creates a proxy plugin for handling unknown calling and pushing.
 func Proxy(fn func(*ProxyLabel) Caller) tp.Plugin {
 	return &proxy{
-		pullCaller: func(label *ProxyLabel) PullCaller {
+		callCaller: func(label *ProxyLabel) CallCaller {
 			return fn(label)
 		},
 		pushCaller: func(label *ProxyLabel) PushCaller {
@@ -34,9 +34,9 @@ func Proxy(fn func(*ProxyLabel) Caller) tp.Plugin {
 	}
 }
 
-// ProxyPull creates a proxy plugin for handling unknown pulling.
-func ProxyPull(fn func(*ProxyLabel) PullCaller) tp.Plugin {
-	return &proxy{pullCaller: fn}
+// ProxyCall creates a proxy plugin for handling unknown calling.
+func ProxyCall(fn func(*ProxyLabel) CallCaller) tp.Plugin {
+	return &proxy{callCaller: fn}
 }
 
 // ProxyPush creates a proxy plugin for handling unknown pushing.
@@ -45,14 +45,14 @@ func ProxyPush(fn func(*ProxyLabel) PushCaller) tp.Plugin {
 }
 
 type (
-	// Caller the object used to pull and push
+	// Caller the object used to call and push
 	Caller interface {
-		PullCaller
+		CallCaller
 		PushCaller
 	}
-	// PullCaller the object used to pull
-	PullCaller interface {
-		Pull(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.PullCmd
+	// CallCaller the object used to call
+	CallCaller interface {
+		Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.CallCmd
 	}
 	// PushCaller the object used to push
 	PushCaller interface {
@@ -63,7 +63,7 @@ type (
 		SessionId, RealIp, Uri string
 	}
 	proxy struct {
-		pullCaller func(*ProxyLabel) PullCaller
+		callCaller func(*ProxyLabel) CallCaller
 		pushCaller func(*ProxyLabel) PushCaller
 	}
 )
@@ -77,8 +77,8 @@ func (p *proxy) Name() string {
 }
 
 func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
-	if p.pullCaller != nil {
-		peer.SetUnknownPull(p.pull)
+	if p.callCaller != nil {
+		peer.SetUnknownCall(p.call)
 	}
 	if p.pushCaller != nil {
 		peer.SetUnknownPush(p.push)
@@ -86,7 +86,7 @@ func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
 	return nil
 }
 
-func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 	var (
 		label    ProxyLabel
 		settings = make([]socket.PacketSetting, 1, 8)
@@ -107,11 +107,11 @@ func (p *proxy) pull(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 		label.RealIp = goutil.BytesToString(realIpBytes)
 	}
 	label.Uri = ctx.Uri()
-	pullcmd := p.pullCaller(&label).Pull(label.Uri, ctx.InputBodyBytes(), &result, settings...)
-	pullcmd.InputMeta().VisitAll(func(key, value []byte) {
+	callcmd := p.callCaller(&label).Call(label.Uri, ctx.InputBodyBytes(), &result, settings...)
+	callcmd.InputMeta().VisitAll(func(key, value []byte) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
-	rerr := pullcmd.Rerror()
+	rerr := callcmd.Rerror()
 	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
 		rerr.Code = tp.CodeBadGateway
 		rerr.Message = tp.CodeText(tp.CodeBadGateway)

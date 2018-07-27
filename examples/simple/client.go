@@ -16,7 +16,7 @@ func main() {
 	}
 
 	var result int
-	rerr := sess.Pull("/math/add?push_status=yes",
+	rerr := sess.Call("/math/add?push_status=yes",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 		// tp.WithAcceptBodyCodec('s'),

@@ -94,10 +94,10 @@ type (
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
 	}
-	// PullCtx context method set for handling the pulled packet.
+	// CallCtx context method set for handling the called packet.
 	// For example:
-	//  type HomePull struct{ PullCtx }
-	PullCtx interface {
+	//  type HomeCall struct{ CallCtx }
+	CallCtx interface {
 		inputCtx
 		// Input returns readed packet.
 		Input() *socket.Packet
@@ -125,8 +125,8 @@ type (
 		// Bind when the raw body binder is []byte type, now binds the input body to v.
 		Bind(v interface{}) (bodyCodec byte, err error)
 	}
-	// UnknownPullCtx context method set for handling the unknown pulled packet.
-	UnknownPullCtx interface {
+	// UnknownCallCtx context method set for handling the unknown called packet.
+	UnknownCallCtx interface {
 		inputCtx
 		// GetBodyCodec gets the body codec type of the input packet.
 		GetBodyCodec() byte
@@ -152,19 +152,19 @@ var (
 	_ WriteCtx       = new(handlerCtx)
 	_ ReadCtx        = new(handlerCtx)
 	_ PushCtx        = new(handlerCtx)
-	_ PullCtx        = new(handlerCtx)
+	_ CallCtx        = new(handlerCtx)
 	_ UnknownPushCtx = new(handlerCtx)
-	_ UnknownPullCtx = new(handlerCtx)
+	_ UnknownCallCtx = new(handlerCtx)
 )
 
-// handlerCtx the underlying common instance of PullCtx and PushCtx.
+// handlerCtx the underlying common instance of CallCtx and PushCtx.
 type handlerCtx struct {
 	sess            *session
 	input           *socket.Packet
 	output          *socket.Packet
 	handler         *Handler
 	arg             reflect.Value
-	pullCmd         *pullCmd
+	callCmd         *callCmd
 	swap            goutil.Map
 	start           time.Time
 	cost            time.Duration
@@ -204,7 +204,7 @@ func (c *handlerCtx) clean() {
 	c.sess = nil
 	c.handler = nil
 	c.arg = emptyValue
-	c.pullCmd = nil
+	c.callCmd = nil
 	c.swap = nil
 	c.cost = 0
 	c.pluginContainer = nil
@@ -352,8 +352,8 @@ func (c *handlerCtx) binding(header socket.Header) (body interface{}) {
 		return c.bindReply(header)
 	case TypePush:
 		return c.bindPush(header)
-	case TypePull:
-		return c.bindPull(header)
+	case TypeCall:
+		return c.bindCall(header)
 	default:
 		c.handleErr = rerrCodePtypeNotAllowed
 		return nil
@@ -369,7 +369,7 @@ func (c *handlerCtx) handle() {
 	}
 	switch c.input.Ptype() {
 	case TypeReply:
-		// handles pull reply
+		// handles call reply
 		c.handleReply()
 		return
 
@@ -378,9 +378,9 @@ func (c *handlerCtx) handle() {
 		c.handlePush()
 		return
 
-	case TypePull:
-		// handles and replies pull
-		c.handlePull()
+	case TypeCall:
+		// handles and replies call
+		c.handleCall()
 		return
 
 	default:
@@ -453,8 +453,8 @@ func (c *handlerCtx) handlePush() {
 	}
 }
 
-func (c *handlerCtx) bindPull(header socket.Header) interface{} {
-	c.handleErr = c.pluginContainer.postReadPullHeader(c)
+func (c *handlerCtx) bindCall(header socket.Header) interface{} {
+	c.handleErr = c.pluginContainer.postReadCallHeader(c)
 	if c.handleErr != nil {
 		return nil
 	}
@@ -466,7 +466,7 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 	}
 
 	var ok bool
-	c.handler, ok = c.sess.getPullHandler(u.Path)
+	c.handler, ok = c.sess.getCallHandler(u.Path)
 	if !ok {
 		c.handleErr = rerrNotFound
 		return nil
@@ -482,7 +482,7 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 		c.input.SetBody(c.arg.Interface())
 	}
 
-	c.handleErr = c.pluginContainer.preReadPullBody(c)
+	c.handleErr = c.pluginContainer.preReadCallBody(c)
 	if c.handleErr != nil {
 		return nil
 	}
@@ -490,8 +490,8 @@ func (c *handlerCtx) bindPull(header socket.Header) interface{} {
 	return c.input.Body()
 }
 
-// handlePull handles and replies pull.
-func (c *handlerCtx) handlePull() {
+// handleCall handles and replies call.
+func (c *handlerCtx) handleCall() {
 	var writed bool
 	defer func() {
 		if p := recover(); p != nil {
@@ -504,7 +504,7 @@ func (c *handlerCtx) handlePull() {
 			}
 		}
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.runlog(c.RealIp(), c.cost, c.input, c.output, typePullHandle)
+		c.sess.runlog(c.RealIp(), c.cost, c.input, c.output, typeCallHandle)
 	}()
 
 	c.output.SetPtype(TypeReply)
@@ -522,9 +522,9 @@ func (c *handlerCtx) handlePull() {
 		c.handleErr = NewRerrorFromMeta(c.output.Meta())
 	}
 
-	// handle pull
+	// handle call
 	if c.handleErr == nil {
-		c.handleErr = c.pluginContainer.postReadPullBody(c)
+		c.handleErr = c.pluginContainer.postReadCallBody(c)
 		if c.handleErr == nil {
 			if c.handler.isUnknown {
 				c.handler.unknownHandleFunc(c)
@@ -534,7 +534,7 @@ func (c *handlerCtx) handlePull() {
 		}
 	}
 
-	// reply pull
+	// reply call
 	c.setReplyBodyCodec(c.handleErr != nil)
 	c.pluginContainer.preWriteReply(c)
 	rerr := c.writeReply(c.handleErr)
@@ -581,64 +581,64 @@ func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
 }
 
 func (c *handlerCtx) bindReply(header socket.Header) interface{} {
-	_pullCmd, ok := c.sess.pullCmdMap.Load(header.Seq())
+	_callCmd, ok := c.sess.callCmdMap.Load(header.Seq())
 	if !ok {
-		Warnf("not found pull cmd: %v", c.input)
+		Warnf("not found call cmd: %v", c.input)
 		return nil
 	}
-	c.pullCmd = _pullCmd.(*pullCmd)
+	c.callCmd = _callCmd.(*callCmd)
 
 	// unlock: handleReply
-	c.pullCmd.mu.Lock()
+	c.callCmd.mu.Lock()
 
-	c.swap = c.pullCmd.swap
-	c.pullCmd.inputBodyCodec = c.GetBodyCodec()
-	// if c.pullCmd.inputMeta!=nil, means the pullCmd is replyed.
-	c.pullCmd.inputMeta = utils.AcquireArgs()
-	c.input.Meta().CopyTo(c.pullCmd.inputMeta)
-	c.setContext(c.pullCmd.output.Context())
-	c.input.SetBody(c.pullCmd.result)
+	c.swap = c.callCmd.swap
+	c.callCmd.inputBodyCodec = c.GetBodyCodec()
+	// if c.callCmd.inputMeta!=nil, means the callCmd is replyed.
+	c.callCmd.inputMeta = utils.AcquireArgs()
+	c.input.Meta().CopyTo(c.callCmd.inputMeta)
+	c.setContext(c.callCmd.output.Context())
+	c.input.SetBody(c.callCmd.result)
 
 	rerr := c.pluginContainer.postReadReplyHeader(c)
 	if rerr != nil {
-		c.pullCmd.rerr = rerr
+		c.callCmd.rerr = rerr
 		return nil
 	}
 	rerr = c.pluginContainer.preReadReplyBody(c)
 	if rerr != nil {
-		c.pullCmd.rerr = rerr
+		c.callCmd.rerr = rerr
 		return nil
 	}
 	return c.input.Body()
 }
 
-// handleReply handles pull reply.
+// handleReply handles call reply.
 func (c *handlerCtx) handleReply() {
-	if c.pullCmd == nil {
+	if c.callCmd == nil {
 		return
 	}
 
 	// lock: bindReply
-	defer c.pullCmd.mu.Unlock()
+	defer c.callCmd.mu.Unlock()
 
 	defer func() {
 		if p := recover(); p != nil {
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
-		c.pullCmd.result = c.input.Body()
-		c.handleErr = c.pullCmd.rerr
-		c.pullCmd.done()
-		c.pullCmd.cost = c.sess.timeSince(c.pullCmd.start)
-		c.sess.runlog(c.RealIp(), c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
+		c.callCmd.result = c.input.Body()
+		c.handleErr = c.callCmd.rerr
+		c.callCmd.done()
+		c.callCmd.cost = c.sess.timeSince(c.callCmd.start)
+		c.sess.runlog(c.RealIp(), c.callCmd.cost, c.input, c.callCmd.output, typeCallLaunch)
 	}()
-	if c.pullCmd.rerr != nil {
+	if c.callCmd.rerr != nil {
 		return
 	}
 	rerr := NewRerrorFromMeta(c.input.Meta())
 	if rerr == nil {
 		rerr = c.pluginContainer.postReadReplyBody(c)
 	}
-	c.pullCmd.rerr = rerr
+	c.callCmd.rerr = rerr
 }
 
 // Rerror returns the handle error.
@@ -667,40 +667,40 @@ func (c *handlerCtx) Bind(v interface{}) (byte, error) {
 }
 
 type (
-	// PullCmd the command of the pulling operation's response.
-	PullCmd interface {
+	// CallCmd the command of the calling operation's response.
+	CallCmd interface {
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
 		// Output returns writed packet.
 		Output() *socket.Packet
-		// Rerror returns the pull error.
+		// Rerror returns the call error.
 		Rerror() *Rerror
 		// Done returns the chan that indicates whether it has been completed.
 		Done() <-chan struct{}
-		// Reply returns the pull reply.
+		// Reply returns the call reply.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
-		//  until the pull is completed!
+		//  until the call is completed!
 		Reply() (interface{}, *Rerror)
 		// InputBodyCodec gets the body codec type of the input packet.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
-		//  until the pull is completed!
+		//  until the call is completed!
 		InputBodyCodec() byte
 		// InputMeta returns the header metadata of input packet.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
-		//  until the pull is completed!
+		//  until the call is completed!
 		InputMeta() *utils.Args
-		// CostTime returns the pulled cost time.
+		// CostTime returns the called cost time.
 		// If PeerConfig.CountTime=false, always returns 0.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
-		//  until the pull is completed!
+		//  until the call is completed!
 		CostTime() time.Duration
 	}
-	pullCmd struct {
+	callCmd struct {
 		sess           *session
 		output         *socket.Packet
 		result         interface{}
@@ -712,32 +712,32 @@ type (
 		swap           goutil.Map
 		mu             sync.Mutex
 
-		// Send itself to the public channel when pull is complete.
-		pullCmdChan chan<- PullCmd
-		// Strobes when pull is complete.
+		// Send itself to the public channel when call is complete.
+		callCmdChan chan<- CallCmd
+		// Strobes when call is complete.
 		doneChan chan struct{}
 	}
 )
 
-var _ WriteCtx = new(pullCmd)
+var _ WriteCtx = new(callCmd)
 
 // Peer returns the peer.
-func (p *pullCmd) Peer() Peer {
+func (p *callCmd) Peer() Peer {
 	return p.sess.peer
 }
 
 // Session returns the session.
-func (p *pullCmd) Session() Session {
+func (p *callCmd) Session() Session {
 	return p.sess
 }
 
 // Ip returns the remote addr.
-func (p *pullCmd) Ip() string {
+func (p *callCmd) Ip() string {
 	return p.sess.RemoteAddr().String()
 }
 
 // RealIp returns the the current real remote addr.
-func (p *pullCmd) RealIp() string {
+func (p *callCmd) RealIp() string {
 	realIp := p.inputMeta.Peek(MetaRealIp)
 	if len(realIp) > 0 {
 		return string(realIp)
@@ -746,41 +746,41 @@ func (p *pullCmd) RealIp() string {
 }
 
 // Swap returns custom data swap of context.
-func (p *pullCmd) Swap() goutil.Map {
+func (p *callCmd) Swap() goutil.Map {
 	return p.swap
 }
 
 // SwapLen returns the amount of recorded custom data of context.
-func (p *pullCmd) SwapLen() int {
+func (p *callCmd) SwapLen() int {
 	return p.swap.Len()
 }
 
 // Output returns writed packet.
-func (p *pullCmd) Output() *socket.Packet {
+func (p *callCmd) Output() *socket.Packet {
 	return p.output
 }
 
 // Context carries a deadline, a cancelation signal, and other values across
 // API boundaries.
-func (p *pullCmd) Context() context.Context {
+func (p *callCmd) Context() context.Context {
 	return p.output.Context()
 }
 
-// Rerror returns the pull error.
-func (p *pullCmd) Rerror() *Rerror {
+// Rerror returns the call error.
+func (p *callCmd) Rerror() *Rerror {
 	return p.rerr
 }
 
 // Done returns the chan that indicates whether it has been completed.
-func (p *pullCmd) Done() <-chan struct{} {
+func (p *callCmd) Done() <-chan struct{} {
 	return p.doneChan
 }
 
-// Reply returns the pull reply.
+// Reply returns the call reply.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
-//  until the pull is completed!
-func (p *pullCmd) Reply() (interface{}, *Rerror) {
+//  until the call is completed!
+func (p *callCmd) Reply() (interface{}, *Rerror) {
 	<-p.Done()
 	return p.result, p.rerr
 }
@@ -788,8 +788,8 @@ func (p *pullCmd) Reply() (interface{}, *Rerror) {
 // InputBodyCodec gets the body codec type of the input packet.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
-//  until the pull is completed!
-func (p *pullCmd) InputBodyCodec() byte {
+//  until the call is completed!
+func (p *callCmd) InputBodyCodec() byte {
 	<-p.Done()
 	return p.inputBodyCodec
 }
@@ -797,40 +797,40 @@ func (p *pullCmd) InputBodyCodec() byte {
 // InputMeta returns the header metadata of input packet.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
-//  until the pull is completed!
-func (p *pullCmd) InputMeta() *utils.Args {
+//  until the call is completed!
+func (p *callCmd) InputMeta() *utils.Args {
 	<-p.Done()
 	return p.inputMeta
 }
 
-// CostTime returns the pulled cost time.
+// CostTime returns the called cost time.
 // If PeerConfig.CountTime=false, always returns 0.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
-//  until the pull is completed!
-func (p *pullCmd) CostTime() time.Duration {
+//  until the call is completed!
+func (p *callCmd) CostTime() time.Duration {
 	<-p.Done()
 	return p.cost
 }
 
-func (p *pullCmd) done() {
-	p.sess.pullCmdMap.Delete(p.output.Seq())
-	p.pullCmdChan <- p
+func (p *callCmd) done() {
+	p.sess.callCmdMap.Delete(p.output.Seq())
+	p.callCmdChan <- p
 	close(p.doneChan)
-	// free count pull-launch
-	p.sess.gracePullCmdWaitGroup.Done()
+	// free count call-launch
+	p.sess.graceCallCmdWaitGroup.Done()
 }
 
-func (p *pullCmd) cancel() {
-	p.sess.pullCmdMap.Delete(p.output.Seq())
+func (p *callCmd) cancel() {
+	p.sess.callCmdMap.Delete(p.output.Seq())
 	p.rerr = rerrConnClosed
-	p.pullCmdChan <- p
+	p.callCmdChan <- p
 	close(p.doneChan)
-	// free count pull-launch
-	p.sess.gracePullCmdWaitGroup.Done()
+	// free count call-launch
+	p.sess.graceCallCmdWaitGroup.Done()
 }
 
-// if pullCmd.inputMeta!=nil, means the pullCmd is replyed.
-func (p *pullCmd) hasReply() bool {
+// if callCmd.inputMeta!=nil, means the callCmd is replyed.
+func (p *callCmd) hasReply() bool {
 	return p.inputMeta != nil
 }

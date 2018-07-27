@@ -13,12 +13,12 @@ func main() {
 		ListenPort: 9090,
 	})
 	group := srv.SubRoute("/srv")
-	group.RoutePull(new(math_v2))
+	group.RouteCall(new(math_v2))
 	srv.ListenAndServe()
 }
 
 type math_v2 struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (m *math_v2) Add__2(arg *[]int) (int, *tp.Rerror) {

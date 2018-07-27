@@ -12,20 +12,20 @@ func main() {
 		CountTime:  true,
 		ListenPort: 9090,
 	})
-	srv.RoutePullFunc((*ctrl).math_add1)
-	srv.RoutePullFunc(math_add2)
+	srv.RouteCallFunc((*ctrl).math_add1)
+	srv.RouteCallFunc(math_add2)
 	srv.ListenAndServe()
 }
 
 type ctrl struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (c *ctrl) math_add1(arg *[]int) (int, *tp.Rerror) {
 	return math_add2(c, arg)
 }
 
-func math_add2(ctx tp.PullCtx, arg *[]int) (int, *tp.Rerror) {
+func math_add2(ctx tp.CallCtx, arg *[]int) (int, *tp.Rerror) {
 	if ctx.Query().Get("push_status") == "yes" {
 		ctx.Session().Push(
 			"/server/status1",

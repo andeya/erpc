@@ -48,7 +48,7 @@ func TestCombined(t *testing.T) {
 	md5.Reg('m', "md5")
 	// Server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
-	srv.RoutePull(new(Home))
+	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
@@ -61,7 +61,7 @@ func TestCombined(t *testing.T) {
 		}
 	}
 	var result interface{}
-	rerr := sess.Pull("/home/test?peer_id=110",
+	rerr := sess.Call("/home/test?peer_id=110",
 		map[string]interface{}{
 			"bytes": []byte("test bytes"),
 		},
@@ -76,7 +76,7 @@ func TestCombined(t *testing.T) {
 }
 
 type Home struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {

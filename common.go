@@ -32,8 +32,8 @@ import (
 // Packet types
 const (
 	TypeUndefined byte = 0
-	TypePull      byte = 1
-	TypeReply     byte = 2 // reply to pull
+	TypeCall      byte = 1
+	TypeReply     byte = 2 // reply to call
 	TypePush      byte = 3
 )
 
@@ -41,8 +41,8 @@ const (
 // If the type is undefined returns 'Undefined'.
 func TypeText(typ byte) string {
 	switch typ {
-	case TypePull:
-		return "PULL"
+	case TypeCall:
+		return "CALL"
 	case TypeReply:
 		return "REPLY"
 	case TypePush:
@@ -295,18 +295,18 @@ func doPrintPid() {
 	})
 }
 
-type fakePullCmd struct {
+type fakeCallCmd struct {
 	output    *socket.Packet
 	result    interface{}
 	rerr      *Rerror
 	inputMeta *utils.Args
 }
 
-// NewFakePullCmd creates a fake PullCmd.
-func NewFakePullCmd(uri string, arg, result interface{}, rerr *Rerror) PullCmd {
-	return &fakePullCmd{
+// NewFakeCallCmd creates a fake CallCmd.
+func NewFakeCallCmd(uri string, arg, result interface{}, rerr *Rerror) CallCmd {
+	return &fakeCallCmd{
 		output: socket.NewPacket(
-			socket.WithPtype(TypePull),
+			socket.WithPtype(TypeCall),
 			socket.WithUri(uri),
 			socket.WithBody(arg),
 		),
@@ -322,47 +322,47 @@ var closedChan = func() <-chan struct{} {
 }()
 
 // Done returns the chan that indicates whether it has been completed.
-func (f *fakePullCmd) Done() <-chan struct{} {
+func (f *fakeCallCmd) Done() <-chan struct{} {
 	return closedChan
 }
 
 // Output returns writed packet.
-func (f *fakePullCmd) Output() *socket.Packet {
+func (f *fakeCallCmd) Output() *socket.Packet {
 	return f.output
 }
 
 // Context carries a deadline, a cancelation signal, and other values across
 // API boundaries.
-func (f *fakePullCmd) Context() context.Context {
+func (f *fakeCallCmd) Context() context.Context {
 	return f.output.Context()
 }
 
-// Reply returns the pull reply.
-func (f *fakePullCmd) Reply() (interface{}, *Rerror) {
+// Reply returns the call reply.
+func (f *fakeCallCmd) Reply() (interface{}, *Rerror) {
 	return f.result, f.rerr
 }
 
-// Rerror returns the pull error.
-func (f *fakePullCmd) Rerror() *Rerror {
+// Rerror returns the call error.
+func (f *fakeCallCmd) Rerror() *Rerror {
 	return f.rerr
 }
 
 // InputBodyCodec gets the body codec type of the input packet.
-func (f *fakePullCmd) InputBodyCodec() byte {
+func (f *fakeCallCmd) InputBodyCodec() byte {
 	return codec.NilCodecId
 }
 
 // InputMeta returns the header metadata of input packet.
-func (f *fakePullCmd) InputMeta() *utils.Args {
+func (f *fakeCallCmd) InputMeta() *utils.Args {
 	if f.inputMeta == nil {
 		f.inputMeta = utils.AcquireArgs()
 	}
 	return f.inputMeta
 }
 
-// CostTime returns the pulled cost time.
+// CostTime returns the called cost time.
 // If PeerConfig.CountTime=false, always returns 0.
-func (f *fakePullCmd) CostTime() time.Duration {
+func (f *fakeCallCmd) CostTime() time.Duration {
 	return 0
 }
 

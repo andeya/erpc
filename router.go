@@ -27,12 +27,12 @@ import (
 )
 
 /**
- * Router the router of pull or push handlers.
+ * Router the router of call or push handlers.
  *
- * 1. Pull-Controller-Struct API template
+ * 1. Call-Controller-Struct API template
  *
  *  type Aaa struct {
- *      tp.PullCtx
+ *      tp.CallCtx
  *  }
  *  func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
  *      ...
@@ -41,23 +41,23 @@ import (
  *
  * - register it to root router:
  *
- *  // register the pull route: /aaa/xx_zz
- *  peer.RoutePull(new(Aaa))
+ *  // register the call route: /aaa/xx_zz
+ *  peer.RouteCall(new(Aaa))
  *
- *  // or register the pull route: /xx_zz
- *  peer.RoutePullFunc((*Aaa).XxZz)
+ *  // or register the call route: /xx_zz
+ *  peer.RouteCallFunc((*Aaa).XxZz)
  *
- * 2. Pull-Handler-Function API template
+ * 2. Call-Handler-Function API template
  *
- *  func XxZz(ctx tp.PullCtx, arg *<T>) (<T>, *tp.Rerror) {
+ *  func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
  *      ...
  *      return r, nil
  *  }
  *
  * - register it to root router:
  *
- *  // register the pull route: /xx_zz
- *  peer.RoutePullFunc(XxZz)
+ *  // register the call route: /xx_zz
+ *  peer.RouteCallFunc(XxZz)
  *
  * 3. Push-Controller-Struct API template
  *
@@ -90,17 +90,17 @@ import (
  *  // register the push route: /yy_zz
  *  peer.RoutePushFunc(YyZz)
  *
- * 5. Unknown-Pull-Handler-Function API template
+ * 5. Unknown-Call-Handler-Function API template
  *
- *  func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+ *  func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
  *      ...
  *      return r, nil
  *  }
  *
  * - register it to root router:
  *
- *  // register the unknown pull route: /*
- *  peer.SetUnknownPull(XxxUnknownPull)
+ *  // register the unknown call route: /*
+ *  peer.SetUnknownCall(XxxUnknownCall)
  *
  * 6. Unknown-Push-Handler-Function API template
  *
@@ -127,27 +127,27 @@ import (
  **/
 
 type (
-	// Router the router of pull or push handlers.
+	// Router the router of call or push handlers.
 	Router struct {
 		subRouter *SubRouter
 	}
-	// SubRouter without the SetUnknownPull and SetUnknownPush methods
+	// SubRouter without the SetUnknownCall and SetUnknownPush methods
 	SubRouter struct {
 		root         *Router
-		pullHandlers map[string]*Handler
+		callHandlers map[string]*Handler
 		pushHandlers map[string]*Handler
-		unknownPull  **Handler
+		unknownCall  **Handler
 		unknownPush  **Handler
 		// only for register router
 		pathPrefix      string
 		pluginContainer *PluginContainer
 	}
-	// Handler pull or push handler type info
+	// Handler call or push handler type info
 	Handler struct {
 		name              string
 		isUnknown         bool
 		argElem           reflect.Type
-		reply             reflect.Type // only for pull handler doc
+		reply             reflect.Type // only for call handler doc
 		handleFunc        func(*handlerCtx, reflect.Value)
 		unknownHandleFunc func(*handlerCtx)
 		pluginContainer   *PluginContainer
@@ -159,9 +159,9 @@ type (
 
 const (
 	pnPush        = "PUSH"
-	pnPull        = "PULL"
+	pnCall        = "CALL"
 	pnUnknownPush = "UNKNOWN_PUSH"
-	pnUnknownPull = "UNKNOWN_PULL"
+	pnUnknownCall = "UNKNOWN_CALL"
 )
 
 // newRouter creates root router.
@@ -169,9 +169,9 @@ func newRouter(rootGroup string, pluginContainer *PluginContainer) *Router {
 	rootGroup = path.Join("/", rootGroup)
 	root := &Router{
 		subRouter: &SubRouter{
-			pullHandlers:    make(map[string]*Handler),
+			callHandlers:    make(map[string]*Handler),
 			pushHandlers:    make(map[string]*Handler),
-			unknownPull:     new(*Handler),
+			unknownCall:     new(*Handler),
 			unknownPush:     new(*Handler),
 			pathPrefix:      rootGroup,
 			pluginContainer: pluginContainer,
@@ -186,7 +186,7 @@ func (r *SubRouter) Root() *Router {
 	return r.root
 }
 
-// ToRouter converts to the router which is added the SetUnknownPull and SetUnknownPush methods.
+// ToRouter converts to the router which is added the SetUnknownCall and SetUnknownPush methods.
 func (r *SubRouter) ToRouter() *Router {
 	return &Router{subRouter: r}
 }
@@ -202,33 +202,33 @@ func (r *SubRouter) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 	warnInvaildHandlerHooks(plugin)
 	return &SubRouter{
 		root:            r.root,
-		pullHandlers:    r.pullHandlers,
+		callHandlers:    r.callHandlers,
 		pushHandlers:    r.pushHandlers,
-		unknownPull:     r.unknownPull,
+		unknownCall:     r.unknownCall,
 		unknownPush:     r.unknownPush,
 		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
 		pluginContainer: pluginContainer,
 	}
 }
 
-// RoutePull registers PULL handlers, and returns the paths.
-func (r *Router) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) []string {
-	return r.subRouter.RoutePull(pullCtrlStruct, plugin...)
+// RouteCall registers CALL handlers, and returns the paths.
+func (r *Router) RouteCall(callCtrlStruct interface{}, plugin ...Plugin) []string {
+	return r.subRouter.RouteCall(callCtrlStruct, plugin...)
 }
 
-// RoutePull registers PULL handlers, and returns the paths.
-func (r *SubRouter) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) []string {
-	return r.reg(pnPull, makePullHandlersFromStruct, pullCtrlStruct, plugin)
+// RouteCall registers CALL handlers, and returns the paths.
+func (r *SubRouter) RouteCall(callCtrlStruct interface{}, plugin ...Plugin) []string {
+	return r.reg(pnCall, makeCallHandlersFromStruct, callCtrlStruct, plugin)
 }
 
-// RoutePullFunc registers PULL handler, and returns the path.
-func (r *Router) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string {
-	return r.subRouter.RoutePullFunc(pullHandleFunc, plugin...)
+// RouteCallFunc registers CALL handler, and returns the path.
+func (r *Router) RouteCallFunc(callHandleFunc interface{}, plugin ...Plugin) string {
+	return r.subRouter.RouteCallFunc(callHandleFunc, plugin...)
 }
 
-// RoutePullFunc registers PULL handler, and returns the path.
-func (r *SubRouter) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string {
-	return r.reg(pnPull, makePullHandlersFromFunc, pullHandleFunc, plugin)[0]
+// RouteCallFunc registers CALL handler, and returns the path.
+func (r *SubRouter) RouteCallFunc(callHandleFunc interface{}, plugin ...Plugin) string {
+	return r.reg(pnCall, makeCallHandlersFromFunc, callHandleFunc, plugin)[0]
 }
 
 // RoutePush registers PUSH handlers, and returns the paths.
@@ -269,8 +269,8 @@ func (r *SubRouter) reg(
 	}
 	var names []string
 	var hadHandlers map[string]*Handler
-	if routerTypeName == pnPull {
-		hadHandlers = r.pullHandlers
+	if routerTypeName == pnCall {
+		hadHandlers = r.callHandlers
 	} else {
 		hadHandlers = r.pushHandlers
 	}
@@ -287,14 +287,14 @@ func (r *SubRouter) reg(
 	return names
 }
 
-// SetUnknownPull sets the default handler,
-// which is called when no handler for PULL is found.
-func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
+// SetUnknownCall sets the default handler,
+// which is called when no handler for CALL is found.
+func (r *Router) SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Rerror), plugin ...Plugin) {
 	pluginContainer := r.subRouter.pluginContainer.cloneAndAppendMiddle(plugin...)
 	warnInvaildHandlerHooks(plugin)
 
 	var h = &Handler{
-		name:            pnUnknownPull,
+		name:            pnUnknownCall,
 		isUnknown:       true,
 		argElem:         reflect.TypeOf([]byte{}),
 		pluginContainer: pluginContainer,
@@ -309,12 +309,12 @@ func (r *Router) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), 
 		},
 	}
 
-	if *r.subRouter.unknownPull == nil {
+	if *r.subRouter.unknownCall == nil {
 		Printf("set %s handler", h.name)
 	} else {
 		Warnf("covered %s handler", h.name)
 	}
-	r.subRouter.unknownPull = &h
+	r.subRouter.unknownCall = &h
 }
 
 // SetUnknownPush sets the default handler,
@@ -341,12 +341,12 @@ func (r *Router) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugi
 	r.subRouter.unknownPush = &h
 }
 
-func (r *SubRouter) getPull(uriPath string) (*Handler, bool) {
-	t, ok := r.pullHandlers[uriPath]
+func (r *SubRouter) getCall(uriPath string) (*Handler, bool) {
+	t, ok := r.callHandlers[uriPath]
 	if ok {
 		return t, true
 	}
-	if unknown := *r.unknownPull; unknown != nil {
+	if unknown := *r.unknownCall; unknown != nil {
 		return unknown, true
 	}
 	return nil, false
@@ -363,43 +363,43 @@ func (r *SubRouter) getPush(uriPath string) (*Handler, bool) {
 	return nil, false
 }
 
-// Note: pullCtrlStruct needs to implement PullCtx interface.
-func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
+// Note: callCtrlStruct needs to implement CallCtx interface.
+func makeCallHandlersFromStruct(pathPrefix string, callCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
-		ctype    = reflect.TypeOf(pullCtrlStruct)
+		ctype    = reflect.TypeOf(callCtrlStruct)
 		handlers = make([]*Handler, 0, 1)
 	)
 
 	if ctype.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("pull-handler: the type is not struct point: %s", ctype.String())
+		return nil, errors.Errorf("call-handler: the type is not struct point: %s", ctype.String())
 	}
 
 	var ctypeElem = ctype.Elem()
 	if ctypeElem.Kind() != reflect.Struct {
-		return nil, errors.Errorf("pull-handler: the type is not struct point: %s", ctype.String())
+		return nil, errors.Errorf("call-handler: the type is not struct point: %s", ctype.String())
 	}
 
-	iType, ok := ctypeElem.FieldByName("PullCtx")
+	iType, ok := ctypeElem.FieldByName("CallCtx")
 	if !ok || !iType.Anonymous {
-		return nil, errors.Errorf("pull-handler: the struct do not have anonymous field tp.PullCtx: %s", ctype.String())
+		return nil, errors.Errorf("call-handler: the struct do not have anonymous field tp.CallCtx: %s", ctype.String())
 	}
 
-	var pullCtxOffset = iType.Offset
+	var callCtxOffset = iType.Offset
 
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
 
-	type PullCtrlValue struct {
+	type CallCtrlValue struct {
 		ctrl   reflect.Value
-		ctxPtr *PullCtx
+		ctxPtr *CallCtx
 	}
 	var pool = &sync.Pool{
 		New: func() interface{} {
 			ctrl := reflect.New(ctypeElem)
-			pullCtxPtr := ctrl.Pointer() + pullCtxOffset
-			ctxPtr := (*PullCtx)(unsafe.Pointer(pullCtxPtr))
-			return &PullCtrlValue{
+			callCtxPtr := ctrl.Pointer() + callCtxOffset
+			ctxPtr := (*CallCtx)(unsafe.Pointer(callCtxPtr))
+			return &CallCtrlValue{
 				ctrl:   ctrl,
 				ctxPtr: ctxPtr,
 			}
@@ -416,60 +416,60 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 		}
 		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
+			return nil, errors.Errorf("call-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
+			return nil, errors.Errorf("call-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
 		}
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
+			return nil, errors.Errorf("call-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
+			return nil, errors.Errorf("call-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 		// Method needs two outs: reply, *Rerror.
 		if mtype.NumOut() != 2 {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s needs two out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
+			return nil, errors.Errorf("call-handler: %s.%s needs two out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 		// Reply type must be exported.
 		replyType := mtype.Out(0)
 		if !goutil.IsExportedOrBuiltinType(replyType) {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
+			return nil, errors.Errorf("call-handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
 		}
 
 		// The return type of the method must be *Rerror.
 		if returnType := mtype.Out(1); !isRerrorType(returnType.String()) {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("pull-handler: %s.%s second out argument %s is not *tp.Rerror", ctype.String(), mname, returnType)
+			return nil, errors.Errorf("call-handler: %s.%s second out argument %s is not *tp.Rerror", ctype.String(), mname, returnType)
 		}
 
 		var methodFunc = method.Func
 		var handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
-			obj := pool.Get().(*PullCtrlValue)
+			obj := pool.Get().(*CallCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
 			rerr, _ := rets[1].Interface().(*Rerror)
@@ -493,61 +493,61 @@ func makePullHandlersFromStruct(pathPrefix string, pullCtrlStruct interface{}, p
 	return handlers, nil
 }
 
-func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
+func makeCallHandlersFromFunc(pathPrefix string, callHandleFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
-		ctype      = reflect.TypeOf(pullHandleFunc)
-		cValue     = reflect.ValueOf(pullHandleFunc)
+		ctype      = reflect.TypeOf(callHandleFunc)
+		cValue     = reflect.ValueOf(callHandleFunc)
 		typeString = objectName(cValue)
 	)
 
 	if ctype.Kind() != reflect.Func {
-		return nil, errors.Errorf("pull-handler: the type is not function: %s", typeString)
+		return nil, errors.Errorf("call-handler: the type is not function: %s", typeString)
 	}
 
 	// needs two outs: reply, *Rerror.
 	if ctype.NumOut() != 2 {
-		return nil, errors.Errorf("pull-handler: %s needs two out arguments, but have %d", typeString, ctype.NumOut())
+		return nil, errors.Errorf("call-handler: %s needs two out arguments, but have %d", typeString, ctype.NumOut())
 	}
 
 	// Reply type must be exported.
 	replyType := ctype.Out(0)
 	if !goutil.IsExportedOrBuiltinType(replyType) {
-		return nil, errors.Errorf("pull-handler: %s first reply type not exported: %s", typeString, replyType)
+		return nil, errors.Errorf("call-handler: %s first reply type not exported: %s", typeString, replyType)
 	}
 
 	// The return type of the method must be *Rerror.
 	if returnType := ctype.Out(1); !isRerrorType(returnType.String()) {
-		return nil, errors.Errorf("pull-handler: %s second out argument %s is not *tp.Rerror", typeString, returnType)
+		return nil, errors.Errorf("call-handler: %s second out argument %s is not *tp.Rerror", typeString, returnType)
 	}
 
-	// needs two ins: PullCtx, *<T>.
+	// needs two ins: CallCtx, *<T>.
 	if ctype.NumIn() != 2 {
-		return nil, errors.Errorf("pull-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
+		return nil, errors.Errorf("call-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
 	}
 
 	// First arg need be exported or builtin, and need be a pointer.
 	argType := ctype.In(1)
 	if !goutil.IsExportedOrBuiltinType(argType) {
-		return nil, errors.Errorf("pull-handler: %s arg type not exported: %s", typeString, argType)
+		return nil, errors.Errorf("call-handler: %s arg type not exported: %s", typeString, argType)
 	}
 	if argType.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("pull-handler: %s arg type need be a pointer: %s", typeString, argType)
+		return nil, errors.Errorf("call-handler: %s arg type need be a pointer: %s", typeString, argType)
 	}
 
-	// first agr need be a PullCtx (struct pointer or PullCtx).
+	// first agr need be a CallCtx (struct pointer or CallCtx).
 	ctxType := ctype.In(0)
 
 	var handleFunc func(*handlerCtx, reflect.Value)
 
 	switch ctxType.Kind() {
 	default:
-		return nil, errors.Errorf("pull-handler: %s's first arg must be tp.PullCtx type or struct pointer: %s", typeString, ctxType)
+		return nil, errors.Errorf("call-handler: %s's first arg must be tp.CallCtx type or struct pointer: %s", typeString, ctxType)
 
 	case reflect.Interface:
-		iface := reflect.TypeOf((*PullCtx)(nil)).Elem()
+		iface := reflect.TypeOf((*CallCtx)(nil)).Elem()
 		if !ctxType.Implements(iface) ||
 			!iface.Implements(reflect.New(ctxType).Type().Elem()) {
-			return nil, errors.Errorf("pull-handler: %s's first arg must be tp.PullCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, errors.Errorf("call-handler: %s's first arg must be tp.CallCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
@@ -564,25 +564,25 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 	case reflect.Ptr:
 		var ctxTypeElem = ctxType.Elem()
 		if ctxTypeElem.Kind() != reflect.Struct {
-			return nil, errors.Errorf("pull-handler: %s's first arg must be tp.PullCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, errors.Errorf("call-handler: %s's first arg must be tp.CallCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
-		iType, ok := ctxTypeElem.FieldByName("PullCtx")
+		iType, ok := ctxTypeElem.FieldByName("CallCtx")
 		if !ok || !iType.Anonymous {
-			return nil, errors.Errorf("pull-handler: %s's first arg do not have anonymous field tp.PullCtx: %s", typeString, ctxType)
+			return nil, errors.Errorf("call-handler: %s's first arg do not have anonymous field tp.CallCtx: %s", typeString, ctxType)
 		}
 
-		type PullCtrlValue struct {
+		type CallCtrlValue struct {
 			ctrl   reflect.Value
-			ctxPtr *PullCtx
+			ctxPtr *CallCtx
 		}
-		var pullCtxOffset = iType.Offset
+		var callCtxOffset = iType.Offset
 		var pool = &sync.Pool{
 			New: func() interface{} {
 				ctrl := reflect.New(ctxTypeElem)
-				pullCtxPtr := ctrl.Pointer() + pullCtxOffset
-				ctxPtr := (*PullCtx)(unsafe.Pointer(pullCtxPtr))
-				return &PullCtrlValue{
+				callCtxPtr := ctrl.Pointer() + callCtxOffset
+				ctxPtr := (*CallCtx)(unsafe.Pointer(callCtxPtr))
+				return &CallCtrlValue{
 					ctrl:   ctrl,
 					ctxPtr: ctxPtr,
 				}
@@ -590,7 +590,7 @@ func makePullHandlersFromFunc(pathPrefix string, pullHandleFunc interface{}, plu
 		}
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
-			obj := pool.Get().(*PullCtrlValue)
+			obj := pool.Get().(*CallCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := cValue.Call([]reflect.Value{obj.ctrl, argValue})
 			rerr, _ := rets[1].Interface().(*Rerror)
@@ -668,7 +668,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 		}
 		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
 			return nil, errors.Errorf("push-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
@@ -676,7 +676,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
 			return nil, errors.Errorf("push-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
@@ -684,13 +684,13 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
 			return nil, errors.Errorf("push-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
 			return nil, errors.Errorf("push-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
@@ -698,7 +698,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 
 		// Method needs one out: *Rerror.
 		if mtype.NumOut() != 1 {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
 			return nil, errors.Errorf("push-handler: %s.%s needs one out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
@@ -706,7 +706,7 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 
 		// The return type of the method must be *Rerror.
 		if returnType := mtype.Out(0); !isRerrorType(returnType.String()) {
-			if isBelongToPullCtx(mname) {
+			if isBelongToCallCtx(mname) {
 				continue
 			}
 			return nil, errors.Errorf("push-handler: %s.%s out argument %s is not *tp.Rerror", ctype.String(), mname, returnType)
@@ -834,8 +834,8 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 	}}, nil
 }
 
-func isBelongToPullCtx(name string) bool {
-	ctype := reflect.TypeOf(PullCtx(new(handlerCtx)))
+func isBelongToCallCtx(name string) bool {
+	ctype := reflect.TypeOf(CallCtx(new(handlerCtx)))
 	for m := 0; m < ctype.NumMethod(); m++ {
 		if name == ctype.Method(m).Name {
 			return true
@@ -909,9 +909,9 @@ func (h *Handler) ReplyType() reflect.Type {
 	return h.reply
 }
 
-// IsPull checks if it is pull handler or not.
-func (h *Handler) IsPull() bool {
-	return h.routerTypeName == pnPull || h.routerTypeName == pnUnknownPull
+// IsCall checks if it is call handler or not.
+func (h *Handler) IsCall() bool {
+	return h.routerTypeName == pnCall || h.routerTypeName == pnUnknownCall
 }
 
 // IsPush checks if it is push handler or not.
@@ -919,7 +919,7 @@ func (h *Handler) IsPush() bool {
 	return h.routerTypeName == pnPush || h.routerTypeName == pnUnknownPush
 }
 
-// IsUnknown checks if it is unknown handler(pull/push) or not.
+// IsUnknown checks if it is unknown handler(call/push) or not.
 func (h *Handler) IsUnknown() bool {
 	return h.isUnknown
 }

@@ -15,12 +15,12 @@ func main() {
 		DefaultSessionAge: time.Second * 7,
 		DefaultContextAge: time.Second * 2,
 	})
-	srv.RoutePull(new(test))
+	srv.RouteCall(new(test))
 	srv.ListenAndServe()
 }
 
 type test struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (t *test) Ok(arg *string) (string, *tp.Rerror) {

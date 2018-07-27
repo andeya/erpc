@@ -99,11 +99,11 @@ type (
 )
 
 var (
-	_ tp.PreWritePullPlugin      = (*encryptPlugin)(nil)
+	_ tp.PreWriteCallPlugin      = (*encryptPlugin)(nil)
 	_ tp.PreWritePushPlugin      = (*encryptPlugin)(nil)
 	_ tp.PreWriteReplyPlugin     = (*encryptPlugin)(nil)
-	_ tp.PreReadPullBodyPlugin   = (*decryptPlugin)(nil)
-	_ tp.PostReadPullBodyPlugin  = (*decryptPlugin)(nil)
+	_ tp.PreReadCallBodyPlugin   = (*decryptPlugin)(nil)
+	_ tp.PostReadCallBodyPlugin  = (*decryptPlugin)(nil)
 	_ tp.PreReadReplyBodyPlugin  = (*decryptPlugin)(nil)
 	_ tp.PostReadReplyBodyPlugin = (*decryptPlugin)(nil)
 	_ tp.PreReadPushBodyPlugin   = (*decryptPlugin)(nil)
@@ -135,7 +135,7 @@ func isSecure(meta *utils.Args) bool {
 	return false
 }
 
-func (e *encryptPlugin) PreWritePull(ctx tp.WriteCtx) *tp.Rerror {
+func (e *encryptPlugin) PreWriteCall(ctx tp.WriteCtx) *tp.Rerror {
 	if ctx.Rerror() != nil {
 		return nil
 	}
@@ -161,14 +161,14 @@ func (e *encryptPlugin) PreWritePull(ctx tp.WriteCtx) *tp.Rerror {
 }
 
 func (e *encryptPlugin) PreWritePush(ctx tp.WriteCtx) *tp.Rerror {
-	return e.PreWritePull(ctx)
+	return e.PreWriteCall(ctx)
 }
 
 func (e *encryptPlugin) PreWriteReply(ctx tp.WriteCtx) *tp.Rerror {
-	return e.PreWritePull(ctx)
+	return e.PreWriteCall(ctx)
 }
 
-func (e *decryptPlugin) PreReadPullBody(ctx tp.ReadCtx) *tp.Rerror {
+func (e *decryptPlugin) PreReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 	b := ctx.PeekMeta(ACCEPT_SECURE_META_KEY)
 	accept := goutil.BytesToString(b)
 	useDecrypt := isSecure(ctx.Input().Meta())
@@ -190,7 +190,7 @@ func (e *decryptPlugin) PreReadPullBody(ctx tp.ReadCtx) *tp.Rerror {
 	return nil
 }
 
-func (e *decryptPlugin) PostReadPullBody(ctx tp.ReadCtx) *tp.Rerror {
+func (e *decryptPlugin) PostReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 	rawbody, ok := ctx.Swap().Load(encrypt_rawbody)
 	if !ok {
 		return nil
@@ -210,17 +210,17 @@ func (e *decryptPlugin) PostReadPullBody(ctx tp.ReadCtx) *tp.Rerror {
 }
 
 func (e *decryptPlugin) PreReadReplyBody(ctx tp.ReadCtx) *tp.Rerror {
-	return e.PreReadPullBody(ctx)
+	return e.PreReadCallBody(ctx)
 }
 
 func (e *decryptPlugin) PostReadReplyBody(ctx tp.ReadCtx) *tp.Rerror {
-	return e.PostReadPullBody(ctx)
+	return e.PostReadCallBody(ctx)
 }
 
 func (e *decryptPlugin) PreReadPushBody(ctx tp.ReadCtx) *tp.Rerror {
-	return e.PreReadPullBody(ctx)
+	return e.PreReadCallBody(ctx)
 }
 
 func (e *decryptPlugin) PostReadPushBody(ctx tp.ReadCtx) *tp.Rerror {
-	return e.PostReadPullBody(ctx)
+	return e.PostReadCallBody(ctx)
 }

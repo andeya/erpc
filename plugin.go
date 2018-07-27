@@ -53,13 +53,13 @@ type (
 	PostAcceptPlugin interface {
 		PostAccept(PreSession) *Rerror
 	}
-	// PreWritePullPlugin is executed before writing PULL packet.
-	PreWritePullPlugin interface {
-		PreWritePull(WriteCtx) *Rerror
+	// PreWriteCallPlugin is executed before writing CALL packet.
+	PreWriteCallPlugin interface {
+		PreWriteCall(WriteCtx) *Rerror
 	}
-	// PostWritePullPlugin is executed after successful writing PULL packet.
-	PostWritePullPlugin interface {
-		PostWritePull(WriteCtx) *Rerror
+	// PostWriteCallPlugin is executed after successful writing CALL packet.
+	PostWriteCallPlugin interface {
+		PostWriteCall(WriteCtx) *Rerror
 	}
 	// PreWriteReplyPlugin is executed before writing REPLY packet.
 	PreWriteReplyPlugin interface {
@@ -81,17 +81,17 @@ type (
 	PreReadHeaderPlugin interface {
 		PreReadHeader(PreCtx) error
 	}
-	// PostReadPullHeaderPlugin is executed after reading PULL packet header.
-	PostReadPullHeaderPlugin interface {
-		PostReadPullHeader(ReadCtx) *Rerror
+	// PostReadCallHeaderPlugin is executed after reading CALL packet header.
+	PostReadCallHeaderPlugin interface {
+		PostReadCallHeader(ReadCtx) *Rerror
 	}
-	// PreReadPullBodyPlugin is executed before reading PULL packet body.
-	PreReadPullBodyPlugin interface {
-		PreReadPullBody(ReadCtx) *Rerror
+	// PreReadCallBodyPlugin is executed before reading CALL packet body.
+	PreReadCallBodyPlugin interface {
+		PreReadCallBody(ReadCtx) *Rerror
 	}
-	// PostReadPullBodyPlugin is executed after reading PULL packet body.
-	PostReadPullBodyPlugin interface {
-		PostReadPullBody(ReadCtx) *Rerror
+	// PostReadCallBodyPlugin is executed after reading CALL packet body.
+	PostReadCallBodyPlugin interface {
+		PostReadCallBody(ReadCtx) *Rerror
 	}
 	// PostReadPushHeaderPlugin is executed after reading PUSH packet header.
 	PostReadPushHeaderPlugin interface {
@@ -371,13 +371,13 @@ func (p *pluginSingleContainer) postAccept(sess PreSession) (rerr *Rerror) {
 	return nil
 }
 
-// PreWritePull executes the defined plugins before writing PULL packet.
-func (p *pluginSingleContainer) preWritePull(ctx WriteCtx) *Rerror {
+// PreWriteCall executes the defined plugins before writing CALL packet.
+func (p *pluginSingleContainer) preWriteCall(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PreWritePullPlugin); ok {
-			if rerr = _plugin.PreWritePull(ctx); rerr != nil {
-				Debugf("[PreWritePullPlugin:%s] %s", plugin.Name(), rerr.String())
+		if _plugin, ok := plugin.(PreWriteCallPlugin); ok {
+			if rerr = _plugin.PreWriteCall(ctx); rerr != nil {
+				Debugf("[PreWriteCallPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -385,13 +385,13 @@ func (p *pluginSingleContainer) preWritePull(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PostWritePull executes the defined plugins after successful writing PULL packet.
-func (p *pluginSingleContainer) postWritePull(ctx WriteCtx) *Rerror {
+// PostWriteCall executes the defined plugins after successful writing CALL packet.
+func (p *pluginSingleContainer) postWriteCall(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostWritePullPlugin); ok {
-			if rerr = _plugin.PostWritePull(ctx); rerr != nil {
-				Errorf("[PostWritePullPlugin:%s] %s", plugin.Name(), rerr.String())
+		if _plugin, ok := plugin.(PostWriteCallPlugin); ok {
+			if rerr = _plugin.PostWriteCall(ctx); rerr != nil {
+				Errorf("[PostWriteCallPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -467,13 +467,13 @@ func (p *pluginSingleContainer) preReadHeader(ctx PreCtx) error {
 	return nil
 }
 
-// PostReadPullHeader executes the defined plugins after reading PULL packet header.
-func (p *pluginSingleContainer) postReadPullHeader(ctx ReadCtx) *Rerror {
+// PostReadCallHeader executes the defined plugins after reading CALL packet header.
+func (p *pluginSingleContainer) postReadCallHeader(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostReadPullHeaderPlugin); ok {
-			if rerr = _plugin.PostReadPullHeader(ctx); rerr != nil {
-				Errorf("[PostReadPullHeaderPlugin:%s] %s", plugin.Name(), rerr.String())
+		if _plugin, ok := plugin.(PostReadCallHeaderPlugin); ok {
+			if rerr = _plugin.PostReadCallHeader(ctx); rerr != nil {
+				Errorf("[PostReadCallHeaderPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -481,13 +481,13 @@ func (p *pluginSingleContainer) postReadPullHeader(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PreReadPullBody executes the defined plugins before reading PULL packet body.
-func (p *pluginSingleContainer) preReadPullBody(ctx ReadCtx) *Rerror {
+// PreReadCallBody executes the defined plugins before reading CALL packet body.
+func (p *pluginSingleContainer) preReadCallBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PreReadPullBodyPlugin); ok {
-			if rerr = _plugin.PreReadPullBody(ctx); rerr != nil {
-				Errorf("[PreReadPullBodyPlugin:%s] %s", plugin.Name(), rerr.String())
+		if _plugin, ok := plugin.(PreReadCallBodyPlugin); ok {
+			if rerr = _plugin.PreReadCallBody(ctx); rerr != nil {
+				Errorf("[PreReadCallBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -495,13 +495,13 @@ func (p *pluginSingleContainer) preReadPullBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PostReadPullBody executes the defined plugins after reading PULL packet body.
-func (p *pluginSingleContainer) postReadPullBody(ctx ReadCtx) *Rerror {
+// PostReadCallBody executes the defined plugins after reading CALL packet body.
+func (p *pluginSingleContainer) postReadCallBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
-		if _plugin, ok := plugin.(PostReadPullBodyPlugin); ok {
-			if rerr = _plugin.PostReadPullBody(ctx); rerr != nil {
-				Errorf("[PostReadPullBodyPlugin:%s] %s", plugin.Name(), rerr.String())
+		if _plugin, ok := plugin.(PostReadCallBodyPlugin); ok {
+			if rerr = _plugin.PostReadCallBody(ctx); rerr != nil {
+				Errorf("[PostReadCallBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -618,18 +618,18 @@ func warnInvaildHandlerHooks(plugin []Plugin) {
 			Debugf("invalid PostDialPlugin in router: %s", p.Name())
 		case PostAcceptPlugin:
 			Debugf("invalid PostAcceptPlugin in router: %s", p.Name())
-		case PreWritePullPlugin:
-			Debugf("invalid PreWritePullPlugin in router: %s", p.Name())
-		case PostWritePullPlugin:
-			Debugf("invalid PostWritePullPlugin in router: %s", p.Name())
+		case PreWriteCallPlugin:
+			Debugf("invalid PreWriteCallPlugin in router: %s", p.Name())
+		case PostWriteCallPlugin:
+			Debugf("invalid PostWriteCallPlugin in router: %s", p.Name())
 		case PreWritePushPlugin:
 			Debugf("invalid PreWritePushPlugin in router: %s", p.Name())
 		case PostWritePushPlugin:
 			Debugf("invalid PostWritePushPlugin in router: %s", p.Name())
 		case PreReadHeaderPlugin:
 			Debugf("invalid PreReadHeaderPlugin in router: %s", p.Name())
-		case PostReadPullHeaderPlugin:
-			Debugf("invalid PostReadPullHeaderPlugin in router: %s", p.Name())
+		case PostReadCallHeaderPlugin:
+			Debugf("invalid PostReadCallHeaderPlugin in router: %s", p.Name())
 		case PostReadPushHeaderPlugin:
 			Debugf("invalid PostReadPushHeaderPlugin in router: %s", p.Name())
 		}

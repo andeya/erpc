@@ -63,37 +63,37 @@ func (c *CliSession) Stats() pool.WorkshopStats {
 	return c.pool.Stats()
 }
 
-// AsyncPull sends a packet and receives reply asynchronously.
+// AsyncCall sends a packet and receives reply asynchronously.
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name.
-func (c *CliSession) AsyncPull(
+func (c *CliSession) AsyncCall(
 	uri string,
 	arg interface{},
 	result interface{},
-	pullCmdChan chan<- tp.PullCmd,
+	callCmdChan chan<- tp.CallCmd,
 	setting ...socket.PacketSetting,
-) tp.PullCmd {
+) tp.CallCmd {
 	_sess, err := c.pool.Hire()
 	if err != nil {
-		pullCmd := tp.NewFakePullCmd(uri, arg, result, tp.ToRerror(err))
-		if pullCmdChan != nil && cap(pullCmdChan) == 0 {
-			tp.Panicf("*CliSession.AsyncPull(): pullCmdChan channel is unbuffered")
+		callCmd := tp.NewFakeCallCmd(uri, arg, result, tp.ToRerror(err))
+		if callCmdChan != nil && cap(callCmdChan) == 0 {
+			tp.Panicf("*CliSession.AsyncCall(): callCmdChan channel is unbuffered")
 		}
-		pullCmdChan <- pullCmd
-		return pullCmd
+		callCmdChan <- callCmd
+		return callCmd
 	}
 	sess := _sess.(tp.Session)
 	defer c.pool.Fire(sess)
-	return sess.AsyncPull(uri, arg, result, pullCmdChan, setting...)
+	return sess.AsyncCall(uri, arg, result, callCmdChan, setting...)
 }
 
-// Pull sends a packet and receives reply.
+// Call sends a packet and receives reply.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *CliSession) Pull(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.PullCmd {
-	pullCmd := c.AsyncPull(uri, arg, result, make(chan tp.PullCmd, 1), setting...)
-	<-pullCmd.Done()
-	return pullCmd
+func (c *CliSession) Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.CallCmd {
+	callCmd := c.AsyncCall(uri, arg, result, make(chan tp.CallCmd, 1), setting...)
+	<-callCmd.Done()
+	return callCmd
 }
 
 // Push sends a packet, but do not receives reply.

@@ -72,7 +72,7 @@ func (a *auth) PostDial(sess tp.PreSession) *tp.Rerror {
 	if a.generateAuthInfoFunc == nil {
 		return nil
 	}
-	rerr := sess.Send(authURI, a.generateAuthInfoFunc(), nil, tp.WithBodyCodec('s'), tp.WithPtype(tp.TypePull))
+	rerr := sess.Send(authURI, a.generateAuthInfoFunc(), nil, tp.WithBodyCodec('s'), tp.WithPtype(tp.TypeCall))
 	if rerr != nil {
 		return rerr
 	}
@@ -87,7 +87,7 @@ func (a *auth) PostAccept(sess tp.PreSession) *tp.Rerror {
 		return nil
 	}
 	input, rerr := sess.Receive(func(header socket.Header) interface{} {
-		if header.Ptype() == tp.TypePull && header.Uri() == authURI {
+		if header.Ptype() == tp.TypeCall && header.Uri() == authURI {
 			return new(string)
 		}
 		return nil
@@ -96,11 +96,11 @@ func (a *auth) PostAccept(sess tp.PreSession) *tp.Rerror {
 		return rerr
 	}
 	authInfoPtr, ok := input.Body().(*string)
-	if !ok || input.Ptype() != tp.TypePull || input.Uri() != authURI {
+	if !ok || input.Ptype() != tp.TypeCall || input.Uri() != authURI {
 		rerr = tp.NewRerror(
 			tp.CodeUnauthorized,
 			tp.CodeText(tp.CodeUnauthorized),
-			fmt.Sprintf("the 1th package want: PULL %s, but have: %s %s", authURI, tp.TypeText(input.Ptype()), input.Uri()),
+			fmt.Sprintf("the 1th package want: CALL %s, but have: %s %s", authURI, tp.TypeText(input.Ptype()), input.Uri()),
 		)
 	} else {
 		rerr = a.verifyAuthInfoFunc(*authInfoPtr, sess)

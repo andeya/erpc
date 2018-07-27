@@ -18,14 +18,14 @@ func main() {
 		ListenPort:        9090,
 	})
 	group := peer.SubRoute("group")
-	group.RoutePull(new(Home))
-	peer.SetUnknownPull(UnknownPullHandle)
+	group.RouteCall(new(Home))
+	peer.SetUnknownCall(UnknownCallHandle)
 	peer.ListenAndServe()
 }
 
 // Home controller
 type Home struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 // Test handler
@@ -45,8 +45,8 @@ func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Re
 	}, nil
 }
 
-// UnknownPullHandle handles unknown pull packet
-func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+// UnknownCallHandle handles unknown call packet
+func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 	time.Sleep(1)
 	var v = struct {
 		RawMessage json.RawMessage
@@ -56,7 +56,7 @@ func UnknownPullHandle(ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 	if err != nil {
 		return nil, tp.NewRerror(1001, "bind error", err.Error())
 	}
-	tp.Debugf("UnknownPullHandle: codec: %d, RawMessage: %s, bytes: %s",
+	tp.Debugf("UnknownCallHandle: codec: %d, RawMessage: %s, bytes: %s",
 		codecId, v.RawMessage, v.Bytes,
 	)
 	ctx.Session().Push("/push/test?tag=from home-test", map[string]interface{}{

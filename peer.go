@@ -54,20 +54,20 @@ type (
 	// EarlyPeer the communication peer that has just been created
 	EarlyPeer interface {
 		BasePeer
-		// Router returns the root router of pull or push handlers.
+		// Router returns the root router of call or push handlers.
 		Router() *Router
 		// SubRoute adds handler group.
 		SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter
-		// RoutePull registers PULL handlers, and returns the paths.
-		RoutePull(ctrlStruct interface{}, plugin ...Plugin) []string
-		// RoutePullFunc registers PULL handler, and returns the path.
-		RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string
+		// RouteCall registers CALL handlers, and returns the paths.
+		RouteCall(ctrlStruct interface{}, plugin ...Plugin) []string
+		// RouteCallFunc registers CALL handler, and returns the path.
+		RouteCallFunc(callHandleFunc interface{}, plugin ...Plugin) string
 		// RoutePush registers PUSH handlers, and returns the paths.
 		RoutePush(ctrlStruct interface{}, plugin ...Plugin) []string
 		// RoutePushFunc registers PUSH handler, and returns the path.
 		RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) string
-		// SetUnknownPull sets the default handler, which is called when no handler for PULL is found.
-		SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin)
+		// SetUnknownCall sets the default handler, which is called when no handler for CALL is found.
+		SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Rerror), plugin ...Plugin)
 		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
 		SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
 	}
@@ -103,7 +103,7 @@ type peer struct {
 	freeContext       *handlerCtx
 	ctxLock           sync.Mutex
 	defaultSessionAge time.Duration // Default session max age, if less than or equal to 0, no time limit
-	defaultContextAge time.Duration // Default PULL or PUSH context max age, if less than or equal to 0, no time limit
+	defaultContextAge time.Duration // Default CALL or PUSH context max age, if less than or equal to 0, no time limit
 	tlsConfig         *tls.Config
 	slowCometDuration time.Duration
 	defaultBodyCodec  byte
@@ -465,7 +465,7 @@ func (p *peer) putContext(ctx *handlerCtx, withWg bool) {
 	p.freeContext = ctx
 }
 
-// Router returns the root router of pull or push handlers.
+// Router returns the root router of call or push handlers.
 func (p *peer) Router() *Router {
 	return p.router
 }
@@ -475,14 +475,14 @@ func (p *peer) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 	return p.router.SubRoute(pathPrefix, plugin...)
 }
 
-// RoutePull registers PULL handlers, and returns the paths.
-func (p *peer) RoutePull(pullCtrlStruct interface{}, plugin ...Plugin) []string {
-	return p.router.RoutePull(pullCtrlStruct, plugin...)
+// RouteCall registers CALL handlers, and returns the paths.
+func (p *peer) RouteCall(callCtrlStruct interface{}, plugin ...Plugin) []string {
+	return p.router.RouteCall(callCtrlStruct, plugin...)
 }
 
-// RoutePullFunc registers PULL handler, and returns the path.
-func (p *peer) RoutePullFunc(pullHandleFunc interface{}, plugin ...Plugin) string {
-	return p.router.RoutePullFunc(pullHandleFunc, plugin...)
+// RouteCallFunc registers CALL handler, and returns the path.
+func (p *peer) RouteCallFunc(callHandleFunc interface{}, plugin ...Plugin) string {
+	return p.router.RouteCallFunc(callHandleFunc, plugin...)
 }
 
 // RoutePush registers PUSH handlers, and returns the paths.
@@ -495,10 +495,10 @@ func (p *peer) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) strin
 	return p.router.RoutePushFunc(pushHandleFunc, plugin...)
 }
 
-// SetUnknownPull sets the default handler,
-// which is called when no handler for PULL is found.
-func (p *peer) SetUnknownPull(fn func(UnknownPullCtx) (interface{}, *Rerror), plugin ...Plugin) {
-	p.router.SetUnknownPull(fn, plugin...)
+// SetUnknownCall sets the default handler,
+// which is called when no handler for CALL is found.
+func (p *peer) SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Rerror), plugin ...Plugin) {
+	p.router.SetUnknownCall(fn, plugin...)
 }
 
 // SetUnknownPush sets the default handler,
@@ -509,8 +509,8 @@ func (p *peer) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
 
 // maybe useful
 
-func (p *peer) getPullHandler(uriPath string) (*Handler, bool) {
-	return p.router.subRouter.getPull(uriPath)
+func (p *peer) getCallHandler(uriPath string) (*Handler, bool) {
+	return p.router.subRouter.getCall(uriPath)
 }
 
 func (p *peer) getPushHandler(uriPath string) (*Handler, bool) {

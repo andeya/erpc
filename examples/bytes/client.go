@@ -22,13 +22,13 @@ func main() {
 	}
 	var result []byte
 	for {
-		if rerr = sess.Pull(
+		if rerr = sess.Call(
 			"/group/home/test?peer_id=call-1",
-			[]byte("pull text"),
+			[]byte("call text"),
 			&result,
 			tp.WithQuery("a", "1"),
 		).Rerror(); rerr != nil {
-			tp.Errorf("pull error: %v", rerr)
+			tp.Errorf("call error: %v", rerr)
 			time.Sleep(time.Second * 2)
 		} else {
 			break
@@ -36,9 +36,9 @@ func main() {
 	}
 	tp.Infof("test result: %s", result)
 
-	rerr = sess.Pull(
+	rerr = sess.Call(
 		"/group/home/test_unknown?peer_id=call-2",
-		[]byte("unknown pull text"),
+		[]byte("unknown call text"),
 		&result,
 		tp.WithQuery("b", "2"),
 	).Rerror()
@@ -46,7 +46,7 @@ func main() {
 		tp.Fatalf("has conn rerror: %v", rerr)
 	}
 	if rerr != nil {
-		tp.Fatalf("pull error: %v", rerr)
+		tp.Fatalf("call error: %v", rerr)
 	}
 	tp.Infof("test_unknown: %s", result)
 }

@@ -28,7 +28,7 @@ type Result struct {
 	C int
 }
 
-type math struct{ tp.PullCtx }
+type math struct{ tp.CallCtx }
 
 func (m *math) Add(arg *Arg) (*Result, *tp.Rerror) {
 	// enforces the body of the encrypted reply packet.
@@ -43,7 +43,7 @@ func newSession(t *testing.T) tp.Session {
 		ListenPort:  9090,
 		PrintDetail: true,
 	})
-	srv.RoutePull(new(math), p)
+	srv.RouteCall(new(math), p)
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
@@ -61,7 +61,7 @@ func TestSecurePlugin(t *testing.T) {
 	sess := newSession(t)
 	// test secure
 	var result Result
-	rerr := sess.Pull(
+	rerr := sess.Call(
 		"/math/add",
 		&Arg{A: 10, B: 2},
 		&result,
@@ -81,7 +81,7 @@ func TestAcceptSecurePlugin(t *testing.T) {
 	sess := newSession(t)
 	// test accept secure
 	var result Result
-	rerr := sess.Pull(
+	rerr := sess.Call(
 		"/math/add",
 		&Arg{A: 20, B: 4},
 		&result,

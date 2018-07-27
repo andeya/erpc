@@ -13,7 +13,7 @@ type Arg struct {
 	B int `param:"<range:1:>"`
 }
 
-type P struct{ tp.PullCtx }
+type P struct{ tp.CallCtx }
 
 func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
 	return arg.A / arg.B, nil
@@ -23,7 +23,7 @@ func TestCliSession(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{
 		ListenPort: 9090,
 	})
-	srv.RoutePull(new(P))
+	srv.RouteCall(new(P))
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
@@ -42,7 +42,7 @@ func TestCliSession(t *testing.T) {
 	go func() {
 		var result int
 		for i := 0; ; i++ {
-			rerr := cli.Pull("/p/divide", &Arg{
+			rerr := cli.Call("/p/divide", &Arg{
 				A: i,
 				B: 2,
 			}, &result).Rerror()

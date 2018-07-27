@@ -29,7 +29,7 @@ import (
 )
 
 type Home struct {
-	tp.PullCtx
+	tp.CallCtx
 }
 
 func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
@@ -48,7 +48,7 @@ func TestPbProto(t *testing.T) {
 	
 	// server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
-	srv.RoutePull(new(Home))
+	srv.RouteCall(new(Home))
 	go srv.ListenAndServe(pbproto.NewPbProtoFunc)
 	time.Sleep(1e9)
 
@@ -60,7 +60,7 @@ func TestPbProto(t *testing.T) {
 		t.Error(err)
 	}
 	var result interface{}
-	rerr := sess.Pull("/home/test?peer_id=110",
+	rerr := sess.Call("/home/test?peer_id=110",
 		map[string]interface{}{
 			"bytes": []byte("test bytes"),
 		},
