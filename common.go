@@ -321,6 +321,16 @@ var closedChan = func() <-chan struct{} {
 	return ch
 }()
 
+// TracePeer trace back the peer.
+func (f *fakeCallCmd) TracePeer() (Peer, bool) {
+	return nil, false
+}
+
+// TraceSession trace back the session.
+func (f *fakeCallCmd) TraceSession() (Session, bool) {
+	return nil, false
+}
+
 // Done returns the chan that indicates whether it has been completed.
 func (f *fakeCallCmd) Done() <-chan struct{} {
 	return closedChan
