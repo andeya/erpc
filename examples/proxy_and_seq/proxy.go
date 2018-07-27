@@ -28,7 +28,7 @@ DIAL:
 		time.Sleep(time.Second * 3)
 		goto DIAL
 	}
-	return proxy.Proxy(func(*proxy.ProxyLabel) proxy.Caller {
+	return proxy.Proxy(func(*proxy.ProxyLabel) proxy.Handler {
 		return sess
 	})
 }
