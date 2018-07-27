@@ -23,39 +23,39 @@ import (
 // A proxy plugin for handling unknown calling or pushing.
 
 // Proxy creates a proxy plugin for handling unknown calling and pushing.
-func Proxy(fn func(*ProxyLabel) Caller) tp.Plugin {
+func Proxy(fn func(*ProxyLabel) Handler) tp.Plugin {
 	return &proxy{
-		callCaller: func(label *ProxyLabel) CallCaller {
+		callHandler: func(label *ProxyLabel) CallHandler {
 			return fn(label)
 		},
-		pushCaller: func(label *ProxyLabel) PushCaller {
+		pushHandler: func(label *ProxyLabel) PushHandler {
 			return fn(label)
 		},
 	}
 }
 
 // ProxyCall creates a proxy plugin for handling unknown calling.
-func ProxyCall(fn func(*ProxyLabel) CallCaller) tp.Plugin {
-	return &proxy{callCaller: fn}
+func ProxyCall(fn func(*ProxyLabel) CallHandler) tp.Plugin {
+	return &proxy{callHandler: fn}
 }
 
 // ProxyPush creates a proxy plugin for handling unknown pushing.
-func ProxyPush(fn func(*ProxyLabel) PushCaller) tp.Plugin {
-	return &proxy{pushCaller: fn}
+func ProxyPush(fn func(*ProxyLabel) PushHandler) tp.Plugin {
+	return &proxy{pushHandler: fn}
 }
 
 type (
-	// Caller the object used to call and push
-	Caller interface {
-		CallCaller
-		PushCaller
+	// Handler the object used to call and push
+	Handler interface {
+		CallHandler
+		PushHandler
 	}
-	// CallCaller the object used to call
-	CallCaller interface {
+	// CallHandler the object used to call
+	CallHandler interface {
 		Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.CallCmd
 	}
-	// PushCaller the object used to push
-	PushCaller interface {
+	// PushHandler the object used to push
+	PushHandler interface {
 		Push(uri string, arg interface{}, setting ...socket.PacketSetting) *tp.Rerror
 	}
 	// ProxyLabel proxy label information
@@ -63,8 +63,8 @@ type (
 		SessionId, RealIp, Uri string
 	}
 	proxy struct {
-		callCaller func(*ProxyLabel) CallCaller
-		pushCaller func(*ProxyLabel) PushCaller
+		callHandler func(*ProxyLabel) CallHandler
+		pushHandler func(*ProxyLabel) PushHandler
 	}
 )
 
@@ -77,10 +77,10 @@ func (p *proxy) Name() string {
 }
 
 func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
-	if p.callCaller != nil {
+	if p.callHandler != nil {
 		peer.SetUnknownCall(p.call)
 	}
-	if p.pushCaller != nil {
+	if p.pushHandler != nil {
 		peer.SetUnknownPush(p.push)
 	}
 	return nil
@@ -107,7 +107,7 @@ func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 		label.RealIp = goutil.BytesToString(realIpBytes)
 	}
 	label.Uri = ctx.Uri()
-	callcmd := p.callCaller(&label).Call(label.Uri, ctx.InputBodyBytes(), &result, settings...)
+	callcmd := p.callHandler(&label).Call(label.Uri, ctx.InputBodyBytes(), &result, settings...)
 	callcmd.InputMeta().VisitAll(func(key, value []byte) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
@@ -136,7 +136,7 @@ func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 		label.RealIp = goutil.BytesToString(realIpBytes)
 	}
 	label.Uri = ctx.Uri()
-	rerr := p.pushCaller(&label).Push(label.Uri, ctx.InputBodyBytes(), settings...)
+	rerr := p.pushHandler(&label).Push(label.Uri, ctx.InputBodyBytes(), settings...)
 	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
 		rerr.Code = tp.CodeBadGateway
 		rerr.Message = tp.CodeText(tp.CodeBadGateway)
