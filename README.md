@@ -1,14 +1,14 @@
-# Teleport [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/teleport?style=flat-square)](http://goreportcard.com/report/henrylee2cn/teleport) [![github issues](https://img.shields.io/github/issues/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/teleport) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/tree/master/examples)
+# Teleport [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/teleport?style=flat-square)](http://goreportcard.com/report/henrylee2cn/teleport) [![github issues](https://img.shields.io/github/issues/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/teleport) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/tree/v3/examples)
 <!-- [![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg?style=flat-square)](http://jq.qq.com/?_wv=1027&k=fzi4p1) -->
 
 Teleport is a versatile, high-performance and flexible socket framework.
 
 It can be used for peer-peer, rpc, gateway, micro services, push services, game services and so on.
 
-[简体中文](https://github.com/henrylee2cn/teleport/blob/master/README_ZH.md)
+[简体中文](https://github.com/henrylee2cn/teleport/blob/v3/README_ZH.md)
 
 
-![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_framework.png)
+![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/v3/doc/teleport_framework.png)
 
 
 ## Benchmark
@@ -50,22 +50,22 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 - Profile torch of teleport/socket
 
-![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
+![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_profile_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_profile_torch.svg)**
 
 - Heap torch of teleport/socket
 
-![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
+![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_heap_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/v3/doc/tp_socket_heap_torch.svg)**
 
 ## Version
 
 | version | status  | branch                                   |
 | ------- | ------- | ---------------------------------------- |
 | v4      | release | [v4](https://github.com/henrylee2cn/teleport/tree/v4) |
-| v3      | release | [master(or v3)](https://github.com/henrylee2cn/teleport/tree/master) |
+| v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/v3) |
 | v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
 | v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
 
@@ -181,7 +181,7 @@ func (p *push) Status(arg *string) *tp.Rerror {
 }
 ```
 
-[More Examples](https://github.com/henrylee2cn/teleport/blob/master/examples)
+[More Examples](https://github.com/henrylee2cn/teleport/blob/v3/examples)
 
 ## Design
 
@@ -628,26 +628,26 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                  |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------- |
-| [json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
-| [protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
-| [plain](https://github.com/henrylee2cn/teleport/blob/master/codec/plain_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Plain text codec(teleport own)   |
-| [form](https://github.com/henrylee2cn/teleport/blob/master/codec/form_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
+| [json](https://github.com/henrylee2cn/teleport/blob/v3/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
+| [protobuf](https://github.com/henrylee2cn/teleport/blob/v3/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
+| [plain](https://github.com/henrylee2cn/teleport/blob/v3/codec/plain_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Plain text codec(teleport own)   |
+| [form](https://github.com/henrylee2cn/teleport/blob/v3/codec/form_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
 
 ### Plugin
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [auth](https://github.com/henrylee2cn/teleport/blob/master/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
+| [auth](https://github.com/henrylee2cn/teleport/blob/v3/plugin/auth.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A auth plugin for verifying peer at the first time |
 | [binder](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-binder) | `import binder "github.com/henrylee2cn/tp-ext/plugin-binder"` | Parameter Binding Verification for Struct Handler |
 | [heartbeat](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-heartbeat) | `import heartbeat "github.com/henrylee2cn/tp-ext/plugin-heartbeat"` | A generic timing heartbeat plugin        |
-| [proxy](https://github.com/henrylee2cn/teleport/blob/master/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
+| [proxy](https://github.com/henrylee2cn/teleport/blob/v3/plugin/proxy.go) | `import "github.com/henrylee2cn/teleport/plugin"` | A proxy plugin for handling unknown pulling or pushing |
 [secure](https://github.com/henrylee2cn/tp-ext/blob/master/plugin-secure)|`import secure "github.com/henrylee2cn/tp-ext/plugin-secure"`|Encrypting/decrypting the packet body
 
 ### Protocol
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [fastproto](https://github.com/henrylee2cn/teleport/blob/master/socket/protocol.go#L70) | `import "github.com/henrylee2cn/teleport/socket` | A fast socket communication protocol(teleport default protocol) |
+| [fastproto](https://github.com/henrylee2cn/teleport/blob/v3/socket/protocol.go#L70) | `import "github.com/henrylee2cn/teleport/socket` | A fast socket communication protocol(teleport default protocol) |
 | [jsonproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-jsonproto) | `import jsonproto "github.com/henrylee2cn/tp-ext/proto-jsonproto"` | A JSON socket communication protocol     |
 | [pbproto](https://github.com/henrylee2cn/tp-ext/blob/master/proto-pbproto) | `import pbproto "github.com/henrylee2cn/tp-ext/proto-pbproto"` | A Protobuf socket communication protocol     |
 
@@ -655,7 +655,7 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [gzip](https://github.com/henrylee2cn/teleport/blob/master/xfer/gzip.go) | `import "github.com/henrylee2cn/teleport/xfer"` | Gzip(teleport own)                       |
+| [gzip](https://github.com/henrylee2cn/teleport/blob/v3/xfer/gzip.go) | `import "github.com/henrylee2cn/teleport/xfer"` | Gzip(teleport own)                       |
 | [md5Hash](https://github.com/henrylee2cn/tp-ext/blob/master/xfer-md5Hash) | `import md5Hash "github.com/henrylee2cn/tp-ext/xfer-md5Hash"` | Provides a integrity check transfer filter |
 
 ### Module
@@ -686,4 +686,4 @@ type PeerConfig struct {
 
 ## License
 
-Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text
+Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/v3/LICENSE) file for the full license text
