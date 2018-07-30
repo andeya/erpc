@@ -81,7 +81,9 @@ type (
 		// DialContext connects with the peer of the destination address, using the provided context.
 		DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
 		// ServeConn serves the connection and returns a session.
-		// Note: Not support automatically redials after disconnection.
+		// Note:
+		//  Not support automatically redials after disconnection;
+		//  Execute the PostAcceptPlugin plugins.
 		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
 		// ServeListener serves the listener.
 		// Note: The caller ensures that the listener supports graceful shutdown.
@@ -309,13 +311,19 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 }
 
 // ServeConn serves the connection and returns a session.
-// Note: Not support automatically redials after disconnection.
+// Note:
+//  Not support automatically redials after disconnection;
+//  Execute the PostAcceptPlugin plugins.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
 	network := conn.LocalAddr().Network()
 	if strings.Contains(network, "udp") {
 		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
 	}
 	var sess = newSession(p, conn, protoFunc)
+	if rerr := p.pluginContainer.postAccept(sess); rerr != nil {
+		sess.Close()
+		return nil, rerr.ToError()
+	}
 	Tracef("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
 	p.sessHub.Set(sess)
 	AnywayGo(sess.startReadAndHandle)
