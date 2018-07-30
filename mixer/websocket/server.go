@@ -17,7 +17,6 @@ package websocket
 import (
 	"net/http"
 	"net/url"
-	"runtime"
 
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/mixer/websocket/jsonSubProto"
@@ -84,7 +83,5 @@ func (w *serverHandler) handler(conn *ws.Conn) {
 	if err != nil {
 		tp.Errorf("serverHandler: %v", err)
 	}
-	for sess.Health() {
-		runtime.Gosched()
-	}
+	<-sess.CloseNotify()
 }
