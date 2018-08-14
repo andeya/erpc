@@ -105,6 +105,8 @@ type (
 		GetBodyCodec() byte
 		// Output returns writed packet.
 		Output() *socket.Packet
+		// ReplyBodyCodec initializes and returns the reply packet body codec id.
+		ReplyBodyCodec() byte
 		// SetBodyCodec sets the body codec for reply packet.
 		SetBodyCodec(byte)
 		// AddMeta adds the header metadata 'key=value' for reply packet.
@@ -551,21 +553,29 @@ func (c *handlerCtx) handlePull() {
 	c.pluginContainer.postWriteReply(c)
 }
 
+// ReplyBodyCodec initializes and returns the reply packet body codec id.
+func (c *handlerCtx) ReplyBodyCodec() byte {
+	id := c.output.BodyCodec()
+	if id != codec.NilCodecId {
+		return id
+	}
+	id, ok := GetAcceptBodyCodec(c.input.Meta())
+	if ok {
+		if _, err := codec.Get(id); err == nil {
+			c.output.SetBodyCodec(id)
+			return id
+		}
+	}
+	id = c.input.BodyCodec()
+	c.output.SetBodyCodec(id)
+	return id
+}
+
 func (c *handlerCtx) setReplyBodyCodec(hasError bool) {
 	if hasError {
 		return
 	}
-	if c.output.BodyCodec() != codec.NilCodecId {
-		return
-	}
-	acceptBodyCodec, ok := GetAcceptBodyCodec(c.input.Meta())
-	if ok {
-		if _, err := codec.Get(acceptBodyCodec); err == nil {
-			c.output.SetBodyCodec(acceptBodyCodec)
-			return
-		}
-	}
-	c.output.SetBodyCodec(c.input.BodyCodec())
+	c.ReplyBodyCodec()
 }
 
 func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
