@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	go tp.GraceSignal()
 	cfg := tp.PeerConfig{
 		CountTime:  true,
 		ListenPort: 9090,
