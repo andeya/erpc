@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	go tp.GraceSignal()
 	srv := tp.NewPeer(tp.PeerConfig{
 		CountTime:   true,
 		ListenPort:  9090,

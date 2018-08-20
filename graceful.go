@@ -17,6 +17,8 @@ package tp
 import (
 	"crypto/tls"
 	"net"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -78,6 +80,8 @@ func GraceSignal() {
 	graceful.GraceSignal()
 }
 
+const parentLaddrKey = "LISTEN_PARENT_ADDR"
+
 var (
 	// FirstSweep is first executed.
 	// Usage: share github.com/henrylee2cn/goutil/graceful with other project.
@@ -101,6 +105,17 @@ func SetShutdown(timeout time.Duration, firstSweep, beforeExiting func() error) 
 		beforeExiting = func() error { return nil }
 	}
 	FirstSweep = func() error {
+		var addrList []string
+		peers.rwmu.RLock()
+		for p := range peers.list {
+			for lis := range p.listeners {
+				addrList = append(addrList, lis.Addr().String())
+			}
+		}
+		peers.rwmu.RUnlock()
+		graceful.AddInherited(nil, []*graceful.Env{
+			{K: parentLaddrKey, V: strings.Join(addrList, ",")},
+		})
 		return errors.Merge(firstSweep(), inherit_net.SetInherited())
 	}
 	BeforeExiting = func() error {
@@ -123,6 +138,18 @@ func Reboot(timeout ...time.Duration) {
 
 // NewInheritListener creates a new listener that can be inherited on reboot.
 func NewInheritListener(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
+	_, port, err := net.SplitHostPort(laddr)
+	if err != nil {
+		return nil, err
+	}
+	if port == "0" {
+		parentLaddr := os.Getenv(parentLaddrKey)
+		if parentLaddr != "" {
+			a := strings.Split(parentLaddr, ",")
+			laddr = a[0]
+			os.Setenv(parentLaddrKey, strings.Join(a[1:], ","))
+		}
+	}
 	lis, err := inherit_net.Listen(network, laddr)
 	if err != nil {
 		return nil, err
