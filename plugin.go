@@ -43,7 +43,7 @@ type (
 	}
 	// PostListenPlugin is executed between listening and accepting.
 	PostListenPlugin interface {
-		PostListen() error
+		PostListen(net.Addr) error
 	}
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
@@ -320,7 +320,7 @@ func (p *pluginSingleContainer) postListen(addr net.Addr) {
 	var err error
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostListenPlugin); ok {
-			if err = _plugin.PostListen(); err != nil {
+			if err = _plugin.PostListen(addr); err != nil {
 				Fatalf("[PostListenPlugin:%s] network:%s, addr:%s, error:%s", plugin.Name(), addr.Network(), addr.String(), err.Error())
 				return
 			}
