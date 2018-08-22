@@ -242,19 +242,27 @@ func (e *decryptPlugin) PostReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 	if !ok {
 		return nil
 	}
-	obj := ctx.Input().Body().(*Encrypt)
-	if obj.GetCipherversion() != e.version {
-		return tp.NewRerror(
-			e.rerrCode,
-			"decrypt ciphertext error",
-			fmt.Sprintf("inconsistent encryption version, get:%q, want:%q", obj.GetCipherversion(), e.version),
-		)
+
+	var obj = ctx.Input().Body().(*Encrypt)
+	var version = obj.GetCipherversion()
+	var bodyBytes []byte
+	var err error
+
+	if len(version) > 0 {
+		if version != e.version {
+			return tp.NewRerror(
+				e.rerrCode,
+				"decrypt ciphertext error",
+				fmt.Sprintf("inconsistent encryption version, get:%q, want:%q", obj.GetCipherversion(), e.version),
+			)
+		}
+		ciphertext := obj.GetCiphertext()
+		bodyBytes, err = goutil.AESDecrypt(e.cipherkey, goutil.StringToBytes(ciphertext))
+		if err != nil {
+			return tp.NewRerror(e.rerrCode, "decrypt ciphertext error", err.Error())
+		}
 	}
-	ciphertext := obj.GetCiphertext()
-	bodyBytes, err := goutil.AESDecrypt(e.cipherkey, goutil.StringToBytes(ciphertext))
-	if err != nil {
-		return tp.NewRerror(e.rerrCode, "decrypt ciphertext error", err.Error())
-	}
+
 	ctx.Swap().Delete(encrypt_rawbody)
 	ctx.Input().SetBody(rawbody)
 	err = ctx.Input().UnmarshalBody(bodyBytes)
