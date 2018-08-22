@@ -22,7 +22,7 @@ type math struct{ tp.CallCtx }
 func (m *math) Add(arg *Arg) (*Result, *tp.Rerror) {
 	// enforces the body of the encrypted reply packet.
 	// secure.EnforceSecure(m.Output())
-
+	tp.Infof("get uri: %s", m.Uri())
 	return &Result{C: arg.A + arg.B}, nil
 }
 
@@ -51,7 +51,7 @@ func TestSecurePlugin(t *testing.T) {
 	// test secure
 	var result Result
 	rerr := sess.Call(
-		"/math/add",
+		"/math/add?x=1&y=2",
 		&Arg{A: 10, B: 2},
 		&result,
 		secure.WithSecureMeta(),

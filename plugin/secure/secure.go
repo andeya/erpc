@@ -18,6 +18,7 @@ package secure
 import (
 	"crypto/aes"
 	"fmt"
+	"net/url"
 
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
@@ -30,6 +31,13 @@ const (
 	SECURE_META_KEY = "X-Secure" // value: true/false
 	// ACCEPT_SECURE_META_KEY if the metadata is true, perform encryption operation to the body.
 	ACCEPT_SECURE_META_KEY = "X-Accept-Secure" // value: true/false
+)
+
+const (
+	// CIPHERVERSION_KEY cipherkey version
+	CIPHERVERSION_KEY = "cipherversion"
+	// CIPHERTEXT_KEY ciphertext content
+	CIPHERTEXT_KEY = "ciphertext"
 )
 
 // NewSecurePlugin creates a AES encryption/decryption plugin.
@@ -147,15 +155,28 @@ func (e *encryptPlugin) PreWriteCall(ctx tp.WriteCtx) *tp.Rerror {
 		EnforceSecure(ctx.Output())
 	}
 
-	// perform encryption operation to the body.
+	// query: perform encryption operation to the query parameters.
+	output := ctx.Output()
+	// if output.Ptype() != tp.TypeReply {
+	u := output.UriObject()
+	if len(u.RawQuery) > 0 {
+		ciphertext := goutil.AESEncrypt(e.cipherkey, goutil.StringToBytes(u.RawQuery))
+		v := make(url.Values, 0)
+		v.Set(CIPHERVERSION_KEY, e.version)
+		v.Set(CIPHERTEXT_KEY, goutil.BytesToString(ciphertext))
+		u.RawQuery = v.Encode()
+	}
+	// }
+
+	// body: perform encryption operation to the body.
 	bodyBytes, err := ctx.Output().MarshalBody()
 	if err != nil {
 		return tp.NewRerror(e.rerrCode, "marshal raw body error", err.Error())
 	}
 	ciphertext := goutil.AESEncrypt(e.cipherkey, bodyBytes)
 	ctx.Output().SetBody(&Encrypt{
-		Version:    e.version,
-		Ciphertext: goutil.BytesToString(ciphertext),
+		Cipherversion: e.version,
+		Ciphertext:    goutil.BytesToString(ciphertext),
 	})
 	return nil
 }
@@ -184,9 +205,35 @@ func (e *decryptPlugin) PreReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 		ctx.Swap().Store(accept_encrypt, nil)
 	}
 
-	// to prepare for decryption.
+	// body: to prepare for decryption.
 	ctx.Swap().Store(encrypt_rawbody, ctx.Input().Body())
 	ctx.Input().SetBody(new(Encrypt))
+
+	// query: decrypt query parameters
+	version := ctx.Query().Get(CIPHERVERSION_KEY)
+	if len(version) == 0 {
+		return nil
+	}
+	if version != e.version {
+		return tp.NewRerror(
+			e.rerrCode,
+			"decrypt ciphertext error",
+			fmt.Sprintf("inconsistent encryption version, get:%q, want:%q", version, e.version),
+		)
+	}
+	ciphertext := ctx.Query().Get(CIPHERTEXT_KEY)
+	queryBytes, err := goutil.AESDecrypt(e.cipherkey, goutil.StringToBytes(ciphertext))
+	if err != nil {
+		return tp.NewRerror(e.rerrCode, "decrypt ciphertext error", err.Error())
+	}
+	q := ctx.Query()
+	q.Del(CIPHERVERSION_KEY)
+	q.Del(CIPHERTEXT_KEY)
+	ctx.UriObject().RawQuery = goutil.BytesToString(queryBytes)
+	last := q.Encode()
+	if len(last) > 0 {
+		ctx.UriObject().RawQuery += "&" + last
+	}
 	return nil
 }
 
@@ -195,7 +242,15 @@ func (e *decryptPlugin) PostReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 	if !ok {
 		return nil
 	}
-	ciphertext := ctx.Input().Body().(*Encrypt).GetCiphertext()
+	obj := ctx.Input().Body().(*Encrypt)
+	if obj.GetCipherversion() != e.version {
+		return tp.NewRerror(
+			e.rerrCode,
+			"decrypt ciphertext error",
+			fmt.Sprintf("inconsistent encryption version, get:%q, want:%q", obj.GetCipherversion(), e.version),
+		)
+	}
+	ciphertext := obj.GetCiphertext()
 	bodyBytes, err := goutil.AESDecrypt(e.cipherkey, goutil.StringToBytes(ciphertext))
 	if err != nil {
 		return tp.NewRerror(e.rerrCode, "decrypt ciphertext error", err.Error())
