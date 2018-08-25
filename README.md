@@ -662,7 +662,7 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [clientsession](https://github.com/henrylee2cn/teleport/tree/v4/mixer/clientsession) | `import "github.com/henrylee2cn/teleport/mixer/clientsession"` | Client session with a high efficient and load balanced connection pool |
+| [multiclient](https://github.com/henrylee2cn/teleport/tree/v4/mixer/multiclient) | `import "github.com/henrylee2cn/teleport/mixer/multiclient"` | Higher throughput client connection pool when transferring large packets (such as downloading files) |
 | [websocket](https://github.com/henrylee2cn/teleport/tree/v4/mixer/websocket) | `import "github.com/henrylee2cn/teleport/mixer/websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
 | [html](https://github.com/xiaoenai/tp-micro/tree/master/helper/mod-html) | `html "github.com/xiaoenai/tp-micro/helper/mod-html"` | HTML render for http client |
 
