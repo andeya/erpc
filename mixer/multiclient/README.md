@@ -1,29 +1,31 @@
-## clientsession
+## multiclient
 
-Client session with a high efficient and load balanced connection pool.
+Higher throughput client connection pool when transferring large packets (such as downloading files).
 
 ### Feature
 
 - Non exclusive, shared connection pool
 - Making full use of the asynchronous communication advantages of each connection
+- Higher throughput when transferring large packets(≥1MB)
+- Preempt more network bandwidth in a shared network environment
 - Load balancing mechanism of traffic level
 - Real-time monitoring of connection status
 
 ### Usage
 	
-`import "github.com/henrylee2cn/teleport/mixer/clientsession"`
+`import "github.com/henrylee2cn/teleport/mixer/multiclient"`
 
 #### Test
 
 ```go
-package clientsession_test
+package multiclient_test
 
 import (
 	"testing"
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/mixer/clientsession"
+	"github.com/henrylee2cn/teleport/mixer/multiclient"
 )
 
 type Arg struct {
@@ -37,7 +39,7 @@ func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
 	return arg.A / arg.B, nil
 }
 
-func TestCliSession(t *testing.T) {
+func TestMultiClient(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{
 		ListenPort: 9090,
 	})
@@ -45,7 +47,7 @@ func TestCliSession(t *testing.T) {
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
-	cli := clientsession.New(
+	cli := multiclient.New(
 		tp.NewPeer(tp.PeerConfig{}),
 		":9090",
 		100,
@@ -81,5 +83,5 @@ func TestCliSession(t *testing.T) {
 test command:
 
 ```sh
-go test -v -run=TestCliSession
+go test -v -run=TestMultiClient
 ```

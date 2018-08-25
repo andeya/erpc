@@ -1,11 +1,11 @@
-package clientsession_test
+package multiclient_test
 
 import (
 	"testing"
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/mixer/clientsession"
+	"github.com/henrylee2cn/teleport/mixer/multiclient"
 )
 
 type Arg struct {
@@ -19,7 +19,7 @@ func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
 	return arg.A / arg.B, nil
 }
 
-func TestCliSession(t *testing.T) {
+func TestMultiClient(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{
 		ListenPort: 9090,
 	})
@@ -27,7 +27,7 @@ func TestCliSession(t *testing.T) {
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
-	cli := clientsession.New(
+	cli := multiclient.New(
 		tp.NewPeer(tp.PeerConfig{}),
 		":9090",
 		100,

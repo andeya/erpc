@@ -1,4 +1,4 @@
-// Package clientsession is client session with a high efficient and load balanced connection pool.
+// Package multiclient is a higher throughput client connection pool when transferring large packets (such as downloading files).
 //
 // Copyright 2018 HenryLee. All Rights Reserved.
 //
@@ -13,7 +13,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package clientsession
+package multiclient
 
 import (
 	"time"
@@ -23,20 +23,20 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
-// CliSession client session which is has connection pool
-type CliSession struct {
+// MultiClient client session which is has connection pool
+type MultiClient struct {
 	addr string
 	peer tp.Peer
 	pool *pool.Workshop
 }
 
 // New creates a client session which is has connection pool.
-func New(peer tp.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.Duration, protoFunc ...socket.ProtoFunc) *CliSession {
+func New(peer tp.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.Duration, protoFunc ...socket.ProtoFunc) *MultiClient {
 	newWorkerFunc := func() (pool.Worker, error) {
 		sess, rerr := peer.Dial(addr, protoFunc...)
 		return sess, rerr.ToError()
 	}
-	return &CliSession{
+	return &MultiClient{
 		addr: addr,
 		peer: peer,
 		pool: pool.NewWorkshop(sessMaxQuota, sessMaxIdleDuration, newWorkerFunc),
@@ -44,28 +44,28 @@ func New(peer tp.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.D
 }
 
 // Addr returns the address.
-func (c *CliSession) Addr() string {
+func (c *MultiClient) Addr() string {
 	return c.addr
 }
 
 // Peer returns the peer.
-func (c *CliSession) Peer() tp.Peer {
+func (c *MultiClient) Peer() tp.Peer {
 	return c.peer
 }
 
 // Close closes the session.
-func (c *CliSession) Close() {
+func (c *MultiClient) Close() {
 	c.pool.Close()
 }
 
 // Stats returns the current session pool stats.
-func (c *CliSession) Stats() pool.WorkshopStats {
+func (c *MultiClient) Stats() pool.WorkshopStats {
 	return c.pool.Stats()
 }
 
 // AsyncCall sends a packet and receives reply asynchronously.
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name.
-func (c *CliSession) AsyncCall(
+func (c *MultiClient) AsyncCall(
 	uri string,
 	arg interface{},
 	result interface{},
@@ -76,7 +76,7 @@ func (c *CliSession) AsyncCall(
 	if err != nil {
 		callCmd := tp.NewFakeCallCmd(uri, arg, result, tp.ToRerror(err))
 		if callCmdChan != nil && cap(callCmdChan) == 0 {
-			tp.Panicf("*CliSession.AsyncCall(): callCmdChan channel is unbuffered")
+			tp.Panicf("*MultiClient.AsyncCall(): callCmdChan channel is unbuffered")
 		}
 		callCmdChan <- callCmd
 		return callCmd
@@ -90,7 +90,7 @@ func (c *CliSession) AsyncCall(
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *CliSession) Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.CallCmd {
+func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.CallCmd {
 	callCmd := c.AsyncCall(uri, arg, result, make(chan tp.CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
@@ -100,7 +100,7 @@ func (c *CliSession) Call(uri string, arg interface{}, result interface{}, setti
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *CliSession) Push(uri string, arg interface{}, setting ...socket.PacketSetting) *tp.Rerror {
+func (c *MultiClient) Push(uri string, arg interface{}, setting ...socket.PacketSetting) *tp.Rerror {
 	_sess, err := c.pool.Hire()
 	if err != nil {
 		return tp.ToRerror(err)
