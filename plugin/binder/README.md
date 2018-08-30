@@ -10,14 +10,14 @@ Parameter Binding Verification Plugin for Struct Handler.
 
 tag   |   key    | required |     value     |   desc
 ------|----------|----------|---------------|----------------------------------
-param |   query    | no |  (name e.g.`id`)   | It indicates that the parameter is from the URI query part. e.g. `/a/b?x={query}`
-param |   swap    | no |   (name e.g.`id`)  | It indicates that the parameter is from the context swap.
-param |   desc   |      no      |     (e.g.`id`)   | Parameter Description
-param |   len    |      no      |   (e.g.`3:6`)  | Length range [a,b] of parameter's value
-param |   range  |      no      |   (e.g.`0:10`)   | Numerical range [a,b] of parameter's value
+param |   query    | no |  name (e.g.`param:"<query:id>"`)   | It indicates that the parameter is from the URI query part. e.g. `/a/b?x={query}`
+param |   swap    | no |   name (e.g.`param:"<swap:id>"`)  | It indicates that the parameter is from the context swap.
+param |   desc   |      no      |     (e.g.`param:"<desc:id>"`)   | Parameter Description
+param |   len    |      no      |   (e.g.`param:"<len:3:6>"`)  | Length range [a,b] of parameter's value
+param |   range  |      no      |   (e.g.`param:"<range:0:10>"`)   | Numerical range [a,b] of parameter's value
 param |  nonzero |      no      |    -    | Not allowed to zero
-param |  regexp  |      no      |   (e.g.`^\w+$`)  | Regular expression validation
-param |   rerr   |      no      |(e.g.`100002:wrong password format`)| Custom error code and message
+param |  regexp  |      no      |   (e.g.`param:"<regexp:^\\w+$>"`)  | Regular expression validation
+param |   rerr   |      no      |(e.g.`param:"<rerr:100002:wrong password format"`)| Custom error code and message
 
 NOTES:
 
