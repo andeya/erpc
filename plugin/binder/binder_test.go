@@ -11,7 +11,8 @@ import (
 type (
 	Arg struct {
 		A int
-		B int `param:"<range:1:100>"`
+		B int    `param:"<range:1:100>"`
+		C string `param:"<regexp:^[1-9]\\d*$>"`
 		Query
 		XyZ       string  `param:"<query><nonzero><rerr: 100002: Parameter cannot be empty>"`
 		SwapValue float32 `param:"<swap><nonzero>"`
@@ -57,6 +58,7 @@ func TestBinder(t *testing.T) {
 	rerr := sess.Call("/p/divide?_x=testquery_x&xy_z=testquery_xy_z", &Arg{
 		A: 10,
 		B: 2,
+		C: "3",
 	}, &result).Rerror()
 	if rerr != nil {
 		t.Fatal(rerr)
@@ -65,6 +67,7 @@ func TestBinder(t *testing.T) {
 	rerr = sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 5,
+		C: "3",
 	}, &result).Rerror()
 	if rerr == nil {
 		t.Fatal(rerr)
@@ -73,6 +76,7 @@ func TestBinder(t *testing.T) {
 	rerr = sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 0,
+		C: "3",
 	}, &result).Rerror()
 	if rerr == nil {
 		t.Fatal(rerr)
