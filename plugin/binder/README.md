@@ -10,7 +10,7 @@ Parameter Binding Verification Plugin for Struct Handler.
 
 tag   |   key    | required |     value     |   desc
 ------|----------|----------|---------------|----------------------------------
-param |   query    | no |  name (e.g.`param:"<query:id>"`)   | It indicates that the parameter is from the URI query part. e.g. `/a/b?x={query}`
+param |   query    | no |  name (e.g.`param:"<query>"` or `param:"<query:id>"`)   | It indicates that the parameter is from the URI query part. e.g. `/a/b?x={query}`
 param |   swap    | no |   name (e.g.`param:"<swap:id>"`)  | It indicates that the parameter is from the context swap.
 param |   desc   |      no      |     (e.g.`param:"<desc:id>"`)   | Parameter Description
 param |   len    |      no      |   (e.g.`param:"<len:3:6>"`)  | Length range [a,b] of parameter's value
@@ -25,6 +25,7 @@ NOTES:
 * Encountered untagged exportable anonymous structure field, automatic recursive resolution
 * Parameter name is the name of the structure field converted to snake format
 * If the parameter is not from `query` or `swap`, it is the default from the body
+* Support for multiple rule combinations, e.g.`param:"<regexp:^\\w+$><len:6:8><rerr:100002:wrong password format"`
 
 #### Field-Types
 
