@@ -675,11 +675,13 @@ type PeerConfig struct {
 
 ## Business Users
 
-[![深圳市梦之舵信息技术有限公司](https://statics.xiaoenai.com/v4/img/logo_zh.png)](http://www.xiaoenai.com)
+<a href="http://www.xiaoenai.com"><img src="https://statics.xiaoenai.com/v4/img/logo_zh.png" height="50" alt="深圳市梦之舵信息技术有限公司"/></a>
 &nbsp;&nbsp;
-[![北京风行在线技术有限公司](http://static.funshion.com/open/static/img/logo.gif)](http://www.fun.tv)
+<a href="https://tech.pingan.com/index.html"><img src="http://pa-tech.hirede.com/templates/pa-tech/Images/logo.png" height="50" alt="平安科技"/></a>
+<br/>
+<a href="http://www.fun.tv"><img src="http://static.funshion.com/open/static/img/logo.gif" height="70" alt="北京风行在线技术有限公司"/></a>
 &nbsp;&nbsp;
-[![北京可即时代网络公司](http://simg.ktvms.com/picture/logo.png)](http://www.kejishidai.cn)
+<a href="http://www.kejishidai.cn"><img src="http://simg.ktvms.com/picture/logo.png" height="70" alt="北京可即时代网络公司"/></a>
 
 ## License
 
