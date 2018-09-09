@@ -45,5 +45,5 @@ func main() {
 }
 
 func newRequestId() string {
-	return "uid@" + goutil.URLRandomString(8)
+	return goutil.URLRandomString(8)
 }

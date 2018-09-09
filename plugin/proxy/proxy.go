@@ -15,6 +15,12 @@
 package proxy
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/socket"
@@ -92,7 +98,7 @@ func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 		settings = make([]socket.PacketSetting, 1, 8)
 	)
 	label.SessionId = ctx.Session().Id()
-	settings[0] = tp.WithSeq(label.SessionId + "@" + ctx.Seq())
+	settings[0] = tp.WithSeq(getSeq(label.SessionId + "@" + ctx.Seq()))
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
@@ -125,7 +131,7 @@ func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 		settings = make([]socket.PacketSetting, 1, 8)
 	)
 	label.SessionId = ctx.Session().Id()
-	settings[0] = tp.WithSeq(label.SessionId + "@" + ctx.Seq())
+	settings[0] = tp.WithSeq(getSeq(label.SessionId + "@" + ctx.Seq()))
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
@@ -142,4 +148,24 @@ func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 		rerr.Message = tp.CodeText(tp.CodeBadGateway)
 	}
 	return rerr
+}
+
+var peerName = filepath.Base(os.Args[0])
+var incr int64
+var mutex sync.Mutex
+
+// getSeq creates a new sequence with some prefix string.
+func getSeq(prefix ...string) string {
+	mutex.Lock()
+	seq := fmt.Sprintf("%s[%d]", peerName, incr)
+	incr++
+	mutex.Unlock()
+	for _, p := range prefix {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		seq = p + ">" + seq
+	}
+	return seq
 }
