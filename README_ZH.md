@@ -7,7 +7,7 @@ Teleport是一个通用、高效、灵活的Socket框架。
 可用于Peer-Peer对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
 
 
-![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/v4/doc/teleport_framework.png)
+![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/v4/doc/teleport_module_diagram.png)
 
 
 ## 性能测试

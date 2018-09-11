@@ -8,7 +8,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 [简体中文](https://github.com/henrylee2cn/teleport/tree/v4/README_ZH.md)
 
 
-![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/v4/doc/teleport_framework.png)
+![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/v4/doc/teleport_module_diagram.png)
 
 
 ## Benchmark
