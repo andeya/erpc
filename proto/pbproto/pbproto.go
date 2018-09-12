@@ -22,17 +22,17 @@ import (
 	"io"
 	"sync"
 
+	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/proto/pbproto/pb"
-	"github.com/henrylee2cn/teleport/socket"
 	"github.com/henrylee2cn/teleport/utils"
 )
 
 // NewPbProtoFunc is creation function of PROTOBUF socket protocol.
-var NewPbProtoFunc = func(rw io.ReadWriter) socket.Proto {
+var NewPbProtoFunc = func(rw io.ReadWriter) tp.Proto {
 	var (
 		readBufioSize             int
-		readBufferSize, isDefault = socket.ReadBuffer()
+		readBufferSize, isDefault = tp.SocketReadBuffer()
 	)
 	if isDefault {
 		readBufioSize = 1024 * 4

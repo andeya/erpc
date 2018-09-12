@@ -11,15 +11,15 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/teleport/socket"
+	tp "github.com/henrylee2cn/teleport"
 	"github.com/tidwall/gjson"
 )
 
 // NewJsonSubProtoFunc is creation function of JSON socket protocol.
-var NewJsonSubProtoFunc = func(rw io.ReadWriter) socket.Proto {
+var NewJsonSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
 	var (
 		readBufioSize             int
-		readBufferSize, isDefault = socket.ReadBuffer()
+		readBufferSize, isDefault = tp.SocketReadBuffer()
 	)
 	if isDefault {
 		readBufioSize = 1024 * 4
