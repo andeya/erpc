@@ -1,6 +1,6 @@
 ## secure
 
-Package secure encrypting/decrypting the packet body.
+Package secure encrypting/decrypting the message body.
 
 ### Usage
 
@@ -31,7 +31,7 @@ type Result struct {
 type math struct{ tp.CallCtx }
 
 func (m *math) Add(arg *Arg) (*Result, *tp.Rerror) {
-	// enforces the body of the encrypted reply packet.
+	// enforces the body of the encrypted reply message.
 	// secure.EnforceSecure(m.Output())
 
 	return &Result{C: arg.A + arg.B}, nil

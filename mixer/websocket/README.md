@@ -96,7 +96,7 @@ Among them, TestJsonSubWebsocket's request body is:
 ```json
 {
   "seq": 0,
-  "ptype": 1,
+  "mtype": 1,
   "uri": "/p/divide",
   "meta": "",
   "body_codec": 106,
@@ -110,7 +110,7 @@ TestJsonSubWebsocket's response body is:
 ```json
 {
   "seq": 0,
-  "ptype": 2,
+  "mtype": 2,
   "uri": "/p/divide",
   "meta": "",
   "body_codec": 106,

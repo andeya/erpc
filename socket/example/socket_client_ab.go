@@ -37,18 +37,18 @@ func main() {
 		count.Add(group)
 		for i := 0; i < group; i++ {
 			go func(a int) {
-				var packet = socket.GetPacket()
+				var message = socket.GetMessage()
 				defer func() {
-					socket.PutPacket(packet)
+					socket.PutMessage(message)
 					count.Done()
 				}()
 				// write request
-				packet.Reset()
-				packet.SetBodyCodec(codec.ID_PROTOBUF)
-				packet.SetSeq(strconv.Itoa(a))
-				packet.SetUri("/a/b")
-				packet.SetBody(&pb.PbTest{A: 10, B: 2})
-				err = s.WritePacket(packet)
+				message.Reset()
+				message.SetBodyCodec(codec.ID_PROTOBUF)
+				message.SetSeq(strconv.Itoa(a))
+				message.SetUri("/a/b")
+				message.SetBody(&pb.PbTest{A: 10, B: 2})
+				err = s.WriteMessage(message)
 				if err != nil {
 					atomic.AddUint32(&failNum, 1)
 					log.Printf("[CLI] write request err: %v", err)
@@ -56,10 +56,10 @@ func main() {
 				}
 
 				// read response
-				packet.Reset(socket.WithNewBody(func(header socket.Header) interface{} {
+				message.Reset(socket.WithNewBody(func(header socket.Header) interface{} {
 					return new(pb.PbTest)
 				}))
-				err = s.ReadPacket(packet)
+				err = s.ReadMessage(message)
 				if err != nil {
 					atomic.AddUint32(&failNum, 1)
 					log.Printf("[CLI] read response err: %v", err)

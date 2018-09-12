@@ -22,7 +22,7 @@ import (
 	"math"
 )
 
-// XferFilter handles byte stream of packet when transfer.
+// XferFilter handles byte stream of message when transfer.
 type XferFilter interface {
 	// Id returns transfer filter id.
 	Id() byte

@@ -102,14 +102,14 @@ var DefaultProtoFunc = socket.DefaultProtoFunc
 //  func SetDefaultProtoFunc(protoFunc socket.ProtoFunc)
 var SetDefaultProtoFunc = socket.SetDefaultProtoFunc
 
-// GetReadLimit gets the packet size upper limit of reading.
+// GetReadLimit gets the message size upper limit of reading.
 //  GetReadLimit() uint32
-var GetReadLimit = socket.PacketSizeLimit
+var GetReadLimit = socket.MessageSizeLimit
 
-// SetReadLimit sets max packet size.
+// SetReadLimit sets max message size.
 // If maxSize<=0, set it to max uint32.
-//  func SetReadLimit(maxPacketSize uint32)
-var SetReadLimit = socket.SetPacketSizeLimit
+//  func SetReadLimit(maxMessageSize uint32)
+var SetReadLimit = socket.SetMessageSizeLimit
 
 // SetSocketKeepAlive sets whether the operating system should send
 // keepalive messages on the connection.

@@ -18,34 +18,34 @@ func main() {
 	}
 	s := socket.GetSocket(conn)
 	defer s.Close()
-	var packet = socket.GetPacket()
-	defer socket.PutPacket(packet)
+	var message = socket.GetMessage()
+	defer socket.PutMessage(message)
 	for i := 0; i < 1; i++ {
 		// write request
-		packet.Reset()
-		packet.SetPtype(0)
-		packet.SetBodyCodec(codec.ID_JSON)
-		packet.SetSeq(strconv.Itoa(i))
-		packet.SetUri("/a/b")
-		packet.SetBody(&pb.PbTest{A: 10, B: 2})
-		err = s.WritePacket(packet)
+		message.Reset()
+		message.SetMtype(0)
+		message.SetBodyCodec(codec.ID_JSON)
+		message.SetSeq(strconv.Itoa(i))
+		message.SetUri("/a/b")
+		message.SetBody(&pb.PbTest{A: 10, B: 2})
+		err = s.WriteMessage(message)
 		if err != nil {
 			log.Printf("[CLI] write request err: %v", err)
 			continue
 		}
-		log.Printf("[CLI] write request: %s", packet.String())
+		log.Printf("[CLI] write request: %s", message.String())
 
 		// read response
-		packet.Reset(socket.WithNewBody(
+		message.Reset(socket.WithNewBody(
 			func(header socket.Header) interface{} {
 				return new(pb.PbTest)
 			}),
 		)
-		err = s.ReadPacket(packet)
+		err = s.ReadMessage(message)
 		if err != nil {
 			log.Printf("[CLI] read response err: %v", err)
 		} else {
-			log.Printf("[CLI] read response: %s", packet.String())
+			log.Printf("[CLI] read response: %s", message.String())
 		}
 	}
 	// select {}

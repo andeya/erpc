@@ -3,14 +3,14 @@
 jsonproto is implemented JSON socket communication protocol.
 
 
-### Data Packet
+### Message Bytes
 
 `{length bytes}` `{xfer_pipe length byte}` `{xfer_pipe bytes}` `{JSON bytes}`
 
 - `{length bytes}`: uint32, 4 bytes, big endian
 - `{xfer_pipe length byte}`: 1 byte
 - `{xfer_pipe bytes}`: one byte one xfer
-- `{JSON bytes}`: {"seq":%d,"ptype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}
+- `{JSON bytes}`: {"seq":%d,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}
 
 ### Usage
 

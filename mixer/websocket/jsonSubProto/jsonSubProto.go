@@ -49,24 +49,24 @@ func (j *jsonSubProto) Version() (byte, string) {
 	return j.id, j.name
 }
 
-const format = `{"seq":%q,"ptype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s","xfer_pipe":%s}`
+const format = `{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s","xfer_pipe":%s}`
 
-// Pack writes the Packet into the connection.
+// Pack writes the Message into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (j *jsonSubProto) Pack(p *socket.Packet) error {
+func (j *jsonSubProto) Pack(m *socket.Message) error {
 	// marshal body
-	bodyBytes, err := p.MarshalBody()
+	bodyBytes, err := m.MarshalBody()
 	if err != nil {
 		return err
 	}
 	// do transfer pipe
-	bodyBytes, err = p.XferPipe().OnPack(bodyBytes)
+	bodyBytes, err = m.XferPipe().OnPack(bodyBytes)
 	if err != nil {
 		return err
 	}
 	// marshal transfer pipe ids
-	var xferPipeIds = make([]int, p.XferPipe().Len())
-	for i, id := range p.XferPipe().Ids() {
+	var xferPipeIds = make([]int, m.XferPipe().Len())
+	for i, id := range m.XferPipe().Ids() {
 		xferPipeIds[i] = int(id)
 	}
 	xferPipeIdsBytes, err := json.Marshal(xferPipeIds)
@@ -76,26 +76,26 @@ func (j *jsonSubProto) Pack(p *socket.Packet) error {
 
 	// join json format
 	s := fmt.Sprintf(format,
-		p.Seq(),
-		p.Ptype(),
-		p.Uri(),
-		p.Meta().QueryString(),
-		p.BodyCodec(),
+		m.Seq(),
+		m.Mtype(),
+		m.Uri(),
+		m.Meta().QueryString(),
+		m.BodyCodec(),
 		bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1),
 		xferPipeIdsBytes,
 	)
 
 	b := goutil.StringToBytes(s)
 
-	p.SetSize(uint32(len(b)))
+	m.SetSize(uint32(len(b)))
 
 	_, err = j.w.Write(b)
 	return err
 }
 
-// Unpack reads bytes from the connection to the Packet.
+// Unpack reads bytes from the connection to the Message.
 // Note: Concurrent unsafe!
-func (j *jsonSubProto) Unpack(p *socket.Packet) error {
+func (j *jsonSubProto) Unpack(m *socket.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()
 	b, err := ioutil.ReadAll(j.r)
@@ -103,32 +103,32 @@ func (j *jsonSubProto) Unpack(p *socket.Packet) error {
 		return err
 	}
 
-	p.SetSize(uint32(len(b)))
+	m.SetSize(uint32(len(b)))
 
 	s := goutil.BytesToString(b)
 
 	// read transfer pipe
 	xferPipe := gjson.Get(s, "xfer_pipe")
 	for _, r := range xferPipe.Array() {
-		p.XferPipe().Append(byte(r.Int()))
+		m.XferPipe().Append(byte(r.Int()))
 	}
 
 	// read body
-	p.SetBodyCodec(byte(gjson.Get(s, "body_codec").Int()))
+	m.SetBodyCodec(byte(gjson.Get(s, "body_codec").Int()))
 	body := gjson.Get(s, "body").String()
-	bodyBytes, err := p.XferPipe().OnUnpack(goutil.StringToBytes(body))
+	bodyBytes, err := m.XferPipe().OnUnpack(goutil.StringToBytes(body))
 	if err != nil {
 		return err
 	}
 
 	// read other
-	p.SetSeq(gjson.Get(s, "seq").String())
-	p.SetPtype(byte(gjson.Get(s, "ptype").Int()))
-	p.SetUri(gjson.Get(s, "uri").String())
+	m.SetSeq(gjson.Get(s, "seq").String())
+	m.SetMtype(byte(gjson.Get(s, "mtype").Int()))
+	m.SetUri(gjson.Get(s, "uri").String())
 	meta := gjson.Get(s, "meta").String()
-	p.Meta().ParseBytes(goutil.StringToBytes(meta))
+	m.Meta().ParseBytes(goutil.StringToBytes(meta))
 
 	// unmarshal new body
-	err = p.UnmarshalBody(bodyBytes)
+	err = m.UnmarshalBody(bodyBytes)
 	return err
 }

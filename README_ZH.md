@@ -189,9 +189,9 @@ func (p *push) Status(arg *string) *tp.Rerror {
 
 - **Peer：** 通信端点，可以是服务端或客户端
 - **Socket：** 对net.Conn的封装，增加自定义包协议、传输管道等功能
-- **Packet：** 数据包内容元素对应的结构体
+- **Message：** 数据包内容元素对应的结构体
 - **Proto：** 数据包封包／解包的协议接口
-- **Codec：** 用于`Packet.Body`的序列化工具
+- **Codec：** 用于`Message.Body`的序列化工具
 - **XferPipe：** 数据包字节流的编码处理管道，如压缩、加密、校验等
 - **XferFilter：** 一个在数据包传输前，对数据进行加工的接口
 - **Plugin：** 贯穿于通信各个环节的插件
@@ -211,35 +211,35 @@ func (p *push) Status(arg *string) *tp.Rerror {
 ```go
 // in .../teleport/socket package
 
-// Packet a socket data packet.
-type Packet struct {
+// Message a socket data message.
+type Message struct {
     // Has unexported fields.
 }
 
-func GetPacket(settings ...PacketSetting) *Packet
-func NewPacket(settings ...PacketSetting) *Packet
-func (p *Packet) Body() interface{}
-func (p *Packet) BodyCodec() byte
-func (p *Packet) Context() context.Context
-func (p *Packet) MarshalBody() ([]byte, error)
-func (p *Packet) Meta() *utils.Args
-func (p *Packet) Ptype() byte
-func (p *Packet) Reset(settings ...PacketSetting)
-func (p *Packet) Seq() string
-func (p *Packet) SetBody(body interface{})
-func (p *Packet) SetBodyCodec(bodyCodec byte)
-func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
-func (p *Packet) SetPtype(ptype byte)
-func (p *Packet) SetSeq(seq string)
-func (p *Packet) SetSize(size uint32) error
-func (p *Packet) SetUri(uri string)
-func (p *Packet) SetUriObject(uriObject *url.URL)
-func (p *Packet) Size() uint32
-func (p *Packet) String() string
-func (p *Packet) UnmarshalBody(bodyBytes []byte) error
-func (p *Packet) Uri() string
-func (p *Packet) UriObject() *url.URL
-func (p *Packet) XferPipe() *xfer.XferPipe
+func GetMessage(settings ...MessageSetting) *Message
+func NewMessage(settings ...MessageSetting) *Message
+func (m *Message) Body() interface{}
+func (m *Message) BodyCodec() byte
+func (m *Message) Context() context.Context
+func (m *Message) MarshalBody() ([]byte, error)
+func (m *Message) Meta() *utils.Args
+func (m *Message) Mtype() byte
+func (m *Message) Reset(settings ...MessageSetting)
+func (m *Message) Seq() string
+func (m *Message) SetBody(body interface{})
+func (m *Message) SetBodyCodec(bodyCodec byte)
+func (m *Message) SetNewBody(newBodyFunc NewBodyFunc)
+func (m *Message) SetMtype(mtype byte)
+func (m *Message) SetSeq(seq string)
+func (m *Message) SetSize(size uint32) error
+func (m *Message) SetUri(uri string)
+func (m *Message) SetUriObject(uriObject *url.URL)
+func (m *Message) Size() uint32
+func (m *Message) String() string
+func (m *Message) UnmarshalBody(bodyBytes []byte) error
+func (m *Message) Uri() string
+func (m *Message) UriObject() *url.URL
+func (m *Message) XferPipe() *xfer.XferPipe
 
 // NewBodyFunc creates a new body by header.
 type NewBodyFunc func(Header) interface{}
@@ -267,7 +267,7 @@ type Codec interface {
 
 传输数据的过滤管道。
 ```go
-// XferFilter handles byte stream of packet when transfer.
+// XferFilter handles byte stream of message when transfer.
 type XferFilter interface {
     // Id returns transfer filter id.
     Id() byte
@@ -325,16 +325,16 @@ type (
 
 ```go
 type (
-    // Proto pack/unpack protocol scheme of socket packet.
+    // Proto pack/unpack protocol scheme of socket message.
     Proto interface {
         // Version returns the protocol's id and name.
         Version() (byte, string)
-        // Pack writes the Packet into the connection.
+        // Pack writes the Message into the connection.
         // Note: Make sure to write only once or there will be package contamination!
-        Pack(*Packet) error
-        // Unpack reads bytes from the connection to the Packet.
+        Pack(*Message) error
+        // Unpack reads bytes from the connection to the Message.
         // Note: Concurrent unsafe!
-        Unpack(*Packet) error
+        Unpack(*Message) error
     }
     ProtoFunc func(io.ReadWriter) Proto
 )
@@ -358,14 +358,14 @@ type Peer interface {
 默认的协议`FastProto`(Big Endian)：
 
 ```sh
-{4 bytes packet length}
+{4 bytes message length}
 {1 byte protocol version}
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
 {4 bytes sequence length}
 {sequence}
-{1 byte packet type} // e.g. PULL:1; REPLY:2; PUSH:3
+{1 byte message type} // e.g. PULL:1; REPLY:2; PUSH:3
 {4 bytes URI length}
 {URI}
 {4 bytes metadata length}
@@ -580,11 +580,11 @@ type PeerConfig struct {
 
 ### 通信优化
 
-- SetPacketSizeLimit 设置包大小的上限，
+- SetMessageSizeLimit 设置消息包大小的上限，
   如果 maxSize<=0，上限默认为最大 uint32
 
     ```go
-    func SetPacketSizeLimit(maxPacketSize uint32)
+    func SetMessageSizeLimit(maxMessageSize uint32)
     ```
 
 - SetSocketKeepAlive 是否允许操作系统的发送TCP的keepalive探测包
@@ -637,7 +637,7 @@ type PeerConfig struct {
 | [binder](https://github.com/henrylee2cn/teleport/tree/v4/plugin/binder) | `import binder "github.com/henrylee2cn/teleport/plugin/binder"` | Parameter Binding Verification for Struct Handler |
 | [heartbeat](https://github.com/henrylee2cn/teleport/tree/v4/plugin/heartbeat) | `import heartbeat "github.com/henrylee2cn/teleport/plugin/heartbeat"` | A generic timing heartbeat plugin        |
 | [proxy](https://github.com/henrylee2cn/teleport/tree/v4/plugin/proxy) | `import "github.com/henrylee2cn/teleport/plugin/proxy"` | A proxy plugin for handling unknown calling or pushing |
-[secure](https://github.com/henrylee2cn/teleport/tree/v4/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the packet body
+[secure](https://github.com/henrylee2cn/teleport/tree/v4/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the message body
 
 ### 协议
 
@@ -658,7 +658,7 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [multiclient](https://github.com/henrylee2cn/teleport/tree/v4/mixer/multiclient) | `import "github.com/henrylee2cn/teleport/mixer/multiclient"` | Higher throughput client connection pool when transferring large packets (such as downloading files) |
+| [multiclient](https://github.com/henrylee2cn/teleport/tree/v4/mixer/multiclient) | `import "github.com/henrylee2cn/teleport/mixer/multiclient"` | Higher throughput client connection pool when transferring large messages (such as downloading files) |
 | [websocket](https://github.com/henrylee2cn/teleport/tree/v4/mixer/websocket) | `import "github.com/henrylee2cn/teleport/mixer/websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
 | [html](https://github.com/xiaoenai/tp-micro/tree/master/helper/mod-html) | `html "github.com/xiaoenai/tp-micro/helper/mod-html"` | HTML render for http client |
 

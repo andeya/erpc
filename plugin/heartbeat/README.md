@@ -2,7 +2,7 @@
 
 A generic timing heartbeat plugin.
 
-During a heartbeat, if there is no communication, send a heartbeat packet;
+During a heartbeat, if there is no communication, send a heartbeat message;
 When the connection is idle more than 3 times the heartbeat time, take the initiative to disconnect.
 
 ### Usage
