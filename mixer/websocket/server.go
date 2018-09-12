@@ -22,7 +22,6 @@ import (
 	"github.com/henrylee2cn/teleport/mixer/websocket/jsonSubProto"
 	"github.com/henrylee2cn/teleport/mixer/websocket/pbSubProto"
 	ws "github.com/henrylee2cn/teleport/mixer/websocket/websocket"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // NewJsonServeHandler creates a websocket json handler.
@@ -36,7 +35,7 @@ func NewPbServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) e
 }
 
 // NewServeHandler creates a websocket handler.
-func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error, protoFunc ...socket.ProtoFunc) http.Handler {
+func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error, protoFunc ...tp.ProtoFunc) http.Handler {
 	w := &serverHandler{
 		peer:      peer,
 		Server:    new(ws.Server),
@@ -74,7 +73,7 @@ func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) err
 
 type serverHandler struct {
 	peer      tp.Peer
-	protoFunc socket.ProtoFunc
+	protoFunc tp.ProtoFunc
 	*ws.Server
 }
 

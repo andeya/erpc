@@ -55,18 +55,18 @@ type (
 		// The connection fd is not allowed to change!
 		// Inherit the previous session id and custom data swap;
 		// If modifiedConn!=nil, reset the net.Conn of the socket;
-		// If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
-		ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc socket.ProtoFunc))
-		// GetProtoFunc returns the socket.ProtoFunc
-		GetProtoFunc() socket.ProtoFunc
+		// If newProtoFunc!=nil, reset the ProtoFunc of the socket.
+		ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc ProtoFunc))
+		// GetProtoFunc returns the ProtoFunc
+		GetProtoFunc() ProtoFunc
 		// Send sends message to peer, before the formal connection.
 		// Note:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
-		Send(uri string, body interface{}, rerr *Rerror, setting ...socket.MessageSetting) *Rerror
+		Send(uri string, body interface{}, rerr *Rerror, setting ...MessageSetting) *Rerror
 		// Receive receives a message from peer, before the formal connection.
 		// Note: does not support automatic redial after disconnection.
-		Receive(socket.NewBodyFunc, ...socket.MessageSetting) (*socket.Message, *Rerror)
+		Receive(NewBodyFunc, ...MessageSetting) (*Message, *Rerror)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -107,18 +107,18 @@ type (
 			arg interface{},
 			result interface{},
 			callCmdChan chan<- CallCmd,
-			setting ...socket.MessageSetting,
+			setting ...MessageSetting,
 		) CallCmd
 		// Call sends a message and receives reply.
 		// Note:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Call(uri string, arg interface{}, result interface{}, setting ...socket.MessageSetting) CallCmd
+		Call(uri string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd
 		// Push sends a message, but do not receives reply.
 		// Note:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Push(uri string, arg interface{}, setting ...socket.MessageSetting) *Rerror
+		Push(uri string, arg interface{}, setting ...MessageSetting) *Rerror
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -140,7 +140,7 @@ type session struct {
 	seq                            uint64
 	seqLock                        sync.Mutex
 	callCmdMap                     goutil.Map
-	protoFuncs                     []socket.ProtoFunc
+	protoFuncs                     []ProtoFunc
 	socket                         socket.Socket
 	status                         int32         // 0:ok, 1:active closed, 2:disconnect
 	closeNotifyCh                  chan struct{} // closeNotifyCh is the channel returned by CloseNotify.
@@ -159,7 +159,7 @@ type session struct {
 	redialForClientLocked func(oldConn net.Conn) bool
 }
 
-func newSession(peer *peer, conn net.Conn, protoFuncs []socket.ProtoFunc) *session {
+func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 	var s = &session{
 		peer:           peer,
 		getCallHandler: peer.router.subRouter.getCall,
@@ -222,8 +222,8 @@ func (s *session) getConn() net.Conn {
 // The connection fd is not allowed to change!
 // Inherit the previous session id and custom data swap;
 // If modifiedConn!=nil, reset the net.Conn of the socket;
-// If newProtoFunc!=nil, reset the socket.ProtoFunc of the socket.
-func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc socket.ProtoFunc)) {
+// If newProtoFunc!=nil, reset the ProtoFunc of the socket.
+func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc ProtoFunc)) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	modifiedConn, newProtoFunc := fn(s.conn)
@@ -258,8 +258,8 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 	s.socket.SetId(id)
 }
 
-// GetProtoFunc returns the socket.ProtoFunc
-func (s *session) GetProtoFunc() socket.ProtoFunc {
+// GetProtoFunc returns the ProtoFunc
+func (s *session) GetProtoFunc() ProtoFunc {
 	if len(s.protoFuncs) > 0 && s.protoFuncs[0] != nil {
 		return s.protoFuncs[0]
 	}
@@ -315,7 +315,7 @@ func (s *session) SetContextAge(duration time.Duration) {
 // Note:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.MessageSetting) (replyErr *Rerror) {
+func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...MessageSetting) (replyErr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
 			replyErr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
@@ -353,7 +353,7 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 
 // Receive receives a message from peer, before the formal connection.
 // Note: does not support automatic redial after disconnection.
-func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.MessageSetting) (input *socket.Message, rerr *Rerror) {
+func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input *Message, rerr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
 			rerr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
@@ -390,7 +390,7 @@ func (s *session) AsyncCall(
 	arg interface{},
 	result interface{},
 	callCmdChan chan<- CallCmd,
-	setting ...socket.MessageSetting,
+	setting ...MessageSetting,
 ) CallCmd {
 	if callCmdChan == nil {
 		callCmdChan = make(chan CallCmd, 10) // buffered.
@@ -485,7 +485,7 @@ W:
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Call(uri string, arg interface{}, result interface{}, setting ...socket.MessageSetting) CallCmd {
+func (s *session) Call(uri string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd {
 	callCmd := s.AsyncCall(uri, arg, result, make(chan CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
@@ -495,7 +495,7 @@ func (s *session) Call(uri string, arg interface{}, result interface{}, setting 
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Push(uri string, arg interface{}, setting ...socket.MessageSetting) *Rerror {
+func (s *session) Push(uri string, arg interface{}, setting ...MessageSetting) *Rerror {
 	ctx := s.peer.getContext(s, true)
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
@@ -712,7 +712,7 @@ func (s *session) redialForClient(oldConn net.Conn) bool {
 }
 
 func (s *session) startReadAndHandle() {
-	var withContext socket.MessageSetting
+	var withContext MessageSetting
 	if readTimeout := s.SessionAge(); readTimeout > 0 {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 		ctxTimout, _ := context.WithTimeout(context.Background(), readTimeout)
@@ -761,7 +761,7 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-func (s *session) write(message *socket.Message) (net.Conn, *Rerror) {
+func (s *session) write(message *Message) (net.Conn, *Rerror) {
 	conn := s.getConn()
 	status := s.getStatus()
 	if status != statusOk &&
@@ -889,7 +889,7 @@ const (
 	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
 )
 
-func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Message, logType int8) {
+func (s *session) runlog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
 	var addr = s.RemoteAddr().String()
 	if realIp != "" && realIp != addr {
 		addr += "(real: " + realIp + ")"
@@ -920,7 +920,7 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 	}
 }
 
-func messageLogBytes(message *socket.Message, printDetail bool) []byte {
+func messageLogBytes(message *Message, printDetail bool) []byte {
 	var b = make([]byte, 0, 128)
 	b = append(b, '{')
 	b = append(b, '"', 's', 'i', 'z', 'e', '"', ':')
@@ -949,7 +949,7 @@ func messageLogBytes(message *socket.Message, printDetail bool) []byte {
 	// return buf.Bytes()
 }
 
-func bodyLogBytes(message *socket.Message) []byte {
+func bodyLogBytes(message *Message) []byte {
 	switch v := message.Body().(type) {
 	case nil:
 		return nil

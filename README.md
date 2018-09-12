@@ -210,7 +210,7 @@ The contents of every one message:
 ```go
 // in .../teleport/socket package
 
-// Message a socket data message.
+// Message a socket message data.
 type Message struct {
     // Has unexported fields.
 }
@@ -343,13 +343,13 @@ type (
 Next, you can specify the communication protocol in the following ways:
 
 ```go
-func SetDefaultProtoFunc(socket.ProtoFunc)
+func SetDefaultProtoFunc(ProtoFunc)
 type Peer interface {
     ...
-    ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) Session
-    DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
-    Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
-    Listen(protoFunc ...socket.ProtoFunc) error
+    ServeConn(conn net.Conn, protoFunc ...ProtoFunc) Session
+    DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
+    Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
+    Listen(protoFunc ...ProtoFunc) error
     ...
 }
 ```

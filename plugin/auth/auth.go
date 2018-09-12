@@ -20,7 +20,6 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // A auth plugin for verifying peer at the first time.
@@ -76,7 +75,7 @@ func (a *auth) PostDial(sess tp.PreSession) *tp.Rerror {
 	if rerr != nil {
 		return rerr
 	}
-	_, rerr = sess.Receive(func(header socket.Header) interface{} {
+	_, rerr = sess.Receive(func(header tp.Header) interface{} {
 		return nil
 	})
 	return rerr
@@ -86,7 +85,7 @@ func (a *auth) PostAccept(sess tp.PreSession) *tp.Rerror {
 	if a.verifyAuthInfoFunc == nil {
 		return nil
 	}
-	input, rerr := sess.Receive(func(header socket.Header) interface{} {
+	input, rerr := sess.Receive(func(header tp.Header) interface{} {
 		if header.Mtype() == tp.TypeCall && header.Uri() == authURI {
 			return new(string)
 		}

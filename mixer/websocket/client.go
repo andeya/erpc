@@ -24,7 +24,6 @@ import (
 
 	tp "github.com/henrylee2cn/teleport"
 	ws "github.com/henrylee2cn/teleport/mixer/websocket/websocket"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // NewDialPlugin creates a websocket plugin for client.
@@ -62,7 +61,7 @@ func (c *clientPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
 		return tp.NewRerror(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
 	}
 	var rerr *tp.Rerror
-	sess.ModifySocket(func(conn net.Conn) (net.Conn, socket.ProtoFunc) {
+	sess.ModifySocket(func(conn net.Conn) (net.Conn, tp.ProtoFunc) {
 		conn, err := ws.NewClient(cfg, conn)
 		if err != nil {
 			rerr = tp.NewRerror(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())

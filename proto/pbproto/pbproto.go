@@ -64,7 +64,7 @@ func (pp *pbproto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (pp *pbproto) Pack(m *socket.Message) error {
+func (pp *pbproto) Pack(m *tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -105,7 +105,7 @@ func (pp *pbproto) Pack(m *socket.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // Note: Concurrent unsafe!
-func (pp *pbproto) Unpack(m *socket.Message) error {
+func (pp *pbproto) Unpack(m *tp.Message) error {
 	pp.rMu.Lock()
 	defer pp.rMu.Unlock()
 	var size uint32
