@@ -355,7 +355,7 @@ type Peer interface {
 }
 ```
 
-默认的协议`FastProto`(Big Endian)：
+默认的协议`RawProto`(Big Endian)：
 
 ```sh
 {4 bytes message length}
