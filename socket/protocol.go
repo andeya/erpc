@@ -57,7 +57,7 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 // default protocol
 
 /*
-raw protocol format(Big Endian):
+# raw protocol format(Big Endian):
 
 {4 bytes message length}
 {1 byte protocol version}
