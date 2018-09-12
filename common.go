@@ -148,7 +148,7 @@ const (
 )
 
 // WithRerror sets the real IP to metadata.
-func WithRerror(rerr *Rerror) socket.MessageSetting {
+func WithRerror(rerr *Rerror) MessageSetting {
 	b, _ := rerr.MarshalJSON()
 	if len(b) == 0 {
 		return nil
@@ -157,15 +157,15 @@ func WithRerror(rerr *Rerror) socket.MessageSetting {
 }
 
 // WithRealIp sets the real IP to metadata.
-func WithRealIp(ip string) socket.MessageSetting {
+func WithRealIp(ip string) MessageSetting {
 	return socket.WithAddMeta(MetaRealIp, ip)
 }
 
 // WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
 // Note: If the specified codec is invalid, the receiver will ignore the mate data.
-func WithAcceptBodyCodec(bodyCodec byte) socket.MessageSetting {
+func WithAcceptBodyCodec(bodyCodec byte) MessageSetting {
 	if bodyCodec == codec.NilCodecId {
-		return func(*socket.Message) {}
+		return func(*Message) {}
 	}
 	return socket.WithAddMeta(MetaAcceptBodyCodec, strconv.FormatUint(uint64(bodyCodec), 10))
 }
@@ -196,56 +196,68 @@ type Proto = socket.Proto
 // ProtoFunc function used to create a custom Proto interface.
 type ProtoFunc = socket.ProtoFunc
 
+// Message a socket message data.
+type Message = socket.Message
+
+// NewBodyFunc creates a new body by header.
+type NewBodyFunc = socket.NewBodyFunc
+
+// Header message header interface
+type Header = socket.Header
+
+// Body message body interface
+type Body = socket.Body
+
 // MessageSetting is a pipe function type for setting message.
 type MessageSetting = socket.MessageSetting
 
 // WithContext sets the message handling context.
-//  func WithContext(ctx context.Context) socket.MessageSetting
+//  func WithContext(ctx context.Context) MessageSetting
 var WithContext = socket.WithContext
 
 // WithSeq sets the message sequence.
-//  func WithSeq(seq uint64) socket.MessageSetting
+//  func WithSeq(seq uint64) MessageSetting
 var WithSeq = socket.WithSeq
 
 // WithMtype sets the message type.
-//  func WithMtype(mtype byte) socket.MessageSetting
+//  func WithMtype(mtype byte) MessageSetting
 var WithMtype = socket.WithMtype
 
 // WithUri sets the message URI string.
-//  func WithUri(uri string) socket.MessageSetting
+//  func WithUri(uri string) MessageSetting
 var WithUri = socket.WithUri
 
 // WithUriObject sets the message URI object.
-//  func WithUriObject(uriObject *url.URL) socket.MessageSetting
+//  func WithUriObject(uriObject *url.URL) MessageSetting
 var WithUriObject = socket.WithUriObject
 
 // WithQuery sets the message URI query parameter.
-//  func WithQuery(key, value string) socket.MessageSetting
+//  func WithQuery(key, value string) MessageSetting
 var WithQuery = socket.WithQuery
 
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
-//  func WithAddMeta(key, value string) socket.MessageSetting
+//  func WithAddMeta(key, value string) MessageSetting
 var WithAddMeta = socket.WithAddMeta
 
 // WithSetMeta sets 'key=value' metadata argument.
-//  func WithSetMeta(key, value string) socket.MessageSetting
+//  func WithSetMeta(key, value string) MessageSetting
 var WithSetMeta = socket.WithSetMeta
 
 // WithBodyCodec sets the body codec.
-//  func WithBodyCodec(bodyCodec byte) socket.MessageSetting
+//  func WithBodyCodec(bodyCodec byte) MessageSetting
 var WithBodyCodec = socket.WithBodyCodec
 
 // WithBody sets the body object.
-//  func WithBody(body interface{}) socket.MessageSetting
+//  func WithBody(body interface{}) MessageSetting
 var WithBody = socket.WithBody
 
 // WithNewBody resets the function of geting body.
-//  func WithNewBody(newBodyFunc socket.NewBodyFunc) socket.MessageSetting
+//  func WithNewBody(newBodyFunc socket.NewBodyFunc) MessageSetting
 var WithNewBody = socket.WithNewBody
 
 // WithXferPipe sets transfer filter pipe.
-//  func WithXferPipe(filterId ...byte) socket.MessageSetting
+//  func WithXferPipe(filterId ...byte) MessageSetting
 // NOTE:
 //  panic if the filterId is not registered
 var WithXferPipe = socket.WithXferPipe
@@ -254,11 +266,11 @@ var WithXferPipe = socket.WithXferPipe
 // Note:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
-//  func GetMessage(settings ...socket.MessageSetting) *socket.Message
+//  func GetMessage(settings ...MessageSetting) *Message
 var GetMessage = socket.GetMessage
 
-// PutMessage puts a *socket.Message to message stack.
-//  func PutMessage(m *socket.Message)
+// PutMessage puts a *Message to message stack.
+//  func PutMessage(m *Message)
 var PutMessage = socket.PutMessage
 
 var (
@@ -310,7 +322,7 @@ func doPrintPid() {
 }
 
 type fakeCallCmd struct {
-	output    *socket.Message
+	output    *Message
 	result    interface{}
 	rerr      *Rerror
 	inputMeta *utils.Args
@@ -351,7 +363,7 @@ func (f *fakeCallCmd) Done() <-chan struct{} {
 }
 
 // Output returns writed message.
-func (f *fakeCallCmd) Output() *socket.Message {
+func (f *fakeCallCmd) Output() *Message {
 	return f.output
 }
 

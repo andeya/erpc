@@ -28,7 +28,6 @@ import (
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
 	"github.com/henrylee2cn/teleport/codec"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 type (
@@ -75,19 +74,19 @@ type (
 	Peer interface {
 		EarlyPeer
 		// ListenAndServe turns on the listening service.
-		ListenAndServe(protoFunc ...socket.ProtoFunc) error
+		ListenAndServe(protoFunc ...ProtoFunc) error
 		// Dial connects with the peer of the destination address.
-		Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
+		Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
 		// DialContext connects with the peer of the destination address, using the provided context.
-		DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror)
+		DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
 		// ServeConn serves the connection and returns a session.
 		// Note:
 		//  Not support automatically redials after disconnection;
 		//  Execute the PostAcceptPlugin plugins.
-		ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error)
+		ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
 		// ServeListener serves the listener.
 		// Note: The caller ensures that the listener supports graceful shutdown.
-		ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) error
+		ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error
 	}
 )
 
@@ -214,7 +213,7 @@ func (p *peer) CountSession() int {
 }
 
 // Dial connects with the peer of the destination address.
-func (p *peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
+func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
 		d := net.Dialer{
 			LocalAddr: p.localAddr,
@@ -226,7 +225,7 @@ func (p *peer) Dial(addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerro
 
 // DialContext connects with the peer of the destination address,
 // using the provided context.
-func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...socket.ProtoFunc) (Session, *Rerror) {
+func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
 		d := net.Dialer{
 			LocalAddr: p.localAddr,
@@ -235,7 +234,7 @@ func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...socket
 	}, addr, protoFunc)
 }
 
-func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) (*session, *Rerror) {
+func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) (*session, *Rerror) {
 	var conn, dialErr = dialFunc()
 	if dialErr != nil {
 		rerr := rerrDialFailed.Copy().SetReason(dialErr.Error())
@@ -282,7 +281,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	return sess, nil
 }
 
-func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []socket.ProtoFunc) error {
+func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) error {
 	var conn, dialErr = dialFunc()
 	if dialErr != nil {
 		return dialErr
@@ -314,7 +313,7 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 // Note:
 //  Not support automatically redials after disconnection;
 //  Execute the PostAcceptPlugin plugins.
-func (p *peer) ServeConn(conn net.Conn, protoFunc ...socket.ProtoFunc) (Session, error) {
+func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error) {
 	network := conn.LocalAddr().Network()
 	if strings.Contains(network, "udp") {
 		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
@@ -335,7 +334,7 @@ var ErrListenClosed = errors.New("listener is closed")
 
 // ServeListener serves the listener.
 // Note: The caller ensures that the listener supports graceful shutdown.
-func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) error {
+func (p *peer) ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 	defer lis.Close()
 	p.listeners[lis] = struct{}{}
 
@@ -401,7 +400,7 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...socket.ProtoFunc) er
 }
 
 // ListenAndServe turns on the listening service.
-func (p *peer) ListenAndServe(protoFunc ...socket.ProtoFunc) error {
+func (p *peer) ListenAndServe(protoFunc ...ProtoFunc) error {
 	if len(p.listenAddr) == 0 {
 		Fatalf("listenAddress can not be empty")
 	}

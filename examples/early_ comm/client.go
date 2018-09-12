@@ -2,7 +2,6 @@ package main
 
 import (
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
@@ -37,7 +36,7 @@ func (e *earlyCall) PostDial(sess tp.PreSession) *tp.Rerror {
 		return rerr
 	}
 
-	input, rerr := sess.Receive(func(header socket.Header) interface{} {
+	input, rerr := sess.Receive(func(header Header) interface{} {
 		if header.Uri() == "/early/pong" {
 			return new(string)
 		}

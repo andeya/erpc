@@ -28,7 +28,7 @@ import (
 var defaultProto = jsonSubProto.NewJsonSubProtoFunc
 
 // NewWsProtoFunc wraps a protocol to a new websocket protocol.
-func NewWsProtoFunc(subProto ...socket.ProtoFunc) socket.ProtoFunc {
+func NewWsProtoFunc(subProto ...tp.ProtoFunc) tp.ProtoFunc {
 	return func(rw io.ReadWriter) socket.Proto {
 		conn, ok := rw.(*ws.Conn)
 		if !ok {
@@ -70,7 +70,7 @@ func (w *wsProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (w *wsProto) Pack(m *socket.Message) error {
+func (w *wsProto) Pack(m *tp.Message) error {
 	w.subConn.w.Reset()
 	err := w.subProto.Pack(m)
 	if err != nil {
@@ -81,7 +81,7 @@ func (w *wsProto) Pack(m *socket.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // Note: Concurrent unsafe!
-func (w *wsProto) Unpack(m *socket.Message) error {
+func (w *wsProto) Unpack(m *tp.Message) error {
 	err := ws.Message.Receive(w.conn, w.subConn.rBytes)
 	if err != nil {
 		return err

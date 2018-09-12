@@ -20,7 +20,6 @@ import (
 
 	"github.com/henrylee2cn/goutil/pool"
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // MultiClient client session which is has connection pool
@@ -31,7 +30,7 @@ type MultiClient struct {
 }
 
 // New creates a client session which is has connection pool.
-func New(peer tp.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.Duration, protoFunc ...socket.ProtoFunc) *MultiClient {
+func New(peer tp.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.Duration, protoFunc ...tp.ProtoFunc) *MultiClient {
 	newWorkerFunc := func() (pool.Worker, error) {
 		sess, rerr := peer.Dial(addr, protoFunc...)
 		return sess, rerr.ToError()
@@ -70,7 +69,7 @@ func (c *MultiClient) AsyncCall(
 	arg interface{},
 	result interface{},
 	callCmdChan chan<- tp.CallCmd,
-	setting ...socket.MessageSetting,
+	setting ...tp.MessageSetting,
 ) tp.CallCmd {
 	_sess, err := c.pool.Hire()
 	if err != nil {
@@ -90,7 +89,7 @@ func (c *MultiClient) AsyncCall(
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...socket.MessageSetting) tp.CallCmd {
+func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...tp.MessageSetting) tp.CallCmd {
 	callCmd := c.AsyncCall(uri, arg, result, make(chan tp.CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
@@ -100,7 +99,7 @@ func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, sett
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *MultiClient) Push(uri string, arg interface{}, setting ...socket.MessageSetting) *tp.Rerror {
+func (c *MultiClient) Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Rerror {
 	_sess, err := c.pool.Hire()
 	if err != nil {
 		return tp.ToRerror(err)

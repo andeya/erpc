@@ -95,11 +95,11 @@ func (p *PeerConfig) check() error {
 }
 
 // DefaultProtoFunc gets the default builder of socket communication protocol
-//  func DefaultProtoFunc() socket.ProtoFunc
+//  func DefaultProtoFunc() tp.ProtoFunc
 var DefaultProtoFunc = socket.DefaultProtoFunc
 
 // SetDefaultProtoFunc sets the default builder of socket communication protocol
-//  func SetDefaultProtoFunc(protoFunc socket.ProtoFunc)
+//  func SetDefaultProtoFunc(protoFunc tp.ProtoFunc)
 var SetDefaultProtoFunc = socket.SetDefaultProtoFunc
 
 // GetReadLimit gets the message size upper limit of reading.

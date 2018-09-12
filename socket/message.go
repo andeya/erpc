@@ -31,7 +31,7 @@ import (
 )
 
 type (
-	// Message a socket data message.
+	// Message a socket message data.
 	Message struct {
 		// message sequence
 		seq string

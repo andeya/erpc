@@ -23,7 +23,6 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // A proxy plugin for handling unknown calling or pushing.
@@ -58,11 +57,11 @@ type (
 	}
 	// CallForwarder the object used to call
 	CallForwarder interface {
-		Call(uri string, arg interface{}, result interface{}, setting ...socket.MessageSetting) tp.CallCmd
+		Call(uri string, arg interface{}, result interface{}, setting ...tp.MessageSetting) tp.CallCmd
 	}
 	// PushForwarder the object used to push
 	PushForwarder interface {
-		Push(uri string, arg interface{}, setting ...socket.MessageSetting) *tp.Rerror
+		Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Rerror
 	}
 	// ProxyLabel proxy label information
 	ProxyLabel struct {
@@ -95,7 +94,7 @@ func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
 func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 	var (
 		label    ProxyLabel
-		settings = make([]socket.MessageSetting, 1, 8)
+		settings = make([]tp.MessageSetting, 1, 8)
 	)
 	label.SessionId = ctx.Session().Id()
 	settings[0] = tp.WithSeq(getSeq(label.SessionId + "@" + ctx.Seq()))
@@ -128,7 +127,7 @@ func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 	var (
 		label    ProxyLabel
-		settings = make([]socket.MessageSetting, 1, 8)
+		settings = make([]tp.MessageSetting, 1, 8)
 	)
 	label.SessionId = ctx.Session().Id()
 	settings[0] = tp.WithSeq(getSeq(label.SessionId + "@" + ctx.Seq()))

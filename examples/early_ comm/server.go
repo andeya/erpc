@@ -2,7 +2,6 @@ package main
 
 import (
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 func main() {
@@ -24,7 +23,7 @@ func (e *earlyResult) Name() string {
 
 func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Rerror {
 	var rigthUri bool
-	input, rerr := sess.Receive(func(header socket.Header) interface{} {
+	input, rerr := sess.Receive(func(header Header) interface{} {
 		if header.Uri() == "/early/ping" {
 			rigthUri = true
 			return new(map[string]string)

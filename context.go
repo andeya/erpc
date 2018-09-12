@@ -49,7 +49,7 @@ type (
 	WriteCtx interface {
 		PreCtx
 		// Output returns writed message.
-		Output() *socket.Message
+		Output() *Message
 		// Rerror returns the handle error.
 		Rerror() *Rerror
 	}
@@ -82,7 +82,7 @@ type (
 	ReadCtx interface {
 		inputCtx
 		// Input returns readed message.
-		Input() *socket.Message
+		Input() *Message
 		// Rerror returns the handle error.
 		Rerror() *Rerror
 	}
@@ -100,11 +100,11 @@ type (
 	CallCtx interface {
 		inputCtx
 		// Input returns readed message.
-		Input() *socket.Message
+		Input() *Message
 		// GetBodyCodec gets the body codec type of the input message.
 		GetBodyCodec() byte
 		// Output returns writed message.
-		Output() *socket.Message
+		Output() *Message
 		// ReplyBodyCodec initializes and returns the reply message body codec id.
 		ReplyBodyCodec() byte
 		// SetBodyCodec sets the body codec for reply message.
@@ -162,8 +162,8 @@ var (
 // handlerCtx the underlying common instance of CallCtx and PushCtx.
 type handlerCtx struct {
 	sess            *session
-	input           *socket.Message
-	output          *socket.Message
+	input           *Message
+	output          *Message
 	handler         *Handler
 	arg             reflect.Value
 	callCmd         *callCmd
@@ -227,12 +227,12 @@ func (c *handlerCtx) Session() Session {
 }
 
 // Input returns readed message.
-func (c *handlerCtx) Input() *socket.Message {
+func (c *handlerCtx) Input() *Message {
 	return c.input
 }
 
 // Output returns writed message.
-func (c *handlerCtx) Output() *socket.Message {
+func (c *handlerCtx) Output() *Message {
 	return c.output
 }
 
@@ -346,7 +346,7 @@ func (c *handlerCtx) setContext(ctx context.Context) {
 }
 
 // Be executed synchronously when reading message
-func (c *handlerCtx) binding(header socket.Header) (body interface{}) {
+func (c *handlerCtx) binding(header Header) (body interface{}) {
 	c.start = c.sess.timeNow()
 	c.pluginContainer = c.sess.peer.pluginContainer
 	switch header.Mtype() {
@@ -394,7 +394,7 @@ E:
 	go c.sess.Close()
 }
 
-func (c *handlerCtx) bindPush(header socket.Header) interface{} {
+func (c *handlerCtx) bindPush(header Header) interface{} {
 	c.handleErr = c.pluginContainer.postReadPushHeader(c)
 	if c.handleErr != nil {
 		return nil
@@ -455,7 +455,7 @@ func (c *handlerCtx) handlePush() {
 	}
 }
 
-func (c *handlerCtx) bindCall(header socket.Header) interface{} {
+func (c *handlerCtx) bindCall(header Header) interface{} {
 	c.handleErr = c.pluginContainer.postReadCallHeader(c)
 	if c.handleErr != nil {
 		return nil
@@ -590,7 +590,7 @@ func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
 	return rerr
 }
 
-func (c *handlerCtx) bindReply(header socket.Header) interface{} {
+func (c *handlerCtx) bindReply(header Header) interface{} {
 	_callCmd, ok := c.sess.callCmdMap.Load(header.Seq())
 	if !ok {
 		Warnf("not found call cmd: %v", c.input)
@@ -687,7 +687,7 @@ type (
 		// API boundaries.
 		Context() context.Context
 		// Output returns writed message.
-		Output() *socket.Message
+		Output() *Message
 		// Rerror returns the call error.
 		Rerror() *Rerror
 		// Done returns the chan that indicates whether it has been completed.
@@ -716,7 +716,7 @@ type (
 	}
 	callCmd struct {
 		sess           *session
-		output         *socket.Message
+		output         *Message
 		result         interface{}
 		rerr           *Rerror
 		inputBodyCodec byte
@@ -780,7 +780,7 @@ func (c *callCmd) SwapLen() int {
 }
 
 // Output returns writed message.
-func (c *callCmd) Output() *socket.Message {
+func (c *callCmd) Output() *Message {
 	return c.output
 }
 
