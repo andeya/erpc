@@ -273,7 +273,7 @@ func GetSocket(net.Conn, ...ProtoFunc) Socket
 func NewSocket(net.Conn, ...ProtoFunc) Socket
 ```
 
-Default protocol `FastProto`(Big Endian):
+Default protocol `RawProto`(Big Endian):
 
 ```sh
 {4 bytes message length}
