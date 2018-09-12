@@ -696,7 +696,7 @@
 <text text-anchor="" x="1142.30" y="271.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*Packet).MarshalBody (14 samples, 0.55%)</title><rect x="567.2" y="309" width="6.5" height="15.0" fill="rgb(242,208,4)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*Message).MarshalBody (14 samples, 0.55%)</title><rect x="567.2" y="309" width="6.5" height="15.0" fill="rgb(242,208,4)" rx="2" ry="2" />
 <text text-anchor="" x="570.21" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -812,7 +812,7 @@
 <text text-anchor="" x="1192.53" y="239.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.checkPacketSize (1 samples, 0.04%)</title><rect x="1110.9" y="341" width="0.5" height="15.0" fill="rgb(253,14,40)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.checkMessageSize (1 samples, 0.04%)</title><rect x="1110.9" y="341" width="0.5" height="15.0" fill="rgb(253,14,40)" rx="2" ry="2" />
 <text text-anchor="" x="1113.93" y="351.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -872,7 +872,7 @@
 <text text-anchor="" x="1142.30" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*Packet).UnmarshalBody (8 samples, 0.32%)</title><rect x="10.5" y="293" width="3.7" height="15.0" fill="rgb(215,171,48)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*Message).UnmarshalBody (8 samples, 0.32%)</title><rect x="10.5" y="293" width="3.7" height="15.0" fill="rgb(215,171,48)" rx="2" ry="2" />
 <text text-anchor="" x="13.47" y="303.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -960,7 +960,7 @@
 <text text-anchor="" x="575.79" y="303.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.GetPacket (1 samples, 0.04%)</title><rect x="1111.4" y="357" width="0.5" height="15.0" fill="rgb(233,0,7)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.GetMessage (1 samples, 0.04%)</title><rect x="1111.4" y="357" width="0.5" height="15.0" fill="rgb(233,0,7)" rx="2" ry="2" />
 <text text-anchor="" x="1114.40" y="367.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -996,8 +996,8 @@
 <text text-anchor="" x="1112.53" y="223.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*socket).ReadPacket (1,191 samples, 46.95%)</title><rect x="10.5" y="357" width="553.9" height="15.0" fill="rgb(206,132,4)" rx="2" ry="2" />
-<text text-anchor="" x="13.47" y="367.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*socket).ReadPacket</text>
+<title>github.com/henrylee2cn/teleport/socket.(*socket).ReadMessage (1,191 samples, 46.95%)</title><rect x="10.5" y="357" width="553.9" height="15.0" fill="rgb(206,132,4)" rx="2" ry="2" />
+<text text-anchor="" x="13.47" y="367.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*socket).ReadMessage</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
 <title>runtime.gosched_m (2 samples, 0.08%)</title><rect x="1138.4" y="357" width="0.9" height="15.0" fill="rgb(244,117,49)" rx="2" ry="2" />
@@ -1008,8 +1008,8 @@
 <text text-anchor="" x="1140.44" y="255.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).readPacket (1,145 samples, 45.13%)</title><rect x="30.0" y="325" width="532.6" height="15.0" fill="rgb(242,84,40)" rx="2" ry="2" />
-<text text-anchor="" x="33.00" y="335.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*fastProto).readPacket</text>
+<title>github.com/henrylee2cn/teleport/socket.(*fastProto).readMessage (1,145 samples, 45.13%)</title><rect x="30.0" y="325" width="532.6" height="15.0" fill="rgb(242,84,40)" rx="2" ry="2" />
+<text text-anchor="" x="33.00" y="335.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*fastProto).readMessage</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
 <title>runtime.notewakeup (1 samples, 0.04%)</title><rect x="15.1" y="165" width="0.5" height="15.0" fill="rgb(209,41,2)" rx="2" ry="2" />
@@ -1660,8 +1660,8 @@
 <text text-anchor="" x="1176.72" y="223.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*socket).WritePacket (1,176 samples, 46.35%)</title><rect x="564.4" y="357" width="547.0" height="15.0" fill="rgb(227,109,23)" rx="2" ry="2" />
-<text text-anchor="" x="567.42" y="367.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*socket).WritePacket</text>
+<title>github.com/henrylee2cn/teleport/socket.(*socket).WriteMessage (1,176 samples, 46.35%)</title><rect x="564.4" y="357" width="547.0" height="15.0" fill="rgb(227,109,23)" rx="2" ry="2" />
+<text text-anchor="" x="567.42" y="367.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*socket).WriteMessage</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
 <title>runtime.semrelease1 (1 samples, 0.04%)</title><rect x="1112.3" y="309" width="0.5" height="15.0" fill="rgb(220,123,20)" rx="2" ry="2" />
@@ -1796,7 +1796,7 @@
 <text text-anchor="" x="26.49" y="255.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.PutPacket (2 samples, 0.08%)</title><rect x="1111.9" y="357" width="0.9" height="15.0" fill="rgb(218,206,31)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.PutMessage (2 samples, 0.08%)</title><rect x="1111.9" y="357" width="0.9" height="15.0" fill="rgb(218,206,31)" rx="2" ry="2" />
 <text text-anchor="" x="1114.86" y="367.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -1836,7 +1836,7 @@
 <text text-anchor="" x="576.72" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*Packet).UnmarshalNewBody (9 samples, 0.35%)</title><rect x="10.5" y="309" width="4.2" height="15.0" fill="rgb(244,95,8)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*Message).UnmarshalNewBody (9 samples, 0.35%)</title><rect x="10.5" y="309" width="4.2" height="15.0" fill="rgb(244,95,8)" rx="2" ry="2" />
 <text text-anchor="" x="13.47" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">

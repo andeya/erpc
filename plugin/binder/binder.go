@@ -110,7 +110,7 @@ func (s *StructArgsBinder) SetErrorFunc(fn ErrorFunc) {
 	}
 	s.errFunc = func(handlerName, paramName, reason string) *tp.Rerror {
 		return tp.NewRerror(
-			tp.CodeBadPacket,
+			tp.CodeBadMessage,
 			"Invalid Parameter",
 			fmt.Sprintf(`{"handler": %q, "param": %q, "reason": %q}`, handlerName, paramName, reason),
 		)

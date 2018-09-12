@@ -142,7 +142,7 @@ func handelHeartbeat(sess tp.Session, query url.Values) *tp.Rerror {
 	rateSecond := parseHeartbeatRateSecond(rateStr)
 	isFirst := updateHeartbeatInfo(sess.Swap(), time.Second*time.Duration(rateSecond))
 	if isFirst && rateSecond == -1 {
-		return tp.NewRerror(tp.CodeBadPacket, "Invalid Heartbeat Rate", rateStr)
+		return tp.NewRerror(tp.CodeBadMessage, "Invalid Heartbeat Rate", rateStr)
 	}
 	if rateSecond == 0 {
 		tp.Tracef("heart-pong: %s", sess.Id())

@@ -69,12 +69,12 @@ type (
 		// some of the data was successfully written.
 		// A zero value for t means Write will not time out.
 		SetWriteDeadline(t time.Time) error
-		// WritePacket writes header and body to the connection.
+		// WriteMessage writes header and body to the connection.
 		// Note: must be safe for concurrent use by multiple goroutines.
-		WritePacket(packet *Packet) error
-		// ReadPacket reads header and body from the connection.
+		WriteMessage(message *Message) error
+		// ReadMessage reads header and body from the connection.
 		// Note: must be safe for concurrent use by multiple goroutines.
-		ReadPacket(packet *Packet) error
+		ReadMessage(message *Message) error
 		// Read reads data from the connection.
 		// Read can be made to time out and return an Error with Timeout() == true
 		// after a fixed time limit; see SetDeadline and SetReadDeadline.
@@ -164,32 +164,32 @@ func (s *socket) ControlFD(f func(fd uintptr)) error {
 	return ctrl.Control(f)
 }
 
-// WritePacket writes header and body to the connection.
-// WritePacket can be made to time out and return an Error with Timeout() == true
+// WriteMessage writes header and body to the connection.
+// WriteMessage can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // Note:
 //  For the byte stream type of body, write directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (s *socket) WritePacket(packet *Packet) error {
+func (s *socket) WriteMessage(message *Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
 	s.mu.RUnlock()
-	err := protocol.Pack(packet)
+	err := protocol.Pack(message)
 	if err != nil && s.isActiveClosed() {
 		err = ErrProactivelyCloseSocket
 	}
 	return err
 }
 
-// ReadPacket reads header and body from the connection.
+// ReadMessage reads header and body from the connection.
 // Note:
 //  For the byte stream type of body, read directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (s *socket) ReadPacket(packet *Packet) error {
+func (s *socket) ReadMessage(message *Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
 	s.mu.RUnlock()
-	return protocol.Unpack(packet)
+	return protocol.Unpack(message)
 }
 
 // Swap returns custom data swap of the socket.
@@ -314,7 +314,7 @@ type (
 	}
 	ifaceSetNoDelay interface {
 		// SetNoDelay controls whether the operating system should delay
-		// packet transmission in hopes of sending fewer packets (Nagle's
+		// message transmission in hopes of sending fewer messages (Nagle's
 		// algorithm).  The default is true (no delay), meaning that data is
 		// sent as soon as possible after a Write.
 		SetNoDelay(noDelay bool) error
@@ -386,7 +386,7 @@ func SetWriteBuffer(bytes int) {
 }
 
 // SetNoDelay controls whether the operating system should delay
-// packet transmission in hopes of sending fewer packets (Nagle's
+// message transmission in hopes of sending fewer messages (Nagle's
 // algorithm).  The default is true (no delay), meaning that data is
 // sent as soon as possible after a Write.
 func SetNoDelay(_noDelay bool) {

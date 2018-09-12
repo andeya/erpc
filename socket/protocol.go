@@ -26,16 +26,16 @@ import (
 )
 
 type (
-	// Proto pack/unpack protocol scheme of socket packet.
+	// Proto pack/unpack protocol scheme of socket message.
 	Proto interface {
 		// Version returns the protocol's id and name.
 		Version() (byte, string)
-		// Pack writes the Packet into the connection.
+		// Pack writes the Message into the connection.
 		// Note: Make sure to write only once or there will be package contamination!
-		Pack(*Packet) error
-		// Unpack reads bytes from the connection to the Packet.
+		Pack(*Message) error
+		// Unpack reads bytes from the connection to the Message.
 		// Note: Concurrent unsafe!
-		Unpack(*Packet) error
+		Unpack(*Message) error
 	}
 	// ProtoFunc function used to create a custom Proto interface.
 	ProtoFunc func(io.ReadWriter) Proto
@@ -92,9 +92,9 @@ func (r *rawProto) Version() (byte, string) {
 	return r.id, r.name
 }
 
-// Pack writes the Packet into the connection.
+// Pack writes the Message into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (r *rawProto) Pack(p *Packet) error {
+func (r *rawProto) Pack(m *Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
@@ -105,38 +105,38 @@ func (r *rawProto) Pack(p *Packet) error {
 	bb.WriteByte(r.id)
 
 	// transfer pipe
-	bb.WriteByte(byte(p.XferPipe().Len()))
-	bb.Write(p.XferPipe().Ids())
+	bb.WriteByte(byte(m.XferPipe().Len()))
+	bb.Write(m.XferPipe().Ids())
 
 	prefixLen := bb.Len()
 
 	// header
-	err = r.writeHeader(bb, p)
+	err = r.writeHeader(bb, m)
 	if err != nil {
 		return err
 	}
 
 	// body
-	err = r.writeBody(bb, p)
+	err = r.writeBody(bb, m)
 	if err != nil {
 		return err
 	}
 
 	// do transfer pipe
-	payload, err := p.XferPipe().OnPack(bb.B[prefixLen:])
+	payload, err := m.XferPipe().OnPack(bb.B[prefixLen:])
 	if err != nil {
 		return err
 	}
 	bb.B = append(bb.B[:prefixLen], payload...)
 
-	// set and check packet size
-	err = p.SetSize(uint32(bb.Len()))
+	// set and check message size
+	err = m.SetSize(uint32(bb.Len()))
 	if err != nil {
 		return err
 	}
 
 	// reset real size
-	binary.BigEndian.PutUint32(bb.B, p.Size())
+	binary.BigEndian.PutUint32(bb.B, m.Size())
 
 	// real write
 	_, err = r.w.Write(bb.B)
@@ -147,26 +147,26 @@ func (r *rawProto) Pack(p *Packet) error {
 	return err
 }
 
-func (r *rawProto) writeHeader(bb *utils.ByteBuffer, p *Packet) error {
-	seqBytes := goutil.StringToBytes(p.Seq())
+func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m *Message) error {
+	seqBytes := goutil.StringToBytes(m.Seq())
 	binary.Write(bb, binary.BigEndian, uint32(len(seqBytes)))
 	bb.Write(seqBytes)
 
-	bb.WriteByte(p.Ptype())
+	bb.WriteByte(m.Mtype())
 
-	uriBytes := goutil.StringToBytes(p.Uri())
+	uriBytes := goutil.StringToBytes(m.Uri())
 	binary.Write(bb, binary.BigEndian, uint32(len(uriBytes)))
 	bb.Write(uriBytes)
 
-	metaBytes := p.Meta().QueryString()
+	metaBytes := m.Meta().QueryString()
 	binary.Write(bb, binary.BigEndian, uint32(len(metaBytes)))
 	bb.Write(metaBytes)
 	return nil
 }
 
-func (r *rawProto) writeBody(bb *utils.ByteBuffer, p *Packet) error {
-	bb.WriteByte(p.BodyCodec())
-	bodyBytes, err := p.MarshalBody()
+func (r *rawProto) writeBody(bb *utils.ByteBuffer, m *Message) error {
+	bb.WriteByte(m.BodyCodec())
+	bodyBytes, err := m.MarshalBody()
 	if err != nil {
 		return err
 	}
@@ -174,31 +174,31 @@ func (r *rawProto) writeBody(bb *utils.ByteBuffer, p *Packet) error {
 	return nil
 }
 
-// Unpack reads bytes from the connection to the Packet.
+// Unpack reads bytes from the connection to the Message.
 // Note: Concurrent unsafe!
-func (r *rawProto) Unpack(p *Packet) error {
+func (r *rawProto) Unpack(m *Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
-	// read packet
-	err := r.readPacket(bb, p)
+	// read message
+	err := r.readMessage(bb, m)
 	if err != nil {
 		return err
 	}
 	// do transfer pipe
-	data, err := p.XferPipe().OnUnpack(bb.B)
+	data, err := m.XferPipe().OnUnpack(bb.B)
 	if err != nil {
 		return err
 	}
 	// header
-	data = r.readHeader(data, p)
+	data = r.readHeader(data, m)
 	// body
-	return r.readBody(data, p)
+	return r.readBody(data, m)
 }
 
 var errProtoUnmatch = errors.New("mismatched protocol")
 
-func (r *rawProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
+func (r *rawProto) readMessage(bb *utils.ByteBuffer, m *Message) error {
 	r.rMu.Lock()
 	defer r.rMu.Unlock()
 	// size
@@ -207,7 +207,7 @@ func (r *rawProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 	if err != nil {
 		return err
 	}
-	if err = p.SetSize(size); err != nil {
+	if err = m.SetSize(size); err != nil {
 		return err
 	}
 	// protocol
@@ -230,7 +230,7 @@ func (r *rawProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 		if err != nil {
 			return err
 		}
-		err = p.XferPipe().Append(bb.B[:xferLen]...)
+		err = m.XferPipe().Append(bb.B[:xferLen]...)
 		if err != nil {
 			return err
 		}
@@ -242,29 +242,29 @@ func (r *rawProto) readPacket(bb *utils.ByteBuffer, p *Packet) error {
 	return err
 }
 
-func (r *rawProto) readHeader(data []byte, p *Packet) []byte {
+func (r *rawProto) readHeader(data []byte, m *Message) []byte {
 	// seq
 	seqLen := binary.BigEndian.Uint32(data)
 	data = data[4:]
-	p.SetSeq(string(data[:seqLen]))
+	m.SetSeq(string(data[:seqLen]))
 	data = data[seqLen:]
 	// type
-	p.SetPtype(data[0])
+	m.SetMtype(data[0])
 	data = data[1:]
 	// uri
 	uriLen := binary.BigEndian.Uint32(data)
 	data = data[4:]
-	p.SetUri(string(data[:uriLen]))
+	m.SetUri(string(data[:uriLen]))
 	data = data[uriLen:]
 	// meta
 	metaLen := binary.BigEndian.Uint32(data)
 	data = data[4:]
-	p.Meta().ParseBytes(data[:metaLen])
+	m.Meta().ParseBytes(data[:metaLen])
 	data = data[metaLen:]
 	return data
 }
 
-func (r *rawProto) readBody(data []byte, p *Packet) error {
-	p.SetBodyCodec(data[0])
-	return p.UnmarshalBody(data[1:])
+func (r *rawProto) readBody(data []byte, m *Message) error {
+	m.SetBodyCodec(data[0])
+	return m.UnmarshalBody(data[1:])
 }

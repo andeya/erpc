@@ -10,7 +10,7 @@ import (
 
 func main() {
 	socket.SetNoDelay(false)
-	socket.SetPacketSizeLimit(512)
+	socket.SetMessageSizeLimit(512)
 	lis, err := net.Listen("tcp", "0.0.0.0:8000")
 	if err != nil {
 		log.Fatalf("[SVR] listen err: %v", err)
@@ -27,32 +27,32 @@ func main() {
 			var pbTest = new(pb.PbTest)
 			for {
 				// read request
-				var packet = socket.GetPacket(socket.WithNewBody(
+				var message = socket.GetMessage(socket.WithNewBody(
 					func(header socket.Header) interface{} {
 						*pbTest = pb.PbTest{}
 						return pbTest
 					}),
 				)
-				err = s.ReadPacket(packet)
+				err = s.ReadMessage(message)
 				if err != nil {
 					log.Printf("[SVR] read request err: %v", err)
 					return
 					// } else {
-					// log.Printf("[SVR] read request: %s", packet.String())
+					// log.Printf("[SVR] read request: %s", message.String())
 				}
 
 				// write response
 				pbTest.A = pbTest.A + pbTest.B
 				pbTest.B = pbTest.A - pbTest.B*2
-				packet.SetBody(pbTest)
+				message.SetBody(pbTest)
 
-				err = s.WritePacket(packet)
+				err = s.WriteMessage(message)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 					// } else {
-					// log.Printf("[SVR] write response: %s", packet.String())
+					// log.Printf("[SVR] write response: %s", message.String())
 				}
-				socket.PutPacket(packet)
+				socket.PutMessage(message)
 			}
 		}(socket.GetSocket(conn))
 	}

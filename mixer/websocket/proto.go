@@ -68,26 +68,26 @@ func (w *wsProto) Version() (byte, string) {
 	return w.id, w.name
 }
 
-// Pack writes the Packet into the connection.
+// Pack writes the Message into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (w *wsProto) Pack(p *socket.Packet) error {
+func (w *wsProto) Pack(m *socket.Message) error {
 	w.subConn.w.Reset()
-	err := w.subProto.Pack(p)
+	err := w.subProto.Pack(m)
 	if err != nil {
 		return err
 	}
 	return ws.Message.Send(w.conn, w.subConn.w.Bytes())
 }
 
-// Unpack reads bytes from the connection to the Packet.
+// Unpack reads bytes from the connection to the Message.
 // Note: Concurrent unsafe!
-func (w *wsProto) Unpack(p *socket.Packet) error {
+func (w *wsProto) Unpack(m *socket.Message) error {
 	err := ws.Message.Receive(w.conn, w.subConn.rBytes)
 	if err != nil {
 		return err
 	}
 	w.subConn.r = bytes.NewBuffer(*w.subConn.rBytes)
-	return w.subProto.Unpack(p)
+	return w.subProto.Unpack(m)
 }
 
 func newVirtualConn() *virtualConn {

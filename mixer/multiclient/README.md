@@ -1,12 +1,12 @@
 ## multiclient
 
-Higher throughput client connection pool when transferring large packets (such as downloading files).
+Higher throughput client connection pool when transferring large messages (such as downloading files).
 
 ### Feature
 
 - Non exclusive, shared connection pool
 - Making full use of the asynchronous communication advantages of each connection
-- Higher throughput when transferring large packets(≥1MB)
+- Higher throughput when transferring large messages(≥1MB)
 - Preempt more network bandwidth in a shared network environment
 - Load balancing mechanism of traffic level
 - Real-time monitoring of connection status

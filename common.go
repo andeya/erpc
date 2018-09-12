@@ -29,7 +29,7 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// Packet types
+// Message types
 const (
 	TypeUndefined byte = 0
 	TypeCall      byte = 1
@@ -37,7 +37,7 @@ const (
 	TypePush      byte = 3
 )
 
-// TypeText returns the packet type text.
+// TypeText returns the message type text.
 // If the type is undefined returns 'Undefined'.
 func TypeText(typ byte) string {
 	switch typ {
@@ -56,17 +56,17 @@ func TypeText(typ byte) string {
 // Note: Recommended custom code is greater than 1000.
 //  unknown error code: -1.
 //  sender peer error code range: [100,199].
-//  packet handling error code range: [400,499].
+//  message handling error code range: [400,499].
 //  receiver peer error code range: [500,599].
 const (
 	CodeUnknownError        = -1
 	CodeConnClosed          = 102
 	CodeWriteFailed         = 104
 	CodeDialFailed          = 105
-	CodeBadPacket           = 400
+	CodeBadMessage          = 400
 	CodeUnauthorized        = 401
 	CodeNotFound            = 404
-	CodePtypeNotAllowed     = 405
+	CodeMtypeNotAllowed     = 405
 	CodeHandleTimeout       = 408
 	CodeInternalServerError = 500
 	CodeBadGateway          = 502
@@ -87,8 +87,8 @@ const (
 // If the type is undefined returns 'Unknown Error'.
 func CodeText(rerrCode int32) string {
 	switch rerrCode {
-	case CodeBadPacket:
-		return "Bad Packet"
+	case CodeBadMessage:
+		return "Bad Message"
 	case CodeUnauthorized:
 		return "Unauthorized"
 	case CodeDialFailed:
@@ -101,8 +101,8 @@ func CodeText(rerrCode int32) string {
 		return "Not Found"
 	case CodeHandleTimeout:
 		return "Handle Timeout"
-	case CodePtypeNotAllowed:
-		return "Packet Type Not Allowed"
+	case CodeMtypeNotAllowed:
+		return "Message Type Not Allowed"
 	case CodeInternalServerError:
 		return "Internal Server Error"
 	case CodeBadGateway:
@@ -120,9 +120,9 @@ var (
 	rerrDialFailed          = NewRerror(CodeDialFailed, CodeText(CodeDialFailed), "")
 	rerrConnClosed          = NewRerror(CodeConnClosed, CodeText(CodeConnClosed), "")
 	rerrWriteFailed         = NewRerror(CodeWriteFailed, CodeText(CodeWriteFailed), "")
-	rerrBadPacket           = NewRerror(CodeBadPacket, CodeText(CodeBadPacket), "")
+	rerrBadMessage          = NewRerror(CodeBadMessage, CodeText(CodeBadMessage), "")
 	rerrNotFound            = NewRerror(CodeNotFound, CodeText(CodeNotFound), "")
-	rerrCodePtypeNotAllowed = NewRerror(CodePtypeNotAllowed, CodeText(CodePtypeNotAllowed), "")
+	rerrCodeMtypeNotAllowed = NewRerror(CodeMtypeNotAllowed, CodeText(CodeMtypeNotAllowed), "")
 	rerrHandleTimeout       = NewRerror(CodeHandleTimeout, CodeText(CodeHandleTimeout), "")
 	rerrInternalServerError = NewRerror(CodeInternalServerError, CodeText(CodeInternalServerError), "")
 )
@@ -148,7 +148,7 @@ const (
 )
 
 // WithRerror sets the real IP to metadata.
-func WithRerror(rerr *Rerror) socket.PacketSetting {
+func WithRerror(rerr *Rerror) socket.MessageSetting {
 	b, _ := rerr.MarshalJSON()
 	if len(b) == 0 {
 		return nil
@@ -157,15 +157,15 @@ func WithRerror(rerr *Rerror) socket.PacketSetting {
 }
 
 // WithRealIp sets the real IP to metadata.
-func WithRealIp(ip string) socket.PacketSetting {
+func WithRealIp(ip string) socket.MessageSetting {
 	return socket.WithAddMeta(MetaRealIp, ip)
 }
 
 // WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
 // Note: If the specified codec is invalid, the receiver will ignore the mate data.
-func WithAcceptBodyCodec(bodyCodec byte) socket.PacketSetting {
+func WithAcceptBodyCodec(bodyCodec byte) socket.MessageSetting {
 	if bodyCodec == codec.NilCodecId {
-		return func(*socket.Packet) {}
+		return func(*socket.Message) {}
 	}
 	return socket.WithAddMeta(MetaAcceptBodyCodec, strconv.FormatUint(uint64(bodyCodec), 10))
 }
@@ -185,67 +185,81 @@ func GetAcceptBodyCodec(meta *utils.Args) (byte, bool) {
 	return c, c != codec.NilCodecId
 }
 
-// WithContext sets the packet handling context.
-//  func WithContext(ctx context.Context) socket.PacketSetting
+// Socket is a generic stream-oriented network connection.
+//
+// Multiple goroutines may invoke methods on a Socket simultaneously.
+type Socket = socket.Socket
+
+// Proto pack/unpack protocol scheme of socket message.
+type Proto = socket.Proto
+
+// ProtoFunc function used to create a custom Proto interface.
+type ProtoFunc = socket.ProtoFunc
+
+// MessageSetting is a pipe function type for setting message.
+type MessageSetting = socket.MessageSetting
+
+// WithContext sets the message handling context.
+//  func WithContext(ctx context.Context) socket.MessageSetting
 var WithContext = socket.WithContext
 
-// WithSeq sets the packet sequence.
-//  func WithSeq(seq uint64) socket.PacketSetting
+// WithSeq sets the message sequence.
+//  func WithSeq(seq uint64) socket.MessageSetting
 var WithSeq = socket.WithSeq
 
-// WithPtype sets the packet type.
-//  func WithPtype(ptype byte) socket.PacketSetting
-var WithPtype = socket.WithPtype
+// WithMtype sets the message type.
+//  func WithMtype(mtype byte) socket.MessageSetting
+var WithMtype = socket.WithMtype
 
-// WithUri sets the packet URI string.
-//  func WithUri(uri string) socket.PacketSetting
+// WithUri sets the message URI string.
+//  func WithUri(uri string) socket.MessageSetting
 var WithUri = socket.WithUri
 
-// WithUriObject sets the packet URI object.
-//  func WithUriObject(uriObject *url.URL) socket.PacketSetting
+// WithUriObject sets the message URI object.
+//  func WithUriObject(uriObject *url.URL) socket.MessageSetting
 var WithUriObject = socket.WithUriObject
 
-// WithQuery sets the packet URI query parameter.
-//  func WithQuery(key, value string) socket.PacketSetting
+// WithQuery sets the message URI query parameter.
+//  func WithQuery(key, value string) socket.MessageSetting
 var WithQuery = socket.WithQuery
 
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
-//  func WithAddMeta(key, value string) socket.PacketSetting
+//  func WithAddMeta(key, value string) socket.MessageSetting
 var WithAddMeta = socket.WithAddMeta
 
 // WithSetMeta sets 'key=value' metadata argument.
-//  func WithSetMeta(key, value string) socket.PacketSetting
+//  func WithSetMeta(key, value string) socket.MessageSetting
 var WithSetMeta = socket.WithSetMeta
 
 // WithBodyCodec sets the body codec.
-//  func WithBodyCodec(bodyCodec byte) socket.PacketSetting
+//  func WithBodyCodec(bodyCodec byte) socket.MessageSetting
 var WithBodyCodec = socket.WithBodyCodec
 
 // WithBody sets the body object.
-//  func WithBody(body interface{}) socket.PacketSetting
+//  func WithBody(body interface{}) socket.MessageSetting
 var WithBody = socket.WithBody
 
 // WithNewBody resets the function of geting body.
-//  func WithNewBody(newBodyFunc socket.NewBodyFunc) socket.PacketSetting
+//  func WithNewBody(newBodyFunc socket.NewBodyFunc) socket.MessageSetting
 var WithNewBody = socket.WithNewBody
 
 // WithXferPipe sets transfer filter pipe.
-//  func WithXferPipe(filterId ...byte) socket.PacketSetting
+//  func WithXferPipe(filterId ...byte) socket.MessageSetting
 // NOTE:
 //  panic if the filterId is not registered
 var WithXferPipe = socket.WithXferPipe
 
-// GetPacket gets a *Packet form packet stack.
+// GetMessage gets a *Message form message stack.
 // Note:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
-//  func GetPacket(settings ...socket.PacketSetting) *socket.Packet
-var GetPacket = socket.GetPacket
+//  func GetMessage(settings ...socket.MessageSetting) *socket.Message
+var GetMessage = socket.GetMessage
 
-// PutPacket puts a *socket.Packet to packet stack.
-//  func PutPacket(p *socket.Packet)
-var PutPacket = socket.PutPacket
+// PutMessage puts a *socket.Message to message stack.
+//  func PutMessage(m *socket.Message)
+var PutMessage = socket.PutMessage
 
 var (
 	_maxGoroutinesAmount      = (1024 * 1024 * 8) / 8 // max memory 8GB (8KB/goroutine)
@@ -296,7 +310,7 @@ func doPrintPid() {
 }
 
 type fakeCallCmd struct {
-	output    *socket.Packet
+	output    *socket.Message
 	result    interface{}
 	rerr      *Rerror
 	inputMeta *utils.Args
@@ -305,8 +319,8 @@ type fakeCallCmd struct {
 // NewFakeCallCmd creates a fake CallCmd.
 func NewFakeCallCmd(uri string, arg, result interface{}, rerr *Rerror) CallCmd {
 	return &fakeCallCmd{
-		output: socket.NewPacket(
-			socket.WithPtype(TypeCall),
+		output: socket.NewMessage(
+			socket.WithMtype(TypeCall),
 			socket.WithUri(uri),
 			socket.WithBody(arg),
 		),
@@ -336,8 +350,8 @@ func (f *fakeCallCmd) Done() <-chan struct{} {
 	return closedChan
 }
 
-// Output returns writed packet.
-func (f *fakeCallCmd) Output() *socket.Packet {
+// Output returns writed message.
+func (f *fakeCallCmd) Output() *socket.Message {
 	return f.output
 }
 
@@ -357,12 +371,12 @@ func (f *fakeCallCmd) Rerror() *Rerror {
 	return f.rerr
 }
 
-// InputBodyCodec gets the body codec type of the input packet.
+// InputBodyCodec gets the body codec type of the input message.
 func (f *fakeCallCmd) InputBodyCodec() byte {
 	return codec.NilCodecId
 }
 
-// InputMeta returns the header metadata of input packet.
+// InputMeta returns the header metadata of input message.
 func (f *fakeCallCmd) InputMeta() *utils.Args {
 	if f.inputMeta == nil {
 		f.inputMeta = utils.AcquireArgs()

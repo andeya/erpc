@@ -8,12 +8,12 @@ A concise, powerful and high-performance connection socket.
 - Support set the size of socket I/O buffer
 - Support custom communication protocol
 - Support custom transfer filter pipe (Such as gzip, encrypt, verify...)
-- Packet contains both Header and Body
+- Message contains both Header and Body
 - Supports custom encoding types, e.g `JSON` `Protobuf`
 - Header contains the status code and its description text
 - Each socket is assigned an id
-- Provides `Socket Hub`, `Socket` pool and `*Packet` stack
-- Support setting the size of the reading packet (if exceed disconnect it)
+- Provides `Socket Hub`, `Socket` pool and `*Message` stack
+- Support setting the size of the reading message (if exceed disconnect it)
 - Provide an operating interface to control the connection file descriptor
 
 
@@ -72,7 +72,7 @@ import (
 )
 
 func main() {
-	socket.SetPacketSizeLimit(512)
+	socket.SetMessageSizeLimit(512)
 	lis, err := net.Listen("tcp", "0.0.0.0:8000")
 	if err != nil {
 		log.Fatalf("[SVR] listen err: %v", err)
@@ -89,32 +89,32 @@ func main() {
 			var pbTest = new(pb.PbTest)
 			for {
 				// read request
-				var packet = socket.GetPacket(socket.WithNewBody(
+				var message = socket.GetMessage(socket.WithNewBody(
 					func(header socket.Header) interface{} {
 						*pbTest = pb.PbTest{}
 						return pbTest
 					}),
 				)
-				err = s.ReadPacket(packet)
+				err = s.ReadMessage(message)
 				if err != nil {
 					log.Printf("[SVR] read request err: %v", err)
 					return
 				} else {
-					// log.Printf("[SVR] read request: %v", packet)
+					// log.Printf("[SVR] read request: %v", message)
 				}
 
 				// write response
 				pbTest.A = pbTest.A + pbTest.B
 				pbTest.B = pbTest.A - pbTest.B*2
-				packet.SetBody(pbTest)
+				message.SetBody(pbTest)
 
-				err = s.WritePacket(packet)
+				err = s.WriteMessage(message)
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 				} else {
-					// log.Printf("[SVR] write response: %v", packet)
+					// log.Printf("[SVR] write response: %v", message)
 				}
-				socket.PutPacket(packet)
+				socket.PutMessage(message)
 			}
 		}(socket.GetSocket(conn))
 	}
@@ -143,34 +143,34 @@ func main() {
 	}
 	s := socket.GetSocket(conn)
 	defer s.Close()
-	var packet = socket.GetPacket()
-	defer socket.PutPacket(packet)
+	var message = socket.GetMessage()
+	defer socket.PutMessage(message)
 	for i := uint64(0); i < 1; i++ {
 		// write request
-		packet.Reset()
-		packet.SetPtype(0)
-		packet.SetBodyCodec(codec.ID_JSON)
-		packet.SetSeq(i)
-		packet.SetUri("/a/b")
-		packet.SetBody(&pb.PbTest{A: 10, B: 2})
-		err = s.WritePacket(packet)
+		message.Reset()
+		message.SetMtype(0)
+		message.SetBodyCodec(codec.ID_JSON)
+		message.SetSeq(i)
+		message.SetUri("/a/b")
+		message.SetBody(&pb.PbTest{A: 10, B: 2})
+		err = s.WriteMessage(message)
 		if err != nil {
 			log.Printf("[CLI] write request err: %v", err)
 			continue
 		}
-		log.Printf("[CLI] write request: %v", packet)
+		log.Printf("[CLI] write request: %v", message)
 
 		// read response
-		packet.Reset(socket.WithNewBody(
+		message.Reset(socket.WithNewBody(
 			func(header socket.Header) interface{} {
 				return new(pb.PbTest)
 			}),
 		)
-		err = s.ReadPacket(packet)
+		err = s.ReadMessage(message)
 		if err != nil {
 			log.Printf("[CLI] read response err: %v", err)
 		} else {
-			log.Printf("[CLI] read response: %v", packet)
+			log.Printf("[CLI] read response: %v", message)
 		}
 	}
 }
@@ -180,49 +180,49 @@ func main() {
 
 ## Keyworks
 
-- **Packet:** The corresponding structure of the data package
-- **Proto:** The protocol interface of packet pack/unpack 
-- **Codec:** Serialization interface for `Packet.Body`
-- **XferPipe:** A series of pipelines to handle packet data before transfer
-- **XferFilter:** A interface to handle packet data before transfer
+- **Message:** The corresponding structure of the data package
+- **Proto:** The protocol interface of message pack/unpack 
+- **Codec:** Serialization interface for `Message.Body`
+- **XferPipe:** A series of pipelines to handle message data before transfer
+- **XferFilter:** A interface to handle message data before transfer
 
 
-## Packet
+## Message
 
-The contents of every one packet:
+The contents of every one message:
 
 ```go
 // in .../teleport/socket package
 type (
-	type Packet struct {
+	type Message struct {
 		// Has unexported fields.
 	}
-	    Packet a socket data packet.
+	    Message a socket data message.
 	
-	func GetPacket(settings ...PacketSetting) *Packet
-	func NewPacket(settings ...PacketSetting) *Packet
-	func (p *Packet) Body() interface{}
-	func (p *Packet) BodyCodec() byte
-	func (p *Packet) Context() context.Context
-	func (p *Packet) MarshalBody() ([]byte, error)
-	func (p *Packet) Meta() *utils.Args
-	func (p *Packet) Ptype() byte
-	func (p *Packet) Reset(settings ...PacketSetting)
-	func (p *Packet) Seq() string
-	func (p *Packet) SetBody(body interface{})
-	func (p *Packet) SetBodyCodec(bodyCodec byte)
-	func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
-	func (p *Packet) SetPtype(ptype byte)
-	func (p *Packet) SetSeq(seq string)
-	func (p *Packet) SetSize(size uint32) error
-	func (p *Packet) SetUri(uri string)
-	func (p *Packet) SetUriObject(uriObject *url.URL)
-	func (p *Packet) Size() uint32
-	func (p *Packet) String() string
-	func (p *Packet) UnmarshalBody(bodyBytes []byte) error
-	func (p *Packet) Uri() string
-	func (p *Packet) UriObject() *url.URL
-	func (p *Packet) XferPipe() *xfer.XferPipe
+	func GetMessage(settings ...MessageSetting) *Message
+	func NewMessage(settings ...MessageSetting) *Message
+	func (m *Message) Body() interface{}
+	func (m *Message) BodyCodec() byte
+	func (m *Message) Context() context.Context
+	func (m *Message) MarshalBody() ([]byte, error)
+	func (m *Message) Meta() *utils.Args
+	func (m *Message) Mtype() byte
+	func (m *Message) Reset(settings ...MessageSetting)
+	func (m *Message) Seq() string
+	func (m *Message) SetBody(body interface{})
+	func (m *Message) SetBodyCodec(bodyCodec byte)
+	func (m *Message) SetNewBody(newBodyFunc NewBodyFunc)
+	func (m *Message) SetMtype(mtype byte)
+	func (m *Message) SetSeq(seq string)
+	func (m *Message) SetSize(size uint32) error
+	func (m *Message) SetUri(uri string)
+	func (m *Message) SetUriObject(uriObject *url.URL)
+	func (m *Message) Size() uint32
+	func (m *Message) String() string
+	func (m *Message) UnmarshalBody(bodyBytes []byte) error
+	func (m *Message) Uri() string
+	func (m *Message) UriObject() *url.URL
+	func (m *Message) XferPipe() *xfer.XferPipe
 
 	// NewBodyFunc creates a new body by header.
 	NewBodyFunc func(Header) interface{}
@@ -235,7 +235,7 @@ type (
 	XferPipe struct {
 		filters []XferFilter
 	}
-	// XferFilter handles byte stream of packet when transfer.
+	// XferFilter handles byte stream of message when transfer.
 	XferFilter interface {
 		Id() byte
 		OnPack([]byte) ([]byte, error)
@@ -250,16 +250,16 @@ You can customize your own communication protocol by implementing the interface:
 
 ```go
 type (
-	// Proto pack/unpack protocol scheme of socket packet.
+	// Proto pack/unpack protocol scheme of socket message.
 	Proto interface {
 		// Version returns the protocol's id and name.
 		Version() (byte, string)
-		// Pack writes the Packet into the connection.
+		// Pack writes the Message into the connection.
 		// Note: Make sure to write only once or there will be package contamination!
-		Pack(*Packet) error
-		// Unpack reads bytes from the connection to the Packet.
+		Pack(*Message) error
+		// Unpack reads bytes from the connection to the Message.
 		// Note: Concurrent unsafe!
-		Unpack(*Packet) error
+		Unpack(*Message) error
 	}
 	ProtoFunc func(io.ReadWriter) Proto
 )
@@ -276,14 +276,14 @@ func NewSocket(net.Conn, ...ProtoFunc) Socket
 Default protocol `FastProto`(Big Endian):
 
 ```sh
-{4 bytes packet length}
+{4 bytes message length}
 {1 byte protocol version}
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
 {4 bytes sequence length}
 {sequence}
-{1 byte packet type} // e.g. CALL:1; REPLY:2; PUSH:3
+{1 byte message type} // e.g. CALL:1; REPLY:2; PUSH:3
 {4 bytes URI length}
 {URI}
 {4 bytes metadata length}
@@ -294,11 +294,11 @@ Default protocol `FastProto`(Big Endian):
 
 ## Optimize
 
-- SetPacketSizeLimit sets max packet size.
+- SetMessageSizeLimit sets max message size.
 If maxSize<=0, set it to max uint32.
 
 	```go
-	func SetPacketSizeLimit(maxPacketSize uint32)
+	func SetMessageSizeLimit(maxMessageSize uint32)
 	```
 
 - SetKeepAlive sets whether the operating system should send
@@ -315,7 +315,7 @@ keepalive messages on the connection.
 	```
 
 - SetNoDelay controls whether the operating system should delay
-packet transmission in hopes of sending fewer packets (Nagle's
+message transmission in hopes of sending fewer messages (Nagle's
 algorithm).  The default is true (no delay), meaning that data is
 sent as soon as possible after a Write.
 

@@ -81,8 +81,8 @@ go get -u -f github.com/henrylee2cn/teleport
 - Server and client are peer-to-peer, have the same API method
 - Support custom communication protocol
 - Support set the size of socket I/O buffer
-- Packet contains both `Header` and `Body` two parts
-- Packet `Header` contains metadata in the same format as HTTP header
+- Message contains both `Header` and `Body` two parts
+- Message `Header` contains metadata in the same format as HTTP header
 - Support for customizing `Body` coding types separately, e.g `JSON` `Protobuf` `string`
 - Support push, call, reply and other means of communication
 - Support plug-in mechanism, can customize authentication, heartbeat, micro service registration center, statistics, etc.
@@ -91,7 +91,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - Detailed log information, support print input and output details
 - Supports setting slow operation alarm threshold
 - Use I/O multiplexing technology
-- Support setting the size of the reading packet (if exceed disconnect it)
+- Support setting the size of the reading message (if exceed disconnect it)
 - Provide the context of the handler
 - Client session support automatically redials after disconnection
 - Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and so on
@@ -189,56 +189,56 @@ func (p *push) Status(arg *string) *tp.Rerror {
 
 - **Peer:** A communication instance may be a server or a client
 - **Socket:** Base on the net.Conn package, add custom package protocol, transfer pipelines and other functions
-- **Packet:** The corresponding structure of the data package content element
-- **Proto:** The protocol interface of packet pack/unpack 
-- **Codec:** Serialization interface for `Packet.Body`
-- **XferPipe:** Packet bytes encoding pipeline, such as compression, encryption, calibration and so on
-- **XferFilter:** A interface to handle packet data before transfer
+- **Message:** The corresponding structure of the data package content element
+- **Proto:** The protocol interface of message pack/unpack 
+- **Codec:** Serialization interface for `Message.Body`
+- **XferPipe:** Message bytes encoding pipeline, such as compression, encryption, calibration and so on
+- **XferFilter:** A interface to handle message data before transfer
 - **Plugin:** Plugins that cover all aspects of communication
 - **Session:** A connection session, with push, call, reply, close and other methods of operation
-- **Context:** Handle the received or send packets
+- **Context:** Handle the received or send messages
 - **Call-Launch:** Call data from the peer
 - **Call-Handle:** Handle and reply to the calling of peer
 - **Push-Launch:** Push data to the peer
 - **Push-Handle:** Handle the pushing of peer
 - **Router:** Router that route the response handler by request information(such as a URI)
 
-### Packet
+### Message
 
-The contents of every one packet:
+The contents of every one message:
 
 ```go
 // in .../teleport/socket package
 
-// Packet a socket data packet.
-type Packet struct {
+// Message a socket data message.
+type Message struct {
     // Has unexported fields.
 }
 
-func GetPacket(settings ...PacketSetting) *Packet
-func NewPacket(settings ...PacketSetting) *Packet
-func (p *Packet) Body() interface{}
-func (p *Packet) BodyCodec() byte
-func (p *Packet) Context() context.Context
-func (p *Packet) MarshalBody() ([]byte, error)
-func (p *Packet) Meta() *utils.Args
-func (p *Packet) Ptype() byte
-func (p *Packet) Reset(settings ...PacketSetting)
-func (p *Packet) Seq() string
-func (p *Packet) SetBody(body interface{})
-func (p *Packet) SetBodyCodec(bodyCodec byte)
-func (p *Packet) SetNewBody(newBodyFunc NewBodyFunc)
-func (p *Packet) SetPtype(ptype byte)
-func (p *Packet) SetSeq(seq string)
-func (p *Packet) SetSize(size uint32) error
-func (p *Packet) SetUri(uri string)
-func (p *Packet) SetUriObject(uriObject *url.URL)
-func (p *Packet) Size() uint32
-func (p *Packet) String() string
-func (p *Packet) UnmarshalBody(bodyBytes []byte) error
-func (p *Packet) Uri() string
-func (p *Packet) UriObject() *url.URL
-func (p *Packet) XferPipe() *xfer.XferPipe
+func GetMessage(settings ...MessageSetting) *Message
+func NewMessage(settings ...MessageSetting) *Message
+func (m *Message) Body() interface{}
+func (m *Message) BodyCodec() byte
+func (m *Message) Context() context.Context
+func (m *Message) MarshalBody() ([]byte, error)
+func (m *Message) Meta() *utils.Args
+func (m *Message) Mtype() byte
+func (m *Message) Reset(settings ...MessageSetting)
+func (m *Message) Seq() string
+func (m *Message) SetBody(body interface{})
+func (m *Message) SetBodyCodec(bodyCodec byte)
+func (m *Message) SetNewBody(newBodyFunc NewBodyFunc)
+func (m *Message) SetMtype(mtype byte)
+func (m *Message) SetSeq(seq string)
+func (m *Message) SetSize(size uint32) error
+func (m *Message) SetUri(uri string)
+func (m *Message) SetUriObject(uriObject *url.URL)
+func (m *Message) Size() uint32
+func (m *Message) String() string
+func (m *Message) UnmarshalBody(bodyBytes []byte) error
+func (m *Message) Uri() string
+func (m *Message) UriObject() *url.URL
+func (m *Message) XferPipe() *xfer.XferPipe
 
 // NewBodyFunc creates a new body by header.
 type NewBodyFunc func(Header) interface{}
@@ -264,10 +264,10 @@ type Codec interface {
 
 ### XferPipe
 
-Transfer filter pipe, handles byte stream of packet when transfer.
+Transfer filter pipe, handles byte stream of message when transfer.
 
 ```go
-// XferFilter handles byte stream of packet when transfer.
+// XferFilter handles byte stream of message when transfer.
 type XferFilter interface {
     // Id returns transfer filter id.
     Id() byte
@@ -325,16 +325,16 @@ You can customize your own communication protocol by implementing the interface:
 
 ```go
 type (
-    // Proto pack/unpack protocol scheme of socket packet.
+    // Proto pack/unpack protocol scheme of socket message.
     Proto interface {
         // Version returns the protocol's id and name.
         Version() (byte, string)
-        // Pack writes the Packet into the connection.
+        // Pack writes the Message into the connection.
         // Note: Make sure to write only once or there will be package contamination!
-        Pack(*Packet) error
-        // Unpack reads bytes from the connection to the Packet.
+        Pack(*Message) error
+        // Unpack reads bytes from the connection to the Message.
         // Note: Concurrent unsafe!
-        Unpack(*Packet) error
+        Unpack(*Message) error
     }
     ProtoFunc func(io.ReadWriter) Proto
 )
@@ -357,14 +357,14 @@ type Peer interface {
 Default protocol `RawProto`(Big Endian):
 
 ```sh
-{4 bytes packet length}
+{4 bytes message length}
 {1 byte protocol version}
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
 {4 bytes sequence length}
 {sequence}
-{1 byte packet type} // e.g. CALL:1; REPLY:2; PUSH:3
+{1 byte message type} // e.g. CALL:1; REPLY:2; PUSH:3
 {4 bytes URI length}
 {URI}
 {4 bytes metadata length}
@@ -578,11 +578,11 @@ type PeerConfig struct {
 
 ### Optimize
 
-- SetPacketSizeLimit sets max packet size.
+- SetMessageSizeLimit sets max message size.
   If maxSize<=0, set it to max uint32.
 
     ```go
-    func SetPacketSizeLimit(maxPacketSize uint32)
+    func SetMessageSizeLimit(maxMessageSize uint32)
     ```
 
 - SetSocketKeepAlive sets whether the operating system should send
@@ -599,7 +599,7 @@ type PeerConfig struct {
     ```
 
 - SetSocketNoDelay controls whether the operating system should delay
-  packet transmission in hopes of sending fewer packets (Nagle's
+  message transmission in hopes of sending fewer messages (Nagle's
   algorithm).  The default is true (no delay), meaning that data is
   sent as soon as possible after a Write.
 
@@ -641,7 +641,7 @@ type PeerConfig struct {
 | [binder](https://github.com/henrylee2cn/teleport/tree/v4/plugin/binder) | `import binder "github.com/henrylee2cn/teleport/plugin/binder"` | Parameter Binding Verification for Struct Handler |
 | [heartbeat](https://github.com/henrylee2cn/teleport/tree/v4/plugin/heartbeat) | `import heartbeat "github.com/henrylee2cn/teleport/plugin/heartbeat"` | A generic timing heartbeat plugin        |
 | [proxy](https://github.com/henrylee2cn/teleport/tree/v4/plugin/proxy) | `import "github.com/henrylee2cn/teleport/plugin/proxy"` | A proxy plugin for handling unknown calling or pushing |
-[secure](https://github.com/henrylee2cn/teleport/tree/v4/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the packet body
+[secure](https://github.com/henrylee2cn/teleport/tree/v4/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the message body
 
 ### Protocol
 
@@ -662,7 +662,7 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [multiclient](https://github.com/henrylee2cn/teleport/tree/v4/mixer/multiclient) | `import "github.com/henrylee2cn/teleport/mixer/multiclient"` | Higher throughput client connection pool when transferring large packets (such as downloading files) |
+| [multiclient](https://github.com/henrylee2cn/teleport/tree/v4/mixer/multiclient) | `import "github.com/henrylee2cn/teleport/mixer/multiclient"` | Higher throughput client connection pool when transferring large messages (such as downloading files) |
 | [websocket](https://github.com/henrylee2cn/teleport/tree/v4/mixer/websocket) | `import "github.com/henrylee2cn/teleport/mixer/websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
 | [html](https://github.com/xiaoenai/tp-micro/tree/master/helper/mod-html) | `html "github.com/xiaoenai/tp-micro/helper/mod-html"` | HTML render for http client |
 

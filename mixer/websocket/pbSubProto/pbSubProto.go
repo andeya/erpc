@@ -46,42 +46,42 @@ func (psp *pbSubProto) Version() (byte, string) {
 	return psp.id, psp.name
 }
 
-// Pack writes the Packet into the connection.
+// Pack writes the Message into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (psp *pbSubProto) Pack(p *socket.Packet) error {
+func (psp *pbSubProto) Pack(m *socket.Message) error {
 	// marshal body
-	bodyBytes, err := p.MarshalBody()
+	bodyBytes, err := m.MarshalBody()
 	if err != nil {
 		return err
 	}
 	// do transfer pipe
-	bodyBytes, err = p.XferPipe().OnPack(bodyBytes)
+	bodyBytes, err = m.XferPipe().OnPack(bodyBytes)
 	if err != nil {
 		return err
 	}
 
 	b, err := codec.ProtoMarshal(&pb.Format{
-		Seq:       p.Seq(),
-		Ptype:     int32(p.Ptype()),
-		Uri:       p.Uri(),
-		Meta:      p.Meta().QueryString(),
-		BodyCodec: int32(p.BodyCodec()),
+		Seq:       m.Seq(),
+		Mtype:     int32(m.Mtype()),
+		Uri:       m.Uri(),
+		Meta:      m.Meta().QueryString(),
+		BodyCodec: int32(m.BodyCodec()),
 		Body:      bodyBytes,
-		XferPipe:  p.XferPipe().Ids(),
+		XferPipe:  m.XferPipe().Ids(),
 	})
 	if err != nil {
 		return err
 	}
 
-	p.SetSize(uint32(len(b)))
+	m.SetSize(uint32(len(b)))
 
 	_, err = psp.w.Write(b)
 	return err
 }
 
-// Unpack reads bytes from the connection to the Packet.
+// Unpack reads bytes from the connection to the Message.
 // Note: Concurrent unsafe!
-func (psp *pbSubProto) Unpack(p *socket.Packet) error {
+func (psp *pbSubProto) Unpack(m *socket.Message) error {
 	psp.rMu.Lock()
 	defer psp.rMu.Unlock()
 	b, err := ioutil.ReadAll(psp.r)
@@ -89,7 +89,7 @@ func (psp *pbSubProto) Unpack(p *socket.Packet) error {
 		return err
 	}
 
-	p.SetSize(uint32(len(b)))
+	m.SetSize(uint32(len(b)))
 
 	s := &pb.Format{}
 	err = codec.ProtoUnmarshal(b, s)
@@ -99,23 +99,23 @@ func (psp *pbSubProto) Unpack(p *socket.Packet) error {
 
 	// read transfer pipe
 	for _, r := range s.XferPipe {
-		p.XferPipe().Append(r)
+		m.XferPipe().Append(r)
 	}
 
 	// read body
-	p.SetBodyCodec(byte(s.BodyCodec))
-	bodyBytes, err := p.XferPipe().OnUnpack(s.Body)
+	m.SetBodyCodec(byte(s.BodyCodec))
+	bodyBytes, err := m.XferPipe().OnUnpack(s.Body)
 	if err != nil {
 		return err
 	}
 
 	// read other
-	p.SetSeq(s.Seq)
-	p.SetPtype(byte(s.Ptype))
-	p.SetUri(s.Uri)
-	p.Meta().ParseBytes(s.Meta)
+	m.SetSeq(s.Seq)
+	m.SetMtype(byte(s.Mtype))
+	m.SetUri(s.Uri)
+	m.Meta().ParseBytes(s.Meta)
 
 	// unmarshal new body
-	err = p.UnmarshalBody(bodyBytes)
+	err = m.UnmarshalBody(bodyBytes)
 	return err
 }

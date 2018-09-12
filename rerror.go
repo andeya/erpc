@@ -12,7 +12,7 @@ import (
 )
 
 type (
-	// Rerror error only for reply packet
+	// Rerror error only for reply message
 	Rerror struct {
 		// Code error code
 		Code int32

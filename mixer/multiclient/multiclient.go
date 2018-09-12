@@ -1,4 +1,4 @@
-// Package multiclient is a higher throughput client connection pool when transferring large packets (such as downloading files).
+// Package multiclient is a higher throughput client connection pool when transferring large messages (such as downloading files).
 //
 // Copyright 2018 HenryLee. All Rights Reserved.
 //
@@ -63,14 +63,14 @@ func (c *MultiClient) Stats() pool.WorkshopStats {
 	return c.pool.Stats()
 }
 
-// AsyncCall sends a packet and receives reply asynchronously.
+// AsyncCall sends a message and receives reply asynchronously.
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name.
 func (c *MultiClient) AsyncCall(
 	uri string,
 	arg interface{},
 	result interface{},
 	callCmdChan chan<- tp.CallCmd,
-	setting ...socket.PacketSetting,
+	setting ...socket.MessageSetting,
 ) tp.CallCmd {
 	_sess, err := c.pool.Hire()
 	if err != nil {
@@ -86,21 +86,21 @@ func (c *MultiClient) AsyncCall(
 	return sess.AsyncCall(uri, arg, result, callCmdChan, setting...)
 }
 
-// Call sends a packet and receives reply.
+// Call sends a message and receives reply.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) tp.CallCmd {
+func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...socket.MessageSetting) tp.CallCmd {
 	callCmd := c.AsyncCall(uri, arg, result, make(chan tp.CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
 }
 
-// Push sends a packet, but do not receives reply.
+// Push sends a message, but do not receives reply.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *MultiClient) Push(uri string, arg interface{}, setting ...socket.PacketSetting) *tp.Rerror {
+func (c *MultiClient) Push(uri string, arg interface{}, setting ...socket.MessageSetting) *tp.Rerror {
 	_sess, err := c.pool.Hire()
 	if err != nil {
 		return tp.ToRerror(err)

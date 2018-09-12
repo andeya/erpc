@@ -1,5 +1,5 @@
 // Package jsonproto is implemented JSON socket communication protocol.
-//  Packet data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
+//  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
 //
 // Copyright 2018 HenryLee. All Rights Reserved.
 //
@@ -32,8 +32,8 @@ import (
 )
 
 // NewJsonProtoFunc is creation function of JSON socket protocol.
-//  Packet data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
-//  Packet data demo: `830{"seq":%q,"ptype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
+//  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
+//  Message data demo: `830{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
 var NewJsonProtoFunc = func(rw io.ReadWriter) socket.Proto {
 	var (
 		readBufioSize             int
@@ -67,51 +67,51 @@ func (j *jsonproto) Version() (byte, string) {
 	return j.id, j.name
 }
 
-const format = `{"seq":%q,"ptype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
+const format = `{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
 
-// Pack writes the Packet into the connection.
+// Pack writes the Message into the connection.
 // Note: Make sure to write only once or there will be package contamination!
-func (j *jsonproto) Pack(p *socket.Packet) error {
+func (j *jsonproto) Pack(m *socket.Message) error {
 	// marshal body
-	bodyBytes, err := p.MarshalBody()
+	bodyBytes, err := m.MarshalBody()
 	if err != nil {
 		return err
 	}
 
 	// marshal whole
 	var s = fmt.Sprintf(format,
-		p.Seq(),
-		p.Ptype(),
-		p.Uri(),
-		p.Meta().QueryString(),
-		p.BodyCodec(),
+		m.Seq(),
+		m.Mtype(),
+		m.Uri(),
+		m.Meta().QueryString(),
+		m.BodyCodec(),
 		bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1),
 	)
 
 	// do transfer pipe
-	b, err := p.XferPipe().OnPack(goutil.StringToBytes(s))
+	b, err := m.XferPipe().OnPack(goutil.StringToBytes(s))
 	if err != nil {
 		return err
 	}
-	xferPipeLen := p.XferPipe().Len()
+	xferPipeLen := m.XferPipe().Len()
 
 	// set size
-	p.SetSize(uint32(1 + xferPipeLen + len(b)))
+	m.SetSize(uint32(1 + xferPipeLen + len(b)))
 
 	// pack
-	var all = make([]byte, p.Size()+4)
-	binary.BigEndian.PutUint32(all, p.Size())
+	var all = make([]byte, m.Size()+4)
+	binary.BigEndian.PutUint32(all, m.Size())
 	all[4] = byte(xferPipeLen)
-	copy(all[4+1:], p.XferPipe().Ids())
+	copy(all[4+1:], m.XferPipe().Ids())
 	copy(all[4+1+xferPipeLen:], b)
 	_, err = j.w.Write(all)
 
 	return err
 }
 
-// Unpack reads bytes from the connection to the Packet.
+// Unpack reads bytes from the connection to the Message.
 // Note: Concurrent unsafe!
-func (j *jsonproto) Unpack(p *socket.Packet) error {
+func (j *jsonproto) Unpack(m *socket.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()
 	var size uint32
@@ -119,15 +119,15 @@ func (j *jsonproto) Unpack(p *socket.Packet) error {
 	if err != nil {
 		return err
 	}
-	if err = p.SetSize(size); err != nil {
+	if err = m.SetSize(size); err != nil {
 		return err
 	}
-	if p.Size() == 0 {
+	if m.Size() == 0 {
 		return nil
 	}
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
-	bb.ChangeLen(int(p.Size()))
+	bb.ChangeLen(int(m.Size()))
 	_, err = io.ReadFull(j.r, bb.B)
 	if err != nil {
 		return err
@@ -137,13 +137,13 @@ func (j *jsonproto) Unpack(p *socket.Packet) error {
 	var xferLen = bb.B[0]
 	bb.B = bb.B[1:]
 	if xferLen > 0 {
-		err = p.XferPipe().Append(bb.B[:xferLen]...)
+		err = m.XferPipe().Append(bb.B[:xferLen]...)
 		if err != nil {
 			return err
 		}
 		bb.B = bb.B[xferLen:]
 		// do transfer pipe
-		bb.B, err = p.XferPipe().OnUnpack(bb.B)
+		bb.B, err = m.XferPipe().OnUnpack(bb.B)
 		if err != nil {
 			return err
 		}
@@ -152,15 +152,15 @@ func (j *jsonproto) Unpack(p *socket.Packet) error {
 	s := string(bb.B)
 
 	// read other
-	p.SetSeq(gjson.Get(s, "seq").String())
-	p.SetPtype(byte(gjson.Get(s, "ptype").Int()))
-	p.SetUri(gjson.Get(s, "uri").String())
+	m.SetSeq(gjson.Get(s, "seq").String())
+	m.SetMtype(byte(gjson.Get(s, "mtype").Int()))
+	m.SetUri(gjson.Get(s, "uri").String())
 	meta := gjson.Get(s, "meta").String()
-	p.Meta().ParseBytes(goutil.StringToBytes(meta))
+	m.Meta().ParseBytes(goutil.StringToBytes(meta))
 
 	// read body
-	p.SetBodyCodec(byte(gjson.Get(s, "body_codec").Int()))
+	m.SetBodyCodec(byte(gjson.Get(s, "body_codec").Int()))
 	body := gjson.Get(s, "body").String()
-	err = p.UnmarshalBody(goutil.StringToBytes(body))
+	err = m.UnmarshalBody(goutil.StringToBytes(body))
 	return err
 }

@@ -29,7 +29,7 @@ import (
 )
 
 type (
-	// PreCtx context method set used before reading packet header.
+	// PreCtx context method set used before reading message header.
 	PreCtx interface {
 		// Peer returns the peer.
 		Peer() Peer
@@ -45,105 +45,105 @@ type (
 		// API boundaries.
 		Context() context.Context
 	}
-	// WriteCtx context method set for writing packet.
+	// WriteCtx context method set for writing message.
 	WriteCtx interface {
 		PreCtx
-		// Output returns writed packet.
-		Output() *socket.Packet
+		// Output returns writed message.
+		Output() *socket.Message
 		// Rerror returns the handle error.
 		Rerror() *Rerror
 	}
 	// inputCtx common context method set.
 	inputCtx interface {
 		PreCtx
-		// Seq returns the input packet sequence.
+		// Seq returns the input message sequence.
 		Seq() string
-		// PeekMeta peeks the header metadata for the input packet.
+		// PeekMeta peeks the header metadata for the input message.
 		PeekMeta(key string) []byte
 		// VisitMeta calls f for each existing metadata.
 		//
 		// f must not retain references to key and value after returning.
 		// Make key and/or value copies if you need storing them after returning.
 		VisitMeta(f func(key, value []byte))
-		// CopyMeta returns the input packet metadata copy.
+		// CopyMeta returns the input message metadata copy.
 		CopyMeta() *utils.Args
-		// Uri returns the input packet uri.
+		// Uri returns the input message uri.
 		Uri() string
-		// UriObject returns the input packet uri object.
+		// UriObject returns the input message uri object.
 		UriObject() *url.URL
-		// ResetUri resets the input packet uri.
+		// ResetUri resets the input message uri.
 		ResetUri(string)
-		// Path returns the input packet uri path.
+		// Path returns the input message uri path.
 		Path() string
-		// Query returns the input packet uri query object.
+		// Query returns the input message uri query object.
 		Query() url.Values
 	}
-	// ReadCtx context method set for reading packet.
+	// ReadCtx context method set for reading message.
 	ReadCtx interface {
 		inputCtx
-		// Input returns readed packet.
-		Input() *socket.Packet
+		// Input returns readed message.
+		Input() *socket.Message
 		// Rerror returns the handle error.
 		Rerror() *Rerror
 	}
-	// PushCtx context method set for handling the pushed packet.
+	// PushCtx context method set for handling the pushed message.
 	// For example:
 	//  type HomePush struct{ PushCtx }
 	PushCtx interface {
 		inputCtx
-		// GetBodyCodec gets the body codec type of the input packet.
+		// GetBodyCodec gets the body codec type of the input message.
 		GetBodyCodec() byte
 	}
-	// CallCtx context method set for handling the called packet.
+	// CallCtx context method set for handling the called message.
 	// For example:
 	//  type HomeCall struct{ CallCtx }
 	CallCtx interface {
 		inputCtx
-		// Input returns readed packet.
-		Input() *socket.Packet
-		// GetBodyCodec gets the body codec type of the input packet.
+		// Input returns readed message.
+		Input() *socket.Message
+		// GetBodyCodec gets the body codec type of the input message.
 		GetBodyCodec() byte
-		// Output returns writed packet.
-		Output() *socket.Packet
-		// ReplyBodyCodec initializes and returns the reply packet body codec id.
+		// Output returns writed message.
+		Output() *socket.Message
+		// ReplyBodyCodec initializes and returns the reply message body codec id.
 		ReplyBodyCodec() byte
-		// SetBodyCodec sets the body codec for reply packet.
+		// SetBodyCodec sets the body codec for reply message.
 		SetBodyCodec(byte)
-		// AddMeta adds the header metadata 'key=value' for reply packet.
+		// AddMeta adds the header metadata 'key=value' for reply message.
 		// Multiple values for the same key may be added.
 		AddMeta(key, value string)
-		// SetMeta sets the header metadata 'key=value' for reply packet.
+		// SetMeta sets the header metadata 'key=value' for reply message.
 		SetMeta(key, value string)
-		// AddXferPipe appends transfer filter pipe of reply packet.
+		// AddXferPipe appends transfer filter pipe of reply message.
 		AddXferPipe(filterId ...byte)
 	}
-	// UnknownPushCtx context method set for handling the unknown pushed packet.
+	// UnknownPushCtx context method set for handling the unknown pushed message.
 	UnknownPushCtx interface {
 		inputCtx
-		// GetBodyCodec gets the body codec type of the input packet.
+		// GetBodyCodec gets the body codec type of the input message.
 		GetBodyCodec() byte
 		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
 		InputBodyBytes() []byte
 		// Bind when the raw body binder is []byte type, now binds the input body to v.
 		Bind(v interface{}) (bodyCodec byte, err error)
 	}
-	// UnknownCallCtx context method set for handling the unknown called packet.
+	// UnknownCallCtx context method set for handling the unknown called message.
 	UnknownCallCtx interface {
 		inputCtx
-		// GetBodyCodec gets the body codec type of the input packet.
+		// GetBodyCodec gets the body codec type of the input message.
 		GetBodyCodec() byte
 		// InputBodyBytes if the input body binder is []byte type, returns it, else returns nil.
 		InputBodyBytes() []byte
 		// Bind when the raw body binder is []byte type, now binds the input body to v.
 		Bind(v interface{}) (bodyCodec byte, err error)
-		// SetBodyCodec sets the body codec for reply packet.
+		// SetBodyCodec sets the body codec for reply message.
 		SetBodyCodec(byte)
-		// AddMeta adds the header metadata 'key=value' for reply packet.
+		// AddMeta adds the header metadata 'key=value' for reply message.
 		// Multiple values for the same key may be added.
 		AddMeta(key, value string)
-		// SetMeta sets the header metadata 'key=value' for reply packet.
+		// SetMeta sets the header metadata 'key=value' for reply message.
 		SetMeta(key, value string)
-		// AddXferPipe appends transfer filter pipe of reply packet.
+		// AddXferPipe appends transfer filter pipe of reply message.
 		AddXferPipe(filterId ...byte)
 	}
 )
@@ -162,8 +162,8 @@ var (
 // handlerCtx the underlying common instance of CallCtx and PushCtx.
 type handlerCtx struct {
 	sess            *session
-	input           *socket.Packet
-	output          *socket.Packet
+	input           *socket.Message
+	output          *socket.Message
 	handler         *Handler
 	arg             reflect.Value
 	callCmd         *callCmd
@@ -184,9 +184,9 @@ var (
 // newReadHandleCtx creates a handlerCtx for one request/response or push.
 func newReadHandleCtx() *handlerCtx {
 	c := new(handlerCtx)
-	c.input = socket.NewPacket()
+	c.input = socket.NewMessage()
 	c.input.SetNewBody(c.binding)
-	c.output = socket.NewPacket()
+	c.output = socket.NewMessage()
 	return c
 }
 
@@ -226,13 +226,13 @@ func (c *handlerCtx) Session() Session {
 	return c.sess
 }
 
-// Input returns readed packet.
-func (c *handlerCtx) Input() *socket.Packet {
+// Input returns readed message.
+func (c *handlerCtx) Input() *socket.Message {
 	return c.input
 }
 
-// Output returns writed packet.
-func (c *handlerCtx) Output() *socket.Packet {
+// Output returns writed message.
+func (c *handlerCtx) Output() *socket.Message {
 	return c.output
 }
 
@@ -241,37 +241,37 @@ func (c *handlerCtx) Swap() goutil.Map {
 	return c.swap
 }
 
-// Seq returns the input packet sequence.
+// Seq returns the input message sequence.
 func (c *handlerCtx) Seq() string {
 	return c.input.Seq()
 }
 
-// Uri returns the input packet uri string.
+// Uri returns the input message uri string.
 func (c *handlerCtx) Uri() string {
 	return c.input.Uri()
 }
 
-// UriObject returns the input packet uri object.
+// UriObject returns the input message uri object.
 func (c *handlerCtx) UriObject() *url.URL {
 	return c.input.UriObject()
 }
 
-// ResetUri resets the input packet uri.
+// ResetUri resets the input message uri.
 func (c *handlerCtx) ResetUri(uri string) {
 	c.input.SetUri(uri)
 }
 
-// Path returns the input packet uri path.
+// Path returns the input message uri path.
 func (c *handlerCtx) Path() string {
 	return c.input.UriObject().Path
 }
 
-// Query returns the input packet uri query object.
+// Query returns the input message uri query object.
 func (c *handlerCtx) Query() url.Values {
 	return c.input.UriObject().Query()
 }
 
-// PeekMeta peeks the header metadata for the input packet.
+// PeekMeta peeks the header metadata for the input message.
 func (c *handlerCtx) PeekMeta(key string) []byte {
 	return c.input.Meta().Peek(key)
 }
@@ -284,35 +284,35 @@ func (c *handlerCtx) VisitMeta(f func(key, value []byte)) {
 	c.input.Meta().VisitAll(f)
 }
 
-// CopyMeta returns the input packet metadata copy.
+// CopyMeta returns the input message metadata copy.
 func (c *handlerCtx) CopyMeta() *utils.Args {
 	dst := utils.AcquireArgs()
 	c.input.Meta().CopyTo(dst)
 	return dst
 }
 
-// AddMeta adds the header metadata 'key=value' for reply packet.
+// AddMeta adds the header metadata 'key=value' for reply message.
 // Multiple values for the same key may be added.
 func (c *handlerCtx) AddMeta(key, value string) {
 	c.output.Meta().Add(key, value)
 }
 
-// SetMeta sets the header metadata 'key=value' for reply packet.
+// SetMeta sets the header metadata 'key=value' for reply message.
 func (c *handlerCtx) SetMeta(key, value string) {
 	c.output.Meta().Set(key, value)
 }
 
-// GetBodyCodec gets the body codec type of the input packet.
+// GetBodyCodec gets the body codec type of the input message.
 func (c *handlerCtx) GetBodyCodec() byte {
 	return c.input.BodyCodec()
 }
 
-// SetBodyCodec sets the body codec for reply packet.
+// SetBodyCodec sets the body codec for reply message.
 func (c *handlerCtx) SetBodyCodec(bodyCodec byte) {
 	c.output.SetBodyCodec(bodyCodec)
 }
 
-// AddXferPipe appends transfer filter pipe of reply packet.
+// AddXferPipe appends transfer filter pipe of reply message.
 func (c *handlerCtx) AddXferPipe(filterId ...byte) {
 	c.output.XferPipe().Append(filterId...)
 }
@@ -345,11 +345,11 @@ func (c *handlerCtx) setContext(ctx context.Context) {
 	c.context = ctx
 }
 
-// Be executed synchronously when reading packet
+// Be executed synchronously when reading message
 func (c *handlerCtx) binding(header socket.Header) (body interface{}) {
 	c.start = c.sess.timeNow()
 	c.pluginContainer = c.sess.peer.pluginContainer
-	switch header.Ptype() {
+	switch header.Mtype() {
 	case TypeReply:
 		return c.bindReply(header)
 	case TypePush:
@@ -357,19 +357,19 @@ func (c *handlerCtx) binding(header socket.Header) (body interface{}) {
 	case TypeCall:
 		return c.bindCall(header)
 	default:
-		c.handleErr = rerrCodePtypeNotAllowed
+		c.handleErr = rerrCodeMtypeNotAllowed
 		return nil
 	}
 }
 
-const logFormatDisconnected = "disconnected due to unsupported packet type: %d\n%s %s %q\nRECV(%s)"
+const logFormatDisconnected = "disconnected due to unsupported message type: %d\n%s %s %q\nRECV(%s)"
 
-// Be executed asynchronously after readed packet
+// Be executed asynchronously after readed message
 func (c *handlerCtx) handle() {
-	if c.handleErr != nil && c.handleErr.Code == CodePtypeNotAllowed {
+	if c.handleErr != nil && c.handleErr.Code == CodeMtypeNotAllowed {
 		goto E
 	}
-	switch c.input.Ptype() {
+	switch c.input.Mtype() {
 	case TypeReply:
 		// handles call reply
 		c.handleReply()
@@ -389,8 +389,8 @@ func (c *handlerCtx) handle() {
 	}
 E:
 	// if unsupported, disconnected.
-	rerrCodePtypeNotAllowed.SetToMeta(c.output.Meta())
-	Errorf(logFormatDisconnected, c.input.Ptype(), c.Ip(), c.input.Uri(), c.input.Seq(), packetLogBytes(c.input, c.sess.peer.printDetail))
+	rerrCodeMtypeNotAllowed.SetToMeta(c.output.Meta())
+	Errorf(logFormatDisconnected, c.input.Mtype(), c.Ip(), c.input.Uri(), c.input.Seq(), messageLogBytes(c.input, c.sess.peer.printDetail))
 	go c.sess.Close()
 }
 
@@ -402,7 +402,7 @@ func (c *handlerCtx) bindPush(header socket.Header) interface{} {
 
 	u := header.UriObject()
 	if len(u.Path) == 0 {
-		c.handleErr = rerrBadPacket.Copy().SetReason("invalid URI for packet")
+		c.handleErr = rerrBadMessage.Copy().SetReason("invalid URI for message")
 		return nil
 	}
 
@@ -463,7 +463,7 @@ func (c *handlerCtx) bindCall(header socket.Header) interface{} {
 
 	u := header.UriObject()
 	if len(u.Path) == 0 {
-		c.handleErr = rerrBadPacket.Copy().SetReason("invalid URI for packet")
+		c.handleErr = rerrBadMessage.Copy().SetReason("invalid URI for message")
 		return nil
 	}
 
@@ -509,7 +509,7 @@ func (c *handlerCtx) handleCall() {
 		c.sess.runlog(c.RealIp(), c.cost, c.input, c.output, typeCallHandle)
 	}()
 
-	c.output.SetPtype(TypeReply)
+	c.output.SetMtype(TypeReply)
 	c.output.SetSeq(c.input.Seq())
 	c.output.SetUriObject(c.input.UriObject())
 	c.output.XferPipe().AppendFrom(c.input.XferPipe())
@@ -553,7 +553,7 @@ func (c *handlerCtx) handleCall() {
 	c.pluginContainer.postWriteReply(c)
 }
 
-// ReplyBodyCodec initializes and returns the reply packet body codec id.
+// ReplyBodyCodec initializes and returns the reply message body codec id.
 func (c *handlerCtx) ReplyBodyCodec() byte {
 	id := c.output.BodyCodec()
 	if id != codec.NilCodecId {
@@ -686,8 +686,8 @@ type (
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
-		// Output returns writed packet.
-		Output() *socket.Packet
+		// Output returns writed message.
+		Output() *socket.Message
 		// Rerror returns the call error.
 		Rerror() *Rerror
 		// Done returns the chan that indicates whether it has been completed.
@@ -697,12 +697,12 @@ type (
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the call is completed!
 		Reply() (interface{}, *Rerror)
-		// InputBodyCodec gets the body codec type of the input packet.
+		// InputBodyCodec gets the body codec type of the input message.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the call is completed!
 		InputBodyCodec() byte
-		// InputMeta returns the header metadata of input packet.
+		// InputMeta returns the header metadata of input message.
 		// Notes:
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the call is completed!
@@ -716,7 +716,7 @@ type (
 	}
 	callCmd struct {
 		sess           *session
-		output         *socket.Packet
+		output         *socket.Message
 		result         interface{}
 		rerr           *Rerror
 		inputBodyCodec byte
@@ -779,8 +779,8 @@ func (c *callCmd) SwapLen() int {
 	return c.swap.Len()
 }
 
-// Output returns writed packet.
-func (c *callCmd) Output() *socket.Packet {
+// Output returns writed message.
+func (c *callCmd) Output() *socket.Message {
 	return c.output
 }
 
@@ -809,7 +809,7 @@ func (c *callCmd) Reply() (interface{}, *Rerror) {
 	return c.result, c.rerr
 }
 
-// InputBodyCodec gets the body codec type of the input packet.
+// InputBodyCodec gets the body codec type of the input message.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
@@ -818,7 +818,7 @@ func (c *callCmd) InputBodyCodec() byte {
 	return c.inputBodyCodec
 }
 
-// InputMeta returns the header metadata of input packet.
+// InputMeta returns the header metadata of input message.
 // Notes:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!

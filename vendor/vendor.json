@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "u2Z8c6Lkb3pNAAWPUpwo+h9g7mw=",
+			"checksumSHA1": "47nJ3iu1bVvK9jPXwAinFYr4mBU=",
 			"path": "github.com/gogo/protobuf/proto",
-			"revision": "15e5f49f11b8f01e78c402755dfdb51088f3b253",
-			"revisionTime": "2017-08-05T07:10:05Z"
+			"revision": "5669497fd64452f28d142899eeb1bfd7e8b26ac8",
+			"revisionTime": "2018-08-30T16:04:56Z"
 		},
 		{
 			"checksumSHA1": "XtSqPuaUibkydRSIbdWe3cn5ykc=",

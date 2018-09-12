@@ -1,4 +1,4 @@
-// Package secure encrypting/decrypting the packet body.
+// Package secure encrypting/decrypting the message body.
 //
 // Copyright 2018 HenryLee. All Rights Reserved.
 //
@@ -63,26 +63,26 @@ func NewSecurePlugin(rerrCode int32, cipherkey string) tp.Plugin {
 	}
 }
 
-// EnforceSecure enforces the body of the encrypted reply packet.
+// EnforceSecure enforces the body of the encrypted reply message.
 // Note: requires that the secure plugin has been registered!
-func EnforceSecure(output *socket.Packet) {
+func EnforceSecure(output *socket.Message) {
 	output.Meta().Set(SECURE_META_KEY, "true")
 }
 
-// WithSecureMeta encrypts the body of the current packet.
+// WithSecureMeta encrypts the body of the current message.
 // Note: requires that the secure plugin has been registered!
-func WithSecureMeta() socket.PacketSetting {
-	return func(packet *socket.Packet) {
-		packet.Meta().Set(SECURE_META_KEY, "true")
+func WithSecureMeta() socket.MessageSetting {
+	return func(message *socket.Message) {
+		message.Meta().Set(SECURE_META_KEY, "true")
 	}
 }
 
 // WithAcceptSecureMeta requires the peer to encrypt the replying body.
 // Note: requires that the secure plugin has been registered!
-func WithAcceptSecureMeta(accept bool) socket.PacketSetting {
+func WithAcceptSecureMeta(accept bool) socket.MessageSetting {
 	s := fmt.Sprintf("%v", accept)
-	return func(packet *socket.Packet) {
-		packet.Meta().Set(ACCEPT_SECURE_META_KEY, s)
+	return func(message *socket.Message) {
+		message.Meta().Set(ACCEPT_SECURE_META_KEY, s)
 	}
 }
 
@@ -157,7 +157,7 @@ func (e *encryptPlugin) PreWriteCall(ctx tp.WriteCtx) *tp.Rerror {
 
 	// query: perform encryption operation to the query parameters.
 	output := ctx.Output()
-	// if output.Ptype() != tp.TypeReply {
+	// if output.Mtype() != tp.TypeReply {
 	u := output.UriObject()
 	if len(u.RawQuery) > 0 {
 		ciphertext := goutil.AESEncrypt(e.cipherkey, goutil.StringToBytes(u.RawQuery))

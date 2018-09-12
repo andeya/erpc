@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/proto/pbproto"
 	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
@@ -15,6 +16,7 @@ func main() {
 	// go func() {
 	// 	http.ListenAndServe("0.0.0.0:9092", nil)
 	// }()
+	tp.SetDefaultProtoFunc(pbproto.NewPbProtoFunc)
 	tp.SetSocketNoDelay(false)
 	tp.SetLoggerLevel("WARNING")
 	go tp.GraceSignal()

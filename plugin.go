@@ -53,67 +53,67 @@ type (
 	PostAcceptPlugin interface {
 		PostAccept(PreSession) *Rerror
 	}
-	// PreWriteCallPlugin is executed before writing CALL packet.
+	// PreWriteCallPlugin is executed before writing CALL message.
 	PreWriteCallPlugin interface {
 		PreWriteCall(WriteCtx) *Rerror
 	}
-	// PostWriteCallPlugin is executed after successful writing CALL packet.
+	// PostWriteCallPlugin is executed after successful writing CALL message.
 	PostWriteCallPlugin interface {
 		PostWriteCall(WriteCtx) *Rerror
 	}
-	// PreWriteReplyPlugin is executed before writing REPLY packet.
+	// PreWriteReplyPlugin is executed before writing REPLY message.
 	PreWriteReplyPlugin interface {
 		PreWriteReply(WriteCtx) *Rerror
 	}
-	// PostWriteReplyPlugin is executed after successful writing REPLY packet.
+	// PostWriteReplyPlugin is executed after successful writing REPLY message.
 	PostWriteReplyPlugin interface {
 		PostWriteReply(WriteCtx) *Rerror
 	}
-	// PreWritePushPlugin is executed before writing PUSH packet.
+	// PreWritePushPlugin is executed before writing PUSH message.
 	PreWritePushPlugin interface {
 		PreWritePush(WriteCtx) *Rerror
 	}
-	// PostWritePushPlugin is executed after successful writing PUSH packet.
+	// PostWritePushPlugin is executed after successful writing PUSH message.
 	PostWritePushPlugin interface {
 		PostWritePush(WriteCtx) *Rerror
 	}
-	// PreReadHeaderPlugin is executed before reading packet header.
+	// PreReadHeaderPlugin is executed before reading message header.
 	PreReadHeaderPlugin interface {
 		PreReadHeader(PreCtx) error
 	}
-	// PostReadCallHeaderPlugin is executed after reading CALL packet header.
+	// PostReadCallHeaderPlugin is executed after reading CALL message header.
 	PostReadCallHeaderPlugin interface {
 		PostReadCallHeader(ReadCtx) *Rerror
 	}
-	// PreReadCallBodyPlugin is executed before reading CALL packet body.
+	// PreReadCallBodyPlugin is executed before reading CALL message body.
 	PreReadCallBodyPlugin interface {
 		PreReadCallBody(ReadCtx) *Rerror
 	}
-	// PostReadCallBodyPlugin is executed after reading CALL packet body.
+	// PostReadCallBodyPlugin is executed after reading CALL message body.
 	PostReadCallBodyPlugin interface {
 		PostReadCallBody(ReadCtx) *Rerror
 	}
-	// PostReadPushHeaderPlugin is executed after reading PUSH packet header.
+	// PostReadPushHeaderPlugin is executed after reading PUSH message header.
 	PostReadPushHeaderPlugin interface {
 		PostReadPushHeader(ReadCtx) *Rerror
 	}
-	// PreReadPushBodyPlugin is executed before reading PUSH packet body.
+	// PreReadPushBodyPlugin is executed before reading PUSH message body.
 	PreReadPushBodyPlugin interface {
 		PreReadPushBody(ReadCtx) *Rerror
 	}
-	// PostReadPushBodyPlugin is executed after reading PUSH packet body.
+	// PostReadPushBodyPlugin is executed after reading PUSH message body.
 	PostReadPushBodyPlugin interface {
 		PostReadPushBody(ReadCtx) *Rerror
 	}
-	// PostReadReplyHeaderPlugin is executed after reading REPLY packet header.
+	// PostReadReplyHeaderPlugin is executed after reading REPLY message header.
 	PostReadReplyHeaderPlugin interface {
 		PostReadReplyHeader(ReadCtx) *Rerror
 	}
-	// PreReadReplyBodyPlugin is executed before reading REPLY packet body.
+	// PreReadReplyBodyPlugin is executed before reading REPLY message body.
 	PreReadReplyBodyPlugin interface {
 		PreReadReplyBody(ReadCtx) *Rerror
 	}
-	// PostReadReplyBodyPlugin is executed after reading REPLY packet body.
+	// PostReadReplyBodyPlugin is executed after reading REPLY message body.
 	PostReadReplyBodyPlugin interface {
 		PostReadReplyBody(ReadCtx) *Rerror
 	}
@@ -135,9 +135,9 @@ type PluginContainer struct {
 func newPluginContainer() *PluginContainer {
 	p := &PluginContainer{
 		pluginSingleContainer: newPluginSingleContainer(),
-		left:   newPluginSingleContainer(),
-		middle: newPluginSingleContainer(),
-		right:  newPluginSingleContainer(),
+		left:                  newPluginSingleContainer(),
+		middle:                newPluginSingleContainer(),
+		right:                 newPluginSingleContainer(),
 	}
 	p.refreshTree = func() { p.refresh() }
 	return p
@@ -371,7 +371,7 @@ func (p *pluginSingleContainer) postAccept(sess PreSession) (rerr *Rerror) {
 	return nil
 }
 
-// PreWriteCall executes the defined plugins before writing CALL packet.
+// PreWriteCall executes the defined plugins before writing CALL message.
 func (p *pluginSingleContainer) preWriteCall(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -385,7 +385,7 @@ func (p *pluginSingleContainer) preWriteCall(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PostWriteCall executes the defined plugins after successful writing CALL packet.
+// PostWriteCall executes the defined plugins after successful writing CALL message.
 func (p *pluginSingleContainer) postWriteCall(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -399,7 +399,7 @@ func (p *pluginSingleContainer) postWriteCall(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PreWriteReply executes the defined plugins before writing REPLY packet.
+// PreWriteReply executes the defined plugins before writing REPLY message.
 func (p *pluginSingleContainer) preWriteReply(ctx WriteCtx) {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -412,7 +412,7 @@ func (p *pluginSingleContainer) preWriteReply(ctx WriteCtx) {
 	}
 }
 
-// PostWriteReply executes the defined plugins after successful writing REPLY packet.
+// PostWriteReply executes the defined plugins after successful writing REPLY message.
 func (p *pluginSingleContainer) postWriteReply(ctx WriteCtx) {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -425,7 +425,7 @@ func (p *pluginSingleContainer) postWriteReply(ctx WriteCtx) {
 	}
 }
 
-// PreWritePush executes the defined plugins before writing PUSH packet.
+// PreWritePush executes the defined plugins before writing PUSH message.
 func (p *pluginSingleContainer) preWritePush(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -439,7 +439,7 @@ func (p *pluginSingleContainer) preWritePush(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PostWritePush executes the defined plugins after successful writing PUSH packet.
+// PostWritePush executes the defined plugins after successful writing PUSH message.
 func (p *pluginSingleContainer) postWritePush(ctx WriteCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -453,7 +453,7 @@ func (p *pluginSingleContainer) postWritePush(ctx WriteCtx) *Rerror {
 	return nil
 }
 
-// PreReadHeader executes the defined plugins before reading packet header.
+// PreReadHeader executes the defined plugins before reading message header.
 func (p *pluginSingleContainer) preReadHeader(ctx PreCtx) error {
 	var err error
 	for _, plugin := range p.plugins {
@@ -467,7 +467,7 @@ func (p *pluginSingleContainer) preReadHeader(ctx PreCtx) error {
 	return nil
 }
 
-// PostReadCallHeader executes the defined plugins after reading CALL packet header.
+// PostReadCallHeader executes the defined plugins after reading CALL message header.
 func (p *pluginSingleContainer) postReadCallHeader(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -481,7 +481,7 @@ func (p *pluginSingleContainer) postReadCallHeader(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PreReadCallBody executes the defined plugins before reading CALL packet body.
+// PreReadCallBody executes the defined plugins before reading CALL message body.
 func (p *pluginSingleContainer) preReadCallBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -495,7 +495,7 @@ func (p *pluginSingleContainer) preReadCallBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PostReadCallBody executes the defined plugins after reading CALL packet body.
+// PostReadCallBody executes the defined plugins after reading CALL message body.
 func (p *pluginSingleContainer) postReadCallBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -509,7 +509,7 @@ func (p *pluginSingleContainer) postReadCallBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PostReadPushHeader executes the defined plugins after reading PUSH packet header.
+// PostReadPushHeader executes the defined plugins after reading PUSH message header.
 func (p *pluginSingleContainer) postReadPushHeader(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -523,7 +523,7 @@ func (p *pluginSingleContainer) postReadPushHeader(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PreReadPushBody executes the defined plugins before reading PUSH packet body.
+// PreReadPushBody executes the defined plugins before reading PUSH message body.
 func (p *pluginSingleContainer) preReadPushBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -537,7 +537,7 @@ func (p *pluginSingleContainer) preReadPushBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PostReadPushBody executes the defined plugins after reading PUSH packet body.
+// PostReadPushBody executes the defined plugins after reading PUSH message body.
 func (p *pluginSingleContainer) postReadPushBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -551,7 +551,7 @@ func (p *pluginSingleContainer) postReadPushBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PostReadReplyHeader executes the defined plugins after reading REPLY packet header.
+// PostReadReplyHeader executes the defined plugins after reading REPLY message header.
 func (p *pluginSingleContainer) postReadReplyHeader(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -565,7 +565,7 @@ func (p *pluginSingleContainer) postReadReplyHeader(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PreReadReplyBody executes the defined plugins before reading REPLY packet body.
+// PreReadReplyBody executes the defined plugins before reading REPLY message body.
 func (p *pluginSingleContainer) preReadReplyBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {
@@ -579,7 +579,7 @@ func (p *pluginSingleContainer) preReadReplyBody(ctx ReadCtx) *Rerror {
 	return nil
 }
 
-// PostReadReplyBody executes the defined plugins after reading REPLY packet body.
+// PostReadReplyBody executes the defined plugins after reading REPLY message body.
 func (p *pluginSingleContainer) postReadReplyBody(ctx ReadCtx) *Rerror {
 	var rerr *Rerror
 	for _, plugin := range p.plugins {

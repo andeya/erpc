@@ -32,7 +32,7 @@ func (h *Home) Test(arg *[]byte) ([]byte, *tp.Rerror) {
 	return []byte("test call result text"), nil
 }
 
-// UnknownCallHandle handles unknown call packet
+// UnknownCallHandle handles unknown call message
 func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 	ctx.Session().Push("/push/test?tag=from unknown", []byte("test unknown push text"))
 	var arg []byte

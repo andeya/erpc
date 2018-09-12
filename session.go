@@ -59,14 +59,14 @@ type (
 		ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc socket.ProtoFunc))
 		// GetProtoFunc returns the socket.ProtoFunc
 		GetProtoFunc() socket.ProtoFunc
-		// Send sends packet to peer, before the formal connection.
+		// Send sends message to peer, before the formal connection.
 		// Note:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
-		Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) *Rerror
-		// Receive receives a packet from peer, before the formal connection.
+		Send(uri string, body interface{}, rerr *Rerror, setting ...socket.MessageSetting) *Rerror
+		// Receive receives a message from peer, before the formal connection.
 		// Note: does not support automatic redial after disconnection.
-		Receive(socket.NewBodyFunc, ...socket.PacketSetting) (*socket.Packet, *Rerror)
+		Receive(socket.NewBodyFunc, ...socket.MessageSetting) (*socket.Message, *Rerror)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -100,25 +100,25 @@ type (
 		CloseNotify() <-chan struct{}
 		// Health checks if the session is usable.
 		Health() bool
-		// AsyncCall sends a packet and receives reply asynchronously.
+		// AsyncCall sends a message and receives reply asynchronously.
 		// If the  is []byte or *[]byte type, it can automatically fill in the body codec name.
 		AsyncCall(
 			uri string,
 			arg interface{},
 			result interface{},
 			callCmdChan chan<- CallCmd,
-			setting ...socket.PacketSetting,
+			setting ...socket.MessageSetting,
 		) CallCmd
-		// Call sends a packet and receives reply.
+		// Call sends a message and receives reply.
 		// Note:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) CallCmd
-		// Push sends a packet, but do not receives reply.
+		Call(uri string, arg interface{}, result interface{}, setting ...socket.MessageSetting) CallCmd
+		// Push sends a message, but do not receives reply.
 		// Note:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Push(uri string, arg interface{}, setting ...socket.PacketSetting) *Rerror
+		Push(uri string, arg interface{}, setting ...socket.MessageSetting) *Rerror
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -311,19 +311,19 @@ func (s *session) SetContextAge(duration time.Duration) {
 	s.contextAgeLock.Unlock()
 }
 
-// Send sends packet to peer, before the formal connection.
+// Send sends message to peer, before the formal connection.
 // Note:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.PacketSetting) (replyErr *Rerror) {
+func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...socket.MessageSetting) (replyErr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
-			replyErr = rerrBadPacket.Copy().SetReason(fmt.Sprintf("%v", p))
+			replyErr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 
-	output := socket.GetPacket(setting...)
+	output := socket.GetMessage(setting...)
 	if len(output.Seq()) == 0 {
 		s.seqLock.Lock()
 		output.SetSeq(strconv.FormatUint(s.seq, 10))
@@ -347,22 +347,22 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...so
 		socket.WithContext(ctxTimout)(output)
 	}
 	_, replyErr = s.write(output)
-	socket.PutPacket(output)
+	socket.PutMessage(output)
 	return replyErr
 }
 
-// Receive receives a packet from peer, before the formal connection.
+// Receive receives a message from peer, before the formal connection.
 // Note: does not support automatic redial after disconnection.
-func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.PacketSetting) (input *socket.Packet, rerr *Rerror) {
+func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.MessageSetting) (input *socket.Message, rerr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
-			rerr = rerrBadPacket.Copy().SetReason(fmt.Sprintf("%v", p))
-			socket.PutPacket(input)
+			rerr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
+			socket.PutMessage(input)
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 
-	input = socket.GetPacket(setting...)
+	input = socket.GetMessage(setting...)
 	input.SetNewBody(newBodyFunc)
 
 	if age := s.ContextAge(); age > 0 {
@@ -372,16 +372,16 @@ func (s *session) Receive(newBodyFunc socket.NewBodyFunc, setting ...socket.Pack
 	deadline, _ := input.Context().Deadline()
 	s.socket.SetReadDeadline(deadline)
 
-	if err := s.socket.ReadPacket(input); err != nil {
+	if err := s.socket.ReadMessage(input); err != nil {
 		rerr := rerrConnClosed.Copy().SetReason(err.Error())
-		socket.PutPacket(input)
+		socket.PutMessage(input)
 		return nil, rerr
 	}
 	rerr = NewRerrorFromMeta(input.Meta())
 	return input, rerr
 }
 
-// AsyncCall sends a packet and receives reply asynchronously.
+// AsyncCall sends a message and receives reply asynchronously.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
@@ -390,7 +390,7 @@ func (s *session) AsyncCall(
 	arg interface{},
 	result interface{},
 	callCmdChan chan<- CallCmd,
-	setting ...socket.PacketSetting,
+	setting ...socket.MessageSetting,
 ) CallCmd {
 	if callCmdChan == nil {
 		callCmdChan = make(chan CallCmd, 10) // buffered.
@@ -403,8 +403,8 @@ func (s *session) AsyncCall(
 			Panicf("*session.AsyncCall(): callCmdChan channel is unbuffered")
 		}
 	}
-	output := socket.NewPacket(
-		socket.WithPtype(TypeCall),
+	output := socket.NewMessage(
+		socket.WithMtype(TypeCall),
 		socket.WithUri(uri),
 		socket.WithBody(arg),
 	)
@@ -481,25 +481,25 @@ W:
 	return cmd
 }
 
-// Call sends a packet and receives reply.
+// Call sends a message and receives reply.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Call(uri string, arg interface{}, result interface{}, setting ...socket.PacketSetting) CallCmd {
+func (s *session) Call(uri string, arg interface{}, result interface{}, setting ...socket.MessageSetting) CallCmd {
 	callCmd := s.AsyncCall(uri, arg, result, make(chan CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
 }
 
-// Push sends a packet, but do not receives reply.
+// Push sends a message, but do not receives reply.
 // Note:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Push(uri string, arg interface{}, setting ...socket.PacketSetting) *Rerror {
+func (s *session) Push(uri string, arg interface{}, setting ...socket.MessageSetting) *Rerror {
 	ctx := s.peer.getContext(s, true)
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
-	output.SetPtype(TypePush)
+	output.SetMtype(TypePush)
 	output.SetUri(uri)
 	output.SetBody(arg)
 
@@ -712,7 +712,7 @@ func (s *session) redialForClient(oldConn net.Conn) bool {
 }
 
 func (s *session) startReadAndHandle() {
-	var withContext socket.PacketSetting
+	var withContext socket.MessageSetting
 	if readTimeout := s.SessionAge(); readTimeout > 0 {
 		s.socket.SetReadDeadline(coarsetime.CeilingTimeNow().Add(readTimeout))
 		ctxTimout, _ := context.WithTimeout(context.Background(), readTimeout)
@@ -741,13 +741,13 @@ func (s *session) startReadAndHandle() {
 			s.peer.putContext(ctx, false)
 			return
 		}
-		err = s.socket.ReadPacket(ctx.input)
+		err = s.socket.ReadMessage(ctx.input)
 		if (err != nil && ctx.GetBodyCodec() == codec.NilCodecId) || !s.goonRead() {
 			s.peer.putContext(ctx, false)
 			return
 		}
 		if err != nil {
-			ctx.handleErr = rerrBadPacket.Copy().SetReason(err.Error())
+			ctx.handleErr = rerrBadMessage.Copy().SetReason(err.Error())
 		}
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
@@ -761,18 +761,18 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
+func (s *session) write(message *socket.Message) (net.Conn, *Rerror) {
 	conn := s.getConn()
 	status := s.getStatus()
 	if status != statusOk &&
-		!(status == statusActiveClosing && packet.Ptype() == TypeReply) {
+		!(status == statusActiveClosing && message.Mtype() == TypeReply) {
 		return conn, rerrConnClosed
 	}
 
 	var (
 		rerr        *Rerror
 		err         error
-		ctx         = packet.Context()
+		ctx         = message.Context()
 		deadline, _ = ctx.Deadline()
 	)
 	select {
@@ -791,7 +791,7 @@ func (s *session) write(packet *socket.Packet) (net.Conn, *Rerror) {
 		goto ERR
 	default:
 		s.socket.SetWriteDeadline(deadline)
-		err = s.socket.WritePacket(packet)
+		err = s.socket.WriteMessage(message)
 	}
 
 	if err == nil {
@@ -889,7 +889,7 @@ const (
 	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
 )
 
-func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
+func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Message, logType int8) {
 	var addr = s.RemoteAddr().String()
 	if realIp != "" && realIp != addr {
 		addr += "(real: " + realIp + ")"
@@ -910,31 +910,31 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 
 	switch logType {
 	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail))
 	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail))
 	case typeCallLaunch:
-		printFunc(logFormatCallLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail), packetLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatCallLaunch, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail), messageLogBytes(input, s.peer.printDetail))
 	case typeCallHandle:
-		printFunc(logFormatCallHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail), packetLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatCallHandle, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail), messageLogBytes(output, s.peer.printDetail))
 	}
 }
 
-func packetLogBytes(packet *socket.Packet, printDetail bool) []byte {
+func messageLogBytes(message *socket.Message, printDetail bool) []byte {
 	var b = make([]byte, 0, 128)
 	b = append(b, '{')
 	b = append(b, '"', 's', 'i', 'z', 'e', '"', ':')
-	b = append(b, strconv.FormatUint(uint64(packet.Size()), 10)...)
-	if rerrBytes := getRerrorBytes(packet.Meta()); len(rerrBytes) > 0 {
+	b = append(b, strconv.FormatUint(uint64(message.Size()), 10)...)
+	if rerrBytes := getRerrorBytes(message.Meta()); len(rerrBytes) > 0 {
 		b = append(b, ',', '"', 'e', 'r', 'r', 'o', 'r', '"', ':')
 		b = append(b, utils.ToJsonStr(rerrBytes, false)...)
 	}
 	if printDetail {
-		if packet.Meta().Len() > 0 {
+		if message.Meta().Len() > 0 {
 			b = append(b, ',', '"', 'm', 'e', 't', 'a', '"', ':')
-			b = append(b, utils.ToJsonStr(packet.Meta().QueryString(), false)...)
+			b = append(b, utils.ToJsonStr(message.Meta().QueryString(), false)...)
 		}
-		if bodyBytes := bodyLogBytes(packet); len(bodyBytes) > 0 {
+		if bodyBytes := bodyLogBytes(message); len(bodyBytes) > 0 {
 			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':')
 			b = append(b, utils.ToJsonStr(bodyBytes, false)...)
 		}
@@ -949,8 +949,8 @@ func packetLogBytes(packet *socket.Packet, printDetail bool) []byte {
 	// return buf.Bytes()
 }
 
-func bodyLogBytes(packet *socket.Packet) []byte {
-	switch v := packet.Body().(type) {
+func bodyLogBytes(message *socket.Message) []byte {
+	switch v := message.Body().(type) {
 	case nil:
 		return nil
 	case []byte:
@@ -958,6 +958,6 @@ func bodyLogBytes(packet *socket.Packet) []byte {
 	case *[]byte:
 		return *v
 	}
-	b, _ := json.Marshal(packet.Body())
+	b, _ := json.Marshal(message.Body())
 	return b
 }

@@ -45,7 +45,7 @@ func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Re
 	}, nil
 }
 
-// UnknownCallHandle handles unknown call packet
+// UnknownCallHandle handles unknown call message
 func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 	time.Sleep(1)
 	var v = struct {
