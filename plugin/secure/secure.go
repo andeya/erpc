@@ -22,7 +22,6 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
 	"github.com/henrylee2cn/teleport/utils"
 )
 

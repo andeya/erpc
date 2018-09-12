@@ -7,16 +7,16 @@ import (
 	"io/ioutil"
 	"sync"
 
+	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/mixer/websocket/pbSubProto/pb"
-	"github.com/henrylee2cn/teleport/socket"
 )
 
 // NewPbSubProtoFunc is creation function of PROTOBUF socket protocol.
-var NewPbSubProtoFunc = func(rw io.ReadWriter) socket.Proto {
+var NewPbSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
 	var (
 		readBufioSize             int
-		readBufferSize, isDefault = socket.ReadBuffer()
+		readBufferSize, isDefault = tp.SocketReadBuffer()
 	)
 	if isDefault {
 		readBufioSize = 1024 * 4

@@ -27,17 +27,17 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/teleport/socket"
+	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/utils"
 )
 
 // NewJsonProtoFunc is creation function of JSON socket protocol.
 //  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
 //  Message data demo: `830{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
-var NewJsonProtoFunc = func(rw io.ReadWriter) socket.Proto {
+var NewJsonProtoFunc = func(rw io.ReadWriter) tp.Proto {
 	var (
 		readBufioSize             int
-		readBufferSize, isDefault = socket.ReadBuffer()
+		readBufferSize, isDefault = tp.SocketReadBuffer()
 	)
 	if isDefault {
 		readBufioSize = 1024 * 4

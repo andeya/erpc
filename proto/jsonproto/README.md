@@ -27,6 +27,7 @@ import (
 
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/proto/jsonproto"
+	"github.com/henrylee2cn/teleport/xfer/gzip"
 )
 
 type Home struct {
@@ -46,7 +47,7 @@ func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Re
 
 func TestJsonProto(t *testing.T) {
 	gzip.Reg('g', "gizp-5", 5)
-	
+
 	// Server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
