@@ -13,7 +13,7 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 ## Benchmark
 
-**Test Case**
+**Self Test**
 
 - A server and a client process, running on the same machine
 - CPU:    Intel Xeon E312xx (Sandy Bridge) 16 cores 2.53GHz
@@ -23,8 +23,6 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 - Message size: 581 bytes
 - Message codec: protobuf
 - Sent total 1000000 messages
-
-**Test Results**
 
 - teleport
 
@@ -46,7 +44,19 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 | 2000               | 8        | 6          | 64      | 0       | 183351          |
 | 5000               | 21       | 18         | 651     | 0       | 133886          |
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/v4/teleport)**
+**Comparison Test**
+
+<table>
+<tr><th>Environment</th><th>Throughputs</th><th>Mean Latency</th><th>P99 Latency</th></tr>
+<tr>
+<td width="10%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/env.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/throughput.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/mean_latency.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/p99_latency.png"></td>
+</tr>
+</table>
+
+**[More Detail](https://github.com/henrylee2cn/rpc-benchmark)**
 
 - Profile torch of teleport/socket
 
