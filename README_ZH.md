@@ -125,12 +125,12 @@ func main() {
         CountTime:  true,
         ListenPort: 9090,
     })
-    srv.RoutePull(new(math))
+    srv.RouteCall(new(math))
     srv.ListenAndServe()
 }
 
 type math struct {
-    tp.PullCtx
+    tp.CallCtx
 }
 
 func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
@@ -169,7 +169,7 @@ func main() {
     }
 
     var result int
-    rerr := sess.Pull("/math/add?push_status=yes",
+    rerr := sess.Call("/math/add?push_status=yes",
         []int{1, 2, 3, 4, 5},
         &result,
     ).Rerror()
@@ -207,8 +207,8 @@ func (p *push) Status(arg *string) *tp.Rerror {
 - **Plugin：** 贯穿于通信各个环节的插件
 - **Session：** 基于Socket封装的连接会话，提供的推、拉、回复、关闭等会话操作
 - **Context：** 连接会话中一次通信（如PULL-REPLY, PUSH）的上下文对象
-- **Pull-Launch：** 从对端Peer拉数据
-- **Pull-Handle：** 处理和回复对端Peer的拉请求
+- **Call-Launch：** 从对端Peer拉数据
+- **Call-Handle：** 处理和回复对端Peer的拉请求
 - **Push-Launch：** 将数据推送到对端Peer
 - **Push-Handle：** 处理同伴的推送
 - **Router：** 通过请求信息（如URI）索引响应函数（Handler）的路由器
@@ -404,11 +404,11 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
 
-### Pull-Controller-Struct 接口模板
+### Call-Controller-Struct 接口模板
 
 ```go
 type Aaa struct {
-    tp.PullCtx
+    tp.CallCtx
 }
 func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
     ...
@@ -420,16 +420,16 @@ func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
 
 ```go
 // register the pull route: /aaa/xx_zz
-peer.RoutePull(new(Aaa))
+peer.RouteCall(new(Aaa))
 
 // or register the pull route: /xx_zz
-peer.RoutePullFunc((*Aaa).XxZz)
+peer.RouteCallFunc((*Aaa).XxZz)
 ```
 
-### Pull-Handler-Function 接口模板
+### Call-Handler-Function 接口模板
 
 ```go
-func XxZz(ctx tp.PullCtx, arg *<T>) (<T>, *tp.Rerror) {
+func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -439,7 +439,7 @@ func XxZz(ctx tp.PullCtx, arg *<T>) (<T>, *tp.Rerror) {
 
 ```go
 // register the pull route: /xx_zz
-peer.RoutePullFunc(XxZz)
+peer.RouteCallFunc(XxZz)
 ```
 
 ### Push-Controller-Struct 接口模板
@@ -481,10 +481,10 @@ func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
 peer.RoutePushFunc(YyZz)
 ```
 
-### Unknown-Pull-Handler-Function 接口模板
+### Unknown-Call-Handler-Function 接口模板
 
 ```go
-func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
+func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
     ...
     return r, nil
 }
@@ -494,7 +494,7 @@ func XxxUnknownPull (ctx tp.UnknownPullCtx) (interface{}, *tp.Rerror) {
 
 ```go
 // register the unknown pull route: /*
-peer.SetUnknownPull(XxxUnknownPull)
+peer.SetUnknownCall(XxxUnknownCall)
 ```
 
 ### Unknown-Push-Handler-Function 接口模板
@@ -535,7 +535,7 @@ func NewIgnoreCase() *ignoreCase {
 type ignoreCase struct{}
 
 var (
-    _ tp.PostReadPullHeaderPlugin = new(ignoreCase)
+    _ tp.PostReadCallHeaderPlugin = new(ignoreCase)
     _ tp.PostReadPushHeaderPlugin = new(ignoreCase)
 )
 
@@ -543,7 +543,7 @@ func (i *ignoreCase) Name() string {
     return "ignoreCase"
 }
 
-func (i *ignoreCase) PostReadPullHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (i *ignoreCase) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
     // Dynamic transformation path is lowercase
     ctx.UriObject().Path = strings.ToLower(ctx.UriObject().Path)
     return nil
@@ -562,11 +562,11 @@ func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 // add router group
 group := peer.SubRoute("test")
 // register to test group
-group.RoutePull(new(Aaa), NewIgnoreCase())
-peer.RoutePullFunc(XxZz, NewIgnoreCase())
+group.RouteCall(new(Aaa), NewIgnoreCase())
+peer.RouteCallFunc(XxZz, NewIgnoreCase())
 group.RoutePush(new(Bbb))
 peer.RoutePushFunc(YyZz)
-peer.SetUnknownPull(XxxUnknownPull)
+peer.SetUnknownCall(XxxUnknownCall)
 peer.SetUnknownPush(XxxUnknownPush)
 ```
 
