@@ -444,32 +444,33 @@ func (p *peer) Close() (err error) {
 }
 
 func (p *peer) getContext(s *session, withWg bool) *handlerCtx {
-	p.ctxLock.Lock()
 	if withWg {
 		// count get context
 		s.graceCtxWaitGroup.Add(1)
 	}
+	p.ctxLock.Lock()
 	ctx := p.freeContext
 	if ctx == nil {
+		p.ctxLock.Unlock()
 		ctx = newReadHandleCtx()
 	} else {
 		p.freeContext = ctx.next
+		p.ctxLock.Unlock()
 	}
 	ctx.reInit(s)
-	p.ctxLock.Unlock()
 	return ctx
 }
 
 func (p *peer) putContext(ctx *handlerCtx, withWg bool) {
-	p.ctxLock.Lock()
-	defer p.ctxLock.Unlock()
 	if withWg {
 		// count get context
 		ctx.sess.graceCtxWaitGroup.Done()
 	}
 	ctx.clean()
+	p.ctxLock.Lock()
 	ctx.next = p.freeContext
 	p.freeContext = ctx
+	p.ctxLock.Unlock()
 }
 
 // Router returns the root router of call or push handlers.
