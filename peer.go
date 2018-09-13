@@ -97,12 +97,12 @@ var (
 )
 
 type peer struct {
-	router            *Router
-	pluginContainer   *PluginContainer
-	sessHub           *SessionHub
-	closeCh           chan struct{}
-	freeContext       *handlerCtx
-	ctxLock           sync.Mutex
+	router          *Router
+	pluginContainer *PluginContainer
+	sessHub         *SessionHub
+	closeCh         chan struct{}
+	// freeContext       *handlerCtx
+	// ctxLock           sync.Mutex
 	defaultSessionAge time.Duration // Default session max age, if less than or equal to 0, no time limit
 	defaultContextAge time.Duration // Default CALL or PUSH context max age, if less than or equal to 0, no time limit
 	tlsConfig         *tls.Config
@@ -443,20 +443,19 @@ func (p *peer) Close() (err error) {
 	return err
 }
 
+var ctxPool = sync.Pool{
+	New: func() interface{} {
+		return newReadHandleCtx()
+	},
+}
+
 func (p *peer) getContext(s *session, withWg bool) *handlerCtx {
 	if withWg {
 		// count get context
 		s.graceCtxWaitGroup.Add(1)
 	}
-	p.ctxLock.Lock()
-	ctx := p.freeContext
-	if ctx == nil {
-		p.ctxLock.Unlock()
-		ctx = newReadHandleCtx()
-	} else {
-		p.freeContext = ctx.next
-		p.ctxLock.Unlock()
-	}
+	ctx := ctxPool.Get().(*handlerCtx)
+	ctx.clean()
 	ctx.reInit(s)
 	return ctx
 }
@@ -466,12 +465,38 @@ func (p *peer) putContext(ctx *handlerCtx, withWg bool) {
 		// count get context
 		ctx.sess.graceCtxWaitGroup.Done()
 	}
-	ctx.clean()
-	p.ctxLock.Lock()
-	ctx.next = p.freeContext
-	p.freeContext = ctx
-	p.ctxLock.Unlock()
+	ctxPool.Put(ctx)
 }
+
+// func (p *peer) getContext(s *session, withWg bool) *handlerCtx {
+// 	if withWg {
+// 		// count get context
+// 		s.graceCtxWaitGroup.Add(1)
+// 	}
+// 	p.ctxLock.Lock()
+// 	ctx := p.freeContext
+// 	if ctx == nil {
+// 		p.ctxLock.Unlock()
+// 		ctx = newReadHandleCtx()
+// 	} else {
+// 		p.freeContext = ctx.next
+// 		p.ctxLock.Unlock()
+// 	}
+// 	ctx.reInit(s)
+// 	return ctx
+// }
+
+// func (p *peer) putContext(ctx *handlerCtx, withWg bool) {
+// 	if withWg {
+// 		// count get context
+// 		ctx.sess.graceCtxWaitGroup.Done()
+// 	}
+// 	ctx.clean()
+// 	p.ctxLock.Lock()
+// 	ctx.next = p.freeContext
+// 	p.freeContext = ctx
+// 	p.ctxLock.Unlock()
+// }
 
 // Router returns the root router of call or push handlers.
 func (p *peer) Router() *Router {
