@@ -27,9 +27,9 @@ import (
 // Logger interface
 type Logger interface {
 	// Level returns the logger's level.
-	Level() string
+	Level() Level
 	// SetLevel sets the logger's level.
-	SetLevel(level string)
+	SetLevel(level Level)
 	// Printf formats according to a format specifier and writes to standard output.
 	// It returns the number of bytes written and any write error encountered.
 	Printf(format string, a ...interface{})
@@ -56,13 +56,13 @@ type Logger interface {
 var (
 	// global logger
 	globalLogger = func() Logger {
-		logger := newDefaultlogger("TRACE")
+		logger := newDefaultlogger(TRACE)
 		graceful.SetLog(logger)
 		return logger
 	}()
 )
 
-func newDefaultlogger(level string) Logger {
+func newDefaultlogger(level Level) Logger {
 	l := &defaultLogger{
 		level: level,
 	}
@@ -72,7 +72,7 @@ func newDefaultlogger(level string) Logger {
 
 type defaultLogger struct {
 	*logging.Logger
-	level string
+	level Level
 	mu    sync.RWMutex
 }
 
@@ -84,7 +84,7 @@ func (l *defaultLogger) newSet() {
 	}
 	consoleFormat := logging.MustStringFormatter("[%{time:2006/01/02 15:04:05.000}] [%{color:bold}%{level:.4s}%{color:reset}] %{message} <%{longfile}>")
 	consoleBackendLevel := logging.AddModuleLevel(logging.NewBackendFormatter(consoleLogBackend, consoleFormat))
-	level, err := logging.LogLevel(l.level)
+	level, err := logging.LogLevel(levelMap[l.level])
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +96,7 @@ func (l *defaultLogger) newSet() {
 
 // Level returns the logger's level.
 // Note: Concurrent is not safe!
-func (l *defaultLogger) Level() string {
+func (l *defaultLogger) Level() Level {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return l.level
@@ -106,7 +106,7 @@ func (l *defaultLogger) Level() string {
 // Note:
 // Concurrent is not safe!
 // the teleport default logger's level list: OFF PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
-func (l *defaultLogger) SetLevel(level string) {
+func (l *defaultLogger) SetLevel(level Level) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.level = level
@@ -128,13 +128,65 @@ func SetLogger(logger Logger) {
 	graceful.SetLog(logger)
 }
 
+// Level defines all available log levels for log messages.
+type Level int
+
+// Log levels.
+const (
+	OFF Level = iota
+	PRINT
+	CRITICAL
+	ERROR
+	WARNING
+	NOTICE
+	INFO
+	DEBUG
+	TRACE
+)
+
+var levelMap = map[Level]string{
+	OFF:      "OFF",
+	PRINT:    "PRINT",
+	CRITICAL: "CRITICAL",
+	ERROR:    "ERROR",
+	WARNING:  "WARNING",
+	NOTICE:   "NOTICE",
+	INFO:     "INFO",
+	DEBUG:    "DEBUG",
+	TRACE:    "TRACE",
+}
+
+func (l Level) String() string {
+	s, ok := levelMap[l]
+	if !ok {
+		return "unknown"
+	}
+	return s
+}
+
 // GetLoggerLevel gets the logger's level.
-func GetLoggerLevel() string {
+func GetLoggerLevel() Level {
 	return globalLogger.Level()
 }
 
-// SetLoggerLevel sets the logger's level.
+// SetLoggerLevel sets the logger's level by string.
 func SetLoggerLevel(level string) {
+	for k, v := range levelMap {
+		if v == level {
+			globalLogger.SetLevel(k)
+			return
+		}
+	}
+	log.Printf("Unknown level string: %s", level)
+}
+
+// SetLoggerLevel2 sets the logger's level by number.
+func SetLoggerLevel2(level Level) {
+	_, ok := levelMap[level]
+	if !ok {
+		log.Printf("Unknown level number: %d", level)
+		return
+	}
 	globalLogger.SetLevel(level)
 }
 
