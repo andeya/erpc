@@ -1,38 +1,46 @@
 package main
 
 import (
+	"time"
+
 	tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
+	// log level
 	tp.SetLoggerLevel("ERROR")
+
 	cli := tp.NewPeer(tp.PeerConfig{})
-	// cli := tp.NewPeer(tp.PeerConfig{LocalIP: "0.0.0.0"})
 	defer cli.Close()
-	cli.RoutePush(new(push))
+
+	cli.RoutePush(new(Push))
+
 	sess, err := cli.Dial(":9090")
 	if err != nil {
 		tp.Fatalf("%v", err)
 	}
 
 	var result int
-	rerr := sess.Call("/math/add?push_status=yes",
+	rerr := sess.Call("/math/add?author=henrylee2cn",
 		[]int{1, 2, 3, 4, 5},
 		&result,
-		// tp.WithAcceptBodyCodec('s'),
 	).Rerror()
-
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)
 	}
 	tp.Printf("result: %d", result)
+
+	tp.Printf("wait for 10s...")
+	time.Sleep(time.Second * 10)
 }
 
-type push struct {
+// Push push handler
+type Push struct {
 	tp.PushCtx
 }
 
-func (p *push) Status(arg *string) *tp.Rerror {
-	tp.Printf("server status: %s", *arg)
+// Push handles '/push/status' message
+func (p *Push) Status(arg *string) *tp.Rerror {
+	tp.Printf("%s", *arg)
 	return nil
 }

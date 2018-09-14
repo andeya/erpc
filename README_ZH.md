@@ -114,38 +114,60 @@ go get -u -f github.com/henrylee2cn/teleport
 package main
 
 import (
-    "fmt"
-    "time"
+	"fmt"
+	"time"
 
-    tp "github.com/henrylee2cn/teleport"
+	tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
-    srv := tp.NewPeer(tp.PeerConfig{
-        CountTime:  true,
-        ListenPort: 9090,
-    })
-    srv.RouteCall(new(math))
-    srv.ListenAndServe()
+	// graceful
+	go tp.GraceSignal()
+
+	// server peer
+	srv := tp.NewPeer(tp.PeerConfig{
+		CountTime:   true,
+		ListenPort:  9090,
+		PrintDetail: true,
+	})
+
+	// router
+	srv.RouteCall(new(Math))
+
+	// broadcast per 5s
+	go func() {
+		for {
+			time.Sleep(time.Second * 5)
+			srv.RangeSession(func(sess tp.Session) bool {
+				sess.Push(
+					"/push/status",
+					fmt.Sprintf("this is a broadcast, server time: %v", time.Now()),
+				)
+				return true
+			})
+		}
+	}()
+
+	// listen and serve
+	srv.ListenAndServe()
 }
 
-type math struct {
-    tp.CallCtx
+// Math handler
+type Math struct {
+	tp.CallCtx
 }
 
-func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
-    if m.Query().Get("push_status") == "yes" {
-        m.Session().Push(
-            "/push/status",
-            fmt.Sprintf("%d numbers are being added...", len(*arg)),
-        )
-        time.Sleep(time.Millisecond * 10)
-    }
-    var r int
-    for _, a := range *arg {
-        r += a
-    }
-    return r, nil
+// Add handles addition request
+func (m *Math) Add(arg *[]int) (int, *tp.Rerror) {
+	// test query parameter
+	tp.Infof("author: %s", m.Query().Get("author"))
+	// add
+	var r int
+	for _, a := range *arg {
+		r += a
+	}
+	// response
+	return r, nil
 }
 ```
 
@@ -155,38 +177,48 @@ func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
 package main
 
 import (
-    tp "github.com/henrylee2cn/teleport"
+	"time"
+
+	tp "github.com/henrylee2cn/teleport"
 )
 
 func main() {
-    tp.SetLoggerLevel("ERROR")
-    cli := tp.NewPeer(tp.PeerConfig{})
-    defer cli.Close()
-    cli.RoutePush(new(push))
-    sess, err := cli.Dial(":9090")
-    if err != nil {
-        tp.Fatalf("%v", err)
-    }
+	// log level
+	tp.SetLoggerLevel("ERROR")
 
-    var result int
-    rerr := sess.Call("/math/add?push_status=yes",
-        []int{1, 2, 3, 4, 5},
-        &result,
-    ).Rerror()
+	cli := tp.NewPeer(tp.PeerConfig{})
+	defer cli.Close()
 
-    if rerr != nil {
-        tp.Fatalf("%v", rerr)
-    }
-    tp.Printf("result: %d", result)
+	cli.RoutePush(new(Push))
+
+	sess, err := cli.Dial(":9090")
+	if err != nil {
+		tp.Fatalf("%v", err)
+	}
+
+	var result int
+	rerr := sess.Call("/math/add?author=henrylee2cn",
+		[]int{1, 2, 3, 4, 5},
+		&result,
+	).Rerror()
+	if rerr != nil {
+		tp.Fatalf("%v", rerr)
+	}
+	tp.Printf("result: %d", result)
+
+	tp.Printf("wait for 10s...")
+	time.Sleep(time.Second * 10)
 }
 
-type push struct {
-    tp.PushCtx
+// Push push handler
+type Push struct {
+	tp.PushCtx
 }
 
-func (p *push) Status(arg *string) *tp.Rerror {
-    tp.Printf("server status: %s", *arg)
-    return nil
+// Push handles '/push/status' message
+func (p *Push) Status(arg *string) *tp.Rerror {
+	tp.Printf("%s", *arg)
+	return nil
 }
 ```
 
