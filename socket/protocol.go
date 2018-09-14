@@ -64,12 +64,12 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
-{4 bytes sequence length}
+{2 bytes sequence length}
 {sequence}
 {1 byte message type} // e.g. CALL:1; REPLY:2; PUSH:3
-{4 bytes URI length}
+{2 bytes URI length}
 {URI}
-{4 bytes metadata length}
+{2 bytes metadata length}
 {metadata(urlencoded)}
 {1 byte body codec id}
 {body}
@@ -168,17 +168,17 @@ func (r *rawProto) Pack(m *Message) error {
 
 func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m *Message) error {
 	seqBytes := goutil.StringToBytes(m.Seq())
-	binary.Write(bb, binary.BigEndian, uint32(len(seqBytes)))
+	binary.Write(bb, binary.BigEndian, uint16(len(seqBytes)))
 	bb.Write(seqBytes)
 
 	bb.WriteByte(m.Mtype())
 
 	uriBytes := goutil.StringToBytes(m.Uri())
-	binary.Write(bb, binary.BigEndian, uint32(len(uriBytes)))
+	binary.Write(bb, binary.BigEndian, uint16(len(uriBytes)))
 	bb.Write(uriBytes)
 
 	metaBytes := m.Meta().QueryString()
-	binary.Write(bb, binary.BigEndian, uint32(len(metaBytes)))
+	binary.Write(bb, binary.BigEndian, uint16(len(metaBytes)))
 	bb.Write(metaBytes)
 	return nil
 }
@@ -263,21 +263,21 @@ func (r *rawProto) readMessage(bb *utils.ByteBuffer, m *Message) error {
 
 func (r *rawProto) readHeader(data []byte, m *Message) []byte {
 	// seq
-	seqLen := binary.BigEndian.Uint32(data)
-	data = data[4:]
+	seqLen := binary.BigEndian.Uint16(data)
+	data = data[2:]
 	m.SetSeq(string(data[:seqLen]))
 	data = data[seqLen:]
 	// type
 	m.SetMtype(data[0])
 	data = data[1:]
 	// uri
-	uriLen := binary.BigEndian.Uint32(data)
-	data = data[4:]
+	uriLen := binary.BigEndian.Uint16(data)
+	data = data[2:]
 	m.SetUri(string(data[:uriLen]))
 	data = data[uriLen:]
 	// meta
-	metaLen := binary.BigEndian.Uint32(data)
-	data = data[4:]
+	metaLen := binary.BigEndian.Uint16(data)
+	data = data[2:]
 	m.Meta().ParseBytes(data[:metaLen])
 	data = data[metaLen:]
 	return data
