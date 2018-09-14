@@ -216,7 +216,8 @@ type MessageSetting = socket.MessageSetting
 var WithContext = socket.WithContext
 
 // WithSeq sets the message sequence.
-//  func WithSeq(seq uint64) MessageSetting
+// NOTE: max len ≤ 65535!
+//  func WithSeq(seq string) MessageSetting
 var WithSeq = socket.WithSeq
 
 // WithMtype sets the message type.
@@ -224,23 +225,28 @@ var WithSeq = socket.WithSeq
 var WithMtype = socket.WithMtype
 
 // WithUri sets the message URI string.
+// NOTE: max len ≤ 65535!
 //  func WithUri(uri string) MessageSetting
 var WithUri = socket.WithUri
 
 // WithUriObject sets the message URI object.
+// NOTE: urlencoded URI max len ≤ 65535!
 //  func WithUriObject(uriObject *url.URL) MessageSetting
 var WithUriObject = socket.WithUriObject
 
 // WithQuery sets the message URI query parameter.
+// NOTE: urlencoded URI max len ≤ 65535!
 //  func WithQuery(key, value string) MessageSetting
 var WithQuery = socket.WithQuery
 
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
+// NOTE: urlencoded string max len ≤ 65535!
 //  func WithAddMeta(key, value string) MessageSetting
 var WithAddMeta = socket.WithAddMeta
 
 // WithSetMeta sets 'key=value' metadata argument.
+// NOTE: urlencoded string max len ≤ 65535!
 //  func WithSetMeta(key, value string) MessageSetting
 var WithSetMeta = socket.WithSetMeta
 

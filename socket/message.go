@@ -34,26 +34,30 @@ type (
 	// Message a socket message data.
 	Message struct {
 		// message sequence
+		// NOTE: max len ≤ 65535!
 		seq string
 		// message type, such as CALL, PUSH, REPLY
 		mtype byte
 		// URI string
+		// NOTE: max len ≤ 65535!
 		uri string
 		// URI object
+		// NOTE: urlencoded URI max len ≤ 65535!
 		uriObject *url.URL
 		// metadata
+		// NOTE: urlencoded string max len ≤ 65535!
 		meta *utils.Args
 		// body codec type
 		bodyCodec byte
 		// body object
 		body interface{}
 		// newBodyFunc creates a new body by message type and URI.
-		// Note:
+		// NOTE:
 		//  only for writing message;
 		//  should be nil when reading message.
 		newBodyFunc NewBodyFunc
 		// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-		// Note: the length can not be bigger than 255!
+		// NOTE: the length can not be bigger than 255!
 		xferPipe *xfer.XferPipe
 		// message size
 		size uint32
@@ -69,6 +73,7 @@ type (
 		// Mtype returns the message sequence
 		Seq() string
 		// SetSeq sets the message sequence
+		// NOTE: max len ≤ 65535!
 		SetSeq(string)
 		// Mtype returns the message type, such as CALL, PUSH, REPLY
 		Mtype() byte
@@ -79,10 +84,13 @@ type (
 		// UriObject returns the URI object
 		UriObject() *url.URL
 		// SetUri sets the message URI
+		// NOTE: max len ≤ 65535!
 		SetUri(string)
 		// SetUriObject sets the message URI
+		// NOTE: urlencoded URI max len ≤ 65535!
 		SetUriObject(uriObject *url.URL)
 		// Meta returns the metadata
+		// NOTE: urlencoded string max len ≤ 65535!
 		Meta() *utils.Args
 	}
 	// Body message body interface
@@ -98,10 +106,10 @@ type (
 		// SetNewBody resets the function of geting body.
 		SetNewBody(newBodyFunc NewBodyFunc)
 		// MarshalBody returns the encoding of body.
-		// Note: when the body is a stream of bytes, no marshalling is done.
+		// NOTE: when the body is a stream of bytes, no marshalling is done.
 		MarshalBody() ([]byte, error)
 		// UnmarshalBody unmarshals the encoded data to the body.
-		// Note:
+		// NOTE:
 		//  seq, mtype, uri must be setted already;
 		//  if body=nil, try to use newBodyFunc to create a new one;
 		//  when the body is a stream of bytes, no unmarshalling is done.
@@ -123,7 +131,7 @@ var messageStack = new(struct {
 })
 
 // GetMessage gets a *Message form message stack.
-// Note:
+// NOTE:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
 func GetMessage(settings ...MessageSetting) *Message {
@@ -149,7 +157,7 @@ func PutMessage(m *Message) {
 }
 
 // NewMessage creates a new *Message.
-// Note:
+// NOTE:
 //  NewBody is only for reading form connection;
 //  settings are only for writing to connection.
 func NewMessage(settings ...MessageSetting) *Message {
@@ -162,7 +170,7 @@ func NewMessage(settings ...MessageSetting) *Message {
 }
 
 // Reset resets itself.
-// Note:
+// NOTE:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
 func (m *Message) Reset(settings ...MessageSetting) {
@@ -203,6 +211,7 @@ func (m *Message) Seq() string {
 }
 
 // SetSeq sets the message sequence
+// NOTE: max len ≤ 65535!
 func (m *Message) SetSeq(seq string) {
 	m.seq = seq
 }
@@ -238,12 +247,14 @@ func (m *Message) UriObject() *url.URL {
 }
 
 // SetUri sets the message URI
+// NOTE: max len ≤ 65535!
 func (m *Message) SetUri(uri string) {
 	m.uri = uri
 	m.uriObject = nil
 }
 
 // SetUriObject sets the message URI
+// NOTE: urlencoded URI max len ≤ 65535!
 func (m *Message) SetUriObject(uriObject *url.URL) {
 	m.uriObject = uriObject
 	m.uri = ""
@@ -251,6 +262,7 @@ func (m *Message) SetUriObject(uriObject *url.URL) {
 
 // Meta returns the metadata.
 // When the package is reset, it will be reset.
+// NOTE: urlencoded string max len ≤ 65535!
 func (m *Message) Meta() *utils.Args {
 	return m.meta
 }
@@ -281,7 +293,7 @@ func (m *Message) SetNewBody(newBodyFunc NewBodyFunc) {
 }
 
 // MarshalBody returns the encoding of body.
-// Note: when the body is a stream of bytes, no marshalling is done.
+// NOTE: when the body is a stream of bytes, no marshalling is done.
 func (m *Message) MarshalBody() ([]byte, error) {
 	switch body := m.body.(type) {
 	default:
@@ -303,7 +315,7 @@ func (m *Message) MarshalBody() ([]byte, error) {
 }
 
 // UnmarshalBody unmarshals the encoded data to the body.
-// Note:
+// NOTE:
 //  seq, mtype, uri must be setted already;
 //  if body=nil, try to use newBodyFunc to create a new one;
 //  when the body is a stream of bytes, no unmarshalling is done.
@@ -333,7 +345,7 @@ func (m *Message) UnmarshalBody(bodyBytes []byte) error {
 }
 
 // XferPipe returns transfer filter pipe, handlers from outer-most to inner-most.
-// Note: the length can not be bigger than 255!
+// NOTE: the length can not be bigger than 255!
 func (m *Message) XferPipe() *xfer.XferPipe {
 	return m.xferPipe
 }
@@ -401,6 +413,7 @@ func WithContext(ctx context.Context) MessageSetting {
 }
 
 // WithSeq sets the message sequence.
+// NOTE: max len ≤ 65535!
 func WithSeq(seq string) MessageSetting {
 	return func(m *Message) {
 		m.seq = seq
@@ -415,6 +428,7 @@ func WithMtype(mtype byte) MessageSetting {
 }
 
 // WithUri sets the message URI string.
+// NOTE: max len ≤ 65535!
 func WithUri(uri string) MessageSetting {
 	return func(m *Message) {
 		m.SetUri(uri)
@@ -422,6 +436,7 @@ func WithUri(uri string) MessageSetting {
 }
 
 // WithUriObject sets the message URI object.
+// NOTE: urlencoded URI max len ≤ 65535!
 func WithUriObject(uriObject *url.URL) MessageSetting {
 	return func(m *Message) {
 		m.SetUriObject(uriObject)
@@ -429,6 +444,7 @@ func WithUriObject(uriObject *url.URL) MessageSetting {
 }
 
 // WithQuery sets the message URI query parameter.
+// NOTE: urlencoded URI max len ≤ 65535!
 func WithQuery(key, value string) MessageSetting {
 	return func(m *Message) {
 		u := m.UriObject()
@@ -440,6 +456,7 @@ func WithQuery(key, value string) MessageSetting {
 
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
+// NOTE: urlencoded string max len ≤ 65535!
 func WithAddMeta(key, value string) MessageSetting {
 	return func(m *Message) {
 		m.meta.Add(key, value)
@@ -447,6 +464,7 @@ func WithAddMeta(key, value string) MessageSetting {
 }
 
 // WithSetMeta sets 'key=value' metadata argument.
+// NOTE: urlencoded string max len ≤ 65535!
 func WithSetMeta(key, value string) MessageSetting {
 	return func(m *Message) {
 		m.meta.Set(key, value)
