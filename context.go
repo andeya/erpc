@@ -583,10 +583,11 @@ func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
 		rerr.SetToMeta(c.output.Meta())
 		c.output.SetBody(nil)
 		c.output.SetBodyCodec(codec.NilCodecId)
-		_, rerr = c.sess.write(c.output)
-		return rerr
 	}
+	uri := c.output.Uri()
+	c.output.SetUri("")
 	_, rerr = c.sess.write(c.output)
+	c.output.SetUri(uri)
 	return rerr
 }
 
@@ -600,7 +601,7 @@ func (c *handlerCtx) bindReply(header Header) interface{} {
 
 	// unlock: handleReply
 	c.callCmd.mu.Lock()
-
+	c.input.SetUri(c.callCmd.output.Uri())
 	c.swap = c.callCmd.swap
 	c.callCmd.inputBodyCodec = c.GetBodyCodec()
 	// if c.callCmd.inputMeta!=nil, means the callCmd is replyed.
