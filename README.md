@@ -213,46 +213,12 @@ func (p *push) Status(arg *string) *tp.Rerror {
 - **Push-Handle:** Handle the pushing of peer
 - **Router:** Router that route the response handler by request information(such as a URI)
 
-### Message
+### Data Message
 
-The contents of every one message:
+Abstracts the data message(Message object) of the application layer and is compatible with HTTP message:
 
-```go
-// in .../teleport/socket package
+![tp_data_message](https://github.com/henrylee2cn/teleport/raw/v4/doc/tp_data_message.png)
 
-// Message a socket message data.
-type Message struct {
-    // Has unexported fields.
-}
-
-func GetMessage(settings ...MessageSetting) *Message
-func NewMessage(settings ...MessageSetting) *Message
-func (m *Message) Body() interface{}
-func (m *Message) BodyCodec() byte
-func (m *Message) Context() context.Context
-func (m *Message) MarshalBody() ([]byte, error)
-func (m *Message) Meta() *utils.Args
-func (m *Message) Mtype() byte
-func (m *Message) Reset(settings ...MessageSetting)
-func (m *Message) Seq() string
-func (m *Message) SetBody(body interface{})
-func (m *Message) SetBodyCodec(bodyCodec byte)
-func (m *Message) SetNewBody(newBodyFunc NewBodyFunc)
-func (m *Message) SetMtype(mtype byte)
-func (m *Message) SetSeq(seq string)
-func (m *Message) SetSize(size uint32) error
-func (m *Message) SetUri(uri string)
-func (m *Message) SetUriObject(uriObject *url.URL)
-func (m *Message) Size() uint32
-func (m *Message) String() string
-func (m *Message) UnmarshalBody(bodyBytes []byte) error
-func (m *Message) Uri() string
-func (m *Message) UriObject() *url.URL
-func (m *Message) XferPipe() *xfer.XferPipe
-
-// NewBodyFunc creates a new body by header.
-type NewBodyFunc func(Header) interface{}
-```
 
 ### Codec
 
@@ -271,6 +237,61 @@ type Codec interface {
     Unmarshal(data []byte, v interface{}) error
 }
 ```
+
+### Protocol
+
+You can customize your own communication protocol by implementing the interface:
+
+```go
+type (
+    // Proto pack/unpack protocol scheme of socket message.
+    Proto interface {
+        // Version returns the protocol's id and name.
+        Version() (byte, string)
+        // Pack writes the Message into the connection.
+        // Note: Make sure to write only once or there will be package contamination!
+        Pack(*Message) error
+        // Unpack reads bytes from the connection to the Message.
+        // Note: Concurrent unsafe!
+        Unpack(*Message) error
+    }
+    ProtoFunc func(io.ReadWriter) Proto
+)
+```
+
+Next, you can specify the communication protocol in the following ways:
+
+```go
+func SetDefaultProtoFunc(ProtoFunc)
+type Peer interface {
+    ...
+    ServeConn(conn net.Conn, protoFunc ...ProtoFunc) Session
+    DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
+    Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
+    Listen(protoFunc ...ProtoFunc) error
+    ...
+}
+```
+
+Default protocol `RawProto`(Big Endian):
+
+```sh
+{4 bytes message length}
+{1 byte protocol version}
+{1 byte transfer pipe length}
+{transfer pipe IDs}
+# The following is handled data by transfer pipe
+{4 bytes sequence length}
+{sequence}
+{1 byte message type} // e.g. CALL:1; REPLY:2; PUSH:3
+{4 bytes URI length}
+{URI}
+{4 bytes metadata length}
+{metadata(urlencoded)}
+{1 byte body codec id}
+{body}
+```
+
 
 ### XferPipe
 
@@ -327,60 +348,6 @@ type (
     }
     ...
 )
-```
-
-### Protocol
-
-You can customize your own communication protocol by implementing the interface:
-
-```go
-type (
-    // Proto pack/unpack protocol scheme of socket message.
-    Proto interface {
-        // Version returns the protocol's id and name.
-        Version() (byte, string)
-        // Pack writes the Message into the connection.
-        // Note: Make sure to write only once or there will be package contamination!
-        Pack(*Message) error
-        // Unpack reads bytes from the connection to the Message.
-        // Note: Concurrent unsafe!
-        Unpack(*Message) error
-    }
-    ProtoFunc func(io.ReadWriter) Proto
-)
-```
-
-Next, you can specify the communication protocol in the following ways:
-
-```go
-func SetDefaultProtoFunc(ProtoFunc)
-type Peer interface {
-    ...
-    ServeConn(conn net.Conn, protoFunc ...ProtoFunc) Session
-    DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
-    Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
-    Listen(protoFunc ...ProtoFunc) error
-    ...
-}
-```
-
-Default protocol `RawProto`(Big Endian):
-
-```sh
-{4 bytes message length}
-{1 byte protocol version}
-{1 byte transfer pipe length}
-{transfer pipe IDs}
-# The following is handled data by transfer pipe
-{4 bytes sequence length}
-{sequence}
-{1 byte message type} // e.g. CALL:1; REPLY:2; PUSH:3
-{4 bytes URI length}
-{URI}
-{4 bytes metadata length}
-{metadata(urlencoded)}
-{1 byte body codec id}
-{body}
 ```
 
 
