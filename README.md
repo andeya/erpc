@@ -215,7 +215,7 @@ func (p *push) Status(arg *string) *tp.Rerror {
 
 ### Data Message
 
-Abstracts the data message(Message object) of the application layer and is compatible with HTTP message:
+Abstracts the data message(Message Object) of the application layer and is compatible with HTTP message:
 
 ![tp_data_message](https://github.com/henrylee2cn/teleport/raw/v4/doc/tp_data_message.png)
 
