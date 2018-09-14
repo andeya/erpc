@@ -2,7 +2,6 @@
 package pbSubProto
 
 import (
-	"bufio"
 	"io"
 	"io/ioutil"
 	"sync"
@@ -14,30 +13,17 @@ import (
 
 // NewPbSubProtoFunc is creation function of PROTOBUF socket protocol.
 var NewPbSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
-	var (
-		readBufioSize             int
-		readBufferSize, isDefault = tp.SocketReadBuffer()
-	)
-	if isDefault {
-		readBufioSize = 1024 * 4
-	} else if readBufferSize == 0 {
-		readBufioSize = 1024 * 35
-	} else {
-		readBufioSize = readBufferSize / 2
-	}
 	return &pbSubProto{
 		id:   'p',
 		name: "protobuf",
-		r:    bufio.NewReaderSize(rw, readBufioSize),
-		w:    rw,
+		rw:   rw,
 	}
 }
 
 type pbSubProto struct {
 	id   byte
 	name string
-	r    *bufio.Reader
-	w    io.Writer
+	rw   io.ReadWriter
 	rMu  sync.Mutex
 }
 
@@ -75,7 +61,7 @@ func (psp *pbSubProto) Pack(m *tp.Message) error {
 
 	m.SetSize(uint32(len(b)))
 
-	_, err = psp.w.Write(b)
+	_, err = psp.rw.Write(b)
 	return err
 }
 
@@ -84,7 +70,7 @@ func (psp *pbSubProto) Pack(m *tp.Message) error {
 func (psp *pbSubProto) Unpack(m *tp.Message) error {
 	psp.rMu.Lock()
 	defer psp.rMu.Unlock()
-	b, err := ioutil.ReadAll(psp.r)
+	b, err := ioutil.ReadAll(psp.rw)
 	if err != nil {
 		return err
 	}

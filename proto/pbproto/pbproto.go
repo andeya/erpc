@@ -17,7 +17,6 @@
 package pbproto
 
 import (
-	"bufio"
 	"encoding/binary"
 	"io"
 	"sync"
@@ -30,30 +29,17 @@ import (
 
 // NewPbProtoFunc is creation function of PROTOBUF socket protocol.
 var NewPbProtoFunc = func(rw io.ReadWriter) tp.Proto {
-	var (
-		readBufioSize             int
-		readBufferSize, isDefault = tp.SocketReadBuffer()
-	)
-	if isDefault {
-		readBufioSize = 1024 * 4
-	} else if readBufferSize == 0 {
-		readBufioSize = 1024 * 35
-	} else {
-		readBufioSize = readBufferSize / 2
-	}
 	return &pbproto{
 		id:   'p',
 		name: "protobuf",
-		r:    bufio.NewReaderSize(rw, readBufioSize),
-		w:    rw,
+		rw:   rw,
 	}
 }
 
 type pbproto struct {
 	id   byte
 	name string
-	r    *bufio.Reader
-	w    io.Writer
+	rw   io.ReadWriter
 	rMu  sync.Mutex
 }
 
@@ -99,7 +85,7 @@ func (pp *pbproto) Pack(m *tp.Message) error {
 	all[4] = byte(xferPipeLen)
 	copy(all[4+1:], m.XferPipe().Ids())
 	copy(all[4+1+xferPipeLen:], b)
-	_, err = pp.w.Write(all)
+	_, err = pp.rw.Write(all)
 	return err
 }
 
@@ -109,7 +95,7 @@ func (pp *pbproto) Unpack(m *tp.Message) error {
 	pp.rMu.Lock()
 	defer pp.rMu.Unlock()
 	var size uint32
-	err := binary.Read(pp.r, binary.BigEndian, &size)
+	err := binary.Read(pp.rw, binary.BigEndian, &size)
 	if err != nil {
 		return err
 	}
@@ -123,7 +109,7 @@ func (pp *pbproto) Unpack(m *tp.Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 	bb.ChangeLen(int(m.Size()))
-	_, err = io.ReadFull(pp.r, bb.B)
+	_, err = io.ReadFull(pp.rw, bb.B)
 	if err != nil {
 		return err
 	}

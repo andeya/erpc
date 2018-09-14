@@ -2,7 +2,6 @@
 package jsonSubProto
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -17,30 +16,17 @@ import (
 
 // NewJsonSubProtoFunc is creation function of JSON socket protocol.
 var NewJsonSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
-	var (
-		readBufioSize             int
-		readBufferSize, isDefault = tp.SocketReadBuffer()
-	)
-	if isDefault {
-		readBufioSize = 1024 * 4
-	} else if readBufferSize == 0 {
-		readBufioSize = 1024 * 35
-	} else {
-		readBufioSize = readBufferSize / 2
-	}
 	return &jsonSubProto{
 		id:   'j',
 		name: "json",
-		r:    bufio.NewReaderSize(rw, readBufioSize),
-		w:    rw,
+		rw:   rw,
 	}
 }
 
 type jsonSubProto struct {
 	id   byte
 	name string
-	r    *bufio.Reader
-	w    io.Writer
+	rw   io.ReadWriter
 	rMu  sync.Mutex
 }
 
@@ -89,7 +75,7 @@ func (j *jsonSubProto) Pack(m *tp.Message) error {
 
 	m.SetSize(uint32(len(b)))
 
-	_, err = j.w.Write(b)
+	_, err = j.rw.Write(b)
 	return err
 }
 
@@ -98,7 +84,7 @@ func (j *jsonSubProto) Pack(m *tp.Message) error {
 func (j *jsonSubProto) Unpack(m *tp.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()
-	b, err := ioutil.ReadAll(j.r)
+	b, err := ioutil.ReadAll(j.rw)
 	if err != nil {
 		return err
 	}

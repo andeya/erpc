@@ -17,6 +17,7 @@
 package socket
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net"
@@ -97,15 +98,21 @@ type (
 		// Reset reset net.Conn and ProtoFunc.
 		Reset(netConn net.Conn, protoFunc ...ProtoFunc)
 	}
+	// RawConn raw conn
+	RawConn interface {
+		// Raw returns the raw net.Conn
+		Raw() net.Conn
+	}
 	socket struct {
 		net.Conn
-		protocol Proto
-		id       string
-		idMutex  sync.RWMutex
-		swap     goutil.Map
-		mu       sync.RWMutex
-		curState int32
-		fromPool bool
+		readerWithBuffer *bufio.Reader
+		protocol         Proto
+		id               string
+		idMutex          sync.RWMutex
+		swap             goutil.Map
+		mu               sync.RWMutex
+		curState         int32
+		fromPool         bool
 	}
 )
 
@@ -114,7 +121,10 @@ const (
 	activeClose int32 = 1
 )
 
-var _ net.Conn = Socket(nil)
+var (
+	_ net.Conn = Socket(nil)
+	_ RawConn  = (*socket)(nil)
+)
 
 // ErrProactivelyCloseSocket proactively close the socket error.
 var ErrProactivelyCloseSocket = errors.New("socket is closed proactively")
@@ -134,6 +144,8 @@ var socketPool = sync.Pool{
 	},
 }
 
+var readerSize = 1024
+
 // NewSocket wraps a net.Conn as a Socket.
 func NewSocket(c net.Conn, protoFunc ...ProtoFunc) Socket {
 	return newSocket(c, protoFunc)
@@ -141,11 +153,24 @@ func NewSocket(c net.Conn, protoFunc ...ProtoFunc) Socket {
 
 func newSocket(c net.Conn, protoFuncs []ProtoFunc) *socket {
 	var s = &socket{
-		protocol: getProto(protoFuncs, c),
-		Conn:     c,
+		Conn:             c,
+		readerWithBuffer: bufio.NewReaderSize(c, readerSize),
 	}
+	s.protocol = getProto(protoFuncs, s)
 	s.optimize()
 	return s
+}
+
+// Raw returns the raw net.Conn
+func (s *socket) Raw() net.Conn {
+	return s.Conn
+}
+
+// Read reads data from the connection.
+// Read can be made to time out and return an Error with Timeout() == true
+// after a fixed time limit; see SetDeadline and SetReadDeadline.
+func (s *socket) Read(b []byte) (int, error) {
+	return s.readerWithBuffer.Read(b)
 }
 
 // ControlFD invokes f on the underlying connection's file
@@ -234,8 +259,10 @@ func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	}
 	s.mu.Lock()
 	s.Conn = netConn
+	s.readerWithBuffer.Discard(s.readerWithBuffer.Buffered())
+	s.readerWithBuffer.Reset(netConn)
+	s.protocol = getProto(protoFunc, s)
 	s.SetId("")
-	s.protocol = getProto(protoFunc, netConn)
 	atomic.StoreInt32(&s.curState, normal)
 	s.optimize()
 	s.mu.Unlock()

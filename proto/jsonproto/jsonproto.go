@@ -17,7 +17,6 @@
 package jsonproto
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -35,30 +34,17 @@ import (
 //  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
 //  Message data demo: `830{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
 var NewJsonProtoFunc = func(rw io.ReadWriter) tp.Proto {
-	var (
-		readBufioSize             int
-		readBufferSize, isDefault = tp.SocketReadBuffer()
-	)
-	if isDefault {
-		readBufioSize = 1024 * 4
-	} else if readBufferSize == 0 {
-		readBufioSize = 1024 * 35
-	} else {
-		readBufioSize = readBufferSize / 2
-	}
 	return &jsonproto{
 		id:   'j',
 		name: "json",
-		r:    bufio.NewReaderSize(rw, readBufioSize),
-		w:    rw,
+		rw:   rw,
 	}
 }
 
 type jsonproto struct {
 	id   byte
 	name string
-	r    *bufio.Reader
-	w    io.Writer
+	rw   io.ReadWriter
 	rMu  sync.Mutex
 }
 
@@ -104,8 +90,7 @@ func (j *jsonproto) Pack(m *tp.Message) error {
 	all[4] = byte(xferPipeLen)
 	copy(all[4+1:], m.XferPipe().Ids())
 	copy(all[4+1+xferPipeLen:], b)
-	_, err = j.w.Write(all)
-
+	_, err = j.rw.Write(all)
 	return err
 }
 
@@ -115,7 +100,7 @@ func (j *jsonproto) Unpack(m *tp.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()
 	var size uint32
-	err := binary.Read(j.r, binary.BigEndian, &size)
+	err := binary.Read(j.rw, binary.BigEndian, &size)
 	if err != nil {
 		return err
 	}
@@ -128,7 +113,7 @@ func (j *jsonproto) Unpack(m *tp.Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 	bb.ChangeLen(int(m.Size()))
-	_, err = io.ReadFull(j.r, bb.B)
+	_, err = io.ReadFull(j.rw, bb.B)
 	if err != nil {
 		return err
 	}
