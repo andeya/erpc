@@ -221,25 +221,6 @@ func (p *push) Status(arg *string) *tp.Rerror {
 ![tp_data_message](https://github.com/henrylee2cn/teleport/raw/v4/doc/tp_data_message.png)
 
 
-### 编解码器
-
-数据包中Body内容的编解码器。
-
-```go
-type Codec interface {
-    // Id returns codec id.
-    Id() byte
-    // Name returns codec name.
-    Name() string
-    // Marshal returns the encoding of v.
-    Marshal(v interface{}) ([]byte, error)
-    // Unmarshal parses the encoded data and stores the result
-    // in the value pointed to by v.
-    Unmarshal(data []byte, v interface{}) error
-}
-```
-
-
 ### 通信协议
 
 支持通过接口定制自己的通信协议：
@@ -332,6 +313,26 @@ func (x *XferPipe) OnUnpack(data []byte) ([]byte, error)
 func (x *XferPipe) Range(callback func(idx int, filter XferFilter) bool)
 func (x *XferPipe) Reset()
 ```
+
+
+### 编解码器
+
+数据包中Body内容的编解码器。
+
+```go
+type Codec interface {
+    // Id returns codec id.
+    Id() byte
+    // Name returns codec name.
+    Name() string
+    // Marshal returns the encoding of v.
+    Marshal(v interface{}) ([]byte, error)
+    // Unmarshal parses the encoded data and stores the result
+    // in the value pointed to by v.
+    Unmarshal(data []byte, v interface{}) error
+}
+```
+
 
 ### 插件
 

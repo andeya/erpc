@@ -220,24 +220,6 @@ Abstracts the data message(Message Object) of the application layer and is compa
 ![tp_data_message](https://github.com/henrylee2cn/teleport/raw/v4/doc/tp_data_message.png)
 
 
-### Codec
-
-The body's codec set.
-
-```go
-type Codec interface {
-    // Id returns codec id.
-    Id() byte
-    // Name returns codec name.
-    Name() string
-    // Marshal returns the encoding of v.
-    Marshal(v interface{}) ([]byte, error)
-    // Unmarshal parses the encoded data and stores the result
-    // in the value pointed to by v.
-    Unmarshal(data []byte, v interface{}) error
-}
-```
-
 ### Protocol
 
 You can customize your own communication protocol by implementing the interface:
@@ -330,6 +312,26 @@ func (x *XferPipe) OnUnpack(data []byte) ([]byte, error)
 func (x *XferPipe) Range(callback func(idx int, filter XferFilter) bool)
 func (x *XferPipe) Reset()
 ```
+
+
+### Codec
+
+The body's codec set.
+
+```go
+type Codec interface {
+    // Id returns codec id.
+    Id() byte
+    // Name returns codec name.
+    Name() string
+    // Marshal returns the encoding of v.
+    Marshal(v interface{}) ([]byte, error)
+    // Unmarshal parses the encoded data and stores the result
+    // in the value pointed to by v.
+    Unmarshal(data []byte, v interface{}) error
+}
+```
+
 
 ### Plugin
 
