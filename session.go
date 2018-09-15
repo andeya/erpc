@@ -137,7 +137,7 @@ type session struct {
 	getCallHandler, getPushHandler func(uriPath string) (*Handler, bool)
 	timeSince                      func(time.Time) time.Duration
 	timeNow                        func() time.Time
-	seq                            uint64
+	seqMaker                       *utils.CountString
 	seqLock                        sync.Mutex
 	callCmdMap                     goutil.Map
 	protoFuncs                     []ProtoFunc
@@ -173,6 +173,7 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 		callCmdMap:     goutil.AtomicMap(),
 		sessionAge:     peer.defaultSessionAge,
 		contextAge:     peer.defaultContextAge,
+		seqMaker:       utils.NewCountString(6),
 	}
 	return s
 }
@@ -326,8 +327,8 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...Me
 	output := socket.GetMessage(setting...)
 	if len(output.Seq()) == 0 {
 		s.seqLock.Lock()
-		output.SetSeq(strconv.FormatUint(s.seq, 10))
-		s.seq++
+		output.SetSeq(s.seqMaker.String())
+		s.seqMaker.Incr()
 		s.seqLock.Unlock()
 	}
 	if output.BodyCodec() == codec.NilCodecId {
@@ -417,9 +418,9 @@ func (s *session) AsyncCall(
 	seq := output.Seq()
 	if len(seq) == 0 {
 		s.seqLock.Lock()
-		seq = strconv.FormatUint(s.seq, 10)
+		seq = s.seqMaker.String()
+		s.seqMaker.Incr()
 		output.SetSeq(seq)
-		s.seq++
 		s.seqLock.Unlock()
 	}
 
@@ -511,8 +512,8 @@ func (s *session) Push(uri string, arg interface{}, setting ...MessageSetting) *
 
 	if len(output.Seq()) == 0 {
 		s.seqLock.Lock()
-		output.SetSeq(strconv.FormatUint(s.seq, 10))
-		s.seq++
+		output.SetSeq(s.seqMaker.String())
+		s.seqMaker.Incr()
 		s.seqLock.Unlock()
 	}
 
