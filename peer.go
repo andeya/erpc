@@ -235,7 +235,14 @@ func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...ProtoF
 }
 
 func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) (*session, *Rerror) {
-	var conn, dialErr = dialFunc()
+	var conn net.Conn
+	var dialErr error
+	for i := p.redialTimes + 1; i > 0; i-- {
+		conn, dialErr = dialFunc()
+		if dialErr == nil {
+			break
+		}
+	}
 	if dialErr != nil {
 		rerr := rerrDialFailed.Copy().SetReason(dialErr.Error())
 		return nil, rerr
