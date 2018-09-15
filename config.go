@@ -91,6 +91,9 @@ func (p *PeerConfig) check() error {
 	if len(p.DefaultBodyCodec) == 0 {
 		p.DefaultBodyCodec = "json"
 	}
+	if p.RedialTimes < 0 {
+		p.RedialTimes = 0
+	}
 	return nil
 }
 
