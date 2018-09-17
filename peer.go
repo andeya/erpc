@@ -330,7 +330,7 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
 		sess.Close()
 		return nil, rerr.ToError()
 	}
-	Tracef("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
+	Infof("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
 	p.sessHub.Set(sess)
 	AnywayGo(sess.startReadAndHandle)
 	return sess, nil
@@ -399,7 +399,7 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 				sess.Close()
 				return
 			}
-			Tracef("accept ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
+			Infof("accept ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
 			p.sessHub.Set(sess)
 			sess.startReadAndHandle()
 		})
