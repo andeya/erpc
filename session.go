@@ -895,9 +895,13 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *M
 		return
 	}
 	var addr = s.RemoteAddr().String()
-	if realIp != "" && realIp != addr {
-		addr += "(real: " + realIp + ")"
+	if realIp != "" && realIp == addr {
+		realIp = "same"
 	}
+	if realIp == "" {
+		realIp = "-"
+	}
+	addr += "(real:" + realIp + ")"
 	var (
 		costTimeStr string
 		printFunc   = Infof
@@ -910,13 +914,13 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *M
 			if GetLoggerLevel() < INFO {
 				return
 			}
-			costTimeStr = costTime.String()
+			costTimeStr = costTime.String() + "(fast)"
 		}
 	} else {
 		if GetLoggerLevel() < INFO {
 			return
 		}
-		costTimeStr = "-"
+		costTimeStr = "(-)"
 	}
 
 	switch logType {
