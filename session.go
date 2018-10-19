@@ -891,9 +891,13 @@ const (
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
 	var addr = s.RemoteAddr().String()
-	if realIp != "" && realIp != addr {
-		addr += "(real: " + realIp + ")"
+	if realIp != "" && realIp == addr {
+		realIp = "same"
 	}
+	if realIp == "" {
+		realIp = "-"
+	}
+	addr += "(real:" + realIp + ")"
 	var (
 		costTimeStr string
 		printFunc   = Infof
@@ -903,9 +907,11 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 		if costTime >= s.peer.slowCometDuration {
 			costTimeStr += "(slow)"
 			printFunc = Warnf
+		} else {
+			costTimeStr += "(fast)"
 		}
 	} else {
-		costTimeStr = "-"
+		costTimeStr = "(-)"
 	}
 
 	switch logType {
