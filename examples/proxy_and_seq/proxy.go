@@ -7,6 +7,8 @@ import (
 	"github.com/henrylee2cn/teleport/plugin/proxy"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	srv := tp.NewPeer(
 		tp.PeerConfig{

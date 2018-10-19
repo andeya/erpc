@@ -5,6 +5,8 @@ import (
 	"github.com/henrylee2cn/teleport/plugin/auth"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	cli := tp.NewPeer(tp.PeerConfig{}, auth.LaunchAuth(generateAuthInfo))
 	defer cli.Close()

@@ -7,6 +7,8 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	// graceful
 	go tp.GraceSignal()

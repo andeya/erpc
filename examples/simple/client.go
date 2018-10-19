@@ -6,6 +6,8 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	// log level
 	tp.SetLoggerLevel("ERROR")

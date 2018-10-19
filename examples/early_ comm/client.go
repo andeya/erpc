@@ -4,6 +4,8 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	cli := tp.NewPeer(
 		tp.PeerConfig{
