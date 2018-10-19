@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/henrylee2cn/teleport/xfer/gzip"
+
 	tp "github.com/henrylee2cn/teleport"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
+	gzip.Reg('g', "gizp", 5)
+
 	go tp.GraceSignal()
 	// tp.SetReadLimit(10)
 	tp.SetShutdown(time.Second*20, nil, nil)
@@ -23,6 +27,7 @@ func main() {
 	group.RouteCall(new(Home))
 	peer.SetUnknownCall(UnknownCallHandle)
 	peer.ListenAndServe()
+	select {}
 }
 
 // Home controller

@@ -5,11 +5,14 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/xfer/gzip"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
+	gzip.Reg('g', "gizp", 5)
+
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var peer = tp.NewPeer(tp.PeerConfig{
