@@ -883,10 +883,10 @@ const (
 )
 
 const (
-	logFormatPushLaunch = "PUSH-> %s %s %s %q SEND(%s)"
-	logFormatPushHandle = "PUSH<- %s %s %s %q RECV(%s)"
-	logFormatPullLaunch = "PULL-> %s %s %s %q SEND(%s) RECV(%s)"
-	logFormatPullHandle = "PULL<- %s %s %s %q RECV(%s) SEND(%s)"
+	logFormatPushLaunch = "PUSH-> %s %s %s %s %q SEND(%s)"
+	logFormatPushHandle = "PUSH<- %s %s %s %s %q RECV(%s)"
+	logFormatPullLaunch = "PULL-> %s %s %s %s %q SEND(%s) RECV(%s)"
+	logFormatPullHandle = "PULL<- %s %s %s %s %q RECV(%s) SEND(%s)"
 )
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
@@ -901,6 +901,7 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 	var (
 		costTimeStr string
 		printFunc   = Infof
+		health      = "ok"
 	)
 	if s.peer.countTime {
 		costTimeStr = costTime.String()
@@ -913,16 +914,19 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *s
 	} else {
 		costTimeStr = "(-)"
 	}
+	if !s.Health() {
+		health = "bad"
+	}
 
 	switch logType {
 	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatPushLaunch, health, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail))
 	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatPushHandle, health, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail))
 	case typePullLaunch:
-		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail), packetLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatPullLaunch, health, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail), packetLogBytes(input, s.peer.printDetail))
 	case typePullHandle:
-		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail), packetLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatPullHandle, health, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail), packetLogBytes(output, s.peer.printDetail))
 	}
 }
 
