@@ -6,6 +6,8 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)

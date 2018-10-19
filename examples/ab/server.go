@@ -10,6 +10,8 @@ import (
 	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	// go func() {
 	// 	http.ListenAndServe("0.0.0.0:9091", nil)

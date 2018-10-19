@@ -5,6 +5,8 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	go tp.GraceSignal()
 	cfg := tp.PeerConfig{

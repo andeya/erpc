@@ -8,6 +8,8 @@ import (
 	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	socket.SetNoDelay(false)
 	socket.SetMessageSizeLimit(512)

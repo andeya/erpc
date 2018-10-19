@@ -8,6 +8,8 @@ import (
 	"github.com/henrylee2cn/teleport/socket"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
 	tp.SetLoggerLevel("ERROR")
 
