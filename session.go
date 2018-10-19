@@ -884,10 +884,10 @@ const (
 )
 
 const (
-	logFormatPushLaunch = "PUSH-> %s %s %s %q SEND(%s)"
-	logFormatPushHandle = "PUSH<- %s %s %s %q RECV(%s)"
-	logFormatCallLaunch = "CALL-> %s %s %s %q SEND(%s) RECV(%s)"
-	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
+	logFormatPushLaunch = "PUSH-> %s %s %s %s %q SEND(%s)"
+	logFormatPushHandle = "PUSH<- %s %s %s %s %q RECV(%s)"
+	logFormatCallLaunch = "CALL-> %s %s %s %s %q SEND(%s) RECV(%s)"
+	logFormatCallHandle = "CALL<- %s %s %s %s %q RECV(%s) SEND(%s)"
 )
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
@@ -905,6 +905,7 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *M
 	var (
 		costTimeStr string
 		printFunc   = Infof
+		health      = "ok"
 	)
 	if s.peer.countTime {
 		if costTime >= s.peer.slowCometDuration {
@@ -922,16 +923,19 @@ func (s *session) runlog(realIp string, costTime time.Duration, input, output *M
 		}
 		costTimeStr = "(-)"
 	}
+	if !s.Health() {
+		health = "bad"
+	}
 
 	switch logType {
 	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatPushLaunch, health, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail))
 	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatPushHandle, health, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail))
 	case typeCallLaunch:
-		printFunc(logFormatCallLaunch, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail), messageLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatCallLaunch, health, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail), messageLogBytes(input, s.peer.printDetail))
 	case typeCallHandle:
-		printFunc(logFormatCallHandle, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail), messageLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatCallHandle, health, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail), messageLogBytes(output, s.peer.printDetail))
 	}
 }
 
