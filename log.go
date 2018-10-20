@@ -15,125 +15,58 @@
 package tp
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"strings"
 	"sync"
+	"time"
 
-	"github.com/henrylee2cn/go-logging"
-	"github.com/henrylee2cn/go-logging/color"
-	"github.com/henrylee2cn/goutil/graceful"
+	"github.com/henrylee2cn/goutil"
+	"github.com/henrylee2cn/teleport/utils"
+	"github.com/henrylee2cn/teleport/utils/color"
 )
 
-// Logger interface
-type Logger interface {
-	// Level returns the logger's level.
-	Level() Level
-	// SetLevel sets the logger's level.
-	SetLevel(level Level)
-	// Printf formats according to a format specifier and writes to standard output.
-	// It returns the number of bytes written and any write error encountered.
-	Printf(format string, a ...interface{})
-	// Fatalf is equivalent to Criticalf followed by a call to os.Exit(1).
-	Fatalf(format string, a ...interface{})
-	// Panicf is equivalent to Criticalf followed by a call to panic().
-	Panicf(format string, a ...interface{})
-	// Criticalf logs a message using CRITICAL as log level.
-	Criticalf(format string, a ...interface{})
-	// Errorf logs a message using ERROR as log level.
-	Errorf(format string, a ...interface{})
-	// Warnf logs a message using WARNING as log level.
-	Warnf(format string, a ...interface{})
-	// Noticef logs a message using NOTICE as log level.
-	Noticef(format string, a ...interface{})
-	// Infof logs a message using INFO as log level.
-	Infof(format string, a ...interface{})
-	// Debugf logs a message using DEBUG as log level.
-	Debugf(format string, a ...interface{})
-	// Tracef logs a message using TRACE as log level.
-	Tracef(format string, a ...interface{})
-}
-
-var (
-	// global logger
-	globalLogger = func() Logger {
-		logger := newDefaultlogger(TRACE)
-		graceful.SetLog(logger)
-		return logger
-	}()
+type (
+	// LoggerOutputter writes log.
+	LoggerOutputter interface {
+		// Output writes log, can append time, line and so on information.
+		Output(calldepth int, msgBytes []byte, loggerLevel LoggerLevel)
+		// Flush writes any buffered log to the underlying io.Writer.
+		Flush() error
+	}
+	// LoggerLevel defines all available log levels for log messages.
+	LoggerLevel int
+	// Logger logger interface
+	Logger interface {
+		// Printf formats according to a format specifier and writes to standard output.
+		// It returns the number of bytes written and any write error encountered.
+		Printf(format string, a ...interface{})
+		// Fatalf is equivalent to Criticalf followed by a call to os.Exit(1).
+		Fatalf(format string, a ...interface{})
+		// Panicf is equivalent to Criticalf followed by a call to panic().
+		Panicf(format string, a ...interface{})
+		// Criticalf logs a message using CRITICAL as log level.
+		Criticalf(format string, a ...interface{})
+		// Errorf logs a message using ERROR as log level.
+		Errorf(format string, a ...interface{})
+		// Warnf logs a message using WARNING as log level.
+		Warnf(format string, a ...interface{})
+		// Noticef logs a message using NOTICE as log level.
+		Noticef(format string, a ...interface{})
+		// Infof logs a message using INFO as log level.
+		Infof(format string, a ...interface{})
+		// Debugf logs a message using DEBUG as log level.
+		Debugf(format string, a ...interface{})
+		// Tracef logs a message using TRACE as log level.
+		Tracef(format string, a ...interface{})
+	}
 )
 
-func newDefaultlogger(level Level) Logger {
-	l := &defaultLogger{
-		level: level,
-	}
-	l.newSet()
-	return l
-}
-
-type defaultLogger struct {
-	*logging.Logger
-	level Level
-	mu    sync.RWMutex
-}
-
-func (l *defaultLogger) newSet() {
-	var consoleLogBackend = &logging.LogBackend{
-		Logger:    log.New(color.NewColorableStdout(), "", 0),
-		ErrLogger: log.New(color.NewColorableStderr(), "", 0),
-		Color:     true,
-	}
-	consoleFormat := logging.MustStringFormatter("[%{time:2006/01/02 15:04:05.000}] [%{color:bold}%{level:.4s}%{color:reset}] %{message} <%{longfile}>")
-	consoleBackendLevel := logging.AddModuleLevel(logging.NewBackendFormatter(consoleLogBackend, consoleFormat))
-	level, err := logging.LogLevel(levelMap[l.level])
-	if err != nil {
-		panic(err)
-	}
-	consoleBackendLevel.SetLevel(level, "")
-	l.Logger = logging.NewLogger("teleport")
-	l.Logger.SetBackend(consoleBackendLevel)
-	l.Logger.ExtraCalldepth++
-}
-
-// Level returns the logger's level.
-// Note: Concurrent is not safe!
-func (l *defaultLogger) Level() Level {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-	return l.level
-}
-
-// SetLevel sets the logger's level.
-// Note:
-// Concurrent is not safe!
-// the teleport default logger's level list: OFF PRINT CRITICAL ERROR WARNING NOTICE INFO DEBUG TRACE
-func (l *defaultLogger) SetLevel(level Level) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.level = level
-	l.newSet()
-}
-
-// GetLogger gets global logger.
-func GetLogger() Logger {
-	return globalLogger
-}
-
-// SetLogger sets global logger.
-// Note: Concurrent is not safe!
-func SetLogger(logger Logger) {
-	if logger == nil {
-		return
-	}
-	globalLogger = logger
-	graceful.SetLog(logger)
-}
-
-// Level defines all available log levels for log messages.
-type Level int
-
-// Log levels.
+// Logger levels.
 const (
-	OFF Level = iota
+	OFF LoggerLevel = iota
 	PRINT
 	CRITICAL
 	ERROR
@@ -144,7 +77,7 @@ const (
 	TRACE
 )
 
-var levelMap = map[Level]string{
+var loggerLevelMap = map[LoggerLevel]string{
 	OFF:      "OFF",
 	PRINT:    "PRINT",
 	CRITICAL: "CRITICAL",
@@ -156,24 +89,100 @@ var levelMap = map[Level]string{
 	TRACE:    "TRACE",
 }
 
-func (l Level) String() string {
-	s, ok := levelMap[l]
+var loggerLevel = DEBUG
+
+func (l LoggerLevel) String() string {
+	s, ok := loggerLevelMap[l]
 	if !ok {
 		return "unknown"
 	}
 	return s
 }
 
-// GetLoggerLevel gets the logger's level.
-func GetLoggerLevel() Level {
-	return globalLogger.Level()
+type easyLoggerOutputter struct {
+	output func(calldepth int, msgBytes []byte, loggerLevel LoggerLevel)
+	flush  func() error
+}
+
+// Output writes log.
+func (e *easyLoggerOutputter) Output(calldepth int, msgBytes []byte, loggerLevel LoggerLevel) {
+	e.output(calldepth, msgBytes, loggerLevel)
+}
+
+// Flush writes any buffered log to the underlying io.Writer.
+func (e *easyLoggerOutputter) Flush() error {
+	return e.flush()
+}
+
+var loggerOutputter = func() LoggerOutputter {
+	type msg struct {
+		logBytes    []byte
+		loggerLevel LoggerLevel
+	}
+	var p = sync.Pool{
+		New: func() interface{} {
+			return new(msg)
+		},
+	}
+	var loggerLevelTagMap = map[LoggerLevel]string{
+		OFF:      color.Bold("OFF"),
+		PRINT:    color.Bold("PRIN"),
+		CRITICAL: color.Magenta(color.Bold("CRIT")),
+		ERROR:    color.Red(color.Bold("ERRO")),
+		WARNING:  color.Yellow(color.Bold("WARN")),
+		NOTICE:   color.Green(color.Bold("NOTI")),
+		INFO:     color.Green(color.Bold("INFO")),
+		DEBUG:    color.Cyan(color.Bold("DEBU")),
+		TRACE:    color.Cyan(color.Bold("TRAC")),
+	}
+	var c = make(chan *msg, 1024)
+	go func() {
+		for m := range c {
+			if m.loggerLevel > ERROR || m.loggerLevel == PRINT {
+				color.Stderr.Write(m.logBytes)
+			} else {
+				color.Stdout.Write(m.logBytes)
+			}
+			p.Put(m)
+		}
+	}()
+	return &easyLoggerOutputter{
+		output: func(calldepth int, msgBytes []byte, loggerLevel LoggerLevel) {
+			m := p.Get().(*msg)
+			buf := utils.AcquireByteBuffer()
+			buf.WriteString("[" + time.Now().Format("2006/01/02 15:04:05.000") + "]")
+			buf.WriteString(" [" + loggerLevelTagMap[loggerLevel] + "] ")
+			buf.Write(msgBytes)
+			line := goutil.GetCallLine(calldepth + 1)
+			if !strings.Contains(line, "github.com/henrylee2cn/teleport") {
+				buf.WriteString(" <" + line + ">\n")
+			} else {
+				buf.WriteByte('\n')
+			}
+			m.logBytes = goutil.StringToBytes(buf.String())
+			m.loggerLevel = loggerLevel
+			c <- m
+		},
+		flush: func() error {
+			for len(c) > 0 {
+				runtime.Gosched()
+			}
+			return nil
+		},
+	}
+}()
+
+// SetLoggerOutputter sets logger outputter.
+// Note: Concurrent is not safe!
+func SetLoggerOutputter(outputter LoggerOutputter) {
+	loggerOutputter = outputter
 }
 
 // SetLoggerLevel sets the logger's level by string.
 func SetLoggerLevel(level string) {
-	for k, v := range levelMap {
+	for k, v := range loggerLevelMap {
 		if v == level {
-			globalLogger.SetLevel(k)
+			loggerLevel = k
 			return
 		}
 	}
@@ -181,63 +190,251 @@ func SetLoggerLevel(level string) {
 }
 
 // SetLoggerLevel2 sets the logger's level by number.
-func SetLoggerLevel2(level Level) {
-	_, ok := levelMap[level]
+func SetLoggerLevel2(level LoggerLevel) {
+	_, ok := loggerLevelMap[level]
 	if !ok {
 		log.Printf("Unknown level number: %d", level)
 		return
 	}
-	globalLogger.SetLevel(level)
+	loggerLevel = level
 }
+
+// GetLoggerLevel gets the logger's level.
+func GetLoggerLevel() LoggerLevel {
+	return loggerLevel
+}
+
+// EnableLoggerLevel returns if can print the level of log.
+func EnableLoggerLevel(level LoggerLevel) bool {
+	if level <= loggerLevel {
+		return level != OFF
+	}
+	return false
+}
+
+func loggerOutput(loggerLevel LoggerLevel, format string, a ...interface{}) {
+	if !EnableLoggerLevel(loggerLevel) {
+		return
+	}
+	loggerOutputter.Output(3, goutil.StringToBytes(fmt.Sprintf(format, a...)), loggerLevel)
+}
+
+// ************ global logger functions ************
 
 // Printf formats according to a format specifier and writes to standard output.
 // It returns the number of bytes written and any write error encountered.
 func Printf(format string, a ...interface{}) {
-	globalLogger.Printf(format, a...)
+	loggerOutput(PRINT, format, a...)
 }
 
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func Fatalf(format string, a ...interface{}) {
-	globalLogger.Fatalf(format, a...)
+	loggerOutput(CRITICAL, format, a...)
 	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
 func Panicf(format string, a ...interface{}) {
-	globalLogger.Panicf(format, a...)
+	loggerOutput(CRITICAL, format, a...)
+	panic(fmt.Sprintf(format, a...))
 }
 
 // Criticalf logs a message using CRITICAL as log level.
 func Criticalf(format string, a ...interface{}) {
-	globalLogger.Criticalf(format, a...)
+	loggerOutput(CRITICAL, format, a...)
 }
 
 // Errorf logs a message using ERROR as log level.
 func Errorf(format string, a ...interface{}) {
-	globalLogger.Errorf(format, a...)
+	loggerOutput(ERROR, format, a...)
 }
 
 // Warnf logs a message using WARNING as log level.
 func Warnf(format string, a ...interface{}) {
-	globalLogger.Warnf(format, a...)
+	loggerOutput(WARNING, format, a...)
 }
 
 // Noticef logs a message using NOTICE as log level.
 func Noticef(format string, a ...interface{}) {
-	globalLogger.Noticef(format, a...)
+	loggerOutput(NOTICE, format, a...)
 }
 
 // Infof logs a message using INFO as log level.
 func Infof(format string, a ...interface{}) {
-	globalLogger.Infof(format, a...)
+	loggerOutput(INFO, format, a...)
 }
 
 // Debugf logs a message using DEBUG as log level.
 func Debugf(format string, a ...interface{}) {
-	globalLogger.Debugf(format, a...)
+	loggerOutput(DEBUG, format, a...)
 }
 
 // Tracef logs a message using TRACE as log level.
 func Tracef(format string, a ...interface{}) {
-	globalLogger.Tracef(format, a...)
+	loggerOutput(TRACE, format, a...)
+}
+
+// ************ *session logger methods ************
+
+// Printf formats according to a format specifier and writes to standard output.
+// It returns the number of bytes written and any write error encountered.
+func (s *session) Printf(format string, a ...interface{}) {
+	loggerOutput(PRINT, format, a...)
+}
+
+// Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
+func (s *session) Fatalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	os.Exit(1)
+}
+
+// Panicf is equivalent to l.Criticalf followed by a call to panic().
+func (s *session) Panicf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	panic(fmt.Sprintf(format, a...))
+}
+
+// Criticalf logs a message using CRITICAL as log level.
+func (s *session) Criticalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+}
+
+// Errorf logs a message using ERROR as log level.
+func (s *session) Errorf(format string, a ...interface{}) {
+	loggerOutput(ERROR, format, a...)
+}
+
+// Warnf logs a message using WARNING as log level.
+func (s *session) Warnf(format string, a ...interface{}) {
+	loggerOutput(WARNING, format, a...)
+}
+
+// Noticef logs a message using NOTICE as log level.
+func (s *session) Noticef(format string, a ...interface{}) {
+	loggerOutput(NOTICE, format, a...)
+}
+
+// Infof logs a message using INFO as log level.
+func (s *session) Infof(format string, a ...interface{}) {
+	loggerOutput(INFO, format, a...)
+}
+
+// Debugf logs a message using DEBUG as log level.
+func (s *session) Debugf(format string, a ...interface{}) {
+	loggerOutput(DEBUG, format, a...)
+}
+
+// Tracef logs a message using TRACE as log level.
+func (s *session) Tracef(format string, a ...interface{}) {
+	loggerOutput(TRACE, format, a...)
+}
+
+// ************ *handlerCtx Pure Logger Methods ************
+
+// Printf formats according to a format specifier and writes to standard output.
+// It returns the number of bytes written and any write error encountered.
+func (c *handlerCtx) Printf(format string, a ...interface{}) {
+	loggerOutput(PRINT, format, a...)
+}
+
+// Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
+func (c *handlerCtx) Fatalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	os.Exit(1)
+}
+
+// Panicf is equivalent to l.Criticalf followed by a call to panic().
+func (c *handlerCtx) Panicf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	panic(fmt.Sprintf(format, a...))
+}
+
+// Criticalf logs a message using CRITICAL as log level.
+func (c *handlerCtx) Criticalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+}
+
+// Errorf logs a message using ERROR as log level.
+func (c *handlerCtx) Errorf(format string, a ...interface{}) {
+	loggerOutput(ERROR, format, a...)
+}
+
+// Warnf logs a message using WARNING as log level.
+func (c *handlerCtx) Warnf(format string, a ...interface{}) {
+	loggerOutput(WARNING, format, a...)
+}
+
+// Noticef logs a message using NOTICE as log level.
+func (c *handlerCtx) Noticef(format string, a ...interface{}) {
+	loggerOutput(NOTICE, format, a...)
+}
+
+// Infof logs a message using INFO as log level.
+func (c *handlerCtx) Infof(format string, a ...interface{}) {
+	loggerOutput(INFO, format, a...)
+}
+
+// Debugf logs a message using DEBUG as log level.
+func (c *handlerCtx) Debugf(format string, a ...interface{}) {
+	loggerOutput(DEBUG, format, a...)
+}
+
+// Tracef logs a message using TRACE as log level.
+func (c *handlerCtx) Tracef(format string, a ...interface{}) {
+	loggerOutput(TRACE, format, a...)
+}
+
+// ************ *callCmd Pure Logger Methods ************
+
+// Printf formats according to a format specifier and writes to standard output.
+// It returns the number of bytes written and any write error encountered.
+func (c *callCmd) Printf(format string, a ...interface{}) {
+	loggerOutput(PRINT, format, a...)
+}
+
+// Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
+func (c *callCmd) Fatalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	os.Exit(1)
+}
+
+// Panicf is equivalent to l.Criticalf followed by a call to panic().
+func (c *callCmd) Panicf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	panic(fmt.Sprintf(format, a...))
+}
+
+// Criticalf logs a message using CRITICAL as log level.
+func (c *callCmd) Criticalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+}
+
+// Errorf logs a message using ERROR as log level.
+func (c *callCmd) Errorf(format string, a ...interface{}) {
+	loggerOutput(ERROR, format, a...)
+}
+
+// Warnf logs a message using WARNING as log level.
+func (c *callCmd) Warnf(format string, a ...interface{}) {
+	loggerOutput(WARNING, format, a...)
+}
+
+// Noticef logs a message using NOTICE as log level.
+func (c *callCmd) Noticef(format string, a ...interface{}) {
+	loggerOutput(NOTICE, format, a...)
+}
+
+// Infof logs a message using INFO as log level.
+func (c *callCmd) Infof(format string, a ...interface{}) {
+	loggerOutput(INFO, format, a...)
+}
+
+// Debugf logs a message using DEBUG as log level.
+func (c *callCmd) Debugf(format string, a ...interface{}) {
+	loggerOutput(DEBUG, format, a...)
+}
+
+// Tracef logs a message using TRACE as log level.
+func (c *callCmd) Tracef(format string, a ...interface{}) {
+	loggerOutput(TRACE, format, a...)
 }
