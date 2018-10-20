@@ -213,8 +213,14 @@ func EnableLoggerLevel(level LoggerLevel) bool {
 	return false
 }
 
+// GetLogger returns the global logger object.
 func GetLogger() Logger {
 	return logger
+}
+
+// FlushLogger writes any buffered log to the underlying io.Writer.
+func FlushLogger() error {
+	return loggerOutputter.Flush()
 }
 
 func loggerOutput(loggerLevel LoggerLevel, format string, a ...interface{}) {

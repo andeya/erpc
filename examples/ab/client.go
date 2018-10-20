@@ -18,6 +18,7 @@ func main() {
 	// go func() {
 	// 	http.ListenAndServe("0.0.0.0:9092", nil)
 	// }()
+	defer tp.FlushLogger()
 	tp.SetDefaultProtoFunc(pbproto.NewPbProtoFunc)
 	tp.SetSocketNoDelay(false)
 	tp.SetLoggerLevel("WARNING")

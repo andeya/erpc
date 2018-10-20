@@ -8,6 +8,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	go tp.GraceSignal()
 	cfg := tp.PeerConfig{
 		CountTime:  true,
