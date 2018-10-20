@@ -12,6 +12,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	gzip.Reg('g', "gizp", 5)
 
 	go tp.GraceSignal()

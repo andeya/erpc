@@ -9,6 +9,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	go tp.GraceSignal()
 	tp.SetShutdown(time.Second*20, nil, nil)
 	var peer = tp.NewPeer(tp.PeerConfig{

@@ -8,6 +8,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	srv := tp.NewPeer(
 		tp.PeerConfig{
 			ListenPort: 9090,

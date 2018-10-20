@@ -10,6 +10,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	// graceful
 	go tp.GraceSignal()
 
