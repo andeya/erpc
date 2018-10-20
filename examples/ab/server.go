@@ -30,6 +30,7 @@ func main() {
 		group.RouteCall(new(Home))
 	}
 	peer.ListenAndServe()
+	select {}
 }
 
 // Home controller

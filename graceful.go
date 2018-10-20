@@ -73,6 +73,7 @@ func shutdown() error {
 }
 
 func init() {
+	graceful.SetLog(logger)
 	initParentLaddrList()
 	SetShutdown(5*time.Second, nil, nil)
 }
