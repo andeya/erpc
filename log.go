@@ -154,7 +154,8 @@ var loggerOutputter = func() LoggerOutputter {
 			buf.WriteString(" [" + loggerLevelTagMap[loggerLevel] + "] ")
 			buf.Write(msgBytes)
 			line := goutil.GetCallLine(calldepth + 1)
-			if !strings.Contains(line, "github.com/henrylee2cn/teleport") {
+			if !strings.Contains(line, "github.com/henrylee2cn/teleport") &&
+				!strings.Contains(line, "github.com/henrylee2cn/goutil/graceful") {
 				buf.WriteString(" <" + line + ">\n")
 			} else {
 				buf.WriteByte('\n')
@@ -210,6 +211,10 @@ func EnableLoggerLevel(level LoggerLevel) bool {
 		return level != OFF
 	}
 	return false
+}
+
+func GetLogger() Logger {
+	return logger
 }
 
 func loggerOutput(loggerLevel LoggerLevel, format string, a ...interface{}) {
@@ -271,6 +276,65 @@ func Debugf(format string, a ...interface{}) {
 
 // Tracef logs a message using TRACE as log level.
 func Tracef(format string, a ...interface{}) {
+	loggerOutput(TRACE, format, a...)
+}
+
+// ************ globalLogger logger methods ************
+
+type globalLogger struct{}
+
+var logger Logger = new(globalLogger)
+
+// Printf formats according to a format specifier and writes to standard output.
+// It returns the number of bytes written and any write error encountered.
+func (globalLogger) Printf(format string, a ...interface{}) {
+	loggerOutput(PRINT, format, a...)
+}
+
+// Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
+func (globalLogger) Fatalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	os.Exit(1)
+}
+
+// Panicf is equivalent to l.Criticalf followed by a call to panic().
+func (globalLogger) Panicf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+	panic(fmt.Sprintf(format, a...))
+}
+
+// Criticalf logs a message using CRITICAL as log level.
+func (globalLogger) Criticalf(format string, a ...interface{}) {
+	loggerOutput(CRITICAL, format, a...)
+}
+
+// Errorf logs a message using ERROR as log level.
+func (globalLogger) Errorf(format string, a ...interface{}) {
+	loggerOutput(ERROR, format, a...)
+}
+
+// Warnf logs a message using WARNING as log level.
+func (globalLogger) Warnf(format string, a ...interface{}) {
+	loggerOutput(WARNING, format, a...)
+}
+
+// Noticef logs a message using NOTICE as log level.
+func (globalLogger) Noticef(format string, a ...interface{}) {
+	loggerOutput(NOTICE, format, a...)
+}
+
+// Infof logs a message using INFO as log level.
+func (globalLogger) Infof(format string, a ...interface{}) {
+	loggerOutput(INFO, format, a...)
+}
+
+// Debugf logs a message using DEBUG as log level.
+func (globalLogger) Debugf(format string, a ...interface{}) {
+	loggerOutput(DEBUG, format, a...)
+}
+
+// Tracef logs a message using TRACE as log level.
+func (globalLogger) Tracef(format string, a ...interface{}) {
 	loggerOutput(TRACE, format, a...)
 }
 
