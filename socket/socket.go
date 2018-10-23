@@ -254,9 +254,6 @@ func (s *socket) SetId(id string) {
 // Reset reset net.Conn and ProtoFunc.
 func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	atomic.StoreInt32(&s.curState, activeClose)
-	if s.Conn != nil {
-		s.Conn.Close()
-	}
 	s.mu.Lock()
 	s.Conn = netConn
 	s.readerWithBuffer.Discard(s.readerWithBuffer.Buffered())
