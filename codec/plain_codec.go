@@ -109,6 +109,11 @@ func (PlainCodec) Unmarshal(data []byte, v interface{}) error {
 	case []byte:
 		copy(s, data)
 	case *[]byte:
+		if length := len(data); cap(*s) < length {
+			*s = make([]byte, length)
+		} else {
+			*s = (*s)[:length]
+		}
 		*s = make([]byte, len(data))
 		copy(*s, data)
 	default:
