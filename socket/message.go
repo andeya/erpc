@@ -323,7 +323,8 @@ func (m *Message) UnmarshalBody(bodyBytes []byte) error {
 	if m.body == nil && m.newBodyFunc != nil {
 		m.body = m.newBodyFunc(m)
 	}
-	if len(bodyBytes) == 0 {
+	length := len(bodyBytes)
+	if length == 0 {
 		return nil
 	}
 	switch body := m.body.(type) {
@@ -336,10 +337,12 @@ func (m *Message) UnmarshalBody(bodyBytes []byte) error {
 	case nil:
 		return nil
 	case *[]byte:
-		if body != nil {
-			*body = make([]byte, len(bodyBytes))
-			copy(*body, bodyBytes)
+		if cap(*body) < length {
+			*body = make([]byte, length)
+		} else {
+			*body = (*body)[:length]
 		}
+		copy(*body, bodyBytes)
 		return nil
 	}
 }
