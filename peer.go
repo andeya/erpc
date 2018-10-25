@@ -298,6 +298,9 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	}
 	oldIp := sess.LocalAddr().String()
 	oldId := sess.Id()
+	if sess.conn != nil {
+		sess.conn.Close()
+	}
 	sess.conn = conn
 	sess.socket.Reset(conn, protoFuncs...)
 	if oldIp == oldId {
