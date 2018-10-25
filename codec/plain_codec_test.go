@@ -11,9 +11,10 @@ func TestPlain(t *testing.T) {
 		I int32
 	)
 	var (
-		a = []interface{}{S("sss"), I(123)}
-		b = []interface{}{new(S), new(I)}
-		c = new(PlainCodec)
+		bytes = make([]byte, 0, 100)
+		a     = []interface{}{S("sss"), I(123), []byte("1234567890"), []byte("asdfghjkl")}
+		b     = []interface{}{new(S), new(I), make([]byte, 10), &bytes}
+		c     = new(PlainCodec)
 	)
 
 	for k, v := range a {
@@ -25,9 +26,8 @@ func TestPlain(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		vv := reflect.ValueOf(b[k]).Elem().Interface()
-		if v != vv {
-			t.Logf("get: %v, but expect: %v", vv, v)
+		if !reflect.DeepEqual(reflect.Indirect(reflect.ValueOf(b[k])).Interface(), v) {
+			t.Logf("get: %v, but expect: %v", b[k], v)
 		}
 	}
 }
