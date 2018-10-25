@@ -114,7 +114,6 @@ func (PlainCodec) Unmarshal(data []byte, v interface{}) error {
 		} else {
 			*s = (*s)[:length]
 		}
-		*s = make([]byte, len(data))
 		copy(*s, data)
 	default:
 		if !parseProperType(data, reflect.ValueOf(v)) {
