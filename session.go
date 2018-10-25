@@ -890,40 +890,65 @@ const (
 )
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
-	var addr = s.RemoteAddr().String()
-	if realIp != "" && realIp == addr {
-		realIp = "same"
-	}
-	if realIp == "" {
-		realIp = "-"
-	}
-	addr += "(real:" + realIp + ")"
 	var (
+		accessLog   string
 		costTimeStr string
 		printFunc   = Infof
+		logFields   = s.peer.accessLogFields
+		isInput     bool
 	)
-	if s.peer.countTime {
-		costTimeStr = costTime.String()
-		if costTime >= s.peer.slowCometDuration {
-			costTimeStr += "(slow)"
-			printFunc = Warnf
-		} else {
-			costTimeStr += "(fast)"
+	if logType == typePushHandle || logType == typePullHandle {
+		isInput = true
+	}
+	for i := 0; i < len(logFields); i++ {
+		if i > 0 {
+			accessLog += " "
 		}
-	} else {
-		costTimeStr = "(-)"
+		switch logFields[i] {
+		case "method":
+			switch logType {
+			case typePushLaunch:
+				accessLog += "PUSH->"
+			case typePushHandle:
+				accessLog += "PUSH<-"
+			case typePullLaunch:
+				accessLog += "PULL->"
+			case typePullHandle:
+				accessLog += "PULL<-"
+			}
+		case "cost_time":
+			if s.peer.countTime {
+				if costTime >= s.peer.slowCometDuration {
+					costTimeStr = costTime.String() + "(slow)"
+					printFunc = Warnf
+				} else {
+					costTimeStr = costTime.String() + "(fast)"
+				}
+			} else {
+				costTimeStr = "(-)"
+			}
+			accessLog += costTimeStr
+		case "remote_addr":
+			accessLog += s.RemoteAddr().String()
+		case "real_ip":
+			accessLog += realIp
+		case "uri":
+			if isInput {
+				accessLog += input.Uri()
+			} else {
+				accessLog += output.Uri()
+			}
+		case "seq":
+			if isInput {
+				accessLog += input.Seq()
+			} else {
+				accessLog += output.Seq()
+			}
+		default:
+			accessLog += "-"
+		}
 	}
-
-	switch logType {
-	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail))
-	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail))
-	case typePullLaunch:
-		printFunc(logFormatPullLaunch, addr, costTimeStr, output.Uri(), output.Seq(), packetLogBytes(output, s.peer.printDetail), packetLogBytes(input, s.peer.printDetail))
-	case typePullHandle:
-		printFunc(logFormatPullHandle, addr, costTimeStr, input.Uri(), input.Seq(), packetLogBytes(input, s.peer.printDetail), packetLogBytes(output, s.peer.printDetail))
-	}
+	printFunc(accessLog)
 }
 
 func packetLogBytes(packet *socket.Packet, printDetail bool) []byte {

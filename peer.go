@@ -123,6 +123,8 @@ type peer struct {
 	// only for server role
 	listenAddr string
 	listeners  map[net.Listener]struct{}
+
+	accessLogFields []string
 }
 
 // NewPeer creates a new peer.
@@ -151,6 +153,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		countTime:          cfg.CountTime,
 		redialTimes:        cfg.RedialTimes,
 		listeners:          make(map[net.Listener]struct{}),
+		accessLogFields:    strings.Split(cfg.AccessLogFormat, " "),
 	}
 
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {

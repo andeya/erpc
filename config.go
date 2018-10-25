@@ -41,6 +41,7 @@ type PeerConfig struct {
 	SlowCometDuration  time.Duration `yaml:"slow_comet_duration"  ini:"slow_comet_duration"  comment:"Slow operation alarm threshold; ns,µs,ms,s ..."`
 	PrintDetail        bool          `yaml:"print_detail"         ini:"print_detail"         comment:"Is print body and metadata or not"`
 	CountTime          bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
+	AccessLogFormat    string        `yaml:"access_log_format"    ini:"access_log_format"    comment:"Set access log print format"`
 
 	localAddr         net.Addr
 	listenAddrStr     string
@@ -90,6 +91,10 @@ func (p *PeerConfig) check() error {
 	}
 	if len(p.DefaultBodyCodec) == 0 {
 		p.DefaultBodyCodec = "json"
+	}
+	if p.AccessLogFormat == "" {
+		// set default format
+		p.AccessLogFormat = "method status_code cost_time remote_addr real_ip uri seq recv_meta recv_body send_error"
 	}
 	return nil
 }
