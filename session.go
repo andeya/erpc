@@ -75,6 +75,8 @@ type (
 		SetSessionAge(duration time.Duration)
 		// SetContextAge sets CALL or PUSH context max age.
 		SetContextAge(duration time.Duration)
+		// Logger logger interface
+		Logger
 	}
 	// BaseSession a connection session with the common method set.
 	BaseSession interface {
@@ -88,6 +90,8 @@ type (
 		RemoteAddr() net.Addr
 		// Swap returns custom data swap of the session(socket).
 		Swap() goutil.Map
+		// Logger logger interface
+		Logger
 	}
 	// Session a connection session.
 	Session interface {
@@ -891,7 +895,7 @@ const (
 )
 
 func (s *session) runlog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
-	if GetLoggerLevel() < WARNING {
+	if !EnableLoggerLevel(WARNING) {
 		return
 	}
 	var addr = s.RemoteAddr().String()

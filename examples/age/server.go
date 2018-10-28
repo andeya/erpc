@@ -10,6 +10,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	srv := tp.NewPeer(tp.PeerConfig{
 		PrintDetail:       true,
 		CountTime:         true,
