@@ -110,7 +110,7 @@ func SetShutdown(timeout time.Duration, firstSweep, beforeExiting func() error) 
 		return errors.Merge(firstSweep(), inherit_net.SetInherited())
 	}
 	BeforeExiting = func() error {
-		return errors.Merge(shutdown(), beforeExiting(), loggerOutputter.Flush())
+		return errors.Merge(shutdown(), beforeExiting())
 	}
 	graceful.SetShutdown(timeout, FirstSweep, BeforeExiting)
 }
