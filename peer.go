@@ -478,36 +478,6 @@ func (p *peer) putContext(ctx *handlerCtx, withWg bool) {
 	ctxPool.Put(ctx)
 }
 
-// func (p *peer) getContext(s *session, withWg bool) *handlerCtx {
-// 	if withWg {
-// 		// count get context
-// 		s.graceCtxWaitGroup.Add(1)
-// 	}
-// 	p.ctxLock.Lock()
-// 	ctx := p.freeContext
-// 	if ctx == nil {
-// 		p.ctxLock.Unlock()
-// 		ctx = newReadHandleCtx()
-// 	} else {
-// 		p.freeContext = ctx.next
-// 		p.ctxLock.Unlock()
-// 	}
-// 	ctx.reInit(s)
-// 	return ctx
-// }
-
-// func (p *peer) putContext(ctx *handlerCtx, withWg bool) {
-// 	if withWg {
-// 		// count get context
-// 		ctx.sess.graceCtxWaitGroup.Done()
-// 	}
-// 	ctx.clean()
-// 	p.ctxLock.Lock()
-// 	ctx.next = p.freeContext
-// 	p.freeContext = ctx
-// 	p.ctxLock.Unlock()
-// }
-
 // Router returns the root router of call or push handlers.
 func (p *peer) Router() *Router {
 	return p.router

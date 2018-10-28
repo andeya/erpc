@@ -7,6 +7,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	cli := tp.NewPeer(
 		tp.PeerConfig{
 			PrintDetail: false,

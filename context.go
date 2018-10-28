@@ -44,6 +44,8 @@ type (
 		// Context carries a deadline, a cancelation signal, and other values across
 		// API boundaries.
 		Context() context.Context
+		// Logger logger interface
+		Logger
 	}
 	// WriteCtx context method set for writing message.
 	WriteCtx interface {
@@ -149,6 +151,7 @@ type (
 )
 
 var (
+	_ Logger         = new(handlerCtx)
 	_ PreCtx         = new(handlerCtx)
 	_ inputCtx       = new(handlerCtx)
 	_ WriteCtx       = new(handlerCtx)

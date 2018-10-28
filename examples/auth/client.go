@@ -8,6 +8,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	cli := tp.NewPeer(tp.PeerConfig{}, auth.LaunchAuth(generateAuthInfo))
 	defer cli.Close()
 	_, rerr := cli.Dial(":9090")

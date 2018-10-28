@@ -10,6 +10,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	tp.SetLoggerLevel("INFO")
 	cli := tp.NewPeer(tp.PeerConfig{PrintDetail: true})
 	sess, err := cli.Dial(":9090")

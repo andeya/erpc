@@ -11,6 +11,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	tp.SetLoggerLevel("ERROR")
 
 	cli := tp.NewPeer(
