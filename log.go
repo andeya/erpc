@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henrylee2cn/goutil/graceful"
+
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/teleport/utils"
 	"github.com/henrylee2cn/teleport/utils/color"
@@ -289,7 +291,15 @@ func Tracef(format string, a ...interface{}) {
 
 type globalLogger struct{}
 
-var logger Logger = new(globalLogger)
+var (
+	logger                            = new(globalLogger)
+	_      Logger                     = logger
+	_      graceful.LoggerWithFlusher = logger
+)
+
+func (globalLogger) Flush() error {
+	return FlushLogger()
+}
 
 // Printf formats according to a format specifier and writes to standard output.
 // It returns the number of bytes written and any write error encountered.
