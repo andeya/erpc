@@ -438,7 +438,7 @@ func (c *handlerCtx) handlePush() {
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.runlog(c.RealIp(), c.cost, c.input, nil, typePushHandle)
+		c.sess.printAccessLog(c.RealIp(), c.cost, c.input, nil, typePushHandle)
 	}()
 
 	if c.handleErr == nil && c.handler != nil {
@@ -506,7 +506,7 @@ func (c *handlerCtx) handlePull() {
 			}
 		}
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.runlog(c.RealIp(), c.cost, c.input, c.output, typePullHandle)
+		c.sess.printAccessLog(c.RealIp(), c.cost, c.input, c.output, typePullHandle)
 	}()
 
 	c.output.SetPtype(TypeReply)
@@ -639,7 +639,7 @@ func (c *handlerCtx) handleReply() {
 		c.handleErr = c.pullCmd.rerr
 		c.pullCmd.done()
 		c.pullCmd.cost = c.sess.timeSince(c.pullCmd.start)
-		c.sess.runlog(c.RealIp(), c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
+		c.sess.printAccessLog(c.RealIp(), c.pullCmd.cost, c.input, c.pullCmd.output, typePullLaunch)
 	}()
 	if c.pullCmd.rerr != nil {
 		return
