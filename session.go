@@ -75,6 +75,8 @@ type (
 		SetSessionAge(duration time.Duration)
 		// SetContextAge sets CALL or PUSH context max age.
 		SetContextAge(duration time.Duration)
+		// Logger logger interface
+		Logger
 	}
 	// BaseSession a connection session with the common method set.
 	BaseSession interface {
@@ -88,6 +90,8 @@ type (
 		RemoteAddr() net.Addr
 		// Swap returns custom data swap of the session(socket).
 		Swap() goutil.Map
+		// Logger logger interface
+		Logger
 	}
 	// Session a connection session.
 	Session interface {
@@ -545,7 +549,7 @@ W:
 		return rerr
 	}
 
-	s.runlog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+	s.printAccessLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
 	s.peer.pluginContainer.postWritePush(ctx)
 	return nil
 }
@@ -890,8 +894,8 @@ const (
 	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
 )
 
-func (s *session) runlog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
-	if GetLoggerLevel() < WARNING {
+func (s *session) printAccessLog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
+	if !EnableLoggerLevel(WARNING) {
 		return
 	}
 	var addr = s.RemoteAddr().String()
@@ -951,17 +955,11 @@ func messageLogBytes(message *Message, printDetail bool) []byte {
 		}
 		if bodyBytes := bodyLogBytes(message); len(bodyBytes) > 0 {
 			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':')
-			b = append(b, utils.ToJsonStr(bodyBytes, false)...)
+			b = append(b, bodyBytes...)
 		}
 	}
 	b = append(b, '}')
 	return b
-	// buf := bytes.NewBuffer(nil)
-	// err := json.Indent(buf, b, "", "  ")
-	// if err != nil {
-	// 	return b
-	// }
-	// return buf.Bytes()
 }
 
 func bodyLogBytes(message *Message) []byte {
@@ -969,9 +967,9 @@ func bodyLogBytes(message *Message) []byte {
 	case nil:
 		return nil
 	case []byte:
-		return v
+		return utils.ToJsonStr(v, false)
 	case *[]byte:
-		return *v
+		return utils.ToJsonStr(*v, false)
 	}
 	b, _ := json.Marshal(message.Body())
 	return b

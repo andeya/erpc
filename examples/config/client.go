@@ -8,6 +8,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
+	defer tp.FlushLogger()
 	cfg := tp.PeerConfig{}
 
 	// auto create and sync config/config.yaml
