@@ -549,7 +549,7 @@ W:
 		return rerr
 	}
 
-	s.runlog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+	s.printAccessLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
 	s.peer.pluginContainer.postWritePush(ctx)
 	return nil
 }
@@ -894,7 +894,7 @@ const (
 	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
 )
 
-func (s *session) runlog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
+func (s *session) printAccessLog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
 	if !EnableLoggerLevel(WARNING) {
 		return
 	}
@@ -955,17 +955,11 @@ func messageLogBytes(message *Message, printDetail bool) []byte {
 		}
 		if bodyBytes := bodyLogBytes(message); len(bodyBytes) > 0 {
 			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':')
-			b = append(b, utils.ToJsonStr(bodyBytes, false)...)
+			b = append(b, bodyBytes...)
 		}
 	}
 	b = append(b, '}')
 	return b
-	// buf := bytes.NewBuffer(nil)
-	// err := json.Indent(buf, b, "", "  ")
-	// if err != nil {
-	// 	return b
-	// }
-	// return buf.Bytes()
 }
 
 func bodyLogBytes(message *Message) []byte {
@@ -973,9 +967,9 @@ func bodyLogBytes(message *Message) []byte {
 	case nil:
 		return nil
 	case []byte:
-		return v
+		return utils.ToJsonStr(v, false)
 	case *[]byte:
-		return *v
+		return utils.ToJsonStr(*v, false)
 	}
 	b, _ := json.Marshal(message.Body())
 	return b
