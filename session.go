@@ -883,13 +883,6 @@ const (
 	typePullHandle int8 = 4
 )
 
-const (
-	logFormatPushLaunch = "PUSH-> %s %s %s %q SEND(%s)"
-	logFormatPushHandle = "PUSH<- %s %s %s %q RECV(%s)"
-	logFormatPullLaunch = "PULL-> %s %s %s %q SEND(%s) RECV(%s)"
-	logFormatPullHandle = "PULL<- %s %s %s %q RECV(%s) SEND(%s)"
-)
-
 func (s *session) printAccessLog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
 	var (
 		printFunc = Infof
