@@ -94,7 +94,7 @@ func (p *PeerConfig) check() error {
 	}
 	if p.AccessLogFormat == "" {
 		// set default format
-		p.AccessLogFormat = "method status_code cost_time remote_addr real_ip uri seq recv_meta recv_body send_error"
+		p.AccessLogFormat = "method status cost_time remote_addr real_ip uri seq recv send"
 	}
 	return nil
 }

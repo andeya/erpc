@@ -21,6 +21,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -882,73 +883,95 @@ const (
 	typePullHandle int8 = 4
 )
 
-const (
-	logFormatPushLaunch = "PUSH-> %s %s %s %q SEND(%s)"
-	logFormatPushHandle = "PUSH<- %s %s %s %q RECV(%s)"
-	logFormatPullLaunch = "PULL-> %s %s %s %q SEND(%s) RECV(%s)"
-	logFormatPullHandle = "PULL<- %s %s %s %q RECV(%s) SEND(%s)"
-)
-
 func (s *session) printAccessLog(realIp string, costTime time.Duration, input, output *socket.Packet, logType int8) {
 	var (
-		accessLog   string
-		costTimeStr string
-		printFunc   = Infof
-		logFields   = s.peer.accessLogFields
-		isInput     bool
+		printFunc = Infof
+		logFields = s.peer.accessLogFields
+		isInput   bool
+		logFormat []string
+		logValues []interface{}
 	)
 	if logType == typePushHandle || logType == typePullHandle {
 		isInput = true
 	}
 	for i := 0; i < len(logFields); i++ {
-		if i > 0 {
-			accessLog += " "
-		}
 		switch logFields[i] {
+		case "status":
+			logFormat = append(logFormat, "%d")
+			logValues = append(logValues, s.status)
+		case "recv":
+			logFormat = append(logFormat, "RECV(%s)")
+			if logType == typePushHandle || logType == typePullHandle {
+				logValues = append(logValues, string(packetLogBytes(input, s.peer.printDetail)))
+			} else {
+				logValues = append(logValues, string(packetLogBytes(output, s.peer.printDetail)))
+			}
+		case "send":
+			if logType == typePullLaunch {
+				logFormat = append(logFormat, "SEND(%s)")
+				logValues = append(logValues, string(packetLogBytes(input, s.peer.printDetail)))
+			} else if logType == typePullHandle {
+				logFormat = append(logFormat, "SEND(%s)")
+				logValues = append(logValues, string(packetLogBytes(output, s.peer.printDetail)))
+			}
 		case "method":
+			logFormat = append(logFormat, "%s")
 			switch logType {
 			case typePushLaunch:
-				accessLog += "PUSH->"
+				logValues = append(logValues, "PUSH->")
 			case typePushHandle:
-				accessLog += "PUSH<-"
+				logValues = append(logValues, "PUSH<-")
 			case typePullLaunch:
-				accessLog += "PULL->"
+				logValues = append(logValues, "PULL->")
 			case typePullHandle:
-				accessLog += "PULL<-"
+				logValues = append(logValues, "PULL<-")
+			default:
+				logValues = append(logValues, "-")
 			}
 		case "cost_time":
+			if logType == typePullLaunch || logType == typePushLaunch {
+				continue
+			}
+			logFormat = append(logFormat, "%s(%s)")
+			logValues = append(logValues, costTime.String())
 			if s.peer.countTime {
 				if costTime >= s.peer.slowCometDuration {
-					costTimeStr = costTime.String() + "(slow)"
+					logValues = append(logValues, "slow")
 					printFunc = Warnf
 				} else {
-					costTimeStr = costTime.String() + "(fast)"
+					logValues = append(logValues, "fast")
 				}
 			} else {
-				costTimeStr = "(-)"
+				logValues = append(logValues, "-")
 			}
-			accessLog += costTimeStr
 		case "remote_addr":
-			accessLog += s.RemoteAddr().String()
+			logFormat = append(logFormat, "%q")
+			logValues = append(logValues, s.RemoteAddr().String())
 		case "real_ip":
-			accessLog += realIp
+			logFormat = append(logFormat, "%q")
+			logValues = append(logValues, realIp)
 		case "uri":
+			logFormat = append(logFormat, "%s")
 			if isInput {
-				accessLog += input.Uri()
+				logValues = append(logValues, input.Uri())
 			} else {
-				accessLog += output.Uri()
+				logValues = append(logValues, output.Uri())
 			}
 		case "seq":
+			logFormat = append(logFormat, "%q")
 			if isInput {
-				accessLog += input.Seq()
+				logValues = append(logValues, input.Seq())
 			} else {
-				accessLog += output.Seq()
+				logValues = append(logValues, output.Seq())
 			}
 		default:
-			accessLog += "-"
+			logFormat = append(logFormat, "-")
 		}
 	}
-	printFunc(accessLog)
+	if !s.isOk() {
+		printFunc = Warnf
+	}
+	printFunc(strings.Join(logFormat, " "), logValues...)
 }
 
 func packetLogBytes(packet *socket.Packet, printDetail bool) []byte {
