@@ -968,6 +968,9 @@ func (s *session) printAccessLog(realIp string, costTime time.Duration, input, o
 			logFormat = append(logFormat, "-")
 		}
 	}
+	if !s.isOk() {
+		printFunc = Warnf
+	}
 	printFunc(strings.Join(logFormat, " "), logValues...)
 }
 
