@@ -140,6 +140,9 @@ var loggerOutputter = func() LoggerOutputter {
 	var c = make(chan *msg, 1024)
 	go func() {
 		for m := range c {
+			if m == nil {
+				continue
+			}
 			if m.loggerLevel > ERROR || m.loggerLevel == PRINT {
 				color.Stderr.Write(m.logBytes)
 			} else {
@@ -167,6 +170,7 @@ var loggerOutputter = func() LoggerOutputter {
 			c <- m
 		},
 		flush: func() error {
+			c <- nil
 			for len(c) > 0 {
 				runtime.Gosched()
 			}
