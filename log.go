@@ -243,12 +243,14 @@ func Printf(format string, a ...interface{}) {
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
 func Panicf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	panic(fmt.Sprintf(format, a...))
 }
 
@@ -310,12 +312,14 @@ func (globalLogger) Printf(format string, a ...interface{}) {
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (globalLogger) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
 func (globalLogger) Panicf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	panic(fmt.Sprintf(format, a...))
 }
 
@@ -365,12 +369,14 @@ func (s *session) Printf(format string, a ...interface{}) {
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (s *session) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
 func (s *session) Panicf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	panic(fmt.Sprintf(format, a...))
 }
 
@@ -420,12 +426,14 @@ func (c *handlerCtx) Printf(format string, a ...interface{}) {
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (c *handlerCtx) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
 func (c *handlerCtx) Panicf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	panic(fmt.Sprintf(format, a...))
 }
 
@@ -475,12 +483,14 @@ func (c *callCmd) Printf(format string, a ...interface{}) {
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (c *callCmd) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	os.Exit(1)
 }
 
 // Panicf is equivalent to l.Criticalf followed by a call to panic().
 func (c *callCmd) Panicf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
 	panic(fmt.Sprintf(format, a...))
 }
 
