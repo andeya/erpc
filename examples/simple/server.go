@@ -40,6 +40,7 @@ func main() {
 
 	// listen and serve
 	srv.ListenAndServe()
+	select {}
 }
 
 // Math handler
