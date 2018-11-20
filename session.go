@@ -971,6 +971,9 @@ func (s *session) printAccessLog(realIp string, costTime time.Duration, input, o
 	if !s.isOk() {
 		printFunc = Warnf
 	}
+	if logType == typePullHandle && len(getRerrorBytes(output.Meta())) > 0 {
+		printFunc = Errorf
+	}
 	printFunc(strings.Join(logFormat, " "), logValues...)
 }
 

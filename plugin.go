@@ -135,9 +135,9 @@ type PluginContainer struct {
 func newPluginContainer() *PluginContainer {
 	p := &PluginContainer{
 		pluginSingleContainer: newPluginSingleContainer(),
-		left:   newPluginSingleContainer(),
-		middle: newPluginSingleContainer(),
-		right:  newPluginSingleContainer(),
+		left:                  newPluginSingleContainer(),
+		middle:                newPluginSingleContainer(),
+		right:                 newPluginSingleContainer(),
 	}
 	p.refreshTree = func() { p.refresh() }
 	return p
@@ -377,7 +377,6 @@ func (p *pluginSingleContainer) preWritePull(ctx WriteCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePullPlugin); ok {
 			if rerr = _plugin.PreWritePull(ctx); rerr != nil {
-				Debugf("[PreWritePullPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -391,7 +390,6 @@ func (p *pluginSingleContainer) postWritePull(ctx WriteCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePullPlugin); ok {
 			if rerr = _plugin.PostWritePull(ctx); rerr != nil {
-				Errorf("[PostWritePullPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -405,7 +403,6 @@ func (p *pluginSingleContainer) preWriteReply(ctx WriteCtx) {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWriteReplyPlugin); ok {
 			if rerr = _plugin.PreWriteReply(ctx); rerr != nil {
-				Errorf("[PreWriteReplyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return
 			}
 		}
@@ -418,7 +415,6 @@ func (p *pluginSingleContainer) postWriteReply(ctx WriteCtx) {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWriteReplyPlugin); ok {
 			if rerr = _plugin.PostWriteReply(ctx); rerr != nil {
-				Errorf("[PostWriteReplyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return
 			}
 		}
@@ -431,7 +427,6 @@ func (p *pluginSingleContainer) preWritePush(ctx WriteCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePushPlugin); ok {
 			if rerr = _plugin.PreWritePush(ctx); rerr != nil {
-				Debugf("[PreWritePushPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -445,7 +440,6 @@ func (p *pluginSingleContainer) postWritePush(ctx WriteCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWritePushPlugin); ok {
 			if rerr = _plugin.PostWritePush(ctx); rerr != nil {
-				Errorf("[PostWritePushPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -473,7 +467,6 @@ func (p *pluginSingleContainer) postReadPullHeader(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPullHeaderPlugin); ok {
 			if rerr = _plugin.PostReadPullHeader(ctx); rerr != nil {
-				Errorf("[PostReadPullHeaderPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -487,7 +480,6 @@ func (p *pluginSingleContainer) preReadPullBody(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadPullBodyPlugin); ok {
 			if rerr = _plugin.PreReadPullBody(ctx); rerr != nil {
-				Errorf("[PreReadPullBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -501,7 +493,6 @@ func (p *pluginSingleContainer) postReadPullBody(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPullBodyPlugin); ok {
 			if rerr = _plugin.PostReadPullBody(ctx); rerr != nil {
-				Errorf("[PostReadPullBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -515,7 +506,6 @@ func (p *pluginSingleContainer) postReadPushHeader(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPushHeaderPlugin); ok {
 			if rerr = _plugin.PostReadPushHeader(ctx); rerr != nil {
-				Errorf("[PostReadPushHeaderPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -529,7 +519,6 @@ func (p *pluginSingleContainer) preReadPushBody(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadPushBodyPlugin); ok {
 			if rerr = _plugin.PreReadPushBody(ctx); rerr != nil {
-				Errorf("[PreReadPushBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -543,7 +532,6 @@ func (p *pluginSingleContainer) postReadPushBody(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadPushBodyPlugin); ok {
 			if rerr = _plugin.PostReadPushBody(ctx); rerr != nil {
-				Errorf("[PostReadPushBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -557,7 +545,6 @@ func (p *pluginSingleContainer) postReadReplyHeader(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadReplyHeaderPlugin); ok {
 			if rerr = _plugin.PostReadReplyHeader(ctx); rerr != nil {
-				Errorf("[PostReadReplyHeaderPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -571,7 +558,6 @@ func (p *pluginSingleContainer) preReadReplyBody(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadReplyBodyPlugin); ok {
 			if rerr = _plugin.PreReadReplyBody(ctx); rerr != nil {
-				Errorf("[PreReadReplyBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -585,7 +571,6 @@ func (p *pluginSingleContainer) postReadReplyBody(ctx ReadCtx) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostReadReplyBodyPlugin); ok {
 			if rerr = _plugin.PostReadReplyBody(ctx); rerr != nil {
-				Errorf("[PostReadReplyBodyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
@@ -599,7 +584,6 @@ func (p *pluginSingleContainer) postDisconnect(sess BaseSession) *Rerror {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDisconnectPlugin); ok {
 			if rerr = _plugin.PostDisconnect(sess); rerr != nil {
-				Errorf("[PostDisconnectPlugin:%s] %s", plugin.Name(), rerr.String())
 				return rerr
 			}
 		}
