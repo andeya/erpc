@@ -403,6 +403,7 @@ func (p *pluginSingleContainer) preWriteReply(ctx WriteCtx) {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWriteReplyPlugin); ok {
 			if rerr = _plugin.PreWriteReply(ctx); rerr != nil {
+				Errorf("[PreWriteReplyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return
 			}
 		}
@@ -415,6 +416,7 @@ func (p *pluginSingleContainer) postWriteReply(ctx WriteCtx) {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostWriteReplyPlugin); ok {
 			if rerr = _plugin.PostWriteReply(ctx); rerr != nil {
+				Errorf("[PostWriteReplyPlugin:%s] %s", plugin.Name(), rerr.String())
 				return
 			}
 		}
