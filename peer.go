@@ -263,7 +263,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 			var err error
 			for i := p.redialTimes; i > 0; i-- {
 				time.Sleep(p.redialInterval)
-				Debugf("trying to redialing... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
+				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
 				err = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
 				if err == nil {
 					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
