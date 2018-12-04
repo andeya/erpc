@@ -118,6 +118,7 @@ type peer struct {
 
 	// only for client role
 	defaultDialTimeout time.Duration
+	redialInterval     time.Duration
 	redialTimes        int32
 	localAddr          net.Addr
 
@@ -145,6 +146,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		closeCh:            make(chan struct{}),
 		slowCometDuration:  cfg.slowCometDuration,
 		defaultDialTimeout: cfg.DefaultDialTimeout,
+		redialInterval:     cfg.RedialInterval,
 		network:            cfg.Network,
 		listenAddr:         cfg.listenAddrStr,
 		localAddr:          cfg.localAddr,
@@ -260,8 +262,11 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 			}
 			var err error
 			for i := p.redialTimes; i > 0; i-- {
+				time.Sleep(p.redialInterval)
+				Debugf("trying to redialing... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
 				err = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
 				if err == nil {
+					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
 					return true
 				}
 				// if i > 1 {
@@ -315,7 +320,6 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	atomic.StoreInt32(&sess.status, statusOk)
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
 	return nil
 }
 

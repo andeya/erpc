@@ -20,9 +20,10 @@ func main() {
 		SlowCometDuration: time.Millisecond * 500,
 		// DefaultBodyCodec:    "json",
 		// DefaultContextAge: time.Second * 5,
-		PrintDetail: true,
-		CountTime:   true,
-		RedialTimes: 3,
+		PrintDetail:    true,
+		CountTime:      true,
+		RedialTimes:    3,
+		RedialInterval: time.Second * 3,
 	})
 	defer peer.Close()
 	peer.RoutePush(new(Push))
