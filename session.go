@@ -51,7 +51,7 @@ type (
 		// f executes but not after f returns.
 		ControlFD(f func(fd uintptr)) error
 		// ModifySocket modifies the socket.
-		// Note:
+		// NOTE:
 		// The connection fd is not allowed to change!
 		// Inherit the previous session id and custom data swap;
 		// If modifiedConn!=nil, reset the net.Conn of the socket;
@@ -60,12 +60,12 @@ type (
 		// GetProtoFunc returns the ProtoFunc
 		GetProtoFunc() ProtoFunc
 		// Send sends message to peer, before the formal connection.
-		// Note:
+		// NOTE:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
 		Send(uri string, body interface{}, rerr *Rerror, setting ...MessageSetting) *Rerror
 		// Receive receives a message from peer, before the formal connection.
-		// Note: does not support automatic redial after disconnection.
+		// NOTE: does not support automatic redial after disconnection.
 		Receive(NewBodyFunc, ...MessageSetting) (*Message, *Rerror)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
@@ -114,12 +114,12 @@ type (
 			setting ...MessageSetting,
 		) CallCmd
 		// Call sends a message and receives reply.
-		// Note:
+		// NOTE:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 		Call(uri string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd
 		// Push sends a message, but do not receives reply.
-		// Note:
+		// NOTE:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 		Push(uri string, arg interface{}, setting ...MessageSetting) *Rerror
@@ -223,7 +223,7 @@ func (s *session) getConn() net.Conn {
 }
 
 // ModifySocket modifies the socket.
-// Note:
+// NOTE:
 // The connection fd is not allowed to change!
 // Inherit the previous session id and custom data swap;
 // If modifiedConn!=nil, reset the net.Conn of the socket;
@@ -317,7 +317,7 @@ func (s *session) SetContextAge(duration time.Duration) {
 }
 
 // Send sends message to peer, before the formal connection.
-// Note:
+// NOTE:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
 func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...MessageSetting) (replyErr *Rerror) {
@@ -357,7 +357,7 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...Me
 }
 
 // Receive receives a message from peer, before the formal connection.
-// Note:
+// NOTE:
 //  Does not support automatic redial after disconnection;
 //  Recommend to reuse unused *Message: PutMessage(input).
 func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input *Message, rerr *Rerror) {
@@ -389,7 +389,7 @@ func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (i
 }
 
 // AsyncCall sends a message and receives reply asynchronously.
-// Note:
+// NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) AsyncCall(
@@ -489,7 +489,7 @@ W:
 }
 
 // Call sends a message and receives reply.
-// Note:
+// NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) Call(uri string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd {
@@ -499,7 +499,7 @@ func (s *session) Call(uri string, arg interface{}, result interface{}, setting 
 }
 
 // Push sends a message, but do not receives reply.
-// Note:
+// NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) Push(uri string, arg interface{}, setting ...MessageSetting) *Rerror {
@@ -872,7 +872,7 @@ func (sh *SessionHub) Random() (*session, bool) {
 }
 
 // Len returns the length of the session hub.
-// Note: the count implemented using sync.Map may be inaccurate.
+// NOTE: the count implemented using sync.Map may be inaccurate.
 func (sh *SessionHub) Len() int {
 	return sh.sessions.Len()
 }

@@ -122,7 +122,7 @@ func Shutdown(timeout ...time.Duration) {
 }
 
 // Reboot all the frame process gracefully.
-// Notes: Windows system are not supported!
+// NOTE: Windows system are not supported!
 func Reboot(timeout ...time.Duration) {
 	graceful.Reboot(timeout...)
 }

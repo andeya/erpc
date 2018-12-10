@@ -69,7 +69,7 @@ func (w *wsProto) Version() (byte, string) {
 }
 
 // Pack writes the Message into the connection.
-// Note: Make sure to write only once or there will be package contamination!
+// NOTE: Make sure to write only once or there will be package contamination!
 func (w *wsProto) Pack(m *tp.Message) error {
 	w.subConn.w.Reset()
 	err := w.subProto.Pack(m)
@@ -80,7 +80,7 @@ func (w *wsProto) Pack(m *tp.Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-// Note: Concurrent unsafe!
+// NOTE: Concurrent unsafe!
 func (w *wsProto) Unpack(m *tp.Message) error {
 	err := ws.Message.Receive(w.conn, w.subConn.rBytes)
 	if err != nil {

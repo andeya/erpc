@@ -121,7 +121,7 @@ func getUnmarshalInfo(t reflect.Type) *unmarshalInfo {
 	u := unmarshalInfoMap[t]
 	if u == nil {
 		u = &unmarshalInfo{typ: t}
-		// Note: we just set the type here. The rest of the fields
+		// NOTE: we just set the type here. The rest of the fields
 		// will be initialized on first use.
 		unmarshalInfoMap[t] = u
 	}
@@ -1332,7 +1332,7 @@ func unmarshalBoolValue(b []byte, f pointer, w int) ([]byte, error) {
 	if w != WireVarint {
 		return b, errInternalBadWireType
 	}
-	// Note: any length varint is allowed, even though any sane
+	// NOTE: any length varint is allowed, even though any sane
 	// encoder will use one byte.
 	// See https://github.com/golang/protobuf/issues/76
 	x, n := decodeVarint(b)
@@ -1760,7 +1760,7 @@ func makeUnmarshalMap(f *reflect.StructField) unmarshaler {
 		r := b[x:] // unused data to return
 		b = b[:x]  // data for map entry
 
-		// Note: we could use #keys * #values ~= 200 functions
+		// NOTE: we could use #keys * #values ~= 200 functions
 		// to do map decoding without reflection. Probably not worth it.
 		// Maps will be somewhat slow. Oh well.
 

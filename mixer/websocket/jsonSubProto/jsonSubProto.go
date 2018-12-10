@@ -38,7 +38,7 @@ func (j *jsonSubProto) Version() (byte, string) {
 const format = `{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s","xfer_pipe":%s}`
 
 // Pack writes the Message into the connection.
-// Note: Make sure to write only once or there will be package contamination!
+// NOTE: Make sure to write only once or there will be package contamination!
 func (j *jsonSubProto) Pack(m *tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
@@ -80,7 +80,7 @@ func (j *jsonSubProto) Pack(m *tp.Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-// Note: Concurrent unsafe!
+// NOTE: Concurrent unsafe!
 func (j *jsonSubProto) Unpack(m *tp.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()

@@ -86,7 +86,7 @@ func (c *MultiClient) AsyncCall(
 }
 
 // Call sends a message and receives reply.
-// Note:
+// NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...tp.MessageSetting) tp.CallCmd {
@@ -96,7 +96,7 @@ func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, sett
 }
 
 // Push sends a message, but do not receives reply.
-// Note:
+// NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (c *MultiClient) Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Rerror {

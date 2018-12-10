@@ -363,7 +363,7 @@ func (r *SubRouter) getPush(uriPath string) (*Handler, bool) {
 	return nil, false
 }
 
-// Note: callCtrlStruct needs to implement CallCtx interface.
+// NOTE: callCtrlStruct needs to implement CallCtx interface.
 func makeCallHandlersFromStruct(pathPrefix string, callCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype    = reflect.TypeOf(callCtrlStruct)
@@ -616,7 +616,7 @@ func makeCallHandlersFromFunc(pathPrefix string, callHandleFunc interface{}, plu
 	}}, nil
 }
 
-// Note: pushCtrlStruct needs to implement PushCtx interface.
+// NOTE: pushCtrlStruct needs to implement PushCtx interface.
 func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype    = reflect.TypeOf(pushCtrlStruct)

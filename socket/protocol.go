@@ -30,10 +30,10 @@ type (
 		// Version returns the protocol's id and name.
 		Version() (byte, string)
 		// Pack writes the Message into the connection.
-		// Note: Make sure to write only once or there will be package contamination!
+		// NOTE: Make sure to write only once or there will be package contamination!
 		Pack(*Message) error
 		// Unpack reads bytes from the connection to the Message.
-		// Note: Concurrent unsafe!
+		// NOTE: Concurrent unsafe!
 		Unpack(*Message) error
 	}
 	// ProtoFunc function used to create a custom Proto interface.
@@ -100,7 +100,7 @@ func (r *rawProto) Version() (byte, string) {
 }
 
 // Pack writes the Message into the connection.
-// Note: Make sure to write only once or there will be package contamination!
+// NOTE: Make sure to write only once or there will be package contamination!
 func (r *rawProto) Pack(m *Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
@@ -182,7 +182,7 @@ func (r *rawProto) writeBody(bb *utils.ByteBuffer, m *Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-// Note: Concurrent unsafe!
+// NOTE: Concurrent unsafe!
 func (r *rawProto) Unpack(m *Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)

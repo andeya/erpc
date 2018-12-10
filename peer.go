@@ -80,12 +80,12 @@ type (
 		// DialContext connects with the peer of the destination address, using the provided context.
 		DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
 		// ServeConn serves the connection and returns a session.
-		// Note:
+		// NOTE:
 		//  Not support automatically redials after disconnection;
 		//  Execute the PostAcceptPlugin plugins.
 		ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
 		// ServeListener serves the listener.
-		// Note: The caller ensures that the listener supports graceful shutdown.
+		// NOTE: The caller ensures that the listener supports graceful shutdown.
 		ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error
 	}
 )
@@ -324,7 +324,7 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 }
 
 // ServeConn serves the connection and returns a session.
-// Note:
+// NOTE:
 //  Not support automatically redials after disconnection;
 //  Execute the PostAcceptPlugin plugins.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error) {
@@ -347,7 +347,7 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
 var ErrListenClosed = errors.New("listener is closed")
 
 // ServeListener serves the listener.
-// Note: The caller ensures that the listener supports graceful shutdown.
+// NOTE: The caller ensures that the listener supports graceful shutdown.
 func (p *peer) ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 	defer lis.Close()
 	p.listeners[lis] = struct{}{}

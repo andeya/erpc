@@ -53,7 +53,7 @@ func TypeText(typ byte) string {
 }
 
 // Internal Framework Rerror code.
-// Note: Recommended custom code is greater than 1000.
+// NOTE: Recommended custom code is greater than 1000.
 //  unknown error code: -1.
 //  sender peer error code range: [100,199].
 //  message handling error code range: [400,499].
@@ -162,7 +162,7 @@ func WithRealIp(ip string) MessageSetting {
 }
 
 // WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
-// Note: If the specified codec is invalid, the receiver will ignore the mate data.
+// NOTE: If the specified codec is invalid, the receiver will ignore the mate data.
 func WithAcceptBodyCodec(bodyCodec byte) MessageSetting {
 	if bodyCodec == codec.NilCodecId {
 		return func(*Message) {}
@@ -171,7 +171,7 @@ func WithAcceptBodyCodec(bodyCodec byte) MessageSetting {
 }
 
 // GetAcceptBodyCodec gets the body codec that the sender wishes to accept.
-// Note: If the specified codec is invalid, the receiver will ignore the mate data.
+// NOTE: If the specified codec is invalid, the receiver will ignore the mate data.
 func GetAcceptBodyCodec(meta *utils.Args) (byte, bool) {
 	s := meta.Peek(MetaAcceptBodyCodec)
 	if len(s) == 0 || len(s) > 3 {
@@ -269,7 +269,7 @@ var WithNewBody = socket.WithNewBody
 var WithXferPipe = socket.WithXferPipe
 
 // GetMessage gets a *Message form message stack.
-// Note:
+// NOTE:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
 //  func GetMessage(settings ...MessageSetting) *Message
@@ -286,7 +286,7 @@ var (
 )
 
 // SetGopool set or reset go pool config.
-// Note: Make sure to call it before calling NewPeer() and Go()
+// NOTE: Make sure to call it before calling NewPeer() and Go()
 func SetGopool(maxGoroutinesAmount int, maxGoroutineIdleDuration time.Duration) {
 	_maxGoroutinesAmount, _maxGoroutineIdleDuration := maxGoroutinesAmount, maxGoroutineIdleDuration
 	if _gopool != nil {
