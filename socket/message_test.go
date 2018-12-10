@@ -5,7 +5,8 @@ import (
 )
 
 func TestMessageString(t *testing.T) {
-	var m = NewMessage()
+	var m = GetMessage()
+	defer PutMessage(m)
 	m.SetSeq("21")
 	m.XferPipe().Append('g')
 	m.SetMtype(3)

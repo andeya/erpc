@@ -125,35 +125,26 @@ var (
 	_ Body   = new(Message)
 )
 
-var messageStack = new(struct {
-	freeMessage *Message
-	mu          sync.Mutex
-})
+var messagePool = sync.Pool{
+	New: func() interface{} {
+		return NewMessage()
+	},
+}
 
 // GetMessage gets a *Message form message stack.
 // NOTE:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
 func GetMessage(settings ...MessageSetting) *Message {
-	messageStack.mu.Lock()
-	m := messageStack.freeMessage
-	if m == nil {
-		m = NewMessage(settings...)
-	} else {
-		messageStack.freeMessage = m.next
-		m.doSetting(settings...)
-	}
-	messageStack.mu.Unlock()
+	m := messagePool.Get().(*Message)
+	m.doSetting(settings...)
 	return m
 }
 
 // PutMessage puts a *Message to message stack.
 func PutMessage(m *Message) {
-	messageStack.mu.Lock()
 	m.Reset()
-	m.next = messageStack.freeMessage
-	messageStack.freeMessage = m
-	messageStack.mu.Unlock()
+	messagePool.Put(m)
 }
 
 // NewMessage creates a new *Message.
