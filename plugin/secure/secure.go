@@ -63,13 +63,13 @@ func NewSecurePlugin(rerrCode int32, cipherkey string) tp.Plugin {
 }
 
 // EnforceSecure enforces the body of the encrypted reply message.
-// Note: requires that the secure plugin has been registered!
+// NOTE: requires that the secure plugin has been registered!
 func EnforceSecure(output *tp.Message) {
 	output.Meta().Set(SECURE_META_KEY, "true")
 }
 
 // WithSecureMeta encrypts the body of the current message.
-// Note: requires that the secure plugin has been registered!
+// NOTE: requires that the secure plugin has been registered!
 func WithSecureMeta() tp.MessageSetting {
 	return func(message *tp.Message) {
 		message.Meta().Set(SECURE_META_KEY, "true")
@@ -77,7 +77,7 @@ func WithSecureMeta() tp.MessageSetting {
 }
 
 // WithAcceptSecureMeta requires the peer to encrypt the replying body.
-// Note: requires that the secure plugin has been registered!
+// NOTE: requires that the secure plugin has been registered!
 func WithAcceptSecureMeta(accept bool) tp.MessageSetting {
 	s := fmt.Sprintf("%v", accept)
 	return func(message *tp.Message) {

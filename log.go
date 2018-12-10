@@ -180,7 +180,7 @@ var loggerOutputter = func() LoggerOutputter {
 }()
 
 // SetLoggerOutputter sets logger outputter.
-// Note: Concurrent is not safe!
+// NOTE: Concurrent is not safe!
 func SetLoggerOutputter(outputter LoggerOutputter) {
 	loggerOutputter = outputter
 }

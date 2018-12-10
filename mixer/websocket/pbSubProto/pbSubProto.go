@@ -33,7 +33,7 @@ func (psp *pbSubProto) Version() (byte, string) {
 }
 
 // Pack writes the Message into the connection.
-// Note: Make sure to write only once or there will be package contamination!
+// NOTE: Make sure to write only once or there will be package contamination!
 func (psp *pbSubProto) Pack(m *tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
@@ -66,7 +66,7 @@ func (psp *pbSubProto) Pack(m *tp.Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-// Note: Concurrent unsafe!
+// NOTE: Concurrent unsafe!
 func (psp *pbSubProto) Unpack(m *tp.Message) error {
 	psp.rMu.Lock()
 	defer psp.rMu.Unlock()

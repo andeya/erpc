@@ -26,7 +26,7 @@ import (
 )
 
 // PeerConfig peer config
-// Note:
+// NOTE:
 //  yaml tag is used for github.com/henrylee2cn/cfgo
 //  ini tag is used for github.com/henrylee2cn/ini
 type PeerConfig struct {
@@ -120,36 +120,36 @@ var SetReadLimit = socket.SetMessageSizeLimit
 
 // SetSocketKeepAlive sets whether the operating system should send
 // keepalive messages on the connection.
-// Note: If have not called the function, the system defaults are used.
+// NOTE: If have not called the function, the system defaults are used.
 //  func SetSocketKeepAlive(keepalive bool)
 var SetSocketKeepAlive = socket.SetKeepAlive
 
 // SetSocketKeepAlivePeriod sets period between keep alives.
-// Note: if d<0, don't change the value.
+// NOTE: if d<0, don't change the value.
 //  func SetSocketKeepAlivePeriod(d time.Duration)
 var SetSocketKeepAlivePeriod = socket.SetKeepAlivePeriod
 
 // SocketReadBuffer returns the size of the operating system's
 // receive buffer associated with the connection.
-// Note: if using the system default value, bytes=-1 and isDefault=true.
+// NOTE: if using the system default value, bytes=-1 and isDefault=true.
 //  func SocketReadBuffer() (bytes int, isDefault bool)
 var SocketReadBuffer = socket.ReadBuffer
 
 // SetSocketReadBuffer sets the size of the operating system's
 // receive buffer associated with the connection.
-// Note: if bytes<0, don't change the value.
+// NOTE: if bytes<0, don't change the value.
 //  func SetSocketReadBuffer(bytes int)
 var SetSocketReadBuffer = socket.SetReadBuffer
 
 // SocketWriteBuffer returns the size of the operating system's
 // transmit buffer associated with the connection.
-// Note: if using the system default value, bytes=-1 and isDefault=true.
+// NOTE: if using the system default value, bytes=-1 and isDefault=true.
 //  func SocketWriteBuffer() (bytes int, isDefault bool)
 var SocketWriteBuffer = socket.WriteBuffer
 
 // SetSocketWriteBuffer sets the size of the operating system's
 // transmit buffer associated with the connection.
-// Note: if bytes<0, don't change the value.
+// NOTE: if bytes<0, don't change the value.
 //  func SetSocketWriteBuffer(bytes int)
 var SetSocketWriteBuffer = socket.SetWriteBuffer
 

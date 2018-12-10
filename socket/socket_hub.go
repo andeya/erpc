@@ -74,7 +74,7 @@ func (sh *SocketHub) Random() (Socket, bool) {
 }
 
 // Len returns the length of the socket hub.
-// Note: the count implemented using sync.Map may be inaccurate.
+// NOTE: the count implemented using sync.Map may be inaccurate.
 func (sh *SocketHub) Len() int {
 	return sh.sockets.Len()
 }
@@ -85,7 +85,7 @@ func (sh *SocketHub) Delete(id string) {
 }
 
 // ChangeId changes the socket id.
-// Note: if the old id is remoteAddr, won't delete the index from socketHub.
+// NOTE: if the old id is remoteAddr, won't delete the index from socketHub.
 func (sh *SocketHub) ChangeId(newId string, socket Socket) {
 	oldId := socket.Id()
 	socket.SetId(newId)

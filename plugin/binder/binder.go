@@ -102,7 +102,7 @@ var (
 )
 
 // SetErrorFunc sets the binding or balidating error function.
-// Note: If fn=nil, set as default.
+// NOTE: If fn=nil, set as default.
 func (s *StructArgsBinder) SetErrorFunc(fn ErrorFunc) {
 	if fn != nil {
 		s.errFunc = fn

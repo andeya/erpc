@@ -697,23 +697,23 @@ type (
 		// Done returns the chan that indicates whether it has been completed.
 		Done() <-chan struct{}
 		// Reply returns the call reply.
-		// Notes:
+		// NOTE:
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the call is completed!
 		Reply() (interface{}, *Rerror)
 		// InputBodyCodec gets the body codec type of the input message.
-		// Notes:
+		// NOTE:
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the call is completed!
 		InputBodyCodec() byte
 		// InputMeta returns the header metadata of input message.
-		// Notes:
+		// NOTE:
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the call is completed!
 		InputMeta() *utils.Args
 		// CostTime returns the called cost time.
 		// If PeerConfig.CountTime=false, always returns 0.
-		// Notes:
+		// NOTE:
 		//  Inside, <-Done() is automatically called and blocked,
 		//  until the call is completed!
 		CostTime() time.Duration
@@ -805,7 +805,7 @@ func (c *callCmd) Done() <-chan struct{} {
 }
 
 // Reply returns the call reply.
-// Notes:
+// NOTE:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
 func (c *callCmd) Reply() (interface{}, *Rerror) {
@@ -814,7 +814,7 @@ func (c *callCmd) Reply() (interface{}, *Rerror) {
 }
 
 // InputBodyCodec gets the body codec type of the input message.
-// Notes:
+// NOTE:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
 func (c *callCmd) InputBodyCodec() byte {
@@ -823,7 +823,7 @@ func (c *callCmd) InputBodyCodec() byte {
 }
 
 // InputMeta returns the header metadata of input message.
-// Notes:
+// NOTE:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
 func (c *callCmd) InputMeta() *utils.Args {
@@ -833,7 +833,7 @@ func (c *callCmd) InputMeta() *utils.Args {
 
 // CostTime returns the called cost time.
 // If PeerConfig.CountTime=false, always returns 0.
-// Notes:
+// NOTE:
 //  Inside, <-Done() is automatically called and blocked,
 //  until the call is completed!
 func (c *callCmd) CostTime() time.Duration {

@@ -263,10 +263,10 @@ type (
         // Version returns the protocol's id and name.
         Version() (byte, string)
         // Pack writes the Message into the connection.
-        // Note: Make sure to write only once or there will be package contamination!
+        // NOTE: Make sure to write only once or there will be package contamination!
         Pack(*Message) error
         // Unpack reads bytes from the connection to the Message.
-        // Note: Concurrent unsafe!
+        // NOTE: Concurrent unsafe!
         Unpack(*Message) error
     }
     ProtoFunc func(io.ReadWriter) Proto
@@ -329,7 +329,7 @@ func Get(id byte) (XferFilter, error)
 func GetByName(name string) (XferFilter, error)
 
 // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-// Note: the length can not be bigger than 255!
+// NOTE: the length can not be bigger than 255!
 type XferPipe struct {
     // Has unexported fields.
 }

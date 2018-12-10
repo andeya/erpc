@@ -78,7 +78,7 @@ func GetByName(name string) (XferFilter, error) {
 }
 
 // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-// Note: the length can not be bigger than 255!
+// NOTE: the length can not be bigger than 255!
 type XferPipe struct {
 	filters []XferFilter
 }
