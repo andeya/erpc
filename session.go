@@ -357,7 +357,9 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...Me
 }
 
 // Receive receives a message from peer, before the formal connection.
-// Note: does not support automatic redial after disconnection.
+// Note:
+//  Does not support automatic redial after disconnection;
+//  Recommend to reuse unused *Message: PutMessage(input).
 func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input *Message, rerr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
