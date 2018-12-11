@@ -10,11 +10,11 @@ rawproto is the protocol default frame splicing format protocol.
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
-{2 bytes sequence length}
+{1 bytes sequence length}
 {sequence}
 {1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
-{2 bytes URI length}
-{URI}
+{1 bytes service method length}
+{service method}
 {2 bytes metadata length}
 {metadata(urlencoded)}
 {1 byte body codec id}
