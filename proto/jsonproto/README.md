@@ -43,7 +43,7 @@ func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror)
 	}, nil
 }
 
-func TestJsonProto(t *testing.T) {
+func TestJSONProto(t *testing.T) {
 	gzip.Reg('g', "gizp-5", 5)
 
 	// Server
@@ -88,5 +88,5 @@ func (p *Push) Test(arg *map[string]string) *tp.Rerror {
 test command:
 
 ```sh
-go test -v -run=TestJsonProto
+go test -v -run=TestJSONProto
 ```
