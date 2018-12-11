@@ -151,7 +151,7 @@ func (p pointer) getInt32Ptr() *int32 {
 func (p pointer) setInt32Ptr(v int32) {
 	// Allocate value in a *int32. Possibly convert that to a *enum.
 	// Then assign it to a **int32 or **enum.
-	// NOTE: we can convert *int32 to *enum, but we can't convert
+	// Note: we can convert *int32 to *enum, but we can't convert
 	// **int32 to **enum!
 	p.v.Elem().Set(reflect.ValueOf(&v).Convert(p.v.Type().Elem()))
 }
@@ -165,7 +165,7 @@ func (p pointer) getInt32Slice() []int32 {
 	}
 	// an enum
 	// Allocate a []int32, then assign []enum's values into it.
-	// NOTE: we can't convert []enum to []int32.
+	// Note: we can't convert []enum to []int32.
 	slice := p.v.Elem()
 	s := make([]int32, slice.Len())
 	for i := 0; i < slice.Len(); i++ {
@@ -184,7 +184,7 @@ func (p pointer) setInt32Slice(v []int32) {
 	}
 	// an enum
 	// Allocate a []enum, then assign []int32's values into it.
-	// NOTE: we can't convert []enum to []int32.
+	// Note: we can't convert []enum to []int32.
 	slice := reflect.MakeSlice(p.v.Type().Elem(), len(v), cap(v))
 	for i, x := range v {
 		slice.Index(i).SetInt(int64(x))
