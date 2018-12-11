@@ -872,10 +872,10 @@ const (
 )
 
 const (
-	logFormatPushLaunch = "PUSH-> %s %s %s %q SEND(%s)"
-	logFormatPushHandle = "PUSH<- %s %s %s %q RECV(%s)"
-	logFormatCallLaunch = "CALL-> %s %s %s %q SEND(%s) RECV(%s)"
-	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
+	logFormatPushLaunch = "PUSH-> %s %s %q SEND(%s)"
+	logFormatPushHandle = "PUSH<- %s %s %q RECV(%s)"
+	logFormatCallLaunch = "CALL-> %s %s %q SEND(%s) RECV(%s)"
+	logFormatCallHandle = "CALL<- %s %s %q RECV(%s) SEND(%s)"
 )
 
 func (s *session) printAccessLog(realIP string, costTime time.Duration, input, output Message, logType int8) {
@@ -913,13 +913,13 @@ func (s *session) printAccessLog(realIP string, costTime time.Duration, input, o
 
 	switch logType {
 	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.ServiceMethod(), output.Seq(), messageLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatPushLaunch, addr, costTimeStr, output.ServiceMethod(), messageLogBytes(output, s.peer.printDetail))
 	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.ServiceMethod(), input.Seq(), messageLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatPushHandle, addr, costTimeStr, input.ServiceMethod(), messageLogBytes(input, s.peer.printDetail))
 	case typeCallLaunch:
-		printFunc(logFormatCallLaunch, addr, costTimeStr, output.ServiceMethod(), output.Seq(), messageLogBytes(output, s.peer.printDetail), messageLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatCallLaunch, addr, costTimeStr, output.ServiceMethod(), messageLogBytes(output, s.peer.printDetail), messageLogBytes(input, s.peer.printDetail))
 	case typeCallHandle:
-		printFunc(logFormatCallHandle, addr, costTimeStr, input.ServiceMethod(), input.Seq(), messageLogBytes(input, s.peer.printDetail), messageLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatCallHandle, addr, costTimeStr, input.ServiceMethod(), messageLogBytes(input, s.peer.printDetail), messageLogBytes(output, s.peer.printDetail))
 	}
 }
 
