@@ -19,7 +19,6 @@ package socket
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -72,10 +71,10 @@ type (
 		SetWriteDeadline(t time.Time) error
 		// WriteMessage writes header and body to the connection.
 		// NOTE: must be safe for concurrent use by multiple goroutines.
-		WriteMessage(message *Message) error
+		WriteMessage(message Message) error
 		// ReadMessage reads header and body from the connection.
 		// NOTE: must be safe for concurrent use by multiple goroutines.
-		ReadMessage(message *Message) error
+		ReadMessage(message Message) error
 		// Read reads data from the connection.
 		// Read can be made to time out and return an Error with Timeout() == true
 		// after a fixed time limit; see SetDeadline and SetReadDeadline.
@@ -195,7 +194,7 @@ func (s *socket) ControlFD(f func(fd uintptr)) error {
 // NOTE:
 //  For the byte stream type of body, write directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (s *socket) WriteMessage(message *Message) error {
+func (s *socket) WriteMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
 	s.mu.RUnlock()
@@ -210,7 +209,7 @@ func (s *socket) WriteMessage(message *Message) error {
 // NOTE:
 //  For the byte stream type of body, read directly, do not do any processing;
 //  Must be safe for concurrent use by multiple goroutines.
-func (s *socket) ReadMessage(message *Message) error {
+func (s *socket) ReadMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
 	s.mu.RUnlock()
@@ -417,7 +416,7 @@ func SetNoDelay(_noDelay bool) {
 	noDelay = _noDelay
 }
 
-func getProto(protoFuncs []ProtoFunc, rw io.ReadWriter) Proto {
+func getProto(protoFuncs []ProtoFunc, rw IOWithReadBuffer) Proto {
 	if len(protoFuncs) > 0 && protoFuncs[0] != nil {
 		return protoFuncs[0](rw)
 	}
