@@ -387,11 +387,11 @@ const messageFormat = `
 
 // String returns printing message information.
 func (m *message) String() string {
-	var xferPipeIds = make([]int, m.xferPipe.Len())
-	for i, id := range m.xferPipe.Ids() {
-		xferPipeIds[i] = int(id)
+	var xferPipeIDs = make([]int, m.xferPipe.Len())
+	for i, id := range m.xferPipe.IDs() {
+		xferPipeIDs[i] = int(id)
 	}
-	idsBytes, _ := json.Marshal(xferPipeIds)
+	idsBytes, _ := json.Marshal(xferPipeIDs)
 	b, _ := json.Marshal(m.body)
 	dst := bytes.NewBuffer(make([]byte, 0, len(b)*2))
 	json.Indent(dst, goutil.StringToBytes(

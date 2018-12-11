@@ -127,8 +127,8 @@ func (x *XferPipe) Len() int {
 	return len(x.filters)
 }
 
-// Ids returns the id list of transfer filters.
-func (x *XferPipe) Ids() []byte {
+// IDs returns the id list of transfer filters.
+func (x *XferPipe) IDs() []byte {
 	var ids = make([]byte, x.Len())
 	if x.Len() == 0 {
 		return ids

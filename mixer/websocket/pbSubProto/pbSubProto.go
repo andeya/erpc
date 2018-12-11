@@ -52,7 +52,7 @@ func (psp *pbSubProto) Pack(m tp.Message) error {
 		Meta:          m.Meta().QueryString(),
 		BodyCodec:     int32(m.BodyCodec()),
 		Body:          bodyBytes,
-		XferPipe:      m.XferPipe().Ids(),
+		XferPipe:      m.XferPipe().IDs(),
 	})
 	if err != nil {
 		return err

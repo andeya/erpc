@@ -336,7 +336,7 @@ type XferPipe struct {
 func NewXferPipe() *XferPipe
 func (x *XferPipe) Append(filterID ...byte) error
 func (x *XferPipe) AppendFrom(src *XferPipe)
-func (x *XferPipe) Ids() []byte
+func (x *XferPipe) IDs() []byte
 func (x *XferPipe) Len() int
 func (x *XferPipe) Names() []string
 func (x *XferPipe) OnPack(data []byte) ([]byte, error)

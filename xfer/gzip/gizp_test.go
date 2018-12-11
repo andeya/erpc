@@ -19,7 +19,7 @@ func TestGzip(t *testing.T) {
 	}
 	xferPipe := xfer.NewXferPipe()
 	xferPipe.Append('g')
-	t.Logf("transfer filter: ids:%v, names:%v", xferPipe.Ids(), xferPipe.Names())
+	t.Logf("transfer filter: ids:%v, names:%v", xferPipe.IDs(), xferPipe.Names())
 
 	// test logic
 	b, err := xferPipe.OnPack([]byte("src"))
