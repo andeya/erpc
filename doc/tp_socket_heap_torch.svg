@@ -340,8 +340,8 @@
 <text text-anchor="" x="950.97" y="159.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).Unpack (5,816,551 samples, 72.92%)</title><rect x="63.3" y="181" width="860.4" height="15.0" fill="rgb(231,130,5)" rx="2" ry="2" />
-<text text-anchor="" x="66.32" y="191.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*fastProto).Unpack</text>
+<title>github.com/henrylee2cn/teleport/socket.(*rawProto).Unpack (5,816,551 samples, 72.92%)</title><rect x="63.3" y="181" width="860.4" height="15.0" fill="rgb(231,130,5)" rx="2" ry="2" />
+<text text-anchor="" x="66.32" y="191.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*rawProto).Unpack</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
 <title>main.(*BenchmarkMessage).Unmarshal (5,423,330 samples, 67.99%)</title><rect x="63.3" y="37" width="802.3" height="15.0" fill="rgb(212,142,49)" rx="2" ry="2" />
@@ -380,7 +380,7 @@
 <text text-anchor="" x="950.97" y="95.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).writeHeader (917,517 samples, 11.50%)</title><rect x="1010.6" y="165" width="135.7" height="15.0" fill="rgb(240,190,19)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*rawProto).writeHeader (917,517 samples, 11.50%)</title><rect x="1010.6" y="165" width="135.7" height="15.0" fill="rgb(240,190,19)" rx="2" ry="2" />
 <text text-anchor="" x="1013.61" y="175.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henryl..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -416,7 +416,7 @@
 <text text-anchor="" x="1052.39" y="159.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >encoding/bi..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).readMessage (294,916 samples, 3.70%)</title><rect x="880.1" y="165" width="43.6" height="15.0" fill="rgb(238,36,41)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*rawProto).readMessage (294,916 samples, 3.70%)</title><rect x="880.1" y="165" width="43.6" height="15.0" fill="rgb(238,36,41)" rx="2" ry="2" />
 <text text-anchor="" x="883.11" y="175.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >gith..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -424,7 +424,7 @@
 <text text-anchor="" x="1149.34" y="207.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >gith..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).readHeader (98,305 samples, 1.23%)</title><rect x="865.6" y="165" width="14.5" height="15.0" fill="rgb(219,42,22)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*rawProto).readHeader (98,305 samples, 1.23%)</title><rect x="865.6" y="165" width="14.5" height="15.0" fill="rgb(219,42,22)" rx="2" ry="2" />
 <text text-anchor="" x="868.57" y="175.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -436,16 +436,16 @@
 <text text-anchor="" x="926.73" y="175.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >e..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).writeBody (423,485 samples, 5.31%)</title><rect x="948.0" y="165" width="62.6" height="15.0" fill="rgb(243,35,22)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*rawProto).writeBody (423,485 samples, 5.31%)</title><rect x="948.0" y="165" width="62.6" height="15.0" fill="rgb(243,35,22)" rx="2" ry="2" />
 <text text-anchor="" x="950.97" y="175.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).Pack (1,504,844 samples, 18.86%)</title><rect x="923.7" y="181" width="222.6" height="15.0" fill="rgb(209,196,52)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(*rawProto).Pack (1,504,844 samples, 18.86%)</title><rect x="923.7" y="181" width="222.6" height="15.0" fill="rgb(209,196,52)" rx="2" ry="2" />
 <text text-anchor="" x="926.73" y="191.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/telepo..</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*fastProto).readBody (5,423,330 samples, 67.99%)</title><rect x="63.3" y="165" width="802.3" height="15.0" fill="rgb(219,86,26)" rx="2" ry="2" />
-<text text-anchor="" x="66.32" y="175.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*fastProto).readBody</text>
+<title>github.com/henrylee2cn/teleport/socket.(*rawProto).readBody (5,423,330 samples, 67.99%)</title><rect x="63.3" y="165" width="802.3" height="15.0" fill="rgb(219,86,26)" rx="2" ry="2" />
+<text text-anchor="" x="66.32" y="175.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >github.com/henrylee2cn/teleport/socket.(*rawProto).readBody</text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
 <title>main.(*BenchmarkMessage).Marshal (423,485 samples, 5.31%)</title><rect x="948.0" y="69" width="62.6" height="15.0" fill="rgb(236,10,6)" rx="2" ry="2" />
