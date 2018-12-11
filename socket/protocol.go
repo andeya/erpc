@@ -48,7 +48,7 @@ type (
 )
 
 // default builder of socket communication protocol.
-var defaultProtoFunc = NewRawProtoFunc
+var defaultProtoFunc = RawProtoFunc
 
 // DefaultProtoFunc gets the default builder of socket communication protocol
 func DefaultProtoFunc() ProtoFunc {
@@ -90,9 +90,9 @@ type rawProto struct {
 	rMu  sync.Mutex
 }
 
-// NewRawProtoFunc is creation function of fast socket protocol.
+// RawProtoFunc is creation function of fast socket protocol.
 // NOTE: it is the default protocol.
-var NewRawProtoFunc = func(rw IOWithReadBuffer) Proto {
+var RawProtoFunc = func(rw IOWithReadBuffer) Proto {
 	return &rawProto{
 		id:   'r',
 		name: "raw",

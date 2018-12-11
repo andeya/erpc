@@ -48,13 +48,13 @@ func TestPbProto(t *testing.T) {
 	// server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
-	go srv.ListenAndServe(pbproto.NewPbProtoFunc)
+	go srv.ListenAndServe(pbproto.NewPbProtoFunc())
 	time.Sleep(1e9)
 
 	// client
 	cli := tp.NewPeer(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
-	sess, err := cli.Dial(":9090", pbproto.NewPbProtoFunc)
+	sess, err := cli.Dial(":9090", pbproto.NewPbProtoFunc())
 	if err != nil {
 		t.Error(err)
 	}

@@ -28,13 +28,13 @@ func TestJsonProto(t *testing.T) {
 	// Server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
-	go srv.ListenAndServe(jsonproto.NewJsonProtoFunc)
+	go srv.ListenAndServe(jsonproto.NewJSONProtoFunc())
 	time.Sleep(1e9)
 
 	// Client
 	cli := tp.NewPeer(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
-	sess, err := cli.Dial(":9090", jsonproto.NewJsonProtoFunc)
+	sess, err := cli.Dial(":9090", jsonproto.NewJSONProtoFunc())
 	if err != nil {
 		t.Error(err)
 	}

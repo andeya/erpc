@@ -1,6 +1,7 @@
 package rawproto
 
 import (
+	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -27,4 +28,6 @@ import (
 // NOTE:
 //  it is the default protocol.
 //  id:'r', name:"raw"
-var NewRawProtoFunc = socket.NewRawProtoFunc
+func NewRawProtoFunc() tp.ProtoFunc {
+	return socket.RawProtoFunc
+}

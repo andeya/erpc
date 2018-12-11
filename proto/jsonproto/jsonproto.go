@@ -30,14 +30,16 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-// NewJsonProtoFunc is creation function of JSON socket protocol.
+// NewJSONProtoFunc is creation function of JSON socket protocol.
 //  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
 //  Message data demo: `830{"seq":%q,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
-var NewJsonProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
-	return &jsonproto{
-		id:   'j',
-		name: "json",
-		rw:   rw,
+func NewJSONProtoFunc() tp.ProtoFunc {
+	return func(rw tp.IOWithReadBuffer) tp.Proto {
+		return &jsonproto{
+			id:   'j',
+			name: "json",
+			rw:   rw,
+		}
 	}
 }
 

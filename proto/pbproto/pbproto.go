@@ -28,11 +28,13 @@ import (
 )
 
 // NewPbProtoFunc is creation function of PROTOBUF socket protocol.
-var NewPbProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
-	return &pbproto{
-		id:   'p',
-		name: "protobuf",
-		rw:   rw,
+func NewPbProtoFunc() tp.ProtoFunc {
+	return func(rw tp.IOWithReadBuffer) tp.Proto {
+		return &pbproto{
+			id:   'p',
+			name: "protobuf",
+			rw:   rw,
+		}
 	}
 }
 

@@ -14,10 +14,10 @@ func init() {
 	tp.SetServiceMethodMapper(tp.RPCServiceMethodMapper)
 }
 
-// NewTProtoFactory creates tp.ProtoFunc of Thrift protocol.
+// NewTProtoFunc creates tp.ProtoFunc of Thrift protocol.
 // NOTE:
 //  If @factory is not provided, use the default binary protocol.
-func NewTProtoFactory(factory ...thrift.TProtocolFactory) tp.ProtoFunc {
+func NewTProtoFunc(factory ...thrift.TProtocolFactory) tp.ProtoFunc {
 	var fa thrift.TProtocolFactory
 	if len(factory) > 0 {
 		fa = factory[0]

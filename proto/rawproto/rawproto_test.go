@@ -21,7 +21,7 @@ func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror)
 	}, nil
 }
 
-func TestPbProto(t *testing.T) {
+func TestRawProto(t *testing.T) {
 	gzip.Reg('g', "gizp-5", 5)
 
 	// server
