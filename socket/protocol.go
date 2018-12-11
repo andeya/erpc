@@ -18,6 +18,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"math"
+	"strconv"
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
@@ -26,18 +28,23 @@ import (
 
 type (
 	// Proto pack/unpack protocol scheme of socket message.
+	// NOTE: Implementation specifications for Message interface should be complied with.
 	Proto interface {
 		// Version returns the protocol's id and name.
 		Version() (byte, string)
 		// Pack writes the Message into the connection.
 		// NOTE: Make sure to write only once or there will be package contamination!
-		Pack(*Message) error
+		Pack(Message) error
 		// Unpack reads bytes from the connection to the Message.
 		// NOTE: Concurrent unsafe!
-		Unpack(*Message) error
+		Unpack(Message) error
+	}
+	// IOWithReadBuffer implements buffered I/O with buffered reader.
+	IOWithReadBuffer interface {
+		io.ReadWriter
 	}
 	// ProtoFunc function used to create a custom Proto interface.
-	ProtoFunc func(io.ReadWriter) Proto
+	ProtoFunc func(IOWithReadBuffer) Proto
 )
 
 // default builder of socket communication protocol.
@@ -63,11 +70,11 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
-{2 bytes sequence length}
+{1 bytes sequence length}
 {sequence}
 {1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
-{2 bytes URI length}
-{URI}
+{1 bytes service method length}
+{service method}
 {2 bytes metadata length}
 {metadata(urlencoded)}
 {1 byte body codec id}
@@ -85,7 +92,7 @@ type rawProto struct {
 
 // NewRawProtoFunc is creation function of fast socket protocol.
 // NOTE: it is the default protocol.
-var NewRawProtoFunc = func(rw io.ReadWriter) Proto {
+var NewRawProtoFunc = func(rw IOWithReadBuffer) Proto {
 	return &rawProto{
 		id:   'r',
 		name: "raw",
@@ -101,15 +108,12 @@ func (r *rawProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (r *rawProto) Pack(m *Message) error {
+func (r *rawProto) Pack(m Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
 	// fake size
 	err := binary.Write(bb, binary.BigEndian, uint32(0))
-
-	// protocol version
-	bb.WriteByte(r.id)
 
 	// transfer pipe
 	bb.WriteByte(byte(m.XferPipe().Len()))
@@ -154,16 +158,20 @@ func (r *rawProto) Pack(m *Message) error {
 	return err
 }
 
-func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m *Message) error {
-	seqBytes := goutil.StringToBytes(m.Seq())
-	binary.Write(bb, binary.BigEndian, uint16(len(seqBytes)))
-	bb.Write(seqBytes)
+func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m Message) error {
+	seqStr := strconv.FormatInt(int64(m.Seq()), 36)
+	bb.WriteByte(byte(len(seqStr)))
+	bb.Write(goutil.StringToBytes(seqStr))
 
 	bb.WriteByte(m.Mtype())
 
-	uriBytes := goutil.StringToBytes(m.Uri())
-	binary.Write(bb, binary.BigEndian, uint16(len(uriBytes)))
-	bb.Write(uriBytes)
+	serviceMethod := goutil.StringToBytes(m.ServiceMethod())
+	serviceMethodLength := len(serviceMethod)
+	if serviceMethodLength > math.MaxUint8 {
+		return errors.New("raw proto: not support service method longer than 255")
+	}
+	bb.WriteByte(byte(serviceMethodLength))
+	bb.Write(serviceMethod)
 
 	metaBytes := m.Meta().QueryString()
 	binary.Write(bb, binary.BigEndian, uint16(len(metaBytes)))
@@ -171,7 +179,7 @@ func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m *Message) error {
 	return nil
 }
 
-func (r *rawProto) writeBody(bb *utils.ByteBuffer, m *Message) error {
+func (r *rawProto) writeBody(bb *utils.ByteBuffer, m Message) error {
 	bb.WriteByte(m.BodyCodec())
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -183,7 +191,7 @@ func (r *rawProto) writeBody(bb *utils.ByteBuffer, m *Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (r *rawProto) Unpack(m *Message) error {
+func (r *rawProto) Unpack(m Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)
 
@@ -198,34 +206,29 @@ func (r *rawProto) Unpack(m *Message) error {
 		return err
 	}
 	// header
-	data = r.readHeader(data, m)
+	data, err = r.readHeader(data, m)
+	if err != nil {
+		return err
+	}
 	// body
 	return r.readBody(data, m)
 }
 
-var errProtoUnmatch = errors.New("mismatched protocol")
-
-func (r *rawProto) readMessage(bb *utils.ByteBuffer, m *Message) error {
+func (r *rawProto) readMessage(bb *utils.ByteBuffer, m Message) error {
 	r.rMu.Lock()
 	defer r.rMu.Unlock()
 	// size
-	var size uint32
-	err := binary.Read(r.r, binary.BigEndian, &size)
+	var lastSize uint32
+	err := binary.Read(r.r, binary.BigEndian, &lastSize)
 	if err != nil {
 		return err
 	}
-	if err = m.SetSize(size); err != nil {
+	if err = m.SetSize(lastSize); err != nil {
 		return err
 	}
-	// protocol
-	bb.ChangeLen(1024)
-	_, err = io.ReadFull(r.r, bb.B[:1])
-	if err != nil {
-		return err
-	}
-	if bb.B[0] != r.id {
-		return errProtoUnmatch
-	}
+	lastSize -= 4
+	bb.ChangeLen(int(lastSize))
+
 	// transfer pipe
 	_, err = io.ReadFull(r.r, bb.B[:1])
 	if err != nil {
@@ -242,36 +245,44 @@ func (r *rawProto) readMessage(bb *utils.ByteBuffer, m *Message) error {
 			return err
 		}
 	}
+	lastSize -= (1 + uint32(xferLen))
+
 	// read last all
-	var lastLen = int(size) - 4 - 1 - 1 - int(xferLen)
-	bb.ChangeLen(lastLen)
+	bb.ChangeLen(int(lastSize))
 	_, err = io.ReadFull(r.r, bb.B)
 	return err
 }
 
-func (r *rawProto) readHeader(data []byte, m *Message) []byte {
+func (r *rawProto) readHeader(data []byte, m Message) ([]byte, error) {
 	// seq
-	seqLen := binary.BigEndian.Uint16(data)
-	data = data[2:]
-	m.SetSeq(string(data[:seqLen]))
+	seqLen := data[0]
+	data = data[1:]
+	seq, err := strconv.ParseInt(goutil.BytesToString(data[:seqLen]), 36, 32)
+	if err != nil {
+		return nil, err
+	}
+	m.SetSeq(int32(seq))
 	data = data[seqLen:]
+
 	// type
 	m.SetMtype(data[0])
 	data = data[1:]
-	// uri
-	uriLen := binary.BigEndian.Uint16(data)
-	data = data[2:]
-	m.SetUri(string(data[:uriLen]))
-	data = data[uriLen:]
+
+	// service method
+	serviceMethodLen := data[0]
+	data = data[1:]
+	m.SetServiceMethod(string(data[:serviceMethodLen]))
+	data = data[serviceMethodLen:]
+
 	// meta
 	metaLen := binary.BigEndian.Uint16(data)
 	data = data[2:]
 	m.Meta().ParseBytes(data[:metaLen])
 	data = data[metaLen:]
-	return data
+	return data, nil
 }
 
-func (r *rawProto) readBody(data []byte, m *Message) error {
+func (r *rawProto) readBody(data []byte, m Message) error {
 	m.SetBodyCodec(data[0])
 	return m.UnmarshalBody(data[1:])
 }

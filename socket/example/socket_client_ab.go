@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -47,8 +46,8 @@ func main() {
 				// write request
 				message.Reset()
 				message.SetBodyCodec(codec.ID_PROTOBUF)
-				message.SetSeq(strconv.Itoa(a))
-				message.SetUri("/a/b")
+				message.SetSeq(int32(a))
+				message.SetServiceMethod("/a/b")
 				message.SetBody(&pb.PbTest{A: 10, B: 2})
 				err = s.WriteMessage(message)
 				if err != nil {

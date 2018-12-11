@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/url"
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
@@ -31,80 +30,73 @@ import (
 )
 
 type (
-	// Message a socket message data.
-	Message struct {
-		// message sequence
-		// NOTE: max len ≤ 65535!
-		seq string
-		// message type, such as CALL, PUSH, REPLY
-		mtype byte
-		// URI string
-		// NOTE: max len ≤ 65535!
-		uri string
-		// URI object
-		// NOTE: urlencoded URI max len ≤ 65535!
-		uriObject *url.URL
-		// metadata
-		// NOTE: urlencoded string max len ≤ 65535!
-		meta *utils.Args
-		// body codec type
-		bodyCodec byte
-		// body object
-		body interface{}
-		// newBodyFunc creates a new body by message type and URI.
-		// NOTE:
-		//  only for writing message;
-		//  should be nil when reading message.
-		newBodyFunc NewBodyFunc
+	// Message a socket message interface.
+	Message interface {
+		// Header is an operation interface of required message fields.
+		// NOTE: Must be supported by Proto interface.
+		Header
+
+		// Body is an operation interface of optional message fields.
+		// SUGGEST: For features complete, the protocol interface should support it.
+		Body
+
 		// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-		// NOTE: the length can not be bigger than 255!
-		xferPipe *xfer.XferPipe
-		// message size
-		size uint32
-		// ctx is the message handling context,
-		// carries a deadline, a cancelation signal,
-		// and other values across API boundaries.
-		ctx context.Context
-		// stack
-		next *Message
+		// SUGGEST: The length can not be bigger than 255!
+		XferPipe() *xfer.XferPipe
+
+		// Size returns the size of message.
+		// SUGGEST: For better statistics, Proto interfaces should support it.
+		Size() uint32
+
+		// SetSize sets the size of message.
+		// If the size is too big, returns error.
+		// SUGGEST: For better statistics, Proto interfaces should support it.
+		SetSize(size uint32) error
+
+		// Reset resets itself.
+		Reset(settings ...MessageSetting)
+
+		// String returns printing message information.
+		// NOTE: Internal implementation without Proto interface support.
+		String() string
 	}
-	// Header message header interface
+
+	// Header is an operation interface of required message fields.
+	// NOTE: Must be supported by Proto interface.
 	Header interface {
-		// Mtype returns the message sequence
-		Seq() string
-		// SetSeq sets the message sequence
-		// NOTE: max len ≤ 65535!
-		SetSeq(string)
-		// Mtype returns the message type, such as CALL, PUSH, REPLY
+		// Seq returns the message sequence.
+		Seq() int32
+		// SetSeq sets the message sequence.
+		SetSeq(int32)
+		// Mtype returns the message type, such as CALL, REPLY, PUSH.
 		Mtype() byte
-		// Mtype sets the message type
+		// Mtype sets the message type, such as CALL, REPLY, PUSH.
 		SetMtype(byte)
-		// Uri returns the URI string
-		Uri() string
-		// UriObject returns the URI object
-		UriObject() *url.URL
-		// SetUri sets the message URI
-		// NOTE: max len ≤ 65535!
-		SetUri(string)
-		// SetUriObject sets the message URI
-		// NOTE: urlencoded URI max len ≤ 65535!
-		SetUriObject(uriObject *url.URL)
-		// Meta returns the metadata
-		// NOTE: urlencoded string max len ≤ 65535!
+		// ServiceMethod returns the serviec method.
+		// SUGGEST: max len ≤ 255!
+		ServiceMethod() string
+		// SetServiceMethod sets the serviec method.
+		// SUGGEST: max len ≤ 255!
+		SetServiceMethod(string)
+		// Meta returns the metadata.
+		// SUGGEST: urlencoded string max len ≤ 65535!
 		Meta() *utils.Args
 	}
-	// Body message body interface
+
+	// Body is an operation interface of optional message fields.
+	// SUGGEST: For features complete, the protocol interface should support it.
 	Body interface {
-		// BodyCodec returns the body codec type id
+		// BodyCodec returns the body codec type id.
 		BodyCodec() byte
-		// SetBodyCodec sets the body codec type id
+		// SetBodyCodec sets the body codec type id.
 		SetBodyCodec(bodyCodec byte)
-		// Body returns the body object
+		// Body returns the body object.
 		Body() interface{}
-		// SetBody sets the body object
+		// SetBody sets the body object.
 		SetBody(body interface{})
 		// SetNewBody resets the function of geting body.
-		SetNewBody(newBodyFunc NewBodyFunc)
+		//  NOTE: NewBodyFunc is only for reading form connection;
+		SetNewBody(NewBodyFunc)
 		// MarshalBody returns the encoding of body.
 		// NOTE: when the body is a stream of bytes, no marshalling is done.
 		MarshalBody() ([]byte, error)
@@ -114,16 +106,56 @@ type (
 		//  if body=nil, try to use newBodyFunc to create a new one;
 		//  when the body is a stream of bytes, no unmarshalling is done.
 		UnmarshalBody(bodyBytes []byte) error
+
+		// messageIdentity prevents implementation outside the package.
+		messageIdentity()
 	}
 
-	// NewBodyFunc creates a new body by header.
+	// NewBodyFunc creates a new body by header,
+	// and only for reading form connection.
 	NewBodyFunc func(Header) interface{}
 )
 
-var (
-	_ Header = new(Message)
-	_ Body   = new(Message)
-)
+// message a socket message data.
+type message struct {
+	// Head: required message fields
+
+	// message sequence
+	// 32-bit, compatible with various system platforms and other languages
+	seq int32
+	// message type, such as CALL, REPLY, PUSH
+	mtype byte
+	// service method
+	// SUGGEST: max len ≤ 255!
+	serviceMethod string
+	// metadata
+	// SUGGEST: urlencoded string max len ≤ 65535!
+	meta *utils.Args
+
+	// Body: optional message fields
+
+	// body codec type
+	bodyCodec byte
+	// body object
+	body interface{}
+	// newBodyFunc creates a new body by message type and URI.
+	// NOTE:
+	//  only for writing message;
+	//  should be nil when reading message.
+	newBodyFunc NewBodyFunc
+
+	// Other
+
+	// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
+	// SUGGEST: the length can not be bigger than 255!
+	xferPipe *xfer.XferPipe
+	// message size
+	size uint32
+	// ctx is the message handling context,
+	// carries a deadline, a cancelation signal,
+	// and other values across API boundaries.
+	ctx context.Context
+}
 
 var messagePool = sync.Pool{
 	New: func() interface{} {
@@ -131,28 +163,28 @@ var messagePool = sync.Pool{
 	},
 }
 
-// GetMessage gets a *Message form message stack.
+// GetMessage gets a *message form message pool.
 // NOTE:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
-func GetMessage(settings ...MessageSetting) *Message {
-	m := messagePool.Get().(*Message)
+func GetMessage(settings ...MessageSetting) Message {
+	m := messagePool.Get().(*message)
 	m.doSetting(settings...)
 	return m
 }
 
-// PutMessage puts a *Message to message stack.
-func PutMessage(m *Message) {
+// PutMessage puts a *message to message pool.
+func PutMessage(m Message) {
 	m.Reset()
 	messagePool.Put(m)
 }
 
-// NewMessage creates a new *Message.
+// NewMessage creates a new *message.
 // NOTE:
 //  NewBody is only for reading form connection;
 //  settings are only for writing to connection.
-func NewMessage(settings ...MessageSetting) *Message {
-	var m = &Message{
+func NewMessage(settings ...MessageSetting) Message {
+	var m = &message{
 		meta:     new(utils.Args),
 		xferPipe: xfer.NewXferPipe(),
 	}
@@ -160,27 +192,26 @@ func NewMessage(settings ...MessageSetting) *Message {
 	return m
 }
 
+func (m *message) messageIdentity() {}
+
 // Reset resets itself.
 // NOTE:
-//  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
-func (m *Message) Reset(settings ...MessageSetting) {
-	m.next = nil
+func (m *message) Reset(settings ...MessageSetting) {
 	m.body = nil
 	m.meta.Reset()
 	m.xferPipe.Reset()
 	m.newBodyFunc = nil
-	m.seq = ""
+	m.seq = 0
 	m.mtype = 0
-	m.uri = ""
-	m.uriObject = nil
+	m.serviceMethod = ""
 	m.size = 0
 	m.ctx = nil
 	m.bodyCodec = codec.NilCodecId
 	m.doSetting(settings...)
 }
 
-func (m *Message) doSetting(settings ...MessageSetting) {
+func (m *message) doSetting(settings ...MessageSetting) {
 	for _, fn := range settings {
 		if fn != nil {
 			fn(m)
@@ -189,103 +220,81 @@ func (m *Message) doSetting(settings ...MessageSetting) {
 }
 
 // Context returns the message handling context.
-func (m *Message) Context() context.Context {
+func (m *message) Context() context.Context {
 	if m.ctx == nil {
 		return context.Background()
 	}
 	return m.ctx
 }
 
-// Seq returns the message sequence
-func (m *Message) Seq() string {
+// Seq returns the message sequence.
+func (m *message) Seq() int32 {
 	return m.seq
 }
 
-// SetSeq sets the message sequence
-// NOTE: max len ≤ 65535!
-func (m *Message) SetSeq(seq string) {
+// SetSeq sets the message sequence.
+func (m *message) SetSeq(seq int32) {
 	m.seq = seq
 }
 
-// Mtype returns the message type, such as CALL, PUSH, REPLY
-func (m *Message) Mtype() byte {
+// Mtype returns the message type, such as CALL, REPLY, PUSH.
+func (m *message) Mtype() byte {
 	return m.mtype
 }
 
-// SetMtype sets the message type
-func (m *Message) SetMtype(mtype byte) {
+// Mtype sets the message type, such as CALL, REPLY, PUSH.
+func (m *message) SetMtype(mtype byte) {
 	m.mtype = mtype
 }
 
-// Uri returns the URI string
-func (m *Message) Uri() string {
-	if m.uriObject != nil {
-		return m.uriObject.String()
-	}
-	return m.uri
+// ServiceMethod returns the serviec method.
+// SUGGEST: max len ≤ 255!
+func (m *message) ServiceMethod() string {
+	return m.serviceMethod
 }
 
-// UriObject returns the URI object
-func (m *Message) UriObject() *url.URL {
-	if m.uriObject == nil {
-		m.uriObject, _ = url.Parse(m.uri)
-		if m.uriObject == nil {
-			m.uriObject = new(url.URL)
-		}
-		m.uri = ""
-	}
-	return m.uriObject
-}
-
-// SetUri sets the message URI
-// NOTE: max len ≤ 65535!
-func (m *Message) SetUri(uri string) {
-	m.uri = uri
-	m.uriObject = nil
-}
-
-// SetUriObject sets the message URI
-// NOTE: urlencoded URI max len ≤ 65535!
-func (m *Message) SetUriObject(uriObject *url.URL) {
-	m.uriObject = uriObject
-	m.uri = ""
+// SetServiceMethod sets the serviec method.
+// SUGGEST: max len ≤ 255!
+func (m *message) SetServiceMethod(serviceMethod string) {
+	m.serviceMethod = serviceMethod
 }
 
 // Meta returns the metadata.
 // When the package is reset, it will be reset.
-// NOTE: urlencoded string max len ≤ 65535!
-func (m *Message) Meta() *utils.Args {
+// SUGGEST: urlencoded string max len ≤ 65535!
+func (m *message) Meta() *utils.Args {
 	return m.meta
 }
 
-// BodyCodec returns the body codec type id
-func (m *Message) BodyCodec() byte {
+// BodyCodec returns the body codec type id.
+func (m *message) BodyCodec() byte {
 	return m.bodyCodec
 }
 
-// SetBodyCodec sets the body codec type id
-func (m *Message) SetBodyCodec(bodyCodec byte) {
+// SetBodyCodec sets the body codec type id.
+func (m *message) SetBodyCodec(bodyCodec byte) {
 	m.bodyCodec = bodyCodec
 }
 
-// Body returns the body object
-func (m *Message) Body() interface{} {
+// Body returns the body object.
+func (m *message) Body() interface{} {
 	return m.body
 }
 
-// SetBody sets the body object
-func (m *Message) SetBody(body interface{}) {
+// SetBody sets the body object.
+func (m *message) SetBody(body interface{}) {
 	m.body = body
 }
 
 // SetNewBody resets the function of geting body.
-func (m *Message) SetNewBody(newBodyFunc NewBodyFunc) {
+//  NOTE: newBodyFunc is only for reading form connection;
+func (m *message) SetNewBody(newBodyFunc NewBodyFunc) {
 	m.newBodyFunc = newBodyFunc
 }
 
 // MarshalBody returns the encoding of body.
 // NOTE: when the body is a stream of bytes, no marshalling is done.
-func (m *Message) MarshalBody() ([]byte, error) {
+func (m *message) MarshalBody() ([]byte, error) {
 	switch body := m.body.(type) {
 	default:
 		c, err := codec.Get(m.bodyCodec)
@@ -310,7 +319,7 @@ func (m *Message) MarshalBody() ([]byte, error) {
 //  seq, mtype, uri must be setted already;
 //  if body=nil, try to use newBodyFunc to create a new one;
 //  when the body is a stream of bytes, no unmarshalling is done.
-func (m *Message) UnmarshalBody(bodyBytes []byte) error {
+func (m *message) UnmarshalBody(bodyBytes []byte) error {
 	if m.body == nil && m.newBodyFunc != nil {
 		m.body = m.newBodyFunc(m)
 	}
@@ -340,18 +349,20 @@ func (m *Message) UnmarshalBody(bodyBytes []byte) error {
 
 // XferPipe returns transfer filter pipe, handlers from outer-most to inner-most.
 // NOTE: the length can not be bigger than 255!
-func (m *Message) XferPipe() *xfer.XferPipe {
+func (m *message) XferPipe() *xfer.XferPipe {
 	return m.xferPipe
 }
 
 // Size returns the size of message.
-func (m *Message) Size() uint32 {
+// SUGGEST: For better statistics, Proto interfaces should support it.
+func (m *message) Size() uint32 {
 	return m.size
 }
 
 // SetSize sets the size of message.
 // If the size is too big, returns error.
-func (m *Message) SetSize(size uint32) error {
+// SUGGEST: For better statistics, Proto interfaces should support it.
+func (m *message) SetSize(size uint32) error {
 	err := checkMessageSize(size)
 	if err != nil {
 		return err
@@ -362,9 +373,9 @@ func (m *Message) SetSize(size uint32) error {
 
 const messageFormat = `
 {
-  "seq": %q,
+  "seq": %d,
   "mtype": %d,
-  "uri": %q,
+  "service_method": %q,
   "meta": %q,
   "body_codec": %d,
   "body": %s,
@@ -372,8 +383,9 @@ const messageFormat = `
   "size": %d
 }`
 
-// String returns printing text.
-func (m *Message) String() string {
+// String returns printing message information.
+// NOTE: Internal implementation without Proto interface support.
+func (m *message) String() string {
 	var xferPipeIds = make([]int, m.xferPipe.Len())
 	for i, id := range m.xferPipe.Ids() {
 		xferPipeIds[i] = int(id)
@@ -385,7 +397,7 @@ func (m *Message) String() string {
 		fmt.Sprintf(messageFormat,
 			m.seq,
 			m.mtype,
-			m.uri,
+			m.serviceMethod,
 			m.meta.QueryString(),
 			m.bodyCodec,
 			b,
@@ -396,102 +408,77 @@ func (m *Message) String() string {
 	return goutil.BytesToString(dst.Bytes())
 }
 
-// MessageSetting is a pipe function type for setting message.
-type MessageSetting func(*Message)
+// MessageSetting is a pipe function type for setting message,
+// and only for writing to connection.
+type MessageSetting func(*message)
 
 // WithContext sets the message handling context.
 func WithContext(ctx context.Context) MessageSetting {
-	return func(m *Message) {
+	return func(m *message) {
 		m.ctx = ctx
-	}
-}
-
-// WithSeq sets the message sequence.
-// NOTE: max len ≤ 65535!
-func WithSeq(seq string) MessageSetting {
-	return func(m *Message) {
-		m.seq = seq
 	}
 }
 
 // WithMtype sets the message type.
 func WithMtype(mtype byte) MessageSetting {
-	return func(m *Message) {
+	return func(m *message) {
 		m.mtype = mtype
 	}
 }
 
-// WithUri sets the message URI string.
-// NOTE: max len ≤ 65535!
-func WithUri(uri string) MessageSetting {
-	return func(m *Message) {
-		m.SetUri(uri)
-	}
-}
-
-// WithUriObject sets the message URI object.
-// NOTE: urlencoded URI max len ≤ 65535!
-func WithUriObject(uriObject *url.URL) MessageSetting {
-	return func(m *Message) {
-		m.SetUriObject(uriObject)
-	}
-}
-
-// WithQuery sets the message URI query parameter.
-// NOTE: urlencoded URI max len ≤ 65535!
-func WithQuery(key, value string) MessageSetting {
-	return func(m *Message) {
-		u := m.UriObject()
-		v := u.Query()
-		v.Add(key, value)
-		u.RawQuery = v.Encode()
+// WithServiceMethod sets the message service method.
+// SUGGEST: max len ≤ 255!
+func WithServiceMethod(serviceMethod string) MessageSetting {
+	return func(m *message) {
+		m.SetServiceMethod(serviceMethod)
 	}
 }
 
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
-// NOTE: urlencoded string max len ≤ 65535!
+// SUGGEST: urlencoded string max len ≤ 65535!
 func WithAddMeta(key, value string) MessageSetting {
-	return func(m *Message) {
+	return func(m *message) {
 		m.meta.Add(key, value)
 	}
 }
 
 // WithSetMeta sets 'key=value' metadata argument.
-// NOTE: urlencoded string max len ≤ 65535!
+// SUGGEST: urlencoded string max len ≤ 65535!
 func WithSetMeta(key, value string) MessageSetting {
-	return func(m *Message) {
+	return func(m *message) {
 		m.meta.Set(key, value)
 	}
 }
 
 // WithBodyCodec sets the body codec.
 func WithBodyCodec(bodyCodec byte) MessageSetting {
-	return func(m *Message) {
+	return func(m *message) {
 		m.bodyCodec = bodyCodec
 	}
 }
 
 // WithBody sets the body object.
 func WithBody(body interface{}) MessageSetting {
-	return func(m *Message) {
+	return func(m *message) {
 		m.body = body
 	}
 }
 
 // WithNewBody resets the function of geting body.
+//  NOTE: newBodyFunc is only for reading form connection;
 func WithNewBody(newBodyFunc NewBodyFunc) MessageSetting {
-	return func(m *Message) {
+	return func(m *message) {
 		m.newBodyFunc = newBodyFunc
 	}
 }
 
 // WithXferPipe sets transfer filter pipe.
-// NOTE:
-//  panic if the filterId is not registered
-func WithXferPipe(filterId ...byte) MessageSetting {
-	return func(m *Message) {
-		if err := m.xferPipe.Append(filterId...); err != nil {
+// NOTE: Panic if the filterId is not registered
+// SUGGEST: The length can not be bigger than 255!
+func WithXferPipe(filterID ...byte) MessageSetting {
+	return func(m *message) {
+		if err := m.xferPipe.Append(filterID...); err != nil {
 			panic(err)
 		}
 	}
@@ -500,7 +487,7 @@ func WithXferPipe(filterId ...byte) MessageSetting {
 var (
 	messageSizeLimit uint32 = math.MaxUint32
 	// ErrExceedMessageSizeLimit error
-	ErrExceedMessageSizeLimit = errors.New("Size of package exceeds limit.")
+	ErrExceedMessageSizeLimit = errors.New("Size of package exceeds limit")
 )
 
 // MessageSizeLimit gets the message size upper limit of reading.
