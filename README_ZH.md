@@ -233,7 +233,7 @@ func (p *Push) Status(arg *string) *tp.Rerror {
 - **Socket：** 对net.Conn的封装，增加自定义包协议、传输管道等功能
 - *Message：** 数据包内容元素对应的结构体
 - **Proto：** 数据包封包／解包的协议接口
-- **Codec：** 用于`Message.Body`的序列化工具
+- **Codec：** 用于`Body`的序列化工具
 - **XferPipe：** 数据包字节流的编码处理管道，如压缩、加密、校验等
 - **XferFilter：** 一个在数据包传输前，对数据进行加工的接口
 - **Plugin：** 贯穿于通信各个环节的插件
@@ -404,8 +404,7 @@ var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
-
-### Call-Controller-Struct 接口模板
+### Call-Controller-Struct 接口模版
 
 ```go
 type Aaa struct {
@@ -420,10 +419,14 @@ func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
 - 注册到根路由：
 
 ```go
-// register the pull route: /aaa/xx_zz
+// register the call route
+// HTTP mapping: /aaa/xx_zz
+// RPC mapping: Aaa.XxZz
 peer.RouteCall(new(Aaa))
 
-// or register the pull route: /xx_zz
+// or register the call route
+// HTTP mapping: /xx_zz
+// RPC mapping: XxZz
 peer.RouteCallFunc((*Aaa).XxZz)
 ```
 
@@ -439,7 +442,9 @@ func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
 - 注册到根路由：
 
 ```go
-// register the pull route: /xx_zz
+// register the call route
+// HTTP mapping: /xx_zz
+// RPC mapping: XxZz
 peer.RouteCallFunc(XxZz)
 ```
 
@@ -458,17 +463,21 @@ func (b *Bbb) YyZz(arg *<T>) *tp.Rerror {
 - 注册到根路由：
 
 ```go
-// register the push route: /bbb/yy_zz
+// register the push handler
+// HTTP mapping: /bbb/yy_zz
+// RPC mapping: Bbb.YyZz
 peer.RoutePush(new(Bbb))
 
-// or register the push route: /yy_zz
+// or register the push handler
+// HTTP mapping: /yy_zz
+// RPC mapping: YyZz
 peer.RoutePushFunc((*Bbb).YyZz)
 ```
 
 ### Push-Handler-Function 接口模板
 
 ```go
-// YyZz register the route: /yy_zz
+// YyZz register the handler
 func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
     ...
     return nil
@@ -478,7 +487,9 @@ func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
 - 注册到根路由：
 
 ```go
-// register the push route: /yy_zz
+// register the push handler
+// HTTP mapping: /yy_zz
+// RPC mapping: YyZz
 peer.RoutePushFunc(YyZz)
 ```
 
@@ -513,17 +524,6 @@ func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 // register the unknown push route: /*
 peer.SetUnknownPush(XxxUnknownPush)
 ```
-
-### 结构体（函数）名称映射到URI路径的规则：
-
-- `AaBb` -> `/aa_bb`
-- `Aa_Bb` -> `/aa/bb`
-- `aa_bb` -> `/aa/bb`
-- `Aa__Bb` -> `/aa_bb`
-- `aa__bb` -> `/aa_bb`
-- `ABC_XYZ` -> `/abc/xyz`
-- `ABcXYz` -> `/abc_xyz`
-- `ABC__XYZ` -> `/abc_xyz`
 
 ### 插件示例
 
@@ -580,6 +580,7 @@ type PeerConfig struct {
     ListenPort         uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
     DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
     RedialTimes        int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; for client role"`
+	RedialInterval     time.Duration `yaml:"redial_interval"      ini:"redial_interval"      comment:"Interval of redialing each time, default 100ms; for client role; ns,µs,ms,s,m,h"`
     DefaultBodyCodec   string        `yaml:"default_body_codec"   ini:"default_body_codec"   comment:"Default body codec type id"`
     DefaultSessionAge  time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
     DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default PULL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
@@ -657,6 +658,7 @@ type PeerConfig struct {
 | [rawproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/rawproto) | `import "github.com/henrylee2cn/teleport/proto/rawproto` | A fast socket communication protocol(teleport default protocol) |
 | [jsonproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/jsonproto) | `import "github.com/henrylee2cn/teleport/proto/jsonproto"` | A JSON socket communication protocol     |
 | [pbproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/pbproto) | `import "github.com/henrylee2cn/teleport/proto/pbproto"` | A Protobuf socket communication protocol     |
+| [thriftproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/thriftproto) | `import "github.com/henrylee2cn/teleport/proto/thriftproto"` | A Thrift communication protocol     |
 
 ### 传输过滤器
 

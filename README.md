@@ -233,7 +233,7 @@ func (p *Push) Status(arg *string) *tp.Rerror {
 - **Socket:** Base on the net.Conn package, add custom package protocol, transfer pipelines and other functions
 - *Message:** The corresponding structure of the data package content element
 - **Proto:** The protocol interface of message pack/unpack 
-- **Codec:** Serialization interface for `Message.Body`
+- **Codec:** Serialization interface for `Body`
 - **XferPipe:** Message bytes encoding pipeline, such as compression, encryption, calibration and so on
 - **XferFilter:** A interface to handle message data before transfer
 - **Plugin:** Plugins that cover all aspects of communication
@@ -418,10 +418,14 @@ func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
 - register it to root router:
 
 ```go
-// register the call route: /aaa/xx_zz
+// register the call route
+// HTTP mapping: /aaa/xx_zz
+// RPC mapping: Aaa.XxZz
 peer.RouteCall(new(Aaa))
 
-// or register the call route: /xx_zz
+// or register the call route
+// HTTP mapping: /xx_zz
+// RPC mapping: XxZz
 peer.RouteCallFunc((*Aaa).XxZz)
 ```
 
@@ -437,7 +441,9 @@ func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
 - register it to root router:
 
 ```go
-// register the call route: /xx_zz
+// register the call route
+// HTTP mapping: /xx_zz
+// RPC mapping: XxZz
 peer.RouteCallFunc(XxZz)
 ```
 
@@ -456,17 +462,21 @@ func (b *Bbb) YyZz(arg *<T>) *tp.Rerror {
 - register it to root router:
 
 ```go
-// register the push route: /bbb/yy_zz
+// register the push handler
+// HTTP mapping: /bbb/yy_zz
+// RPC mapping: Bbb.YyZz
 peer.RoutePush(new(Bbb))
 
-// or register the push route: /yy_zz
+// or register the push handler
+// HTTP mapping: /yy_zz
+// RPC mapping: YyZz
 peer.RoutePushFunc((*Bbb).YyZz)
 ```
 
 ### Push-Handler-Function API template
 
 ```go
-// YyZz register the route: /yy_zz
+// YyZz register the handler
 func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
     ...
     return nil
@@ -476,7 +486,9 @@ func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
 - register it to root router:
 
 ```go
-// register the push route: /yy_zz
+// register the push handler
+// HTTP mapping: /yy_zz
+// RPC mapping: YyZz
 peer.RoutePushFunc(YyZz)
 ```
 
@@ -511,17 +523,6 @@ func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
 // register the unknown push route: /*
 peer.SetUnknownPush(XxxUnknownPush)
 ```
-
-### The mapping rule of struct(func) name to URI path:
-
-- `AaBb` -> `/aa_bb`
-- `Aa_Bb` -> `/aa/bb`
-- `aa_bb` -> `/aa/bb`
-- `Aa__Bb` -> `/aa_bb`
-- `aa__bb` -> `/aa_bb`
-- `ABC_XYZ` -> `/abc/xyz`
-- `ABcXYz` -> `/abc_xyz`
-- `ABC__XYZ` -> `/abc_xyz`
 
 ### Plugin Demo
 
@@ -578,6 +579,7 @@ type PeerConfig struct {
     ListenPort         uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
     DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
     RedialTimes        int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; for client role"`
+	RedialInterval     time.Duration `yaml:"redial_interval"      ini:"redial_interval"      comment:"Interval of redialing each time, default 100ms; for client role; ns,µs,ms,s,m,h"`
     DefaultBodyCodec   string        `yaml:"default_body_codec"   ini:"default_body_codec"   comment:"Default body codec type id"`
     DefaultSessionAge  time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
     DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default CALL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
@@ -661,6 +663,7 @@ type PeerConfig struct {
 | [rawproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/rawproto) | `import "github.com/henrylee2cn/teleport/proto/rawproto` | A fast socket communication protocol(teleport default protocol) |
 | [jsonproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/jsonproto) | `import "github.com/henrylee2cn/teleport/proto/jsonproto"` | A JSON socket communication protocol     |
 | [pbproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/pbproto) | `import "github.com/henrylee2cn/teleport/proto/pbproto"` | A Protobuf socket communication protocol     |
+| [thriftproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/thriftproto) | `import "github.com/henrylee2cn/teleport/proto/thriftproto"` | A Thrift communication protocol     |
 
 ### Transfer-Filter
 
