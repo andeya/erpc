@@ -138,7 +138,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	}
 
 	var p = &peer{
-		router:             newRouter("/", pluginContainer),
+		router:             newRouter("", pluginContainer),
 		pluginContainer:    pluginContainer,
 		sessHub:            newSessionHub(),
 		defaultSessionAge:  cfg.DefaultSessionAge,

@@ -139,7 +139,7 @@ type (
 		unknownCall  **Handler
 		unknownPush  **Handler
 		// only for register router
-		pathPrefix      string
+		prefix          string
 		pluginContainer *PluginContainer
 	}
 	// Handler call or push handler type info
@@ -157,6 +157,38 @@ type (
 	HandlersMaker func(string, interface{}, *PluginContainer) ([]*Handler, error)
 )
 
+// ServiceMethodMapper mapper service method from prefix, recvName and funcName.
+// NOTE:
+//  @prefix is optional;
+//  @name is required.
+type ServiceMethodMapper func(prefix, name string) (serviceMethod string)
+
+var globalServiceMethodMapper = HTTPServiceMethodMapper
+
+// SetServiceMethodMapper customizes your own service method mapper.
+func SetServiceMethodMapper(mapper ServiceMethodMapper) {
+	globalServiceMethodMapper = mapper
+}
+
+// HTTPServiceMethodMapper like most RPC services service method mapper.
+// Such as: user/get
+// It is the default mapper.
+func HTTPServiceMethodMapper(prefix, name string) string {
+	return path.Join("/", prefix, toUriPath(name))
+}
+
+// RPCServiceMethodMapper like most RPC services service method mapper.
+// Such as: User.Get
+func RPCServiceMethodMapper(prefix, name string) string {
+	if prefix == "" {
+		return name
+	}
+	if name == "" {
+		return prefix
+	}
+	return prefix + "." + name
+}
+
 const (
 	pnPush        = "PUSH"
 	pnCall        = "CALL"
@@ -166,14 +198,14 @@ const (
 
 // newRouter creates root router.
 func newRouter(rootGroup string, pluginContainer *PluginContainer) *Router {
-	rootGroup = path.Join("/", rootGroup)
+	rootGroup = globalServiceMethodMapper("", rootGroup)
 	root := &Router{
 		subRouter: &SubRouter{
 			callHandlers:    make(map[string]*Handler),
 			pushHandlers:    make(map[string]*Handler),
 			unknownCall:     new(*Handler),
 			unknownPush:     new(*Handler),
-			pathPrefix:      rootGroup,
+			prefix:          rootGroup,
 			pluginContainer: pluginContainer,
 		},
 	}
@@ -192,12 +224,12 @@ func (r *SubRouter) ToRouter() *Router {
 }
 
 // SubRoute adds handler group.
-func (r *Router) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
-	return r.subRouter.SubRoute(pathPrefix, plugin...)
+func (r *Router) SubRoute(prefix string, plugin ...Plugin) *SubRouter {
+	return r.subRouter.SubRoute(prefix, plugin...)
 }
 
 // SubRoute adds handler group.
-func (r *SubRouter) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
+func (r *SubRouter) SubRoute(prefix string, plugin ...Plugin) *SubRouter {
 	pluginContainer := r.pluginContainer.cloneAndAppendMiddle(plugin...)
 	warnInvaildHandlerHooks(plugin)
 	return &SubRouter{
@@ -206,7 +238,7 @@ func (r *SubRouter) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 		pushHandlers:    r.pushHandlers,
 		unknownCall:     r.unknownCall,
 		unknownPush:     r.unknownPush,
-		pathPrefix:      path.Join(r.pathPrefix, pathPrefix),
+		prefix:          globalServiceMethodMapper(r.prefix, prefix),
 		pluginContainer: pluginContainer,
 	}
 }
@@ -260,7 +292,7 @@ func (r *SubRouter) reg(
 	pluginContainer := r.pluginContainer.cloneAndAppendMiddle(plugins...)
 	warnInvaildHandlerHooks(plugins)
 	handlers, err := handlerMaker(
-		r.pathPrefix,
+		r.prefix,
 		ctrlStruct,
 		pluginContainer,
 	)
@@ -364,7 +396,7 @@ func (r *SubRouter) getPush(uriPath string) (*Handler, bool) {
 }
 
 // NOTE: callCtrlStruct needs to implement CallCtx interface.
-func makeCallHandlersFromStruct(pathPrefix string, callCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
+func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype    = reflect.TypeOf(callCtrlStruct)
 		handlers = make([]*Handler, 0, 1)
@@ -483,17 +515,20 @@ func makeCallHandlersFromStruct(pathPrefix string, callCtrlStruct interface{}, p
 		}
 
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, ToUriPath(ctrlStructName(ctype)), ToUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			reply:           replyType,
 			pluginContainer: pluginContainer,
+			name: globalServiceMethodMapper(
+				globalServiceMethodMapper(prefix, ctrlStructName(ctype)),
+				mname,
+			),
 		})
 	}
 	return handlers, nil
 }
 
-func makeCallHandlersFromFunc(pathPrefix string, callHandleFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
+func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype      = reflect.TypeOf(callHandleFunc)
 		cValue     = reflect.ValueOf(callHandleFunc)
@@ -608,7 +643,7 @@ func makeCallHandlersFromFunc(pathPrefix string, callHandleFunc interface{}, plu
 		pluginContainer = newPluginContainer()
 	}
 	return []*Handler{&Handler{
-		name:            path.Join(pathPrefix, ToUriPath(handlerFuncName(cValue))),
+		name:            globalServiceMethodMapper(prefix, handlerFuncName(cValue)),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),
 		reply:           replyType,
@@ -617,7 +652,7 @@ func makeCallHandlersFromFunc(pathPrefix string, callHandleFunc interface{}, plu
 }
 
 // NOTE: pushCtrlStruct needs to implement PushCtx interface.
-func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
+func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype    = reflect.TypeOf(pushCtrlStruct)
 		handlers = make([]*Handler, 0, 1)
@@ -721,16 +756,19 @@ func makePushHandlersFromStruct(pathPrefix string, pushCtrlStruct interface{}, p
 			pool.Put(obj)
 		}
 		handlers = append(handlers, &Handler{
-			name:            path.Join(pathPrefix, ToUriPath(ctrlStructName(ctype)), ToUriPath(mname)),
 			handleFunc:      handleFunc,
 			argElem:         argType.Elem(),
 			pluginContainer: pluginContainer,
+			name: globalServiceMethodMapper(
+				globalServiceMethodMapper(prefix, ctrlStructName(ctype)),
+				mname,
+			),
 		})
 	}
 	return handlers, nil
 }
 
-func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
+func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	var (
 		ctype      = reflect.TypeOf(pushHandleFunc)
 		cValue     = reflect.ValueOf(pushHandleFunc)
@@ -827,7 +865,7 @@ func makePushHandlersFromFunc(pathPrefix string, pushHandleFunc interface{}, plu
 		pluginContainer = newPluginContainer()
 	}
 	return []*Handler{&Handler{
-		name:            path.Join(pathPrefix, ToUriPath(handlerFuncName(cValue))),
+		name:            globalServiceMethodMapper(prefix, handlerFuncName(cValue)),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),
 		pluginContainer: pluginContainer,
@@ -877,8 +915,8 @@ func objectName(v reflect.Value) string {
 	return t.String()
 }
 
-// ToUriPath maps struct(func) name to URI path.
-func ToUriPath(name string) string {
+// toUriPath maps struct(func) name to URI path.
+func toUriPath(name string) string {
 	p := strings.Replace(name, "__", ".", -1)
 	a := strings.Split(p, "_")
 	for k, v := range a {
