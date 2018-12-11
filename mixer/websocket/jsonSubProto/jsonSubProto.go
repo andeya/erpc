@@ -50,11 +50,11 @@ func (j *jsonSubProto) Pack(m tp.Message) error {
 		return err
 	}
 	// marshal transfer pipe ids
-	var xferPipeIds = make([]int, m.XferPipe().Len())
-	for i, id := range m.XferPipe().Ids() {
-		xferPipeIds[i] = int(id)
+	var xferPipeIDs = make([]int, m.XferPipe().Len())
+	for i, id := range m.XferPipe().IDs() {
+		xferPipeIDs[i] = int(id)
 	}
-	xferPipeIdsBytes, err := json.Marshal(xferPipeIds)
+	xferPipeIDsBytes, err := json.Marshal(xferPipeIDs)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (j *jsonSubProto) Pack(m tp.Message) error {
 		m.Meta().QueryString(),
 		m.BodyCodec(),
 		bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1),
-		xferPipeIdsBytes,
+		xferPipeIDsBytes,
 	)
 
 	b := goutil.StringToBytes(s)

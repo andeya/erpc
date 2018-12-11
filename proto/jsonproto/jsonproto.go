@@ -88,7 +88,7 @@ func (j *jsonproto) Pack(m tp.Message) error {
 	var all = make([]byte, m.Size()+4)
 	binary.BigEndian.PutUint32(all, m.Size())
 	all[4] = byte(xferPipeLen)
-	copy(all[4+1:], m.XferPipe().Ids())
+	copy(all[4+1:], m.XferPipe().IDs())
 	copy(all[4+1+xferPipeLen:], b)
 	_, err = j.rw.Write(all)
 	return err

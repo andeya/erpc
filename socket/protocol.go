@@ -117,7 +117,7 @@ func (r *rawProto) Pack(m Message) error {
 
 	// transfer pipe
 	bb.WriteByte(byte(m.XferPipe().Len()))
-	bb.Write(m.XferPipe().Ids())
+	bb.Write(m.XferPipe().IDs())
 
 	prefixLen := bb.Len()
 
