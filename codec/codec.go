@@ -22,8 +22,8 @@ import (
 
 // Codec makes the body's Encoder and Decoder
 type Codec interface {
-	// Id returns codec id.
-	Id() byte
+	// ID returns codec id.
+	ID() byte
 	// Name returns codec name.
 	Name() string
 	// Marshal returns the encoding of v.
@@ -42,32 +42,32 @@ var codecMap = struct {
 }
 
 const (
-	// NilCodecId empty codec id.
-	NilCodecId byte = 0
+	// NilCodecID empty codec id.
+	NilCodecID byte = 0
 	// NilCodecName empty codec name.
 	NilCodecName string = ""
 )
 
 // Reg registers Codec.
 func Reg(codec Codec) {
-	if codec.Id() == NilCodecId {
-		panic(fmt.Sprintf("codec id can not be %d", NilCodecId))
+	if codec.ID() == NilCodecID {
+		panic(fmt.Sprintf("codec id can not be %d", NilCodecID))
 	}
-	if _, ok := codecMap.idMap[codec.Id()]; ok {
-		panic(fmt.Sprintf("multi-register codec id: %d", codec.Id()))
+	if _, ok := codecMap.idMap[codec.ID()]; ok {
+		panic(fmt.Sprintf("multi-register codec id: %d", codec.ID()))
 	}
 	if _, ok := codecMap.nameMap[codec.Name()]; ok {
 		panic("multi-register codec name: " + codec.Name())
 	}
-	codecMap.idMap[codec.Id()] = codec
+	codecMap.idMap[codec.ID()] = codec
 	codecMap.nameMap[codec.Name()] = codec
 }
 
 // Get returns Codec by id.
-func Get(codecId byte) (Codec, error) {
-	codec, ok := codecMap.idMap[codecId]
+func Get(codecID byte) (Codec, error) {
+	codec, ok := codecMap.idMap[codecID]
 	if !ok {
-		return nil, fmt.Errorf("unsupported codec id: %d", codecId)
+		return nil, fmt.Errorf("unsupported codec id: %d", codecID)
 	}
 	return codec, nil
 }
@@ -82,8 +82,8 @@ func GetByName(codecName string) (Codec, error) {
 }
 
 // Marshal returns the encoding of v.
-func Marshal(codecId byte, v interface{}) ([]byte, error) {
-	codec, err := Get(codecId)
+func Marshal(codecID byte, v interface{}) ([]byte, error) {
+	codec, err := Get(codecID)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func Marshal(codecId byte, v interface{}) ([]byte, error) {
 
 // Unmarshal parses the encoded data and stores the result
 // in the value pointed to by v.
-func Unmarshal(codecId byte, data []byte, v interface{}) error {
-	codec, err := Get(codecId)
+func Unmarshal(codecID byte, data []byte, v interface{}) error {
+	codec, err := Get(codecID)
 	if err != nil {
 		return err
 	}

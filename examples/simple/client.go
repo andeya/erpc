@@ -23,9 +23,10 @@ func main() {
 	}
 
 	var result int
-	rerr := sess.Call("/math/add?author=henrylee2cn",
+	rerr := sess.Call("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&result,
+		tp.WithAddMeta("author", "henrylee2cn"),
 	).Rerror()
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)

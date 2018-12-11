@@ -141,8 +141,8 @@ func IsConnRerror(rerr *Rerror) bool {
 const (
 	// MetaRerror reply error metadata key
 	MetaRerror = "X-Reply-Error"
-	// MetaRealIp real IP metadata key
-	MetaRealIp = "X-Real-IP"
+	// MetaRealIP real IP metadata key
+	MetaRealIP = "X-Real-IP"
 	// MetaAcceptBodyCodec the key of body codec that the sender wishes to accept
 	MetaAcceptBodyCodec = "X-Accept-Body-Codec"
 )
@@ -156,16 +156,16 @@ func WithRerror(rerr *Rerror) MessageSetting {
 	return socket.WithAddMeta(MetaRerror, goutil.BytesToString(b))
 }
 
-// WithRealIp sets the real IP to metadata.
-func WithRealIp(ip string) MessageSetting {
-	return socket.WithAddMeta(MetaRealIp, ip)
+// WithRealIP sets the real IP to metadata.
+func WithRealIP(ip string) MessageSetting {
+	return socket.WithAddMeta(MetaRealIP, ip)
 }
 
 // WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
 // NOTE: If the specified codec is invalid, the receiver will ignore the mate data.
 func WithAcceptBodyCodec(bodyCodec byte) MessageSetting {
-	if bodyCodec == codec.NilCodecId {
-		return func(*Message) {}
+	if bodyCodec == codec.NilCodecID {
+		return WithNothing()
 	}
 	return socket.WithAddMeta(MetaAcceptBodyCodec, strconv.FormatUint(uint64(bodyCodec), 10))
 }
@@ -182,8 +182,12 @@ func GetAcceptBodyCodec(meta *utils.Args) (byte, bool) {
 		return 0, false
 	}
 	c := byte(b)
-	return c, c != codec.NilCodecId
+	return c, c != codec.NilCodecID
 }
+
+// WithNothing nothing to do.
+//  func WithNothing() MessageSetting
+var WithNothing = socket.WithNothing
 
 // Socket is a generic stream-oriented network connection.
 //
@@ -195,6 +199,9 @@ type Proto = socket.Proto
 
 // ProtoFunc function used to create a custom Proto interface.
 type ProtoFunc = socket.ProtoFunc
+
+// IOWithReadBuffer implements buffered I/O with buffered reader.
+type IOWithReadBuffer = socket.IOWithReadBuffer
 
 // Message a socket message data.
 type Message = socket.Message
@@ -215,38 +222,23 @@ type MessageSetting = socket.MessageSetting
 //  func WithContext(ctx context.Context) MessageSetting
 var WithContext = socket.WithContext
 
-// WithSeq sets the message sequence.
-// NOTE: max len ≤ 65535!
-//  func WithSeq(seq string) MessageSetting
-var WithSeq = socket.WithSeq
-
 // WithMtype sets the message type.
 //  func WithMtype(mtype byte) MessageSetting
 var WithMtype = socket.WithMtype
 
-// WithUri sets the message URI string.
-// NOTE: max len ≤ 65535!
-//  func WithUri(uri string) MessageSetting
-var WithUri = socket.WithUri
-
-// WithUriObject sets the message URI object.
-// NOTE: urlencoded URI max len ≤ 65535!
-//  func WithUriObject(uriObject *url.URL) MessageSetting
-var WithUriObject = socket.WithUriObject
-
-// WithQuery sets the message URI query parameter.
-// NOTE: urlencoded URI max len ≤ 65535!
-//  func WithQuery(key, value string) MessageSetting
-var WithQuery = socket.WithQuery
+// WithServiceMethod sets the message service method.
+// SUGGEST: max len ≤ 255!
+//  func WithServiceMethod(serviceMethod string) MessageSetting
+var WithServiceMethod = socket.WithServiceMethod
 
 // WithAddMeta adds 'key=value' metadata argument.
 // Multiple values for the same key may be added.
-// NOTE: urlencoded string max len ≤ 65535!
+// SUGGEST: urlencoded string max len ≤ 65535!
 //  func WithAddMeta(key, value string) MessageSetting
 var WithAddMeta = socket.WithAddMeta
 
 // WithSetMeta sets 'key=value' metadata argument.
-// NOTE: urlencoded string max len ≤ 65535!
+// SUGGEST: urlencoded string max len ≤ 65535!
 //  func WithSetMeta(key, value string) MessageSetting
 var WithSetMeta = socket.WithSetMeta
 
@@ -259,24 +251,25 @@ var WithBodyCodec = socket.WithBodyCodec
 var WithBody = socket.WithBody
 
 // WithNewBody resets the function of geting body.
+//  NOTE: newBodyFunc is only for reading form connection.
 //  func WithNewBody(newBodyFunc socket.NewBodyFunc) MessageSetting
 var WithNewBody = socket.WithNewBody
 
 // WithXferPipe sets transfer filter pipe.
-//  func WithXferPipe(filterId ...byte) MessageSetting
-// NOTE:
-//  panic if the filterId is not registered
+// NOTE: Panic if the filterID is not registered.
+// SUGGEST: The length can not be bigger than 255!
+//  func WithXferPipe(filterID ...byte) MessageSetting
 var WithXferPipe = socket.WithXferPipe
 
-// GetMessage gets a *Message form message stack.
+// GetMessage gets a Message form message pool.
 // NOTE:
 //  newBodyFunc is only for reading form connection;
 //  settings are only for writing to connection.
-//  func GetMessage(settings ...MessageSetting) *Message
+//  func GetMessage(settings ...MessageSetting) Message
 var GetMessage = socket.GetMessage
 
-// PutMessage puts a *Message to message stack.
-//  func PutMessage(m *Message)
+// PutMessage puts a Message to message pool.
+//  func PutMessage(m Message)
 var PutMessage = socket.PutMessage
 
 var (
@@ -328,18 +321,18 @@ func doPrintPid() {
 }
 
 type fakeCallCmd struct {
-	output    *Message
+	output    Message
 	result    interface{}
 	rerr      *Rerror
 	inputMeta *utils.Args
 }
 
 // NewFakeCallCmd creates a fake CallCmd.
-func NewFakeCallCmd(uri string, arg, result interface{}, rerr *Rerror) CallCmd {
+func NewFakeCallCmd(serviceMethod string, arg, result interface{}, rerr *Rerror) CallCmd {
 	return &fakeCallCmd{
 		output: socket.NewMessage(
 			socket.WithMtype(TypeCall),
-			socket.WithUri(uri),
+			socket.WithServiceMethod(serviceMethod),
 			socket.WithBody(arg),
 		),
 		result: result,
@@ -369,7 +362,7 @@ func (f *fakeCallCmd) Done() <-chan struct{} {
 }
 
 // Output returns writed message.
-func (f *fakeCallCmd) Output() *Message {
+func (f *fakeCallCmd) Output() Message {
 	return f.output
 }
 
@@ -391,7 +384,7 @@ func (f *fakeCallCmd) Rerror() *Rerror {
 
 // InputBodyCodec gets the body codec type of the input message.
 func (f *fakeCallCmd) InputBodyCodec() byte {
-	return codec.NilCodecId
+	return codec.NilCodecID
 }
 
 // InputMeta returns the header metadata of input message.

@@ -13,14 +13,12 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
-	h.Session().Push("/push/test", map[string]interface{}{
-		"your_id": h.Query().Get("peer_id"),
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror) {
+	h.Session().Push("/push/test", map[string]string{
+		"your_id": string(h.PeekMeta("peer_id")),
 	})
-	meta := h.CopyMeta()
 	return map[string]interface{}{
-		"arg":  *arg,
-		"meta": meta.String(),
+		"arg": *arg,
 	}, nil
 }
 
@@ -41,12 +39,12 @@ func TestJsonProto(t *testing.T) {
 		t.Error(err)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/test?peer_id=110",
-		map[string]interface{}{
-			"bytes": []byte("test bytes"),
+	rerr := sess.Call("/home/test",
+		map[string]string{
+			"author": "henrylee2cn",
 		},
 		&result,
-		tp.WithAddMeta("add", "1"),
+		tp.WithAddMeta("peer_id", "110"),
 		tp.WithXferPipe('g'),
 	).Rerror()
 	if rerr != nil {
@@ -60,7 +58,7 @@ type Push struct {
 	tp.PushCtx
 }
 
-func (p *Push) Test(arg *map[string]interface{}) *tp.Rerror {
-	tp.Infof("receive push(%s):\narg: %#v\n", p.Ip(), arg)
+func (p *Push) Test(arg *map[string]string) *tp.Rerror {
+	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }

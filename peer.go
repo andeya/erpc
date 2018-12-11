@@ -38,7 +38,7 @@ type (
 		// CountSession returns the number of sessions.
 		CountSession() int
 		// GetSession gets the session by id.
-		GetSession(sessionId string) (Session, bool)
+		GetSession(sessionID string) (Session, bool)
 		// RangeSession ranges all sessions. If fn returns false, stop traversing.
 		RangeSession(fn func(sess Session) bool)
 		// SetTlsConfig sets the TLS config.
@@ -159,7 +159,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
 		Fatalf("%v", err)
 	} else {
-		p.defaultBodyCodec = c.Id()
+		p.defaultBodyCodec = c.ID()
 	}
 	if p.countTime {
 		p.timeNow = time.Now
@@ -197,8 +197,8 @@ func (p *peer) SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error {
 }
 
 // GetSession gets the session by id.
-func (p *peer) GetSession(sessionId string) (Session, bool) {
-	return p.sessHub.Get(sessionId)
+func (p *peer) GetSession(sessionID string) (Session, bool) {
+	return p.sessHub.Get(sessionID)
 }
 
 // RangeSession ranges all sessions.
@@ -263,33 +263,33 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 			var err error
 			for i := p.redialTimes; i > 0; i-- {
 				time.Sleep(p.redialInterval)
-				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
+				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 				err = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
 				if err == nil {
-					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
+					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 					return true
 				}
 				// if i > 1 {
-				// 	Warnf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteIp(), sess.Id(), err.Error())
+				// 	Warnf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteIP(), sess.ID(), err.Error())
 				// 	// Debug:
 				// 	time.Sleep(5e9)
 				// }
 			}
 			if err != nil {
-				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteAddr().String(), sess.Id(), err.Error())
+				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteAddr().String(), sess.ID(), err.Error())
 			}
 			return false
 		}
 	}
 
-	sess.socket.SetId(sess.LocalAddr().String())
+	sess.socket.SetID(sess.LocalAddr().String())
 	if rerr := p.pluginContainer.postDial(sess); rerr != nil {
 		sess.Close()
 		return nil, rerr
 	}
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.Id())
+	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 	return sess, nil
 }
 
@@ -301,17 +301,17 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
-	oldIp := sess.LocalAddr().String()
-	oldId := sess.Id()
+	oldIP := sess.LocalAddr().String()
+	oldID := sess.ID()
 	if sess.conn != nil {
 		sess.conn.Close()
 	}
 	sess.conn = conn
 	sess.socket.Reset(conn, protoFuncs...)
-	if oldIp == oldId {
-		sess.socket.SetId(sess.LocalAddr().String())
+	if oldIP == oldID {
+		sess.socket.SetID(sess.LocalAddr().String())
 	} else {
-		sess.socket.SetId(oldId)
+		sess.socket.SetID(oldID)
 	}
 	if rerr := p.pluginContainer.postDial(sess); rerr != nil {
 		sess.Close()
@@ -337,7 +337,7 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
 		sess.Close()
 		return nil, rerr.ToError()
 	}
-	Infof("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
+	Infof("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.ID())
 	p.sessHub.Set(sess)
 	AnywayGo(sess.startReadAndHandle)
 	return sess, nil
@@ -406,7 +406,7 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 				sess.Close()
 				return
 			}
-			Infof("accept ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.Id())
+			Infof("accept ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.ID())
 			p.sessHub.Set(sess)
 			sess.startReadAndHandle()
 		})

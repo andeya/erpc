@@ -40,8 +40,8 @@ func (PlainCodec) Name() string {
 	return NAME_PLAIN
 }
 
-// Id returns codec id.
-func (PlainCodec) Id() byte {
+// ID returns codec id.
+func (PlainCodec) ID() byte {
 	return ID_PLAIN
 }
 

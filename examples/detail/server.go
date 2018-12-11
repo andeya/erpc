@@ -38,18 +38,16 @@ type Home struct {
 
 // Test handler
 func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
-	h.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
-		"your_id": h.Query().Get("peer_id"),
+	h.Session().Push("/push/test", map[string]interface{}{
+		"your_id": string(h.PeekMeta("peer_id")),
 	})
-	meta := h.CopyMeta()
-	meta.VisitAll(func(k, v []byte) {
+	h.VisitMeta(func(k, v []byte) {
 		tp.Infof("meta: key: %s, value: %s", k, v)
 	})
 	time.Sleep(5e9)
 	return map[string]interface{}{
 		"your_arg":    *arg,
 		"server_time": time.Now(),
-		"meta":        meta.String(),
 	}, nil
 }
 
@@ -60,15 +58,15 @@ func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 		RawMessage json.RawMessage
 		Bytes      []byte
 	}{}
-	codecId, err := ctx.Bind(&v)
+	codecID, err := ctx.Bind(&v)
 	if err != nil {
 		return nil, tp.NewRerror(1001, "bind error", err.Error())
 	}
 	tp.Debugf("UnknownCallHandle: codec: %d, RawMessage: %s, bytes: %s",
-		codecId, v.RawMessage, v.Bytes,
+		codecID, v.RawMessage, v.Bytes,
 	)
-	ctx.Session().Push("/push/test?tag=from home-test", map[string]interface{}{
-		"your_id": ctx.Query().Get("peer_id"),
+	ctx.Session().Push("/push/test", map[string]interface{}{
+		"your_id": string(ctx.PeekMeta("peer_id")),
 	})
 	return map[string]interface{}{
 		"your_arg":    v,

@@ -9,7 +9,7 @@ import (
 
 func main() {
 	defer tp.FlushLogger()
-	cli := tp.NewPeer(tp.PeerConfig{}, auth.LaunchAuth(generateAuthInfo))
+	cli := tp.NewPeer(tp.PeerConfig{}, auth.NewLaunchPlugin(generateAuthInfo))
 	defer cli.Close()
 	_, rerr := cli.Dial(":9090")
 	if rerr != nil {

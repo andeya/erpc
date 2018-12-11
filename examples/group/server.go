@@ -25,7 +25,7 @@ type math_v2 struct {
 }
 
 func (m *math_v2) Add__2(arg *[]int) (int, *tp.Rerror) {
-	if m.Query().Get("push_status") == "yes" {
+	if string(m.PeekMeta("push_status")) == "yes" {
 		m.Session().Push(
 			"/cli/push/server_status",
 			fmt.Sprintf("%d numbers are being added...", len(*arg)),

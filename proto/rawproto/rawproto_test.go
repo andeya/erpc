@@ -1,11 +1,11 @@
-package ignorecase_test
+package rawproto_test
 
 import (
 	"testing"
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/plugin/ignorecase"
+	"github.com/henrylee2cn/teleport/xfer/gzip"
 )
 
 type Home struct {
@@ -21,29 +21,30 @@ func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror)
 	}, nil
 }
 
-func TestIngoreCase(t *testing.T) {
-	// Server
-	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090}, ignorecase.NewIgnoreCase())
+func TestPbProto(t *testing.T) {
+	gzip.Reg('g', "gizp-5", 5)
+
+	// server
+	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
-	// Client
-	cli := tp.NewPeer(tp.PeerConfig{}, ignorecase.NewIgnoreCase())
+	// client
+	cli := tp.NewPeer(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
 	sess, err := cli.Dial(":9090")
 	if err != nil {
-		if err != nil {
-			t.Error(err)
-		}
+		t.Error(err)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/TesT",
+	rerr := sess.Call("/home/test",
 		map[string]string{
 			"author": "henrylee2cn",
 		},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
+		tp.WithXferPipe('g'),
 	).Rerror()
 	if rerr != nil {
 		t.Error(rerr)

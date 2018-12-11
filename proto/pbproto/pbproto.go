@@ -28,7 +28,7 @@ import (
 )
 
 // NewPbProtoFunc is creation function of PROTOBUF socket protocol.
-var NewPbProtoFunc = func(rw io.ReadWriter) tp.Proto {
+var NewPbProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
 	return &pbproto{
 		id:   'p',
 		name: "protobuf",
@@ -39,7 +39,7 @@ var NewPbProtoFunc = func(rw io.ReadWriter) tp.Proto {
 type pbproto struct {
 	id   byte
 	name string
-	rw   io.ReadWriter
+	rw   tp.IOWithReadBuffer
 	rMu  sync.Mutex
 }
 
@@ -50,7 +50,7 @@ func (pp *pbproto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (pp *pbproto) Pack(m *tp.Message) error {
+func (pp *pbproto) Pack(m tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -58,12 +58,12 @@ func (pp *pbproto) Pack(m *tp.Message) error {
 	}
 
 	b, err := codec.ProtoMarshal(&pb.Payload{
-		Seq:       m.Seq(),
-		Mtype:     int32(m.Mtype()),
-		Uri:       m.Uri(),
-		Meta:      m.Meta().QueryString(),
-		BodyCodec: int32(m.BodyCodec()),
-		Body:      bodyBytes,
+		Seq:           m.Seq(),
+		Mtype:         int32(m.Mtype()),
+		ServiceMethod: m.ServiceMethod(),
+		Meta:          m.Meta().QueryString(),
+		BodyCodec:     int32(m.BodyCodec()),
+		Body:          bodyBytes,
 	})
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (pp *pbproto) Pack(m *tp.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (pp *pbproto) Unpack(m *tp.Message) error {
+func (pp *pbproto) Unpack(m tp.Message) error {
 	pp.rMu.Lock()
 	defer pp.rMu.Unlock()
 	var size uint32
@@ -139,7 +139,7 @@ func (pp *pbproto) Unpack(m *tp.Message) error {
 	// read other
 	m.SetSeq(s.Seq)
 	m.SetMtype(byte(s.Mtype))
-	m.SetUri(s.Uri)
+	m.SetServiceMethod(s.ServiceMethod)
 	m.Meta().ParseBytes(s.Meta)
 
 	// read body

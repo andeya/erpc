@@ -231,7 +231,7 @@ func (p *Push) Status(arg *string) *tp.Rerror {
 
 - **Peer:** A communication instance may be a server or a client
 - **Socket:** Base on the net.Conn package, add custom package protocol, transfer pipelines and other functions
-- **Message:** The corresponding structure of the data package content element
+- *Message:** The corresponding structure of the data package content element
 - **Proto:** The protocol interface of message pack/unpack 
 - **Codec:** Serialization interface for `Message.Body`
 - **XferPipe:** Message bytes encoding pipeline, such as compression, encryption, calibration and so on
@@ -264,10 +264,10 @@ type (
         Version() (byte, string)
         // Pack writes the Message into the connection.
         // NOTE: Make sure to write only once or there will be package contamination!
-        Pack(*Message) error
+        Pack(Message) error
         // Unpack reads bytes from the connection to the Message.
         // NOTE: Concurrent unsafe!
-        Unpack(*Message) error
+        Unpack(Message) error
     }
     ProtoFunc func(io.ReadWriter) Proto
 )
@@ -314,8 +314,8 @@ Transfer filter pipe, handles byte stream of message when transfer.
 ```go
 // XferFilter handles byte stream of message when transfer.
 type XferFilter interface {
-    // Id returns transfer filter id.
-    Id() byte
+    // ID returns transfer filter id.
+    ID() byte
     // Name returns transfer filter name.
     Name() string
     // OnPack performs filtering on packing.
@@ -334,7 +334,7 @@ type XferPipe struct {
     // Has unexported fields.
 }
 func NewXferPipe() *XferPipe
-func (x *XferPipe) Append(filterId ...byte) error
+func (x *XferPipe) Append(filterID ...byte) error
 func (x *XferPipe) AppendFrom(src *XferPipe)
 func (x *XferPipe) Ids() []byte
 func (x *XferPipe) Len() int
@@ -352,8 +352,8 @@ The body's codec set.
 
 ```go
 type Codec interface {
-    // Id returns codec id.
-    Id() byte
+    // ID returns codec id.
+    ID() byte
     // Name returns codec name.
     Name() string
     // Marshal returns the encoding of v.

@@ -43,8 +43,8 @@ func (FormCodec) Name() string {
 	return NAME_FORM
 }
 
-// Id returns codec id.
-func (FormCodec) Id() byte {
+// ID returns codec id.
+func (FormCodec) ID() byte {
 	return ID_FORM
 }
 

@@ -24,7 +24,7 @@ func main() {
 			log.Fatalf("[SVR] accept err: %v", err)
 		}
 		go func(s socket.Socket) {
-			log.Printf("accept %s", s.Id())
+			log.Printf("accept %s", s.ID())
 			defer s.Close()
 			var pbTest = new(pb.PbTest)
 			for {

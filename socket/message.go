@@ -209,7 +209,7 @@ func (m *message) Reset(settings ...MessageSetting) {
 	m.serviceMethod = ""
 	m.size = 0
 	m.ctx = nil
-	m.bodyCodec = codec.NilCodecId
+	m.bodyCodec = codec.NilCodecID
 	m.doSetting(settings...)
 }
 
@@ -411,31 +411,31 @@ func (m *message) String() string {
 
 // MessageSetting is a pipe function type for setting message,
 // and only for writing to connection.
-type MessageSetting func(*message)
+type MessageSetting func(Message)
 
 // WithNothing nothing to do.
 func WithNothing() MessageSetting {
-	return func(*message) {}
+	return func(Message) {}
 }
 
 // WithContext sets the message handling context.
 func WithContext(ctx context.Context) MessageSetting {
-	return func(m *message) {
-		m.ctx = ctx
+	return func(m Message) {
+		m.(*message).ctx = ctx
 	}
 }
 
 // WithMtype sets the message type.
 func WithMtype(mtype byte) MessageSetting {
-	return func(m *message) {
-		m.mtype = mtype
+	return func(m Message) {
+		m.SetMtype(mtype)
 	}
 }
 
 // WithServiceMethod sets the message service method.
 // SUGGEST: max len ≤ 255!
 func WithServiceMethod(serviceMethod string) MessageSetting {
-	return func(m *message) {
+	return func(m Message) {
 		m.SetServiceMethod(serviceMethod)
 	}
 }
@@ -444,47 +444,47 @@ func WithServiceMethod(serviceMethod string) MessageSetting {
 // Multiple values for the same key may be added.
 // SUGGEST: urlencoded string max len ≤ 65535!
 func WithAddMeta(key, value string) MessageSetting {
-	return func(m *message) {
-		m.meta.Add(key, value)
+	return func(m Message) {
+		m.Meta().Add(key, value)
 	}
 }
 
 // WithSetMeta sets 'key=value' metadata argument.
 // SUGGEST: urlencoded string max len ≤ 65535!
 func WithSetMeta(key, value string) MessageSetting {
-	return func(m *message) {
-		m.meta.Set(key, value)
+	return func(m Message) {
+		m.Meta().Set(key, value)
 	}
 }
 
 // WithBodyCodec sets the body codec.
 func WithBodyCodec(bodyCodec byte) MessageSetting {
-	return func(m *message) {
-		m.bodyCodec = bodyCodec
+	return func(m Message) {
+		m.SetBodyCodec(bodyCodec)
 	}
 }
 
 // WithBody sets the body object.
 func WithBody(body interface{}) MessageSetting {
-	return func(m *message) {
-		m.body = body
+	return func(m Message) {
+		m.SetBody(body)
 	}
 }
 
 // WithNewBody resets the function of geting body.
 //  NOTE: newBodyFunc is only for reading form connection.
 func WithNewBody(newBodyFunc NewBodyFunc) MessageSetting {
-	return func(m *message) {
-		m.newBodyFunc = newBodyFunc
+	return func(m Message) {
+		m.SetNewBody(newBodyFunc)
 	}
 }
 
 // WithXferPipe sets transfer filter pipe.
-// NOTE: Panic if the filterId is not registered.
+// NOTE: Panic if the filterID is not registered.
 // SUGGEST: The length can not be bigger than 255!
 func WithXferPipe(filterID ...byte) MessageSetting {
-	return func(m *message) {
-		if err := m.xferPipe.Append(filterID...); err != nil {
+	return func(m Message) {
+		if err := m.XferPipe().Append(filterID...); err != nil {
 			panic(err)
 		}
 	}

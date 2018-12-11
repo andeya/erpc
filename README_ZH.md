@@ -231,7 +231,7 @@ func (p *Push) Status(arg *string) *tp.Rerror {
 
 - **Peer：** 通信端点，可以是服务端或客户端
 - **Socket：** 对net.Conn的封装，增加自定义包协议、传输管道等功能
-- **Message：** 数据包内容元素对应的结构体
+- *Message：** 数据包内容元素对应的结构体
 - **Proto：** 数据包封包／解包的协议接口
 - **Codec：** 用于`Message.Body`的序列化工具
 - **XferPipe：** 数据包字节流的编码处理管道，如压缩、加密、校验等
@@ -265,10 +265,10 @@ type (
         Version() (byte, string)
         // Pack writes the Message into the connection.
         // NOTE: Make sure to write only once or there will be package contamination!
-        Pack(*Message) error
+        Pack(Message) error
         // Unpack reads bytes from the connection to the Message.
         // NOTE: Concurrent unsafe!
-        Unpack(*Message) error
+        Unpack(Message) error
     }
     ProtoFunc func(io.ReadWriter) Proto
 )
@@ -315,8 +315,8 @@ type Peer interface {
 ```go
 // XferFilter handles byte stream of message when transfer.
 type XferFilter interface {
-    // Id returns transfer filter id.
-    Id() byte
+    // ID returns transfer filter id.
+    ID() byte
     // Name returns transfer filter name.
     Name() string
     // OnPack performs filtering on packing.
@@ -335,7 +335,7 @@ type XferPipe struct {
     // Has unexported fields.
 }
 func NewXferPipe() *XferPipe
-func (x *XferPipe) Append(filterId ...byte) error
+func (x *XferPipe) Append(filterID ...byte) error
 func (x *XferPipe) AppendFrom(src *XferPipe)
 func (x *XferPipe) Ids() []byte
 func (x *XferPipe) Len() int
@@ -353,8 +353,8 @@ func (x *XferPipe) Reset()
 
 ```go
 type Codec interface {
-    // Id returns codec id.
-    Id() byte
+    // ID returns codec id.
+    ID() byte
     // Name returns codec name.
     Name() string
     // Marshal returns the encoding of v.

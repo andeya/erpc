@@ -25,10 +25,10 @@ func (e *earlyResult) Name() string {
 }
 
 func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Rerror {
-	var rigthUri bool
-	input, rerr := sess.Receive(func(header Header) interface{} {
-		if header.Uri() == "/early/ping" {
-			rigthUri = true
+	var rigthServiceMethod bool
+	input, rerr := sess.Receive(func(header tp.Header) interface{} {
+		if header.ServiceMethod() == "/early/ping" {
+			rigthServiceMethod = true
 			return new(map[string]string)
 		}
 		return nil
@@ -38,7 +38,7 @@ func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Rerror {
 	}
 
 	var result string
-	if !rigthUri {
+	if !rigthServiceMethod {
 		rerr = tp.NewRerror(10005, "unexpected request", "")
 	} else {
 		body := *input.Body().(*map[string]string)

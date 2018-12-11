@@ -27,12 +27,12 @@ const md5Length = 16
 
 var errDataCheck = errors.New("check failed")
 
-// Id returns transfer filter id.
-func (m *md5Hash) Id() byte {
+// ID returns transfer filter id.
+func (m *md5Hash) ID() byte {
 	return m.id
 }
 
-// Id returns transfer filter name.
+// ID returns transfer filter name.
 func (m *md5Hash) Name() string {
 	return m.name
 }

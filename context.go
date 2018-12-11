@@ -17,7 +17,6 @@ package tp
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"reflect"
 	"sync"
 	"time"
@@ -35,10 +34,10 @@ type (
 		Peer() Peer
 		// Session returns the session.
 		Session() Session
-		// Ip returns the remote addr.
-		Ip() string
-		// RealIp returns the the current real remote addr.
-		RealIp() string
+		// IP returns the remote addr.
+		IP() string
+		// RealIP returns the the current real remote addr.
+		RealIP() string
 		// Swap returns custom data swap of context.
 		Swap() goutil.Map
 		// Context carries a deadline, a cancelation signal, and other values across
@@ -51,7 +50,7 @@ type (
 	WriteCtx interface {
 		PreCtx
 		// Output returns writed message.
-		Output() *Message
+		Output() Message
 		// Rerror returns the handle error.
 		Rerror() *Rerror
 	}
@@ -59,7 +58,7 @@ type (
 	inputCtx interface {
 		PreCtx
 		// Seq returns the input message sequence.
-		Seq() string
+		Seq() int32
 		// PeekMeta peeks the header metadata for the input message.
 		PeekMeta(key string) []byte
 		// VisitMeta calls f for each existing metadata.
@@ -69,22 +68,16 @@ type (
 		VisitMeta(f func(key, value []byte))
 		// CopyMeta returns the input message metadata copy.
 		CopyMeta() *utils.Args
-		// Uri returns the input message uri.
-		Uri() string
-		// UriObject returns the input message uri object.
-		UriObject() *url.URL
-		// ResetUri resets the input message uri.
-		ResetUri(string)
-		// Path returns the input message uri path.
-		Path() string
-		// Query returns the input message uri query object.
-		Query() url.Values
+		// ServiceMethod returns the input message service method.
+		ServiceMethod() string
+		// ResetServiceMethod resets the input message service method.
+		ResetServiceMethod(string)
 	}
 	// ReadCtx context method set for reading message.
 	ReadCtx interface {
 		inputCtx
 		// Input returns readed message.
-		Input() *Message
+		Input() Message
 		// Rerror returns the handle error.
 		Rerror() *Rerror
 	}
@@ -102,11 +95,11 @@ type (
 	CallCtx interface {
 		inputCtx
 		// Input returns readed message.
-		Input() *Message
+		Input() Message
 		// GetBodyCodec gets the body codec type of the input message.
 		GetBodyCodec() byte
 		// Output returns writed message.
-		Output() *Message
+		Output() Message
 		// ReplyBodyCodec initializes and returns the reply message body codec id.
 		ReplyBodyCodec() byte
 		// SetBodyCodec sets the body codec for reply message.
@@ -117,7 +110,7 @@ type (
 		// SetMeta sets the header metadata 'key=value' for reply message.
 		SetMeta(key, value string)
 		// AddXferPipe appends transfer filter pipe of reply message.
-		AddXferPipe(filterId ...byte)
+		AddXferPipe(filterID ...byte)
 	}
 	// UnknownPushCtx context method set for handling the unknown pushed message.
 	UnknownPushCtx interface {
@@ -146,7 +139,7 @@ type (
 		// SetMeta sets the header metadata 'key=value' for reply message.
 		SetMeta(key, value string)
 		// AddXferPipe appends transfer filter pipe of reply message.
-		AddXferPipe(filterId ...byte)
+		AddXferPipe(filterID ...byte)
 	}
 )
 
@@ -165,8 +158,8 @@ var (
 // handlerCtx the underlying common instance of CallCtx and PushCtx.
 type handlerCtx struct {
 	sess            *session
-	input           *Message
-	output          *Message
+	input           Message
+	output          Message
 	handler         *Handler
 	arg             reflect.Value
 	callCmd         *callCmd
@@ -230,12 +223,12 @@ func (c *handlerCtx) Session() Session {
 }
 
 // Input returns readed message.
-func (c *handlerCtx) Input() *Message {
+func (c *handlerCtx) Input() Message {
 	return c.input
 }
 
 // Output returns writed message.
-func (c *handlerCtx) Output() *Message {
+func (c *handlerCtx) Output() Message {
 	return c.output
 }
 
@@ -245,33 +238,18 @@ func (c *handlerCtx) Swap() goutil.Map {
 }
 
 // Seq returns the input message sequence.
-func (c *handlerCtx) Seq() string {
+func (c *handlerCtx) Seq() int32 {
 	return c.input.Seq()
 }
 
-// Uri returns the input message uri string.
-func (c *handlerCtx) Uri() string {
-	return c.input.Uri()
+// ServiceMethod returns the input message service method.
+func (c *handlerCtx) ServiceMethod() string {
+	return c.input.ServiceMethod()
 }
 
-// UriObject returns the input message uri object.
-func (c *handlerCtx) UriObject() *url.URL {
-	return c.input.UriObject()
-}
-
-// ResetUri resets the input message uri.
-func (c *handlerCtx) ResetUri(uri string) {
-	c.input.SetUri(uri)
-}
-
-// Path returns the input message uri path.
-func (c *handlerCtx) Path() string {
-	return c.input.UriObject().Path
-}
-
-// Query returns the input message uri query object.
-func (c *handlerCtx) Query() url.Values {
-	return c.input.UriObject().Query()
+// ResetServiceMethod resets the input message service method.
+func (c *handlerCtx) ResetServiceMethod(serviceMethod string) {
+	c.input.SetServiceMethod(serviceMethod)
 }
 
 // PeekMeta peeks the header metadata for the input message.
@@ -316,20 +294,20 @@ func (c *handlerCtx) SetBodyCodec(bodyCodec byte) {
 }
 
 // AddXferPipe appends transfer filter pipe of reply message.
-func (c *handlerCtx) AddXferPipe(filterId ...byte) {
-	c.output.XferPipe().Append(filterId...)
+func (c *handlerCtx) AddXferPipe(filterID ...byte) {
+	c.output.XferPipe().Append(filterID...)
 }
 
-// Ip returns the remote addr.
-func (c *handlerCtx) Ip() string {
+// IP returns the remote addr.
+func (c *handlerCtx) IP() string {
 	return c.sess.RemoteAddr().String()
 }
 
-// RealIp returns the the current real remote addr.
-func (c *handlerCtx) RealIp() string {
-	realIp := c.PeekMeta(MetaRealIp)
-	if len(realIp) > 0 {
-		return string(realIp)
+// RealIP returns the the current real remote addr.
+func (c *handlerCtx) RealIP() string {
+	realIP := c.PeekMeta(MetaRealIP)
+	if len(realIP) > 0 {
+		return string(realIP)
 	}
 	return c.sess.RemoteAddr().String()
 }
@@ -393,7 +371,7 @@ func (c *handlerCtx) handle() {
 E:
 	// if unsupported, disconnected.
 	rerrCodeMtypeNotAllowed.SetToMeta(c.output.Meta())
-	Errorf(logFormatDisconnected, c.input.Mtype(), c.Ip(), c.input.Uri(), c.input.Seq(), messageLogBytes(c.input, c.sess.peer.printDetail))
+	Errorf(logFormatDisconnected, c.input.Mtype(), c.IP(), c.input.ServiceMethod(), c.input.Seq(), messageLogBytes(c.input, c.sess.peer.printDetail))
 	go c.sess.Close()
 }
 
@@ -403,14 +381,13 @@ func (c *handlerCtx) bindPush(header Header) interface{} {
 		return nil
 	}
 
-	u := header.UriObject()
-	if len(u.Path) == 0 {
-		c.handleErr = rerrBadMessage.Copy().SetReason("invalid URI for message")
+	if len(header.ServiceMethod()) == 0 {
+		c.handleErr = rerrBadMessage.Copy().SetReason("invalid service method for message")
 		return nil
 	}
 
 	var ok bool
-	c.handler, ok = c.sess.getPushHandler(u.Path)
+	c.handler, ok = c.sess.getPushHandler(header.ServiceMethod())
 	if !ok {
 		c.handleErr = rerrNotFound
 		return nil
@@ -441,7 +418,7 @@ func (c *handlerCtx) handlePush() {
 			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.printAccessLog(c.RealIp(), c.cost, c.input, nil, typePushHandle)
+		c.sess.printAccessLog(c.RealIP(), c.cost, c.input, nil, typePushHandle)
 	}()
 
 	if c.handleErr == nil && c.handler != nil {
@@ -464,14 +441,13 @@ func (c *handlerCtx) bindCall(header Header) interface{} {
 		return nil
 	}
 
-	u := header.UriObject()
-	if len(u.Path) == 0 {
-		c.handleErr = rerrBadMessage.Copy().SetReason("invalid URI for message")
+	if len(header.ServiceMethod()) == 0 {
+		c.handleErr = rerrBadMessage.Copy().SetReason("invalid service method for message")
 		return nil
 	}
 
 	var ok bool
-	c.handler, ok = c.sess.getCallHandler(u.Path)
+	c.handler, ok = c.sess.getCallHandler(header.ServiceMethod())
 	if !ok {
 		c.handleErr = rerrNotFound
 		return nil
@@ -509,12 +485,12 @@ func (c *handlerCtx) handleCall() {
 			}
 		}
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.printAccessLog(c.RealIp(), c.cost, c.input, c.output, typeCallHandle)
+		c.sess.printAccessLog(c.RealIP(), c.cost, c.input, c.output, typeCallHandle)
 	}()
 
 	c.output.SetMtype(TypeReply)
 	c.output.SetSeq(c.input.Seq())
-	c.output.SetUriObject(c.input.UriObject())
+	c.output.SetServiceMethod(c.input.ServiceMethod())
 	c.output.XferPipe().AppendFrom(c.input.XferPipe())
 
 	if age := c.sess.ContextAge(); age > 0 {
@@ -559,7 +535,7 @@ func (c *handlerCtx) handleCall() {
 // ReplyBodyCodec initializes and returns the reply message body codec id.
 func (c *handlerCtx) ReplyBodyCodec() byte {
 	id := c.output.BodyCodec()
-	if id != codec.NilCodecId {
+	if id != codec.NilCodecID {
 		return id
 	}
 	id, ok := GetAcceptBodyCodec(c.input.Meta())
@@ -585,12 +561,12 @@ func (c *handlerCtx) writeReply(rerr *Rerror) *Rerror {
 	if rerr != nil {
 		rerr.SetToMeta(c.output.Meta())
 		c.output.SetBody(nil)
-		c.output.SetBodyCodec(codec.NilCodecId)
+		c.output.SetBodyCodec(codec.NilCodecID)
 	}
-	uri := c.output.Uri()
-	c.output.SetUri("")
+	serviceMethod := c.output.ServiceMethod()
+	c.output.SetServiceMethod("")
 	_, rerr = c.sess.write(c.output)
-	c.output.SetUri(uri)
+	c.output.SetServiceMethod(serviceMethod)
 	return rerr
 }
 
@@ -604,7 +580,7 @@ func (c *handlerCtx) bindReply(header Header) interface{} {
 
 	// unlock: handleReply
 	c.callCmd.mu.Lock()
-	c.input.SetUri(c.callCmd.output.Uri())
+	c.input.SetServiceMethod(c.callCmd.output.ServiceMethod())
 	c.swap = c.callCmd.swap
 	c.callCmd.inputBodyCodec = c.GetBodyCodec()
 	// if c.callCmd.inputMeta!=nil, means the callCmd is replyed.
@@ -643,7 +619,7 @@ func (c *handlerCtx) handleReply() {
 		c.handleErr = c.callCmd.rerr
 		c.callCmd.done()
 		c.callCmd.cost = c.sess.timeSince(c.callCmd.start)
-		c.sess.printAccessLog(c.RealIp(), c.callCmd.cost, c.input, c.callCmd.output, typeCallLaunch)
+		c.sess.printAccessLog(c.RealIP(), c.callCmd.cost, c.input, c.callCmd.output, typeCallLaunch)
 	}()
 	if c.callCmd.rerr != nil {
 		return
@@ -673,7 +649,7 @@ func (c *handlerCtx) InputBodyBytes() []byte {
 func (c *handlerCtx) Bind(v interface{}) (byte, error) {
 	b := c.InputBodyBytes()
 	if b == nil {
-		return codec.NilCodecId, nil
+		return codec.NilCodecID, nil
 	}
 	c.input.SetBody(v)
 	err := c.input.UnmarshalBody(b)
@@ -691,7 +667,7 @@ type (
 		// API boundaries.
 		Context() context.Context
 		// Output returns writed message.
-		Output() *Message
+		Output() Message
 		// Rerror returns the call error.
 		Rerror() *Rerror
 		// Done returns the chan that indicates whether it has been completed.
@@ -720,7 +696,7 @@ type (
 	}
 	callCmd struct {
 		sess           *session
-		output         *Message
+		output         Message
 		result         interface{}
 		rerr           *Rerror
 		inputBodyCodec byte
@@ -759,16 +735,16 @@ func (c *callCmd) Session() Session {
 	return c.sess
 }
 
-// Ip returns the remote addr.
-func (c *callCmd) Ip() string {
+// IP returns the remote addr.
+func (c *callCmd) IP() string {
 	return c.sess.RemoteAddr().String()
 }
 
-// RealIp returns the the current real remote addr.
-func (c *callCmd) RealIp() string {
-	realIp := c.inputMeta.Peek(MetaRealIp)
-	if len(realIp) > 0 {
-		return string(realIp)
+// RealIP returns the the current real remote addr.
+func (c *callCmd) RealIP() string {
+	realIP := c.inputMeta.Peek(MetaRealIP)
+	if len(realIP) > 0 {
+		return string(realIP)
 	}
 	return c.sess.RemoteAddr().String()
 }
@@ -784,7 +760,7 @@ func (c *callCmd) SwapLen() int {
 }
 
 // Output returns writed message.
-func (c *callCmd) Output() *Message {
+func (c *callCmd) Output() Message {
 	return c.output
 }
 

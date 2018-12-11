@@ -4,12 +4,12 @@ pbproto is implemented PTOTOBUF socket communication protocol.
 
 ### Message Bytes
 
-`{length bytes}` `{xfer_pipe length byte}` `{xfer_pipe bytes}` `{protobuf bytes}`
+`{length bytes}` `{xferPipe length byte}` `{xferPipe bytes}` `{protobuf bytes}`
 
 - `{length bytes}`: uint32, 4 bytes, big endian
-- `{xfer_pipe length byte}`: 1 byte
-- `{xfer_pipe bytes}`: one byte one xfer
-- `{protobuf bytes}`: {"seq":%d,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}
+- `{xferPipe length byte}`: 1 byte
+- `{xferPipe bytes}`: one byte one xfer
+- `{protobuf bytes}`: {"seq":%d,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}
 
 ### Usage
 
@@ -33,14 +33,12 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
-	h.Session().Push("/push/test", map[string]interface{}{
-		"your_id": h.Query().Get("peer_id"),
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror) {
+	h.Session().Push("/push/test", map[string]string{
+		"your_id": string(h.PeekMeta("peer_id")),
 	})
-	meta := h.CopyMeta()
 	return map[string]interface{}{
-		"arg":  *arg,
-		"meta": meta.String(),
+		"arg": *arg,
 	}, nil
 }
 
@@ -61,12 +59,12 @@ func TestPbProto(t *testing.T) {
 		t.Error(err)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/test?peer_id=110",
-		map[string]interface{}{
-			"bytes": []byte("test bytes"),
+	rerr := sess.Call("/home/test",
+		map[string]string{
+			"author": "henrylee2cn",
 		},
 		&result,
-		tp.WithAddMeta("add", "1"),
+		tp.WithAddMeta("peer_id", "110"),
 		tp.WithXferPipe('g'),
 	).Rerror()
 	if rerr != nil {
@@ -80,8 +78,8 @@ type Push struct {
 	tp.PushCtx
 }
 
-func (p *Push) Test(arg *map[string]interface{}) *tp.Rerror {
-	tp.Infof("receive push(%s):\narg: %#v\n", p.Ip(), arg)
+func (p *Push) Test(arg *map[string]string) *tp.Rerror {
+	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }
 ```

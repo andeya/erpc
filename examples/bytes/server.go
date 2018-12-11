@@ -30,19 +30,19 @@ type Home struct {
 
 // Test handler
 func (h *Home) Test(arg *[]byte) ([]byte, *tp.Rerror) {
-	h.Session().Push("/push/test?tag=from home-test", []byte("test push text"))
+	h.Session().Push("/push/test", []byte("test push text"))
 	tp.Debugf("HomeCallHandle: codec: %d, arg: %s", h.GetBodyCodec(), *arg)
 	return []byte("test call result text"), nil
 }
 
 // UnknownCallHandle handles unknown call message
 func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
-	ctx.Session().Push("/push/test?tag=from unknown", []byte("test unknown push text"))
+	ctx.Session().Push("/push/test", []byte("test unknown push text"))
 	var arg []byte
-	codecId, err := ctx.Bind(&arg)
+	codecID, err := ctx.Bind(&arg)
 	if err != nil {
 		return nil, tp.NewRerror(1001, "bind error", err.Error())
 	}
-	tp.Debugf("UnknownCallHandle: codec: %d, arg: %s", codecId, arg)
+	tp.Debugf("UnknownCallHandle: codec: %d, arg: %s", codecID, arg)
 	return []byte("test unknown call result text"), nil
 }

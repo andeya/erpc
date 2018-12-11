@@ -7,8 +7,6 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
-//go:generate go test -v -run=^TestTPS$
-
 type Call struct {
 	tp.CallCtx
 }

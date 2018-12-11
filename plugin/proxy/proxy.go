@@ -27,25 +27,25 @@ import (
 
 // A proxy plugin for handling unknown calling or pushing.
 
-// Proxy creates a proxy plugin for handling unknown calling and pushing.
-func Proxy(fn func(*ProxyLabel) Forwarder) tp.Plugin {
+// NewPlugin creates a proxy plugin for handling unknown calling and pushing.
+func NewPlugin(fn func(*Label) Forwarder) tp.Plugin {
 	return &proxy{
-		callForwarder: func(label *ProxyLabel) CallForwarder {
+		callForwarder: func(label *Label) CallForwarder {
 			return fn(label)
 		},
-		pushForwarder: func(label *ProxyLabel) PushForwarder {
+		pushForwarder: func(label *Label) PushForwarder {
 			return fn(label)
 		},
 	}
 }
 
-// ProxyCall creates a proxy plugin for handling unknown calling.
-func ProxyCall(fn func(*ProxyLabel) CallForwarder) tp.Plugin {
+// NewCallPlugin creates a proxy plugin for handling unknown calling.
+func NewCallPlugin(fn func(*Label) CallForwarder) tp.Plugin {
 	return &proxy{callForwarder: fn}
 }
 
-// ProxyPush creates a proxy plugin for handling unknown pushing.
-func ProxyPush(fn func(*ProxyLabel) PushForwarder) tp.Plugin {
+// NewPushPlugin creates a proxy plugin for handling unknown pushing.
+func NewPushPlugin(fn func(*Label) PushForwarder) tp.Plugin {
 	return &proxy{pushForwarder: fn}
 }
 
@@ -63,13 +63,13 @@ type (
 	PushForwarder interface {
 		Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Rerror
 	}
-	// ProxyLabel proxy label information
-	ProxyLabel struct {
-		SessionId, RealIp, Uri string
+	// Label proxy label information
+	Label struct {
+		SessionID, RealIP, ServiceMethod string
 	}
 	proxy struct {
-		callForwarder func(*ProxyLabel) CallForwarder
-		pushForwarder func(*ProxyLabel) PushForwarder
+		callForwarder func(*Label) CallForwarder
+		pushForwarder func(*Label) PushForwarder
 	}
 )
 
@@ -93,26 +93,25 @@ func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
 
 func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 	var (
-		label    ProxyLabel
-		settings = make([]tp.MessageSetting, 1, 8)
+		label    Label
+		settings = make([]tp.MessageSetting, 0, 16)
 	)
-	label.SessionId = ctx.Session().Id()
-	settings[0] = tp.WithSeq(getSeq(label.SessionId + "@" + ctx.Seq()))
+	label.SessionID = ctx.Session().ID()
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
 	var (
 		result      []byte
-		realIpBytes = ctx.PeekMeta(tp.MetaRealIp)
+		realIPBytes = ctx.PeekMeta(tp.MetaRealIP)
 	)
-	if len(realIpBytes) == 0 {
-		label.RealIp = ctx.Ip()
-		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, label.RealIp))
+	if len(realIPBytes) == 0 {
+		label.RealIP = ctx.IP()
+		settings = append(settings, tp.WithAddMeta(tp.MetaRealIP, label.RealIP))
 	} else {
-		label.RealIp = goutil.BytesToString(realIpBytes)
+		label.RealIP = goutil.BytesToString(realIPBytes)
 	}
-	label.Uri = ctx.Uri()
-	callcmd := p.callForwarder(&label).Call(label.Uri, ctx.InputBodyBytes(), &result, settings...)
+	label.ServiceMethod = ctx.ServiceMethod()
+	callcmd := p.callForwarder(&label).Call(label.ServiceMethod, ctx.InputBodyBytes(), &result, settings...)
 	callcmd.InputMeta().VisitAll(func(key, value []byte) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
@@ -126,22 +125,21 @@ func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 
 func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 	var (
-		label    ProxyLabel
-		settings = make([]tp.MessageSetting, 1, 8)
+		label    Label
+		settings = make([]tp.MessageSetting, 0, 16)
 	)
-	label.SessionId = ctx.Session().Id()
-	settings[0] = tp.WithSeq(getSeq(label.SessionId + "@" + ctx.Seq()))
+	label.SessionID = ctx.Session().ID()
 	ctx.VisitMeta(func(key, value []byte) {
 		settings = append(settings, tp.WithAddMeta(string(key), string(value)))
 	})
-	if realIpBytes := ctx.PeekMeta(tp.MetaRealIp); len(realIpBytes) == 0 {
-		label.RealIp = ctx.Ip()
-		settings = append(settings, tp.WithAddMeta(tp.MetaRealIp, label.RealIp))
+	if realIPBytes := ctx.PeekMeta(tp.MetaRealIP); len(realIPBytes) == 0 {
+		label.RealIP = ctx.IP()
+		settings = append(settings, tp.WithAddMeta(tp.MetaRealIP, label.RealIP))
 	} else {
-		label.RealIp = goutil.BytesToString(realIpBytes)
+		label.RealIP = goutil.BytesToString(realIPBytes)
 	}
-	label.Uri = ctx.Uri()
-	rerr := p.pushForwarder(&label).Push(label.Uri, ctx.InputBodyBytes(), settings...)
+	label.ServiceMethod = ctx.ServiceMethod()
+	rerr := p.pushForwarder(&label).Push(label.ServiceMethod, ctx.InputBodyBytes(), settings...)
 	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
 		rerr.Code = tp.CodeBadGateway
 		rerr.Message = tp.CodeText(tp.CodeBadGateway)

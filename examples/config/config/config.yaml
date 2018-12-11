@@ -4,6 +4,7 @@ cfg_cli:
   listen_port: 0
   default_dial_timeout: 0s
   redial_times: 0
+  redial_interval: 100ms
   default_body_codec: json
   default_session_age: 0s
   default_context_age: 0s
@@ -21,5 +22,6 @@ cfg_srv:
   local_ip: 0.0.0.0
   network: tcp
   print_detail: false
+  redial_interval: 100ms
   redial_times: 0
   slow_comet_duration: 0s

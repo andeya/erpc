@@ -22,7 +22,7 @@ func main() {
 	}
 
 	var result int
-	rerr := sess.Call("/math/add1?push_status=yes",
+	rerr := sess.Call("/math/add1",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 	).Rerror()
@@ -32,9 +32,10 @@ func main() {
 	}
 	tp.Printf("result1: %d", result)
 
-	rerr = sess.Call("/math/add2?push_status=yes",
+	rerr = sess.Call("/math/add2",
 		[]int{1, 2, 3, 4, 5},
 		&result,
+		tp.WithAddMeta("push_status", "yes"),
 	).Rerror()
 
 	if rerr != nil {
@@ -52,6 +53,6 @@ func (c *ctrl) ServerStatus1(arg *string) *tp.Rerror {
 }
 
 func ServerStatus2(ctx tp.PushCtx, arg *string) *tp.Rerror {
-	tp.Printf("server status(%s): %s", ctx.Uri(), *arg)
+	tp.Printf("server status(%s): %s", ctx.ServiceMethod(), *arg)
 	return nil
 }

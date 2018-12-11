@@ -26,9 +26,9 @@ import (
 )
 
 const (
-	// HeartbeatUri heartbeat service URI
-	HeartbeatUri      = "/heartbeat"
-	heartbeatQueryKey = "hb_"
+	// HeartbeatServiceMethod heartbeat service method
+	HeartbeatServiceMethod = "/heartbeat"
+	heartbeatMetaKey       = "hb_"
 )
 
 // NewPing returns a heartbeat(CALL or PUSH) sender plugin.
@@ -66,12 +66,12 @@ type (
 		PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror
 	}
 	heartPing struct {
-		peer     tp.Peer
-		pingRate time.Duration
-		uri      string
-		useCall  bool
-		mu       sync.RWMutex
-		once     sync.Once
+		peer           tp.Peer
+		pingRate       time.Duration
+		pingRateSecond string
+		useCall        bool
+		mu             sync.RWMutex
+		once           sync.Once
 	}
 )
 
@@ -92,7 +92,7 @@ func (h *heartPing) SetRate(rateSecond int) {
 	}
 	h.mu.Lock()
 	h.pingRate = time.Second * time.Duration(rateSecond)
-	h.uri = HeartbeatUri + "?" + heartbeatQueryKey + "=" + strconv.Itoa(rateSecond)
+	h.pingRateSecond = strconv.Itoa(rateSecond)
 	h.mu.Unlock()
 	tp.Infof("set heartbeat rate: %ds", rateSecond)
 }
@@ -103,10 +103,10 @@ func (h *heartPing) getRate() time.Duration {
 	return h.pingRate
 }
 
-func (h *heartPing) getUri() string {
+func (h *heartPing) getPingRateSecond() string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.uri
+	return h.pingRateSecond
 }
 
 // UseCall uses CALL method to ping.
@@ -202,7 +202,10 @@ func (h *heartPing) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
 
 func (h *heartPing) goCall(sess tp.Session) {
 	tp.Go(func() {
-		if sess.Call(h.getUri(), nil, nil).Rerror() != nil {
+		if sess.Call(
+			HeartbeatServiceMethod, nil, nil,
+			tp.WithSetMeta(heartbeatMetaKey, h.getPingRateSecond()),
+		).Rerror() != nil {
 			sess.Close()
 		}
 	})
@@ -210,7 +213,11 @@ func (h *heartPing) goCall(sess tp.Session) {
 
 func (h *heartPing) goPush(sess tp.Session) {
 	tp.Go(func() {
-		if sess.Push(h.getUri(), nil) != nil {
+		if sess.Push(
+			HeartbeatServiceMethod,
+			nil,
+			tp.WithSetMeta(heartbeatMetaKey, h.getPingRateSecond()),
+		) != nil {
 			sess.Close()
 		}
 	})

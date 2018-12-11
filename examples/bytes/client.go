@@ -26,10 +26,10 @@ func main() {
 	var result []byte
 	for {
 		if rerr = sess.Call(
-			"/group/home/test?peer_id=call-1",
+			"/group/home/test",
 			[]byte("call text"),
 			&result,
-			tp.WithQuery("a", "1"),
+			tp.WithAddMeta("peer_id", "call-1"),
 		).Rerror(); rerr != nil {
 			tp.Errorf("call error: %v", rerr)
 			time.Sleep(time.Second * 2)
@@ -40,10 +40,10 @@ func main() {
 	tp.Infof("test result: %s", result)
 
 	rerr = sess.Call(
-		"/group/home/test_unknown?peer_id=call-2",
+		"/group/home/test_unknown",
 		[]byte("unknown call text"),
 		&result,
-		tp.WithQuery("b", "2"),
+		tp.WithAddMeta("peer_id", "call-2"),
 	).Rerror()
 	if tp.IsConnRerror(rerr) {
 		tp.Fatalf("has conn rerror: %v", rerr)
@@ -61,6 +61,6 @@ type Push struct {
 
 // Test handler
 func (p *Push) Test(arg *[]byte) *tp.Rerror {
-	tp.Infof("receive push(%s):\narg: %s\nquery: %#v\n", p.Ip(), *arg, p.Query())
+	tp.Infof("receive push(%s):\narg: %s\n", p.IP(), *arg)
 	return nil
 }

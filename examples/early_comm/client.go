@@ -39,11 +39,11 @@ func (e *earlyCall) PostDial(sess tp.PreSession) *tp.Rerror {
 		return rerr
 	}
 
-	input, rerr := sess.Receive(func(header Header) interface{} {
-		if header.Uri() == "/early/pong" {
+	input, rerr := sess.Receive(func(header tp.Header) interface{} {
+		if header.ServiceMethod() == "/early/pong" {
 			return new(string)
 		}
-		tp.Panicf("Received an unexpected response: %s", header.Uri())
+		tp.Panicf("Received an unexpected response: %s", header.ServiceMethod())
 		return nil
 	})
 	if rerr != nil {

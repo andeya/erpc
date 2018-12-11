@@ -90,10 +90,10 @@ type (
 		Swap() goutil.Map
 		// SwapLen returns the amount of custom data of the socket.
 		SwapLen() int
-		// Id returns the socket id.
-		Id() string
-		// SetId sets the socket id.
-		SetId(string)
+		// ID returns the socket id.
+		ID() string
+		// SetID sets the socket id.
+		SetID(string)
 		// Reset reset net.Conn and ProtoFunc.
 		Reset(netConn net.Conn, protoFunc ...ProtoFunc)
 	}
@@ -232,8 +232,8 @@ func (s *socket) SwapLen() int {
 	return s.swap.Len()
 }
 
-// Id returns the socket id.
-func (s *socket) Id() string {
+// ID returns the socket id.
+func (s *socket) ID() string {
 	s.idMutex.RLock()
 	id := s.id
 	if len(id) == 0 {
@@ -243,8 +243,8 @@ func (s *socket) Id() string {
 	return id
 }
 
-// SetId sets the socket id.
-func (s *socket) SetId(id string) {
+// SetID sets the socket id.
+func (s *socket) SetID(id string) {
 	s.idMutex.Lock()
 	s.id = id
 	s.idMutex.Unlock()
@@ -258,7 +258,7 @@ func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	s.readerWithBuffer.Discard(s.readerWithBuffer.Buffered())
 	s.readerWithBuffer.Reset(netConn)
 	s.protocol = getProto(protoFunc, s)
-	s.SetId("")
+	s.SetID("")
 	atomic.StoreInt32(&s.curState, normal)
 	s.optimize()
 	s.mu.Unlock()
