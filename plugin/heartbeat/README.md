@@ -24,14 +24,14 @@ import (
 
 func TestHeartbeatCall1(t *testing.T) {
 	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090},
+		tp.PeerConfig{ListenPort: 9090, PrintDetail: true},
 		heartbeat.NewPong(),
 	)
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
 	cli := tp.NewPeer(
-		tp.PeerConfig{},
+		tp.PeerConfig{PrintDetail: true},
 		heartbeat.NewPing(3, true),
 	)
 	cli.Dial(":9090")
@@ -40,14 +40,14 @@ func TestHeartbeatCall1(t *testing.T) {
 
 func TestHeartbeatCall2(t *testing.T) {
 	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090},
+		tp.PeerConfig{ListenPort: 9090, PrintDetail: true},
 		heartbeat.NewPong(),
 	)
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
 	cli := tp.NewPeer(
-		tp.PeerConfig{},
+		tp.PeerConfig{PrintDetail: true},
 		heartbeat.NewPing(3, true),
 	)
 	sess, _ := cli.Dial(":9090")
@@ -60,14 +60,14 @@ func TestHeartbeatCall2(t *testing.T) {
 
 func TestHeartbeatPush1(t *testing.T) {
 	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090},
+		tp.PeerConfig{ListenPort: 9090, PrintDetail: true},
 		heartbeat.NewPing(3, false),
 	)
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
 	cli := tp.NewPeer(
-		tp.PeerConfig{},
+		tp.PeerConfig{PrintDetail: true},
 		heartbeat.NewPong(),
 	)
 	cli.Dial(":9090")
@@ -76,14 +76,14 @@ func TestHeartbeatPush1(t *testing.T) {
 
 func TestHeartbeatPush2(t *testing.T) {
 	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090},
+		tp.PeerConfig{ListenPort: 9090, PrintDetail: true},
 		heartbeat.NewPing(3, false),
 	)
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
 	cli := tp.NewPeer(
-		tp.PeerConfig{},
+		tp.PeerConfig{PrintDetail: true},
 		heartbeat.NewPong(),
 	)
 	sess, _ := cli.Dial(":9090")

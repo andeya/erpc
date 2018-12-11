@@ -16,7 +16,6 @@ package websocket
 
 import (
 	"bytes"
-	"io"
 
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/mixer/websocket/jsonSubProto"
@@ -29,7 +28,7 @@ var defaultProto = jsonSubProto.NewJsonSubProtoFunc
 
 // NewWsProtoFunc wraps a protocol to a new websocket protocol.
 func NewWsProtoFunc(subProto ...tp.ProtoFunc) tp.ProtoFunc {
-	return func(rw io.ReadWriter) socket.Proto {
+	return func(rw tp.IOWithReadBuffer) socket.Proto {
 		conn, ok := rw.(socket.RawConn).Raw().(*ws.Conn)
 		if !ok {
 			tp.Warnf("connection does not support websocket protocol")
@@ -70,7 +69,7 @@ func (w *wsProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (w *wsProto) Pack(m *tp.Message) error {
+func (w *wsProto) Pack(m tp.Message) error {
 	w.subConn.w.Reset()
 	err := w.subProto.Pack(m)
 	if err != nil {
@@ -81,7 +80,7 @@ func (w *wsProto) Pack(m *tp.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (w *wsProto) Unpack(m *tp.Message) error {
+func (w *wsProto) Unpack(m tp.Message) error {
 	err := ws.Message.Receive(w.conn, w.subConn.rBytes)
 	if err != nil {
 		return err

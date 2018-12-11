@@ -10,6 +10,8 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+//go:generate go build $GOFILE
+
 func NewTPS(intervalSecond uint32) *TPS {
 	if intervalSecond < 1 {
 		intervalSecond = 1
@@ -56,12 +58,12 @@ func (t *TPS) PostReg(h *tp.Handler) error {
 
 func (t *TPS) PostWriteReply(ctx tp.WriteCtx) *tp.Rerror {
 	t.once.Do(t.start)
-	atomic.AddUint32(t.stat[ctx.Output().UriObject().Path], 1)
+	atomic.AddUint32(t.stat[ctx.Output().ServiceMethod()], 1)
 	return nil
 }
 
 func (t *TPS) PostReadPushBody(ctx tp.ReadCtx) *tp.Rerror {
 	t.once.Do(t.start)
-	atomic.AddUint32(t.stat[ctx.Path()], 1)
+	atomic.AddUint32(t.stat[ctx.ServiceMethod()], 1)
 	return nil
 }

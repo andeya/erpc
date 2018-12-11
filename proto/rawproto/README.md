@@ -30,14 +30,13 @@ NOTE: Big Endian
 #### Test
 
 ```go
-package pbproto_test
+package rawproto_test
 
 import (
 	"testing"
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/proto/pbproto"
 	"github.com/henrylee2cn/teleport/xfer/gzip"
 )
 
@@ -45,14 +44,12 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
-	h.Session().Push("/push/test", map[string]interface{}{
-		"your_id": h.Query().Get("peer_id"),
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror) {
+	h.Session().Push("/push/test", map[string]string{
+		"your_id": string(h.PeekMeta("peer_id")),
 	})
-	meta := h.CopyMeta()
 	return map[string]interface{}{
-		"arg":  *arg,
-		"meta": meta.String(),
+		"arg": *arg,
 	}, nil
 }
 
@@ -62,23 +59,23 @@ func TestPbProto(t *testing.T) {
 	// server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
-	go srv.ListenAndServe(pbproto.NewPbProtoFunc)
+	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
 	// client
 	cli := tp.NewPeer(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
-	sess, err := cli.Dial(":9090", pbproto.NewPbProtoFunc)
+	sess, err := cli.Dial(":9090")
 	if err != nil {
 		t.Error(err)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/test?peer_id=110",
-		map[string]interface{}{
-			"bytes": []byte("test bytes"),
+	rerr := sess.Call("/home/test",
+		map[string]string{
+			"author": "henrylee2cn",
 		},
 		&result,
-		tp.WithAddMeta("add", "1"),
+		tp.WithAddMeta("peer_id", "110"),
 		tp.WithXferPipe('g'),
 	).Rerror()
 	if rerr != nil {
@@ -92,8 +89,8 @@ type Push struct {
 	tp.PushCtx
 }
 
-func (p *Push) Test(arg *map[string]interface{}) *tp.Rerror {
-	tp.Infof("receive push(%s):\narg: %#v\n", p.Ip(), arg)
+func (p *Push) Test(arg *map[string]string) *tp.Rerror {
+	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }
 ```

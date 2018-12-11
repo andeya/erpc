@@ -36,8 +36,8 @@ func (JsonCodec) Name() string {
 	return NAME_JSON
 }
 
-// Id returns codec id.
-func (JsonCodec) Id() byte {
+// ID returns codec id.
+func (JsonCodec) ID() byte {
 	return ID_JSON
 }
 

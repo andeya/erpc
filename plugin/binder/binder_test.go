@@ -14,18 +14,18 @@ type (
 		B int    `param:"<range:1:100>"`
 		C string `param:"<regexp:^[1-9]\\d*$>"`
 		Query
-		XyZ       string  `param:"<query><nonzero><rerr: 100002: Parameter cannot be empty>"`
+		XyZ       string  `param:"<meta><nonzero><rerr: 100002: Parameter cannot be empty>"`
 		SwapValue float32 `param:"<swap><nonzero>"`
 	}
 	Query struct {
-		X string `param:"<query:_x>"`
+		X string `param:"<meta:_x>"`
 	}
 )
 
 type P struct{ tp.CallCtx }
 
 func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
-	tp.Infof("query arg _x: %s, xy_z: %s, swap_value: %v", arg.Query.X, arg.XyZ, arg.SwapValue)
+	tp.Infof("meta arg _x: %s, xy_z: %s, swap_value: %v", arg.Query.X, arg.XyZ, arg.SwapValue)
 	return arg.A / arg.B, nil
 }
 
@@ -55,11 +55,15 @@ func TestBinder(t *testing.T) {
 		t.Fatal(err)
 	}
 	var result int
-	rerr := sess.Call("/p/divide?_x=testquery_x&xy_z=testquery_xy_z", &Arg{
+	rerr := sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 2,
 		C: "3",
-	}, &result).Rerror()
+	},
+		&result,
+		tp.WithSetMeta("_x", "testmeta_x"),
+		tp.WithSetMeta("xy_z", "testmeta_xy_z"),
+	).Rerror()
 	if rerr != nil {
 		t.Fatal(rerr)
 	}

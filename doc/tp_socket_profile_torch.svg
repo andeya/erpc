@@ -696,7 +696,7 @@
 <text text-anchor="" x="1142.30" y="271.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*Message).MarshalBody (14 samples, 0.55%)</title><rect x="567.2" y="309" width="6.5" height="15.0" fill="rgb(242,208,4)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(Message).MarshalBody (14 samples, 0.55%)</title><rect x="567.2" y="309" width="6.5" height="15.0" fill="rgb(242,208,4)" rx="2" ry="2" />
 <text text-anchor="" x="570.21" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -872,7 +872,7 @@
 <text text-anchor="" x="1142.30" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*Message).UnmarshalBody (8 samples, 0.32%)</title><rect x="10.5" y="293" width="3.7" height="15.0" fill="rgb(215,171,48)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(Message).UnmarshalBody (8 samples, 0.32%)</title><rect x="10.5" y="293" width="3.7" height="15.0" fill="rgb(215,171,48)" rx="2" ry="2" />
 <text text-anchor="" x="13.47" y="303.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
@@ -1836,7 +1836,7 @@
 <text text-anchor="" x="576.72" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">
-<title>github.com/henrylee2cn/teleport/socket.(*Message).UnmarshalNewBody (9 samples, 0.35%)</title><rect x="10.5" y="309" width="4.2" height="15.0" fill="rgb(244,95,8)" rx="2" ry="2" />
+<title>github.com/henrylee2cn/teleport/socket.(Message).UnmarshalNewBody (9 samples, 0.35%)</title><rect x="10.5" y="309" width="4.2" height="15.0" fill="rgb(244,95,8)" rx="2" ry="2" />
 <text text-anchor="" x="13.47" y="319.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
 </g>
 <g class="func_g" onmouseover="s(this)" onmouseout="c()" onclick="zoom(this)">

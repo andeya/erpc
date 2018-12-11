@@ -29,7 +29,7 @@ func (c *ctrl) math_add1(arg *[]int) (int, *tp.Rerror) {
 }
 
 func math_add2(ctx tp.CallCtx, arg *[]int) (int, *tp.Rerror) {
-	if ctx.Query().Get("push_status") == "yes" {
+	if string(ctx.PeekMeta("push_status")) == "yes" {
 		ctx.Session().Push(
 			"/server/status1",
 			fmt.Sprintf("%d numbers are being added...", len(*arg)),

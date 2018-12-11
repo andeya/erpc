@@ -49,7 +49,7 @@ func (t *test) Break(*struct{}) (*struct{}, *tp.Rerror) {
 	time.Sleep(time.Second * 3)
 	select {
 	case <-t.Session().CloseNotify():
-		tp.Errorf("the connection has gone away!")
+		tp.Infof("the connection has gone away!")
 		return nil, tp.NewRerror(tp.CodeConnClosed, "", "")
 	default:
 		return nil, nil

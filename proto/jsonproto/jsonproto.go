@@ -32,8 +32,8 @@ import (
 
 // NewJsonProtoFunc is creation function of JSON socket protocol.
 //  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
-//  Message data demo: `830{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
-var NewJsonProtoFunc = func(rw io.ReadWriter) tp.Proto {
+//  Message data demo: `830{"seq":%q,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
+var NewJsonProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
 	return &jsonproto{
 		id:   'j',
 		name: "json",
@@ -44,7 +44,7 @@ var NewJsonProtoFunc = func(rw io.ReadWriter) tp.Proto {
 type jsonproto struct {
 	id   byte
 	name string
-	rw   io.ReadWriter
+	rw   tp.IOWithReadBuffer
 	rMu  sync.Mutex
 }
 
@@ -53,11 +53,11 @@ func (j *jsonproto) Version() (byte, string) {
 	return j.id, j.name
 }
 
-const format = `{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s"}`
+const format = `{"seq":%d,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (j *jsonproto) Pack(m *tp.Message) error {
+func (j *jsonproto) Pack(m tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -68,7 +68,7 @@ func (j *jsonproto) Pack(m *tp.Message) error {
 	var s = fmt.Sprintf(format,
 		m.Seq(),
 		m.Mtype(),
-		m.Uri(),
+		m.ServiceMethod(),
 		m.Meta().QueryString(),
 		m.BodyCodec(),
 		bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1),
@@ -96,7 +96,7 @@ func (j *jsonproto) Pack(m *tp.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (j *jsonproto) Unpack(m *tp.Message) error {
+func (j *jsonproto) Unpack(m tp.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()
 	var size uint32
@@ -137,14 +137,14 @@ func (j *jsonproto) Unpack(m *tp.Message) error {
 	s := string(bb.B)
 
 	// read other
-	m.SetSeq(gjson.Get(s, "seq").String())
+	m.SetSeq(int32(gjson.Get(s, "seq").Int()))
 	m.SetMtype(byte(gjson.Get(s, "mtype").Int()))
-	m.SetUri(gjson.Get(s, "uri").String())
+	m.SetServiceMethod(gjson.Get(s, "serviceMethod").String())
 	meta := gjson.Get(s, "meta").String()
 	m.Meta().ParseBytes(goutil.StringToBytes(meta))
 
 	// read body
-	m.SetBodyCodec(byte(gjson.Get(s, "body_codec").Int()))
+	m.SetBodyCodec(byte(gjson.Get(s, "bodyCodec").Int()))
 	body := gjson.Get(s, "body").String()
 	err = m.UnmarshalBody(goutil.StringToBytes(body))
 	return err

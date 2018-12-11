@@ -15,9 +15,10 @@
 package heartbeat
 
 import (
-	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/henrylee2cn/goutil"
 
 	"github.com/henrylee2cn/goutil/coarsetime"
 	tp "github.com/henrylee2cn/teleport"
@@ -111,7 +112,7 @@ func (h *heartPong) PostWritePush(ctx tp.WriteCtx) *tp.Rerror {
 }
 
 func (h *heartPong) update(ctx tp.ReadCtx) {
-	if ctx.Path() == HeartbeatUri {
+	if ctx.ServiceMethod() == HeartbeatServiceMethod {
 		return
 	}
 	sess := ctx.Session()
@@ -126,7 +127,7 @@ type pongCall struct {
 }
 
 func (ctx *pongCall) heartbeat(_ *struct{}) (*struct{}, *tp.Rerror) {
-	return nil, handelHeartbeat(ctx.Session(), ctx.Query())
+	return nil, handelHeartbeat(ctx.Session(), ctx.PeekMeta)
 }
 
 type pongPush struct {
@@ -134,20 +135,20 @@ type pongPush struct {
 }
 
 func (ctx *pongPush) heartbeat(_ *struct{}) *tp.Rerror {
-	return handelHeartbeat(ctx.Session(), ctx.Query())
+	return handelHeartbeat(ctx.Session(), ctx.PeekMeta)
 }
 
-func handelHeartbeat(sess tp.Session, query url.Values) *tp.Rerror {
-	rateStr := query.Get(heartbeatQueryKey)
+func handelHeartbeat(sess tp.Session, peekMeta func(string) []byte) *tp.Rerror {
+	rateStr := goutil.BytesToString(peekMeta(heartbeatMetaKey))
 	rateSecond := parseHeartbeatRateSecond(rateStr)
 	isFirst := updateHeartbeatInfo(sess.Swap(), time.Second*time.Duration(rateSecond))
 	if isFirst && rateSecond == -1 {
 		return tp.NewRerror(tp.CodeBadMessage, "Invalid Heartbeat Rate", rateStr)
 	}
 	if rateSecond == 0 {
-		tp.Tracef("heart-pong: %s", sess.Id())
+		tp.Tracef("heart-pong: %s", sess.ID())
 	} else {
-		tp.Tracef("heart-pong: %s, set rate: %ds", sess.Id(), rateSecond)
+		tp.Tracef("heart-pong: %s, set rate: %ds", sess.ID(), rateSecond)
 	}
 	return nil
 }

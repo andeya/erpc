@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"sync"
 
@@ -15,7 +14,7 @@ import (
 )
 
 // NewJsonSubProtoFunc is creation function of JSON socket protocol.
-var NewJsonSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
+var NewJsonSubProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
 	return &jsonSubProto{
 		id:   'j',
 		name: "json",
@@ -26,7 +25,7 @@ var NewJsonSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
 type jsonSubProto struct {
 	id   byte
 	name string
-	rw   io.ReadWriter
+	rw   tp.IOWithReadBuffer
 	rMu  sync.Mutex
 }
 
@@ -35,11 +34,11 @@ func (j *jsonSubProto) Version() (byte, string) {
 	return j.id, j.name
 }
 
-const format = `{"seq":%q,"mtype":%d,"uri":%q,"meta":%q,"body_codec":%d,"body":"%s","xfer_pipe":%s}`
+const format = `{"seq":%d,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s","xferPipe":%s}`
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (j *jsonSubProto) Pack(m *tp.Message) error {
+func (j *jsonSubProto) Pack(m tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -64,7 +63,7 @@ func (j *jsonSubProto) Pack(m *tp.Message) error {
 	s := fmt.Sprintf(format,
 		m.Seq(),
 		m.Mtype(),
-		m.Uri(),
+		m.ServiceMethod(),
 		m.Meta().QueryString(),
 		m.BodyCodec(),
 		bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1),
@@ -81,7 +80,7 @@ func (j *jsonSubProto) Pack(m *tp.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (j *jsonSubProto) Unpack(m *tp.Message) error {
+func (j *jsonSubProto) Unpack(m tp.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()
 	b, err := ioutil.ReadAll(j.rw)
@@ -94,13 +93,13 @@ func (j *jsonSubProto) Unpack(m *tp.Message) error {
 	s := goutil.BytesToString(b)
 
 	// read transfer pipe
-	xferPipe := gjson.Get(s, "xfer_pipe")
+	xferPipe := gjson.Get(s, "xferPipe")
 	for _, r := range xferPipe.Array() {
 		m.XferPipe().Append(byte(r.Int()))
 	}
 
 	// read body
-	m.SetBodyCodec(byte(gjson.Get(s, "body_codec").Int()))
+	m.SetBodyCodec(byte(gjson.Get(s, "bodyCodec").Int()))
 	body := gjson.Get(s, "body").String()
 	bodyBytes, err := m.XferPipe().OnUnpack(goutil.StringToBytes(body))
 	if err != nil {
@@ -108,9 +107,9 @@ func (j *jsonSubProto) Unpack(m *tp.Message) error {
 	}
 
 	// read other
-	m.SetSeq(gjson.Get(s, "seq").String())
+	m.SetSeq(int32(gjson.Get(s, "seq").Int()))
 	m.SetMtype(byte(gjson.Get(s, "mtype").Int()))
-	m.SetUri(gjson.Get(s, "uri").String())
+	m.SetServiceMethod(gjson.Get(s, "serviceMethod").String())
 	meta := gjson.Get(s, "meta").String()
 	m.Meta().ParseBytes(goutil.StringToBytes(meta))
 

@@ -12,6 +12,7 @@ Ciphertext struct:
 package secure_test
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -33,14 +34,13 @@ type math struct{ tp.CallCtx }
 func (m *math) Add(arg *Arg) (*Result, *tp.Rerror) {
 	// enforces the body of the encrypted reply message.
 	// secure.EnforceSecure(m.Output())
-
 	return &Result{C: arg.A + arg.B}, nil
 }
 
-func newSession(t *testing.T) tp.Session {
-	p := secure.NewSecurePlugin(100001, "cipherkey1234567")
+func newSession(t *testing.T, port uint16) tp.Session {
+	p := secure.NewPlugin(100001, "cipherkey1234567")
 	srv := tp.NewPeer(tp.PeerConfig{
-		ListenPort:  9090,
+		ListenPort:  port,
 		PrintDetail: true,
 	})
 	srv.RouteCall(new(math), p)
@@ -50,7 +50,7 @@ func newSession(t *testing.T) tp.Session {
 	cli := tp.NewPeer(tp.PeerConfig{
 		PrintDetail: true,
 	}, p)
-	sess, err := cli.Dial(":9090")
+	sess, err := cli.Dial(":" + strconv.Itoa(int(port)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func newSession(t *testing.T) tp.Session {
 }
 
 func TestSecurePlugin(t *testing.T) {
-	sess := newSession(t)
+	sess := newSession(t, 9090)
 	// test secure
 	var result Result
 	rerr := sess.Call(
@@ -78,7 +78,7 @@ func TestSecurePlugin(t *testing.T) {
 }
 
 func TestAcceptSecurePlugin(t *testing.T) {
-	sess := newSession(t)
+	sess := newSession(t, 9091)
 	// test accept secure
 	var result Result
 	rerr := sess.Call(

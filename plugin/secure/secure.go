@@ -18,7 +18,6 @@ package secure
 import (
 	"crypto/aes"
 	"fmt"
-	"net/url"
 
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
@@ -39,13 +38,13 @@ const (
 	CIPHERTEXT_KEY = "ciphertext"
 )
 
-// NewSecurePlugin creates a AES encryption/decryption plugin.
+// NewPlugin creates a AES encryption/decryption plugin.
 // The cipherkey argument should be the AES key,
 // either 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256.
-func NewSecurePlugin(rerrCode int32, cipherkey string) tp.Plugin {
+func NewPlugin(rerrCode int32, cipherkey string) tp.Plugin {
 	b := []byte(cipherkey)
 	if _, err := aes.NewCipher(b); err != nil {
-		tp.Fatalf("NewSecurePlugin: %v", err)
+		tp.Fatalf("secure: %v", err)
 	}
 	version := goutil.Md5([]byte(cipherkey))
 	return &securePlugin{
@@ -63,24 +62,24 @@ func NewSecurePlugin(rerrCode int32, cipherkey string) tp.Plugin {
 }
 
 // EnforceSecure enforces the body of the encrypted reply message.
-// NOTE: requires that the secure plugin has been registered!
-func EnforceSecure(output *tp.Message) {
+// Note: requires that the secure plugin has been registered!
+func EnforceSecure(output tp.Message) {
 	output.Meta().Set(SECURE_META_KEY, "true")
 }
 
 // WithSecureMeta encrypts the body of the current message.
-// NOTE: requires that the secure plugin has been registered!
+// Note: requires that the secure plugin has been registered!
 func WithSecureMeta() tp.MessageSetting {
-	return func(message *tp.Message) {
+	return func(message tp.Message) {
 		message.Meta().Set(SECURE_META_KEY, "true")
 	}
 }
 
 // WithAcceptSecureMeta requires the peer to encrypt the replying body.
-// NOTE: requires that the secure plugin has been registered!
+// Note: requires that the secure plugin has been registered!
 func WithAcceptSecureMeta(accept bool) tp.MessageSetting {
 	s := fmt.Sprintf("%v", accept)
-	return func(message *tp.Message) {
+	return func(message tp.Message) {
 		message.Meta().Set(ACCEPT_SECURE_META_KEY, s)
 	}
 }
@@ -154,19 +153,6 @@ func (e *encryptPlugin) PreWriteCall(ctx tp.WriteCtx) *tp.Rerror {
 		EnforceSecure(ctx.Output())
 	}
 
-	// query: perform encryption operation to the query parameters.
-	output := ctx.Output()
-	// if output.Mtype() != tp.TypeReply {
-	u := output.UriObject()
-	if len(u.RawQuery) > 0 {
-		ciphertext := goutil.AESEncrypt(e.cipherkey, goutil.StringToBytes(u.RawQuery))
-		v := make(url.Values, 0)
-		v.Set(CIPHERVERSION_KEY, e.version)
-		v.Set(CIPHERTEXT_KEY, goutil.BytesToString(ciphertext))
-		u.RawQuery = v.Encode()
-	}
-	// }
-
 	// body: perform encryption operation to the body.
 	bodyBytes, err := ctx.Output().MarshalBody()
 	if err != nil {
@@ -208,31 +194,6 @@ func (e *decryptPlugin) PreReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
 	ctx.Swap().Store(encrypt_rawbody, ctx.Input().Body())
 	ctx.Input().SetBody(new(Encrypt))
 
-	// query: decrypt query parameters
-	version := ctx.Query().Get(CIPHERVERSION_KEY)
-	if len(version) == 0 {
-		return nil
-	}
-	if version != e.version {
-		return tp.NewRerror(
-			e.rerrCode,
-			"decrypt ciphertext error",
-			fmt.Sprintf("inconsistent encryption version, get:%q, want:%q", version, e.version),
-		)
-	}
-	ciphertext := ctx.Query().Get(CIPHERTEXT_KEY)
-	queryBytes, err := goutil.AESDecrypt(e.cipherkey, goutil.StringToBytes(ciphertext))
-	if err != nil {
-		return tp.NewRerror(e.rerrCode, "decrypt ciphertext error", err.Error())
-	}
-	q := ctx.Query()
-	q.Del(CIPHERVERSION_KEY)
-	q.Del(CIPHERTEXT_KEY)
-	ctx.UriObject().RawQuery = goutil.BytesToString(queryBytes)
-	last := q.Encode()
-	if len(last) > 0 {
-		ctx.UriObject().RawQuery += "&" + last
-	}
 	return nil
 }
 

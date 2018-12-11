@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 /**
@@ -36,20 +36,20 @@ Parameter Binding Verification Plugin for Struct Handler.
 
 tag   |   key    | required |     value     |   desc
 ------|----------|----------|---------------|----------------------------------
-param |   query    | no |  (name e.g.`id`)  | It indicates that the parameter is from the URI query part. e.g. `/a/b?x={query}`
-param |   swap    | no |  (name e.g.`id`)  | It indicates that the parameter is from the context swap.
-param |   desc   |      no      |     (e.g.`id`)   | Parameter Description
-param |   len    |      no      |   (e.g.`3:6`)  | Length range [a,b] of parameter's value
-param |   range  |      no      |   (e.g.`0:10`)   | Numerical range [a,b] of parameter's value
+param |   meta    | no |  (name e.g.`param:"<meta:id>"`)  | It indicates that the parameter is from the meta.
+param |   swap    | no |   name (e.g.`param:"<swap:id>"`)  | It indicates that the parameter is from the context swap.
+param |   desc   |      no      |     (e.g.`param:"<desc:id>"`)   | Parameter Description
+param |   len    |      no      |   (e.g.`param:"<len:3:6>"`)  | Length range [a,b] of parameter's value
+param |   range  |      no      |   (e.g.`param:"<range:0:10>"`)   | Numerical range [a,b] of parameter's value
 param |  nonzero |      no      |    -    | Not allowed to zero
-param |  regexp  |      no      |   (e.g.`^\w+$`)  | Regular expression validation
-param |   rerr   |      no      |(e.g.`100002:wrong password format`)| Custom error code and message
+param |  regexp  |      no      |   (e.g.`param:"<regexp:^\\w+$>"`)  | Regular expression validation
+param |   rerr   |      no      |(e.g.`param:"<rerr:100002:wrong password format>"`)| Custom error code and message
 
 NOTES:
 * `param:"-"` means ignore
 * Encountered untagged exportable anonymous structure field, automatic recursive resolution
 * Parameter name is the name of the structure field converted to snake format
-* If the parameter is not from `query` or `swap`, it is the default from the body
+* If the parameter is not from `meta` or `swap`, it is the default from the body
 
 - Field-Types
 
@@ -138,12 +138,12 @@ func (s *StructArgsBinder) PostReg(h *tp.Handler) error {
 
 // PostReadCallBody binds and validates the registered struct handler.
 func (s *StructArgsBinder) PostReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
-	params, ok := s.binders[ctx.Path()]
+	params, ok := s.binders[ctx.ServiceMethod()]
 	if !ok {
 		return nil
 	}
 	bodyValue := reflect.ValueOf(ctx.Input().Body())
-	rerr := params.bindAndValidate(bodyValue, ctx.Query(), ctx.Swap())
+	rerr := params.bindAndValidate(bodyValue, ctx.CopyMeta(), ctx.Swap())
 	if rerr != nil {
 		return rerr
 	}
@@ -161,7 +161,7 @@ type Params struct {
 const (
 	TAG_PARAM        = "param"   // request param tag name
 	TAG_IGNORE_PARAM = "-"       // ignore request param tag value
-	KEY_QUERY        = "query"   // query param(optional), value means parameter(optional)
+	KEY_META         = "meta"    // meta param(optional), value means parameter(optional)
 	KEY_SWAP         = "swap"    // swap param from the context swap(ctx.Swap()) (optional), value means parameter(optional)
 	KEY_DESC         = "desc"    // request param description
 	KEY_LEN          = "len"     // length range of param's value
@@ -270,8 +270,8 @@ func (p *Params) addFields(parentIndexPath []int, t reflect.Type, v reflect.Valu
 			}
 		}
 
-		if fd.name, ok = parsedTags[KEY_QUERY]; ok {
-			fd.position = KEY_QUERY
+		if fd.name, ok = parsedTags[KEY_META]; ok {
+			fd.position = KEY_META
 		} else if fd.name, ok = parsedTags[KEY_SWAP]; ok {
 			fd.position = KEY_SWAP
 		}
@@ -303,7 +303,7 @@ func (p *Params) fieldsForBinding(structElem reflect.Value) []reflect.Value {
 	return fields
 }
 
-func (p *Params) bindAndValidate(structValue reflect.Value, queryValues url.Values, swap goutil.Map) (rerr *tp.Rerror) {
+func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, swap goutil.Map) (rerr *tp.Rerror) {
 	defer func() {
 		if r := recover(); r != nil {
 			rerr = p.binder.errFunc(p.handlerName, "", fmt.Sprint(r))
@@ -315,12 +315,12 @@ func (p *Params) bindAndValidate(structValue reflect.Value, queryValues url.Valu
 	)
 	for i, param := range p.params {
 		value := fields[i]
-		// bind query or swap param
+		// bind meta or swap param
 		switch param.position {
-		case KEY_QUERY:
-			paramValues, ok := queryValues[param.name]
-			if ok {
-				if err = convertAssign(value, paramValues); err != nil {
+		case KEY_META:
+			paramValues := meta.PeekMulti(param.name)
+			if len(paramValues) > 0 {
+				if err = convertAssign(value, toSliceString(paramValues)); err != nil {
 					return param.fixRerror(p.binder.errFunc(param.handlerName, param.name, err.Error()))
 				}
 			}
@@ -357,6 +357,17 @@ func (p *Params) bindAndValidate(structValue reflect.Value, queryValues url.Valu
 		}
 	}
 	return
+}
+
+func toSliceString(b [][]byte) []string {
+	if len(b) == 0 {
+		return nil
+	}
+	a := make([]string, len(b))
+	for k, v := range b {
+		a[k] = goutil.BytesToString(v)
+	}
+	return a
 }
 
 // parseTags returns the key-value in the tag string.

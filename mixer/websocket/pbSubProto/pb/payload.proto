@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package pb;
+
+message payload {
+    int32  seq           = 1;
+    int32  mtype         = 2;
+    string serviceMethod = 3;
+    bytes  meta          = 4;
+    int32  bodyCodec     = 5;
+    bytes  body          = 6;
+    bytes  xfer_pipe     = 7;
+}

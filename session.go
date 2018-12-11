@@ -43,8 +43,8 @@ type (
 		RemoteAddr() net.Addr
 		// Swap returns custom data swap of the session(socket).
 		Swap() goutil.Map
-		// SetId sets the session id.
-		SetId(newId string)
+		// SetID sets the session id.
+		SetID(newID string)
 		// ControlFD invokes f on the underlying connection's file
 		// descriptor or handle.
 		// The file descriptor fd is guaranteed to remain valid while
@@ -63,10 +63,10 @@ type (
 		// NOTE:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
-		Send(uri string, body interface{}, rerr *Rerror, setting ...MessageSetting) *Rerror
+		Send(serviceMethod string, body interface{}, rerr *Rerror, setting ...MessageSetting) *Rerror
 		// Receive receives a message from peer, before the formal connection.
 		// NOTE: does not support automatic redial after disconnection.
-		Receive(NewBodyFunc, ...MessageSetting) (*Message, *Rerror)
+		Receive(NewBodyFunc, ...MessageSetting) (Message, *Rerror)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -80,8 +80,8 @@ type (
 	}
 	// BaseSession a connection session with the common method set.
 	BaseSession interface {
-		// Id returns the session id.
-		Id() string
+		// ID returns the session id.
+		ID() string
 		// Peer returns the peer.
 		Peer() Peer
 		// LocalAddr returns the local network address.
@@ -96,8 +96,8 @@ type (
 	// Session a connection session.
 	Session interface {
 		BaseSession
-		// SetId sets the session id.
-		SetId(newId string)
+		// SetID sets the session id.
+		SetID(newID string)
 		// Close closes the session.
 		Close() error
 		// CloseNotify returns a channel that closes when the connection has gone away.
@@ -107,7 +107,7 @@ type (
 		// AsyncCall sends a message and receives reply asynchronously.
 		// If the  is []byte or *[]byte type, it can automatically fill in the body codec name.
 		AsyncCall(
-			uri string,
+			serviceMethod string,
 			arg interface{},
 			result interface{},
 			callCmdChan chan<- CallCmd,
@@ -117,12 +117,12 @@ type (
 		// NOTE:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Call(uri string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd
+		Call(serviceMethod string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd
 		// Push sends a message, but do not receives reply.
 		// NOTE:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Push(uri string, arg interface{}, setting ...MessageSetting) *Rerror
+		Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Rerror
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -138,11 +138,10 @@ var (
 
 type session struct {
 	peer                           *peer
-	getCallHandler, getPushHandler func(uriPath string) (*Handler, bool)
+	getCallHandler, getPushHandler func(serviceMethodPath string) (*Handler, bool)
 	timeSince                      func(time.Time) time.Duration
 	timeNow                        func() time.Time
-	seqMaker                       *utils.CountString
-	seqLock                        sync.Mutex
+	seq                            int32
 	callCmdMap                     goutil.Map
 	protoFuncs                     []ProtoFunc
 	socket                         socket.Socket
@@ -177,7 +176,6 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 		callCmdMap:     goutil.AtomicMap(),
 		sessionAge:     peer.defaultSessionAge,
 		contextAge:     peer.defaultContextAge,
-		seqMaker:       utils.NewCountString(6),
 	}
 	return s
 }
@@ -187,22 +185,22 @@ func (s *session) Peer() Peer {
 	return s.peer
 }
 
-// Id returns the session id.
-func (s *session) Id() string {
-	return s.socket.Id()
+// ID returns the session id.
+func (s *session) ID() string {
+	return s.socket.ID()
 }
 
-// SetId sets the session id.
-func (s *session) SetId(newId string) {
-	oldId := s.Id()
-	if oldId == newId {
+// SetID sets the session id.
+func (s *session) SetID(newID string) {
+	oldID := s.ID()
+	if oldID == newID {
 		return
 	}
-	s.socket.SetId(newId)
+	s.socket.SetID(newID)
 	hub := s.peer.sessHub
 	hub.Set(s)
-	hub.Delete(oldId)
-	Tracef("session changes id: %s -> %s", oldId, newId)
+	hub.Delete(oldID)
+	Tracef("session changes id: %s -> %s", oldID, newID)
 }
 
 // ControlFD invokes f on the underlying connection's file
@@ -247,7 +245,7 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 	var (
 		pub   goutil.Map
 		count = s.socket.SwapLen()
-		id    = s.Id()
+		id    = s.ID()
 	)
 	if count > 0 {
 		pub = s.socket.Swap()
@@ -260,7 +258,7 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 			return true
 		})
 	}
-	s.socket.SetId(id)
+	s.socket.SetID(id)
 }
 
 // GetProtoFunc returns the ProtoFunc
@@ -320,7 +318,7 @@ func (s *session) SetContextAge(duration time.Duration) {
 // NOTE:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...MessageSetting) (replyErr *Rerror) {
+func (s *session) Send(serviceMethod string, body interface{}, rerr *Rerror, setting ...MessageSetting) (replyErr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
 			replyErr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
@@ -329,17 +327,13 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...Me
 	}()
 
 	output := socket.GetMessage(setting...)
-	if len(output.Seq()) == 0 {
-		s.seqLock.Lock()
-		output.SetSeq(s.seqMaker.String())
-		s.seqMaker.Incr()
-		s.seqLock.Unlock()
-	}
-	if output.BodyCodec() == codec.NilCodecId {
+	output.SetSeq(atomic.AddInt32(&s.seq, 1))
+
+	if output.BodyCodec() == codec.NilCodecID {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
-	if len(uri) > 0 {
-		output.SetUri(uri)
+	if len(serviceMethod) > 0 {
+		output.SetServiceMethod(serviceMethod)
 	}
 	if body != nil {
 		output.SetBody(body)
@@ -359,8 +353,8 @@ func (s *session) Send(uri string, body interface{}, rerr *Rerror, setting ...Me
 // Receive receives a message from peer, before the formal connection.
 // NOTE:
 //  Does not support automatic redial after disconnection;
-//  Recommend to reuse unused *Message: PutMessage(input).
-func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input *Message, rerr *Rerror) {
+//  Recommend to reuse unused Message: PutMessage(input).
+func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input Message, rerr *Rerror) {
 	defer func() {
 		if p := recover(); p != nil {
 			rerr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
@@ -393,7 +387,7 @@ func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (i
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) AsyncCall(
-	uri string,
+	serviceMethod string,
 	arg interface{},
 	result interface{},
 	callCmdChan chan<- CallCmd,
@@ -412,7 +406,7 @@ func (s *session) AsyncCall(
 	}
 	output := socket.NewMessage(
 		socket.WithMtype(TypeCall),
-		socket.WithUri(uri),
+		socket.WithServiceMethod(serviceMethod),
 		socket.WithBody(arg),
 	)
 	for _, fn := range setting {
@@ -421,16 +415,10 @@ func (s *session) AsyncCall(
 		}
 	}
 
-	seq := output.Seq()
-	if len(seq) == 0 {
-		s.seqLock.Lock()
-		seq = s.seqMaker.String()
-		s.seqMaker.Incr()
-		output.SetSeq(seq)
-		s.seqLock.Unlock()
-	}
+	seq := atomic.AddInt32(&s.seq, 1)
+	output.SetSeq(seq)
 
-	if output.BodyCodec() == codec.NilCodecId {
+	if output.BodyCodec() == codec.NilCodecID {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
 	if age := s.ContextAge(); age > 0 {
@@ -492,8 +480,8 @@ W:
 // NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Call(uri string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd {
-	callCmd := s.AsyncCall(uri, arg, result, make(chan CallCmd, 1), setting...)
+func (s *session) Call(serviceMethod string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd {
+	callCmd := s.AsyncCall(serviceMethod, arg, result, make(chan CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
 }
@@ -502,12 +490,12 @@ func (s *session) Call(uri string, arg interface{}, result interface{}, setting 
 // NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Push(uri string, arg interface{}, setting ...MessageSetting) *Rerror {
+func (s *session) Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Rerror {
 	ctx := s.peer.getContext(s, true)
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
 	output.SetMtype(TypePush)
-	output.SetUri(uri)
+	output.SetServiceMethod(serviceMethod)
 	output.SetBody(arg)
 
 	for _, fn := range setting {
@@ -515,15 +503,9 @@ func (s *session) Push(uri string, arg interface{}, setting ...MessageSetting) *
 			fn(output)
 		}
 	}
+	output.SetSeq(atomic.AddInt32(&s.seq, 1))
 
-	if len(output.Seq()) == 0 {
-		s.seqLock.Lock()
-		output.SetSeq(s.seqMaker.String())
-		s.seqMaker.Incr()
-		s.seqLock.Unlock()
-	}
-
-	if output.BodyCodec() == codec.NilCodecId {
+	if output.BodyCodec() == codec.NilCodecID {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
 	if age := s.ContextAge(); age > 0 {
@@ -644,7 +626,7 @@ func (s *session) Close() error {
 	s.activelyClosing()
 	s.statusLock.Unlock()
 
-	s.peer.sessHub.Delete(s.Id())
+	s.peer.sessHub.Delete(s.ID())
 	s.notifyClosed()
 
 	s.graceCtxWaitGroup.Wait()
@@ -675,7 +657,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	s.passivelyClosed()
 	s.statusLock.Unlock()
 
-	s.peer.sessHub.Delete(s.Id())
+	s.peer.sessHub.Delete(s.ID())
 	s.notifyClosed()
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
@@ -749,7 +731,7 @@ func (s *session) startReadAndHandle() {
 			return
 		}
 		err = s.socket.ReadMessage(ctx.input)
-		if (err != nil && ctx.GetBodyCodec() == codec.NilCodecId) || !s.goonRead() {
+		if (err != nil && ctx.GetBodyCodec() == codec.NilCodecID) || !s.goonRead() {
 			s.peer.putContext(ctx, false)
 			return
 		}
@@ -768,7 +750,7 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-func (s *session) write(message *Message) (net.Conn, *Rerror) {
+func (s *session) write(message Message) (net.Conn, *Rerror) {
 	conn := s.getConn()
 	status := s.getStatus()
 	if status != statusOk &&
@@ -833,11 +815,11 @@ func newSessionHub() *SessionHub {
 
 // Set sets a *session.
 func (sh *SessionHub) Set(sess *session) {
-	_sess, loaded := sh.sessions.LoadOrStore(sess.Id(), sess)
+	_sess, loaded := sh.sessions.LoadOrStore(sess.ID(), sess)
 	if !loaded {
 		return
 	}
-	sh.sessions.Store(sess.Id(), sess)
+	sh.sessions.Store(sess.ID(), sess)
 	if oldSess := _sess.(*session); sess != oldSess {
 		oldSess.Close()
 	}
@@ -896,18 +878,18 @@ const (
 	logFormatCallHandle = "CALL<- %s %s %s %q RECV(%s) SEND(%s)"
 )
 
-func (s *session) printAccessLog(realIp string, costTime time.Duration, input, output *Message, logType int8) {
+func (s *session) printAccessLog(realIP string, costTime time.Duration, input, output Message, logType int8) {
 	if !EnableLoggerLevel(WARNING) {
 		return
 	}
 	var addr = s.RemoteAddr().String()
-	if realIp != "" && realIp == addr {
-		realIp = "same"
+	if realIP != "" && realIP == addr {
+		realIP = "same"
 	}
-	if realIp == "" {
-		realIp = "-"
+	if realIP == "" {
+		realIP = "-"
 	}
-	addr += "(real:" + realIp + ")"
+	addr += "(real:" + realIP + ")"
 	var (
 		costTimeStr string
 		printFunc   = Infof
@@ -931,17 +913,17 @@ func (s *session) printAccessLog(realIp string, costTime time.Duration, input, o
 
 	switch logType {
 	case typePushLaunch:
-		printFunc(logFormatPushLaunch, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatPushLaunch, addr, costTimeStr, output.ServiceMethod(), output.Seq(), messageLogBytes(output, s.peer.printDetail))
 	case typePushHandle:
-		printFunc(logFormatPushHandle, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatPushHandle, addr, costTimeStr, input.ServiceMethod(), input.Seq(), messageLogBytes(input, s.peer.printDetail))
 	case typeCallLaunch:
-		printFunc(logFormatCallLaunch, addr, costTimeStr, output.Uri(), output.Seq(), messageLogBytes(output, s.peer.printDetail), messageLogBytes(input, s.peer.printDetail))
+		printFunc(logFormatCallLaunch, addr, costTimeStr, output.ServiceMethod(), output.Seq(), messageLogBytes(output, s.peer.printDetail), messageLogBytes(input, s.peer.printDetail))
 	case typeCallHandle:
-		printFunc(logFormatCallHandle, addr, costTimeStr, input.Uri(), input.Seq(), messageLogBytes(input, s.peer.printDetail), messageLogBytes(output, s.peer.printDetail))
+		printFunc(logFormatCallHandle, addr, costTimeStr, input.ServiceMethod(), input.Seq(), messageLogBytes(input, s.peer.printDetail), messageLogBytes(output, s.peer.printDetail))
 	}
 }
 
-func messageLogBytes(message *Message, printDetail bool) []byte {
+func messageLogBytes(message Message, printDetail bool) []byte {
 	var b = make([]byte, 0, 128)
 	b = append(b, '{')
 	b = append(b, '"', 's', 'i', 'z', 'e', '"', ':')
@@ -964,7 +946,7 @@ func messageLogBytes(message *Message, printDetail bool) []byte {
 	return b
 }
 
-func bodyLogBytes(message *Message) []byte {
+func bodyLogBytes(message Message) []byte {
 	switch v := message.Body().(type) {
 	case nil:
 		return nil

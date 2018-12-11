@@ -32,12 +32,12 @@ func main() {
 	if rerr != nil {
 		tp.Fatalf("%v", rerr)
 	}
-	sess.SetId("testId")
+	sess.SetID("testId")
 
 	var result interface{}
 	for {
 		if rerr = sess.Call(
-			"/group/home/test?peer_id=call-1",
+			"/group/home/test",
 			map[string]interface{}{
 				"bytes": []byte("test bytes"),
 			},
@@ -45,7 +45,7 @@ func main() {
 			tp.WithBodyCodec('j'),
 			tp.WithAcceptBodyCodec('j'),
 			tp.WithXferPipe('g'),
-			tp.WithSetMeta("set", "0"),
+			tp.WithSetMeta("peer_id", "call-1"),
 			tp.WithAddMeta("add", "1"),
 			tp.WithAddMeta("add", "2"),
 		).Rerror(); rerr != nil {
@@ -60,7 +60,7 @@ func main() {
 	// sess.Close()
 
 	rerr = sess.Call(
-		"/group/home/test_unknown?peer_id=call-2",
+		"/group/home/test_unknown",
 		struct {
 			RawMessage json.RawMessage
 			Bytes      []byte
@@ -87,6 +87,6 @@ type Push struct {
 
 // Test handler
 func (p *Push) Test(arg *map[string]interface{}) *tp.Rerror {
-	tp.Infof("receive push(%s):\narg: %#v\nquery: %#v\n", p.Ip(), arg, p.Query())
+	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }

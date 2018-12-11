@@ -38,8 +38,8 @@ func (ProtoCodec) Name() string {
 	return NAME_PROTOBUF
 }
 
-// Id returns codec id.
-func (ProtoCodec) Id() byte {
+// ID returns codec id.
+func (ProtoCodec) ID() byte {
 	return ID_PROTOBUF
 }
 

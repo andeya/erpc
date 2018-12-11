@@ -2,7 +2,6 @@
 package pbSubProto
 
 import (
-	"io"
 	"io/ioutil"
 	"sync"
 
@@ -12,7 +11,7 @@ import (
 )
 
 // NewPbSubProtoFunc is creation function of PROTOBUF socket protocol.
-var NewPbSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
+var NewPbSubProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
 	return &pbSubProto{
 		id:   'p',
 		name: "protobuf",
@@ -23,7 +22,7 @@ var NewPbSubProtoFunc = func(rw io.ReadWriter) tp.Proto {
 type pbSubProto struct {
 	id   byte
 	name string
-	rw   io.ReadWriter
+	rw   tp.IOWithReadBuffer
 	rMu  sync.Mutex
 }
 
@@ -34,7 +33,7 @@ func (psp *pbSubProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (psp *pbSubProto) Pack(m *tp.Message) error {
+func (psp *pbSubProto) Pack(m tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -46,14 +45,14 @@ func (psp *pbSubProto) Pack(m *tp.Message) error {
 		return err
 	}
 
-	b, err := codec.ProtoMarshal(&pb.Format{
-		Seq:       m.Seq(),
-		Mtype:     int32(m.Mtype()),
-		Uri:       m.Uri(),
-		Meta:      m.Meta().QueryString(),
-		BodyCodec: int32(m.BodyCodec()),
-		Body:      bodyBytes,
-		XferPipe:  m.XferPipe().Ids(),
+	b, err := codec.ProtoMarshal(&pb.Payload{
+		Seq:           m.Seq(),
+		Mtype:         int32(m.Mtype()),
+		ServiceMethod: m.ServiceMethod(),
+		Meta:          m.Meta().QueryString(),
+		BodyCodec:     int32(m.BodyCodec()),
+		Body:          bodyBytes,
+		XferPipe:      m.XferPipe().Ids(),
 	})
 	if err != nil {
 		return err
@@ -67,7 +66,7 @@ func (psp *pbSubProto) Pack(m *tp.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (psp *pbSubProto) Unpack(m *tp.Message) error {
+func (psp *pbSubProto) Unpack(m tp.Message) error {
 	psp.rMu.Lock()
 	defer psp.rMu.Unlock()
 	b, err := ioutil.ReadAll(psp.rw)
@@ -77,7 +76,7 @@ func (psp *pbSubProto) Unpack(m *tp.Message) error {
 
 	m.SetSize(uint32(len(b)))
 
-	s := &pb.Format{}
+	s := &pb.Payload{}
 	err = codec.ProtoUnmarshal(b, s)
 	if err != nil {
 		return err
@@ -98,7 +97,7 @@ func (psp *pbSubProto) Unpack(m *tp.Message) error {
 	// read other
 	m.SetSeq(s.Seq)
 	m.SetMtype(byte(s.Mtype))
-	m.SetUri(s.Uri)
+	m.SetServiceMethod(s.ServiceMethod)
 	m.Meta().ParseBytes(s.Meta)
 
 	// unmarshal new body

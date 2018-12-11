@@ -62,12 +62,12 @@ type Gzip struct {
 	rPool sync.Pool
 }
 
-// Id returns transfer filter id.
-func (g *Gzip) Id() byte {
+// ID returns transfer filter id.
+func (g *Gzip) ID() byte {
 	return g.id
 }
 
-// Id returns transfer filter name.
+// ID returns transfer filter name.
 func (g *Gzip) Name() string {
 	return g.name
 }

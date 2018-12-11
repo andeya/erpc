@@ -3,10 +3,10 @@ syntax = "proto3";
 package pb;
 
 message payload {
-    string seq        = 1;
-    int32  mtype      = 2;
-    string uri        = 3;
-    bytes  meta       = 4;
-    int32  body_codec = 5;
-    bytes  body       = 6;
+    int32  seq           = 1;
+    int32  mtype         = 2;
+    string serviceMethod = 3;
+    bytes  meta          = 4;
+    int32  bodyCodec     = 5;
+    bytes  body          = 6;
 }
