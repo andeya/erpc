@@ -56,8 +56,10 @@ type (
 		// Reset resets itself.
 		Reset(settings ...MessageSetting)
 
+		// Context returns the message handling context.
+		Context() context.Context
+
 		// String returns printing message information.
-		// NOTE: Internal implementation without Proto interface support.
 		String() string
 	}
 
@@ -384,7 +386,6 @@ const messageFormat = `
 }`
 
 // String returns printing message information.
-// NOTE: Internal implementation without Proto interface support.
 func (m *message) String() string {
 	var xferPipeIds = make([]int, m.xferPipe.Len())
 	for i, id := range m.xferPipe.Ids() {
@@ -411,6 +412,11 @@ func (m *message) String() string {
 // MessageSetting is a pipe function type for setting message,
 // and only for writing to connection.
 type MessageSetting func(*message)
+
+// WithNothing nothing to do.
+func WithNothing() MessageSetting {
+	return func(*message) {}
+}
 
 // WithContext sets the message handling context.
 func WithContext(ctx context.Context) MessageSetting {
@@ -466,7 +472,7 @@ func WithBody(body interface{}) MessageSetting {
 }
 
 // WithNewBody resets the function of geting body.
-//  NOTE: newBodyFunc is only for reading form connection;
+//  NOTE: newBodyFunc is only for reading form connection.
 func WithNewBody(newBodyFunc NewBodyFunc) MessageSetting {
 	return func(m *message) {
 		m.newBodyFunc = newBodyFunc
@@ -474,7 +480,7 @@ func WithNewBody(newBodyFunc NewBodyFunc) MessageSetting {
 }
 
 // WithXferPipe sets transfer filter pipe.
-// NOTE: Panic if the filterId is not registered
+// NOTE: Panic if the filterId is not registered.
 // SUGGEST: The length can not be bigger than 255!
 func WithXferPipe(filterID ...byte) MessageSetting {
 	return func(m *message) {
