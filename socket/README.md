@@ -12,7 +12,7 @@ A concise, powerful and high-performance connection socket.
 - Supports custom encoding types, e.g `JSON` `Protobuf`
 - Header contains the status code and its description text
 - Each socket is assigned an id
-- Provides `Socket Hub`, `Socket` pool and `*Message` stack
+- Provides `Socket Hub`, `Socket` pool and `Message` stack
 - Support setting the size of the reading message (if exceed disconnect it)
 - Provide an operating interface to control the connection file descriptor
 
@@ -71,7 +71,10 @@ import (
 	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
 
+//go:generate go build $GOFILE
+
 func main() {
+	socket.SetNoDelay(false)
 	socket.SetMessageSizeLimit(512)
 	lis, err := net.Listen("tcp", "0.0.0.0:8000")
 	if err != nil {
@@ -99,8 +102,6 @@ func main() {
 				if err != nil {
 					log.Printf("[SVR] read request err: %v", err)
 					return
-				} else {
-					// log.Printf("[SVR] read request: %v", message)
 				}
 
 				// write response
@@ -112,7 +113,7 @@ func main() {
 				if err != nil {
 					log.Printf("[SVR] write response err: %v", err)
 				} else {
-					// log.Printf("[SVR] write response: %v", message)
+					log.Printf("[SVR] write response: %v", message)
 				}
 				socket.PutMessage(message)
 			}
@@ -132,9 +133,10 @@ import (
 
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
-
 	"github.com/henrylee2cn/teleport/socket/example/pb"
 )
+
+//go:generate go build $GOFILE
 
 func main() {
 	conn, err := net.Dial("tcp", "127.0.0.1:8000")
@@ -145,13 +147,13 @@ func main() {
 	defer s.Close()
 	var message = socket.GetMessage()
 	defer socket.PutMessage(message)
-	for i := uint64(0); i < 1; i++ {
+	for i := int32(0); i < 1; i++ {
 		// write request
 		message.Reset()
 		message.SetMtype(0)
 		message.SetBodyCodec(codec.ID_JSON)
 		message.SetSeq(i)
-		message.SetUri("/a/b")
+		message.SetServiceMethod("/a/b")
 		message.SetBody(&pb.PbTest{A: 10, B: 2})
 		err = s.WriteMessage(message)
 		if err != nil {
@@ -182,7 +184,7 @@ func main() {
 
 - **Message:** The corresponding structure of the data package
 - **Proto:** The protocol interface of message pack/unpack 
-- **Codec:** Serialization interface for `Message.Body`
+- **Codec:** Serialization interface for `Body`
 - **XferPipe:** A series of pipelines to handle message data before transfer
 - **XferFilter:** A interface to handle message data before transfer
 
@@ -194,37 +196,86 @@ The contents of every one message:
 ```go
 // in .../teleport/socket package
 type (
-	type Message struct {
-		// Has unexported fields.
-	}
-	    Message a socket data message.
-	
-	func GetMessage(settings ...MessageSetting) *Message
-	func NewMessage(settings ...MessageSetting) *Message
-	func (m *Message) Body() interface{}
-	func (m *Message) BodyCodec() byte
-	func (m *Message) Context() context.Context
-	func (m *Message) MarshalBody() ([]byte, error)
-	func (m *Message) Meta() *utils.Args
-	func (m *Message) Mtype() byte
-	func (m *Message) Reset(settings ...MessageSetting)
-	func (m *Message) Seq() string
-	func (m *Message) SetBody(body interface{})
-	func (m *Message) SetBodyCodec(bodyCodec byte)
-	func (m *Message) SetNewBody(newBodyFunc NewBodyFunc)
-	func (m *Message) SetMtype(mtype byte)
-	func (m *Message) SetSeq(seq string)
-	func (m *Message) SetSize(size uint32) error
-	func (m *Message) SetUri(uri string)
-	func (m *Message) SetUriObject(uriObject *url.URL)
-	func (m *Message) Size() uint32
-	func (m *Message) String() string
-	func (m *Message) UnmarshalBody(bodyBytes []byte) error
-	func (m *Message) Uri() string
-	func (m *Message) UriObject() *url.URL
-	func (m *Message) XferPipe() *xfer.XferPipe
+	// Message a socket message interface.
+	Message interface {
+		// Header is an operation interface of required message fields.
+		// NOTE: Must be supported by Proto interface.
+		Header
 
-	// NewBodyFunc creates a new body by header.
+		// Body is an operation interface of optional message fields.
+		// SUGGEST: For features complete, the protocol interface should support it.
+		Body
+
+		// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
+		// SUGGEST: The length can not be bigger than 255!
+		XferPipe() *xfer.XferPipe
+
+		// Size returns the size of message.
+		// SUGGEST: For better statistics, Proto interfaces should support it.
+		Size() uint32
+
+		// SetSize sets the size of message.
+		// If the size is too big, returns error.
+		// SUGGEST: For better statistics, Proto interfaces should support it.
+		SetSize(size uint32) error
+
+		// Reset resets itself.
+		Reset(settings ...MessageSetting)
+
+		// String returns printing message information.
+		// NOTE: Internal implementation without Proto interface support.
+		String() string
+	}
+
+	// Header is an operation interface of required message fields.
+	// NOTE: Must be supported by Proto interface.
+	Header interface {
+		// Seq returns the message sequence.
+		Seq() int32
+		// SetSeq sets the message sequence.
+		SetSeq(int32)
+		// Mtype returns the message type, such as CALL, REPLY, PUSH.
+		Mtype() byte
+		// Mtype sets the message type, such as CALL, REPLY, PUSH.
+		SetMtype(byte)
+		// ServiceMethod returns the serviec method.
+		// SUGGEST: max len ≤ 255!
+		ServiceMethod() string
+		// SetServiceMethod sets the serviec method.
+		// SUGGEST: max len ≤ 255!
+		SetServiceMethod(string)
+		// Meta returns the metadata.
+		// SUGGEST: urlencoded string max len ≤ 65535!
+		Meta() *utils.Args
+	}
+
+	// Body is an operation interface of optional message fields.
+	// SUGGEST: For features complete, the protocol interface should support it.
+	Body interface {
+		// BodyCodec returns the body codec type id.
+		BodyCodec() byte
+		// SetBodyCodec sets the body codec type id.
+		SetBodyCodec(bodyCodec byte)
+		// Body returns the body object.
+		Body() interface{}
+		// SetBody sets the body object.
+		SetBody(body interface{})
+		// SetNewBody resets the function of geting body.
+		//  NOTE: NewBodyFunc is only for reading form connection;
+		SetNewBody(NewBodyFunc)
+		// MarshalBody returns the encoding of body.
+		// NOTE: when the body is a stream of bytes, no marshalling is done.
+		MarshalBody() ([]byte, error)
+		// UnmarshalBody unmarshals the encoded data to the body.
+		// NOTE:
+		//  seq, mtype, uri must be setted already;
+		//  if body=nil, try to use newBodyFunc to create a new one;
+		//  when the body is a stream of bytes, no unmarshalling is done.
+		UnmarshalBody(bodyBytes []byte) error
+	}
+
+	// NewBodyFunc creates a new body by header,
+	// and only for reading form connection.
 	NewBodyFunc func(Header) interface{}
 )
 
@@ -251,17 +302,23 @@ You can customize your own communication protocol by implementing the interface:
 ```go
 type (
 	// Proto pack/unpack protocol scheme of socket message.
+	// NOTE: Implementation specifications for Message interface should be complied with.
 	Proto interface {
 		// Version returns the protocol's id and name.
 		Version() (byte, string)
 		// Pack writes the Message into the connection.
 		// NOTE: Make sure to write only once or there will be package contamination!
-		Pack(*Message) error
+		Pack(Message) error
 		// Unpack reads bytes from the connection to the Message.
 		// NOTE: Concurrent unsafe!
-		Unpack(*Message) error
+		Unpack(Message) error
 	}
-	ProtoFunc func(io.ReadWriter) Proto
+	// IOWithReadBuffer implements buffered I/O with buffered reader.
+	IOWithReadBuffer interface {
+		io.ReadWriter
+	}
+	// ProtoFunc function used to create a custom Proto interface.
+	ProtoFunc func(IOWithReadBuffer) Proto
 )
 ```
 
@@ -276,16 +333,17 @@ func NewSocket(net.Conn, ...ProtoFunc) Socket
 Default protocol `RawProto`(Big Endian):
 
 ```sh
+# raw protocol format(Big Endian):
 {4 bytes message length}
 {1 byte protocol version}
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
-{2 bytes sequence length}
+{1 bytes sequence length}
 {sequence}
 {1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
-{2 bytes URI length}
-{URI}
+{1 bytes service method length}
+{service method}
 {2 bytes metadata length}
 {metadata(urlencoded)}
 {1 byte body codec id}
