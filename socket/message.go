@@ -377,11 +377,11 @@ const messageFormat = `
 {
   "seq": %d,
   "mtype": %d,
-  "service_method": %q,
+  "serviceMethod": %q,
   "meta": %q,
-  "body_codec": %d,
+  "bodyCodec": %d,
   "body": %s,
-  "xfer_pipe": %s,
+  "xferPipe": %s,
   "size": %d
 }`
 
