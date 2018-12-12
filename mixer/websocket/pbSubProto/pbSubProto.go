@@ -10,12 +10,14 @@ import (
 	"github.com/henrylee2cn/teleport/mixer/websocket/pbSubProto/pb"
 )
 
-// NewPbSubProtoFunc is creation function of PROTOBUF socket protocol.
-var NewPbSubProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
-	return &pbSubProto{
-		id:   'p',
-		name: "protobuf",
-		rw:   rw,
+// NewPbSubProtoFunc() is creation function of PROTOBUF socket protocol.
+func NewPbSubProtoFunc() tp.ProtoFunc {
+	return func(rw tp.IOWithReadBuffer) tp.Proto {
+		return &pbSubProto{
+			id:   'p',
+			name: "protobuf",
+			rw:   rw,
+		}
 	}
 }
 

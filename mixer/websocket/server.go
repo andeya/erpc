@@ -24,14 +24,14 @@ import (
 	ws "github.com/henrylee2cn/teleport/mixer/websocket/websocket"
 )
 
-// NewJsonServeHandler creates a websocket json handler.
-func NewJsonServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error) http.Handler {
-	return NewServeHandler(peer, handshake, jsonSubProto.NewJsonSubProtoFunc)
+// NewJSONServeHandler creates a websocket json handler.
+func NewJSONServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error) http.Handler {
+	return NewServeHandler(peer, handshake, jsonSubProto.NewJSONSubProtoFunc())
 }
 
 // NewPbServeHandler creates a websocket protobuf handler.
 func NewPbServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error) http.Handler {
-	return NewServeHandler(peer, handshake, pbSubProto.NewPbSubProtoFunc)
+	return NewServeHandler(peer, handshake, pbSubProto.NewPbSubProtoFunc())
 }
 
 // NewServeHandler creates a websocket handler.

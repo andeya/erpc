@@ -24,7 +24,7 @@ import (
 	"github.com/henrylee2cn/teleport/utils"
 )
 
-var defaultProto = jsonSubProto.NewJsonSubProtoFunc
+var defaultProto = jsonSubProto.NewJSONSubProtoFunc()
 
 // NewWsProtoFunc wraps a protocol to a new websocket protocol.
 func NewWsProtoFunc(subProto ...tp.ProtoFunc) tp.ProtoFunc {

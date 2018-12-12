@@ -5,8 +5,8 @@ import (
 	"unicode/utf8"
 )
 
-// ToJsonStr converts the string to json string.
-func ToJsonStr(s []byte, escapeHTML bool) []byte {
+// ToJSONStr converts the string to json string.
+func ToJSONStr(s []byte, escapeHTML bool) []byte {
 	var buf = bytes.NewBuffer(make([]byte, 0, 64))
 	buf.WriteByte('"')
 	start := 0

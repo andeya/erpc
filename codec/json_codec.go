@@ -25,29 +25,29 @@ const (
 )
 
 func init() {
-	Reg(new(JsonCodec))
+	Reg(new(JSONCodec))
 }
 
-// JsonCodec json codec
-type JsonCodec struct{}
+// JSONCodec json codec
+type JSONCodec struct{}
 
 // Name returns codec name.
-func (JsonCodec) Name() string {
+func (JSONCodec) Name() string {
 	return NAME_JSON
 }
 
 // ID returns codec id.
-func (JsonCodec) ID() byte {
+func (JSONCodec) ID() byte {
 	return ID_JSON
 }
 
 // Marshal returns the JSON encoding of v.
-func (JsonCodec) Marshal(v interface{}) ([]byte, error) {
+func (JSONCodec) Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
 // Unmarshal parses the JSON-encoded data and stores the result
 // in the value pointed to by v.
-func (JsonCodec) Unmarshal(data []byte, v interface{}) error {
+func (JSONCodec) Unmarshal(data []byte, v interface{}) error {
 	return json.Unmarshal(data, v)
 }

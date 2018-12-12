@@ -930,12 +930,12 @@ func messageLogBytes(message Message, printDetail bool) []byte {
 	b = append(b, strconv.FormatUint(uint64(message.Size()), 10)...)
 	if rerrBytes := getRerrorBytes(message.Meta()); len(rerrBytes) > 0 {
 		b = append(b, ',', '"', 'e', 'r', 'r', 'o', 'r', '"', ':')
-		b = append(b, utils.ToJsonStr(rerrBytes, false)...)
+		b = append(b, utils.ToJSONStr(rerrBytes, false)...)
 	}
 	if printDetail {
 		if message.Meta().Len() > 0 {
 			b = append(b, ',', '"', 'm', 'e', 't', 'a', '"', ':')
-			b = append(b, utils.ToJsonStr(message.Meta().QueryString(), false)...)
+			b = append(b, utils.ToJSONStr(message.Meta().QueryString(), false)...)
 		}
 		if bodyBytes := bodyLogBytes(message); len(bodyBytes) > 0 {
 			b = append(b, ',', '"', 'b', 'o', 'd', 'y', '"', ':')
@@ -951,9 +951,9 @@ func bodyLogBytes(message Message) []byte {
 	case nil:
 		return nil
 	case []byte:
-		return utils.ToJsonStr(v, false)
+		return utils.ToJSONStr(v, false)
 	case *[]byte:
-		return utils.ToJsonStr(*v, false)
+		return utils.ToJSONStr(*v, false)
 	}
 	b, _ := json.Marshal(message.Body())
 	return b

@@ -96,11 +96,11 @@ func (r *Rerror) MarshalJSON() ([]byte, error) {
 	var b = append(reA, strconv.FormatInt(int64(r.Code), 10)...)
 	if len(r.Message) > 0 {
 		b = append(b, reB...)
-		b = append(b, utils.ToJsonStr(goutil.StringToBytes(r.Message), false)...)
+		b = append(b, utils.ToJSONStr(goutil.StringToBytes(r.Message), false)...)
 	}
 	if len(r.Reason) > 0 {
 		b = append(b, reC...)
-		b = append(b, utils.ToJsonStr(goutil.StringToBytes(r.Reason), false)...)
+		b = append(b, utils.ToJSONStr(goutil.StringToBytes(r.Reason), false)...)
 	}
 	b = append(b, '}')
 	return b, nil

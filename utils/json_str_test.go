@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-func ExampleToJsonStr() {
+func ExampleToJSONStr() {
 	s := `<>&{}""`
-	fmt.Printf("%s\n", ToJsonStr([]byte(s), true))
-	fmt.Printf("%s\n", ToJsonStr([]byte(s), false))
+	fmt.Printf("%s\n", ToJSONStr([]byte(s), true))
+	fmt.Printf("%s\n", ToJSONStr([]byte(s), false))
 	// Output:
 	// "\u003c\u003e\u0026{}\"\""
 	// "<>&{}\"\""

@@ -13,12 +13,14 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// NewJsonSubProtoFunc is creation function of JSON socket protocol.
-var NewJsonSubProtoFunc = func(rw tp.IOWithReadBuffer) tp.Proto {
-	return &jsonSubProto{
-		id:   'j',
-		name: "json",
-		rw:   rw,
+// NewJSONSubProtoFunc is creation function of JSON socket protocol.
+func NewJSONSubProtoFunc() tp.ProtoFunc {
+	return func(rw tp.IOWithReadBuffer) tp.Proto {
+		return &jsonSubProto{
+			id:   'j',
+			name: "json",
+			rw:   rw,
+		}
 	}
 }
 

@@ -33,15 +33,15 @@ func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
 	return arg.A / arg.B, nil
 }
 
-func TestJsonSubWebsocket(t *testing.T) {
+func TestJSONSubWebsocket(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{})
-	http.Handle("/ws", ws.NewJsonServeHandler(srv, nil))
+	http.Handle("/ws", ws.NewJSONServeHandler(srv, nil))
 	go http.ListenAndServe("0.0.0.0:9090", nil)
 	srv.RouteCall(new(P))
 	time.Sleep(time.Second * 1)
 
 	cli := tp.NewPeer(tp.PeerConfig{}, ws.NewDialPlugin("/ws"))
-	sess, err := cli.Dial("127.0.0.1:9090", jsonSubProto.NewJsonSubProtoFunc)
+	sess, err := cli.Dial("127.0.0.1:9090", jsonSubProto.NewJSONSubProtoFunc())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestPbSubWebsocket(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	cli := tp.NewPeer(tp.PeerConfig{}, ws.NewDialPlugin("/ws"))
-	sess, err := cli.Dial("127.0.0.1:9091", pbSubProto.NewPbSubProtoFunc)
+	sess, err := cli.Dial("127.0.0.1:9091", pbSubProto.NewPbSubProtoFunc())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,11 +87,11 @@ func TestPbSubWebsocket(t *testing.T) {
 test command:
 
 ```sh
-go test -v -run=TestJsonSubWebsocket
+go test -v -run=TestJSONSubWebsocket
 go test -v -run=TestPbSubWebsocket
 ```
 
-Among them, TestJsonSubWebsocket's request body is:
+Among them, TestJSONSubWebsocket's request body is:
 
 ```json
 {
@@ -105,7 +105,7 @@ Among them, TestJsonSubWebsocket's request body is:
 }
 ```
 
-TestJsonSubWebsocket's response body is:
+TestJSONSubWebsocket's response body is:
 
 ```json
 {
