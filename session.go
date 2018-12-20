@@ -658,7 +658,6 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	s.statusLock.Unlock()
 
 	s.peer.sessHub.Delete(s.ID())
-	s.notifyClosed()
 
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteAddr().String(), err.Error())
@@ -683,6 +682,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	s.socket.Close()
 
 	if !s.redialForClient(oldConn) {
+		s.notifyClosed()
 		s.peer.pluginContainer.postDisconnect(s)
 	}
 }
