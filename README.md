@@ -690,7 +690,7 @@ type PeerConfig struct {
 
 ## Business Users
 
-<a href="http://www.xiaoenai.com"><img src="https://statics.xiaoenai.com/v5/img/logo_zh.png" height="50" alt="深圳市梦之舵信息技术有限公司"/></a>
+<a href="http://www.xiaoenai.com"><img src="https://raw.githubusercontent.com/henrylee2cn/imgs-repo/master/xiaoenai.png" height="50" alt="深圳市梦之舵信息技术有限公司"/></a>
 &nbsp;&nbsp;
 <a href="https://tech.pingan.com/index.html"><img src="http://pa-tech.hirede.com/templates/pa-tech/Images/logo.png" height="50" alt="平安科技"/></a>
 <br/>
