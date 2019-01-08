@@ -61,6 +61,9 @@ type (
 
 		// String returns printing message information.
 		String() string
+
+		// messageIdentity prevents implementation outside the package.
+		messageIdentity()
 	}
 
 	// Header is an operation interface of required message fields.
@@ -108,9 +111,6 @@ type (
 		//  if body=nil, try to use newBodyFunc to create a new one;
 		//  when the body is a stream of bytes, no unmarshalling is done.
 		UnmarshalBody(bodyBytes []byte) error
-
-		// messageIdentity prevents implementation outside the package.
-		messageIdentity()
 	}
 
 	// NewBodyFunc creates a new body by header,
