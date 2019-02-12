@@ -405,7 +405,35 @@ var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
-### Call-Controller-Struct 接口模版
+### 自带ServiceMethod映射规则
+
+- 结构体或方法名称到服务方法名称的默认映射（HTTPServiceMethodMapper）：
+    - `AaBb` -> `/aa_bb`
+    - `ABcXYz` -> `/abc_xyz`
+    - `Aa__Bb` -> `/aa_bb`
+    - `aa__bb` -> `/aa_bb`
+    - `ABC__XYZ` -> `/abc_xyz`
+    - `Aa_Bb` -> `/aa/bb`
+    - `aa_bb` -> `/aa/bb`
+    - `ABC_XYZ` -> `/abc/xyz`
+    ```go
+    tp.SetServiceMethodMapper(tp.HTTPServiceMethodMapper)
+    ```
+
+- 结构体或方法名称到服务方法名称的映射（RPCServiceMethodMapper）：
+    - `AaBb` -> `AaBb`
+    - `ABcXYz` -> `ABcXYz`
+    - `Aa__Bb` -> `Aa_Bb`
+    - `aa__bb` -> `aa_bb`
+    - `ABC__XYZ` -> `ABC_XYZ`
+    - `Aa_Bb` -> `Aa.Bb`
+    - `aa_bb` -> `aa.bb`
+    - `ABC_XYZ` -> `ABC.XYZ`
+    ```go
+    tp.SetServiceMethodMapper(tp.RPCServiceMethodMapper)
+    ```
+
+### Call-Struct 接口模版
 
 ```go
 type Aaa struct {
@@ -431,7 +459,7 @@ peer.RouteCall(new(Aaa))
 peer.RouteCallFunc((*Aaa).XxZz)
 ```
 
-### Call-Handler-Function 接口模板
+### Call-Function 接口模板
 
 ```go
 func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
@@ -449,7 +477,7 @@ func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
 peer.RouteCallFunc(XxZz)
 ```
 
-### Push-Controller-Struct 接口模板
+### Push-Struct 接口模板
 
 ```go
 type Bbb struct {
@@ -475,7 +503,7 @@ peer.RoutePush(new(Bbb))
 peer.RoutePushFunc((*Bbb).YyZz)
 ```
 
-### Push-Handler-Function 接口模板
+### Push-Function 接口模板
 
 ```go
 // YyZz register the handler
@@ -494,7 +522,7 @@ func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
 peer.RoutePushFunc(YyZz)
 ```
 
-### Unknown-Call-Handler-Function 接口模板
+### Unknown-Call-Function 接口模板
 
 ```go
 func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
@@ -510,7 +538,7 @@ func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 peer.SetUnknownCall(XxxUnknownCall)
 ```
 
-### Unknown-Push-Handler-Function 接口模板
+### Unknown-Push-Function 接口模板
 
 ```go
 func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {

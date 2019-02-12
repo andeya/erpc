@@ -15,7 +15,6 @@
 package tp
 
 import (
-	"path"
 	"reflect"
 	"runtime"
 	"strings"
@@ -114,16 +113,27 @@ import (
  *  // register the unknown push route: /*
  *  peer.SetUnknownPush(XxxUnknownPush)
  *
- * 7. The mapping rule of struct(func) name to URI path:
+ * 7. The default mapping rule(HTTPServiceMethodMapper) of struct(func) name to service methods:
  *
  * - `AaBb` -> `/aa_bb`
- * - `Aa_Bb` -> `/aa/bb`
- * - `aa_bb` -> `/aa/bb`
+ * - `ABcXYz` -> `/abc_xyz`
  * - `Aa__Bb` -> `/aa_bb`
  * - `aa__bb` -> `/aa_bb`
- * - `ABC_XYZ` -> `/abc/xyz`
- * - `ABcXYz` -> `/abc_xyz`
  * - `ABC__XYZ` -> `/abc_xyz`
+ * - `Aa_Bb` -> `/aa/bb`
+ * - `aa_bb` -> `/aa/bb`
+ * - `ABC_XYZ` -> `/abc/xyz`
+ *
+ * 8. The mapping rule(RPCServiceMethodMapper) of struct(func) name to service methods:
+ *
+ * - `AaBb` -> `AaBb`
+ * - `ABcXYz` -> `ABcXYz`
+ * - `Aa__Bb` -> `Aa_Bb`
+ * - `aa__bb` -> `aa_bb`
+ * - `ABC__XYZ` -> `ABC_XYZ`
+ * - `Aa_Bb` -> `Aa.Bb`
+ * - `aa_bb` -> `aa.bb`
+ * - `ABC_XYZ` -> `ABC.XYZ`
  **/
 
 type (
@@ -157,37 +167,7 @@ type (
 	HandlersMaker func(string, interface{}, *PluginContainer) ([]*Handler, error)
 )
 
-// ServiceMethodMapper mapper service method from prefix, recvName and funcName.
-// NOTE:
-//  @prefix is optional;
-//  @name is required.
-type ServiceMethodMapper func(prefix, name string) (serviceMethod string)
-
 var globalServiceMethodMapper = HTTPServiceMethodMapper
-
-// SetServiceMethodMapper customizes your own service method mapper.
-func SetServiceMethodMapper(mapper ServiceMethodMapper) {
-	globalServiceMethodMapper = mapper
-}
-
-// HTTPServiceMethodMapper like most RPC services service method mapper.
-// Such as: user/get
-// It is the default mapper.
-func HTTPServiceMethodMapper(prefix, name string) string {
-	return path.Join("/", prefix, toUriPath(name))
-}
-
-// RPCServiceMethodMapper like most RPC services service method mapper.
-// Such as: User.Get
-func RPCServiceMethodMapper(prefix, name string) string {
-	if prefix == "" {
-		return name
-	}
-	if name == "" {
-		return prefix
-	}
-	return prefix + "." + name
-}
 
 const (
 	pnPush        = "PUSH"
@@ -913,18 +893,6 @@ func objectName(v reflect.Value) string {
 		return runtime.FuncForPC(v.Pointer()).Name()
 	}
 	return t.String()
-}
-
-// toUriPath maps struct(func) name to URI path.
-func toUriPath(name string) string {
-	p := strings.Replace(name, "__", ".", -1)
-	a := strings.Split(p, "_")
-	for k, v := range a {
-		a[k] = goutil.SnakeString(v)
-	}
-	p = path.Join(a...)
-	p = path.Join("/", p)
-	return strings.Replace(p, ".", "_", -1)
 }
 
 // Name returns the handler name.

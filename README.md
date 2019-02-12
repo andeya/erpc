@@ -404,7 +404,7 @@ var peer2 = tp.NewPeer(tp.PeerConfig{})
 var sess, err = peer2.Dial("127.0.0.1:8080")
 ```
 
-### Call-Controller-Struct API template
+### Call-Struct API template
 
 ```go
 type Aaa struct {
@@ -430,7 +430,35 @@ peer.RouteCall(new(Aaa))
 peer.RouteCallFunc((*Aaa).XxZz)
 ```
 
-### Call-Handler-Function API template
+### Service method mapping
+
+- The default mapping(HTTPServiceMethodMapper) of struct(func) name to service methods:
+    - `AaBb` -> `/aa_bb`
+    - `ABcXYz` -> `/abc_xyz`
+    - `Aa__Bb` -> `/aa_bb`
+    - `aa__bb` -> `/aa_bb`
+    - `ABC__XYZ` -> `/abc_xyz`
+    - `Aa_Bb` -> `/aa/bb`
+    - `aa_bb` -> `/aa/bb`
+    - `ABC_XYZ` -> `/abc/xyz`
+    ```go
+    tp.SetServiceMethodMapper(tp.HTTPServiceMethodMapper)
+    ```
+
+- The mapping(RPCServiceMethodMapper) of struct(func) name to service methods:
+    - `AaBb` -> `AaBb`
+    - `ABcXYz` -> `ABcXYz`
+    - `Aa__Bb` -> `Aa_Bb`
+    - `aa__bb` -> `aa_bb`
+    - `ABC__XYZ` -> `ABC_XYZ`
+    - `Aa_Bb` -> `Aa.Bb`
+    - `aa_bb` -> `aa.bb`
+    - `ABC_XYZ` -> `ABC.XYZ`
+    ```go
+    tp.SetServiceMethodMapper(tp.RPCServiceMethodMapper)
+    ```
+
+### Call-Function API template
 
 ```go
 func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
@@ -448,7 +476,7 @@ func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
 peer.RouteCallFunc(XxZz)
 ```
 
-### Push-Controller-Struct API template
+### Push-Struct API template
 
 ```go
 type Bbb struct {
@@ -474,7 +502,7 @@ peer.RoutePush(new(Bbb))
 peer.RoutePushFunc((*Bbb).YyZz)
 ```
 
-### Push-Handler-Function API template
+### Push-Function API template
 
 ```go
 // YyZz register the handler
@@ -493,7 +521,7 @@ func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
 peer.RoutePushFunc(YyZz)
 ```
 
-### Unknown-Call-Handler-Function API template
+### Unknown-Call-Function API template
 
 ```go
 func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
@@ -509,7 +537,7 @@ func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 peer.SetUnknownCall(XxxUnknownCall)
 ```
 
-### Unknown-Push-Handler-Function API template
+### Unknown-Push-Function API template
 
 ```go
 func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
