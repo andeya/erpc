@@ -15,7 +15,7 @@ func dialWithDialer(dialer *net.Dialer, config *Config) (conn net.Conn, err erro
 		conn, err = dialer.Dial("tcp", parseAuthority(config.Location))
 
 	case "wss":
-		conn, err = tls.DialWithDialer(dialer, "tcp", parseAuthority(config.Location), config.TlsConfig)
+		conn, err = tls.DialWithDialer(dialer, "tcp", parseAuthority(config.Location), config.TLSConfig)
 
 	default:
 		err = ErrBadScheme

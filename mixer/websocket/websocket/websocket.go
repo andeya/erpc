@@ -93,7 +93,7 @@ type Config struct {
 	Version int
 
 	// TLS config for secure WebSocket (wss).
-	TlsConfig *tls.Config
+	TLSConfig *tls.Config
 
 	// Additional header fields to be sent in WebSocket opening handshake.
 	Header http.Header

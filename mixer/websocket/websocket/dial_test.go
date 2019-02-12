@@ -25,7 +25,7 @@ func TestDialConfigTLSWithDialer(t *testing.T) {
 	config.Dialer = &net.Dialer{
 		Deadline: time.Now().Add(-time.Minute),
 	}
-	config.TlsConfig = &tls.Config{
+	config.TLSConfig = &tls.Config{
 		InsecureSkipVerify: true,
 	}
 	_, err := DialConfig(config)
