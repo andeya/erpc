@@ -49,7 +49,7 @@ func (*clientPlugin) Name() string {
 
 func (c *clientPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
 	var location, origin string
-	if sess.Peer().TlsConfig() == nil {
+	if sess.Peer().TLSConfig() == nil {
 		location = "ws://" + sess.RemoteAddr().String() + c.pattern
 		origin = "ws://" + sess.LocalAddr().String() + c.pattern
 	} else {

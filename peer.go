@@ -41,12 +41,12 @@ type (
 		GetSession(sessionID string) (Session, bool)
 		// RangeSession ranges all sessions. If fn returns false, stop traversing.
 		RangeSession(fn func(sess Session) bool)
-		// SetTlsConfig sets the TLS config.
-		SetTlsConfig(tlsConfig *tls.Config)
-		// SetTlsConfigFromFile sets the TLS config from file.
-		SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error
-		// TlsConfig returns the TLS config.
-		TlsConfig() *tls.Config
+		// SetTLSConfig sets the TLS config.
+		SetTLSConfig(tlsConfig *tls.Config)
+		// SetTLSConfigFromFile sets the TLS config from file.
+		SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string) error
+		// TLSConfig returns the TLS config.
+		TLSConfig() *tls.Config
 		// PluginContainer returns the global plugin container.
 		PluginContainer() *PluginContainer
 	}
@@ -179,20 +179,20 @@ func (p *peer) PluginContainer() *PluginContainer {
 	return p.pluginContainer
 }
 
-// TlsConfig returns the TLS config.
-func (p *peer) TlsConfig() *tls.Config {
+// TLSConfig returns the TLS config.
+func (p *peer) TLSConfig() *tls.Config {
 	return p.tlsConfig
 }
 
-// SetTlsConfig sets the TLS config.
-func (p *peer) SetTlsConfig(tlsConfig *tls.Config) {
+// SetTLSConfig sets the TLS config.
+func (p *peer) SetTLSConfig(tlsConfig *tls.Config) {
 	p.tlsConfig = tlsConfig
 }
 
-// SetTlsConfigFromFile sets the TLS config from file.
-func (p *peer) SetTlsConfigFromFile(tlsCertFile, tlsKeyFile string) error {
+// SetTLSConfigFromFile sets the TLS config from file.
+func (p *peer) SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string) error {
 	var err error
-	p.tlsConfig, err = NewTlsConfigFromFile(tlsCertFile, tlsKeyFile)
+	p.tlsConfig, err = NewTLSConfigFromFile(tlsCertFile, tlsKeyFile)
 	return err
 }
 

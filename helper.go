@@ -476,8 +476,8 @@ func (f *fakeCallCmd) CostTime() time.Duration {
 	return 0
 }
 
-// NewTlsConfigFromFile creates a new TLS config.
-func NewTlsConfigFromFile(tlsCertFile, tlsKeyFile string) (*tls.Config, error) {
+// NewTLSConfigFromFile creates a new TLS config.
+func NewTLSConfigFromFile(tlsCertFile, tlsKeyFile string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
 	if err != nil {
 		return nil, err

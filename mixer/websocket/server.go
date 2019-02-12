@@ -42,7 +42,7 @@ func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) err
 		protoFunc: NewWsProtoFunc(protoFunc...),
 	}
 	var scheme string
-	if peer.TlsConfig() == nil {
+	if peer.TLSConfig() == nil {
 		scheme = "ws"
 	} else {
 		scheme = "wss"
@@ -66,7 +66,7 @@ func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) err
 	}
 	w.Server.Handler = w.handler
 	w.Server.Config = ws.Config{
-		TlsConfig: peer.TlsConfig(),
+		TLSConfig: peer.TLSConfig(),
 	}
 	return w
 }
