@@ -26,6 +26,7 @@ import (
 	"github.com/henrylee2cn/goutil/errors"
 	"github.com/henrylee2cn/goutil/graceful"
 	"github.com/henrylee2cn/goutil/graceful/inherit_net"
+	"github.com/henrylee2cn/teleport/quic"
 )
 
 var peers = struct {
@@ -127,14 +128,23 @@ func Reboot(timeout ...time.Duration) {
 	graceful.Reboot(timeout...)
 }
 
-// NewInheritListener creates a new listener that can be inherited on reboot.
-func NewInheritListener(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
+var testTLSConfig = GenerateTLSConfigForServer()
+
+// NewListener creates a new listener.
+// If the network is not "quic", the listener can be inherited on reboot.
+func NewListener(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
 	host, port, err := net.SplitHostPort(laddr)
 	if err != nil {
 		return nil, err
 	}
 	if port == "0" {
 		laddr = popParentLaddr(network, host, laddr)
+	}
+	if network == "quic" {
+		if tlsConfig == nil {
+			tlsConfig = testTLSConfig
+		}
+		return quic.ListenAddr(laddr, tlsConfig, nil)
 	}
 	lis, err := inherit_net.Listen(network, laddr)
 	if err != nil {

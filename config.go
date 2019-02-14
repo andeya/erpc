@@ -30,7 +30,7 @@ import (
 //  yaml tag is used for github.com/henrylee2cn/cfgo
 //  ini tag is used for github.com/henrylee2cn/ini
 type PeerConfig struct {
-	Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix or unixpacket"`
+	Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket or quic"`
 	LocalIP            string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
 	ListenPort         uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
 	DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
@@ -72,7 +72,7 @@ func (p *PeerConfig) check() error {
 	var err error
 	switch p.Network {
 	default:
-		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix or unixpacket.")
+		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic.")
 	case "":
 		p.Network = "tcp"
 		fallthrough
@@ -80,6 +80,8 @@ func (p *PeerConfig) check() error {
 		p.localAddr, err = net.ResolveTCPAddr(p.Network, net.JoinHostPort(p.LocalIP, "0"))
 	case "unix", "unixpacket":
 		p.localAddr, err = net.ResolveUnixAddr(p.Network, net.JoinHostPort(p.LocalIP, "0"))
+	case "quic":
+		p.localAddr, err = net.ResolveUDPAddr("udp", net.JoinHostPort(p.LocalIP, "0"))
 	}
 	if err != nil {
 		return err

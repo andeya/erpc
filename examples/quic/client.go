@@ -12,9 +12,12 @@ func main() {
 	defer tp.FlushLogger()
 	tp.SetLoggerLevel("ERROR")
 
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := tp.NewPeer(tp.PeerConfig{Network: "quic"})
 	defer cli.Close()
-	// cli.SetTLSConfig(&tls.Config{InsecureSkipVerify: true})
+	e := cli.SetTLSConfigFromFile("cert.pem", "key.pem", true)
+	if e != nil {
+		tp.Fatalf("%v", e)
+	}
 
 	cli.RoutePush(new(Push))
 

@@ -104,7 +104,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - 支持设置读取包的大小限制（如果超出则断开连接）
 - 提供Handler的上下文
 - 客户端的Session支持断线后自动重连
-- 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket`等
+- 支持的网络类型：`tcp`、`tcp4`、`tcp6`、`unix`、`unixpacket` 和 `quic`
 - 提供对连接文件描述符（fd）的操作接口
 
 ## 代码示例
@@ -604,7 +604,7 @@ peer.SetUnknownPush(XxxUnknownPush)
 
 ```go
 type PeerConfig struct {
-    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix or unixpacket"`
+    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket or quic"`
     LocalIP            string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
     ListenPort         uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
     DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`

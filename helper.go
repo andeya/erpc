@@ -16,7 +16,12 @@ package tp
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"math/big"
 	"os"
 	"path"
 	"strconv"
@@ -477,12 +482,42 @@ func (f *fakeCallCmd) CostTime() time.Duration {
 }
 
 // NewTLSConfigFromFile creates a new TLS config.
-func NewTLSConfigFromFile(tlsCertFile, tlsKeyFile string) (*tls.Config, error) {
+func NewTLSConfigFromFile(tlsCertFile, tlsKeyFile string, insecureSkipVerifyForClient ...bool) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
 	if err != nil {
 		return nil, err
 	}
+	return newTLSConfig(cert, insecureSkipVerifyForClient...), nil
+}
+
+// GenerateTLSConfigForServer setup a bare-bones TLS config for the server.
+func GenerateTLSConfigForServer() *tls.Config {
+	key, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		panic(err)
+	}
+	template := x509.Certificate{SerialNumber: big.NewInt(1)}
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		panic(err)
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		panic(err)
+	}
+	return newTLSConfig(cert)
+}
+
+func newTLSConfig(cert tls.Certificate, insecureSkipVerifyForClient ...bool) *tls.Config {
+	var insecureSkipVerify bool
+	if len(insecureSkipVerifyForClient) > 0 {
+		insecureSkipVerify = insecureSkipVerifyForClient[0]
+	}
 	return &tls.Config{
+		InsecureSkipVerify:       insecureSkipVerify,
 		Certificates:             []tls.Certificate{cert},
 		NextProtos:               []string{"http/1.1", "h2"},
 		PreferServerCipherSuites: true,
@@ -501,5 +536,5 @@ func NewTLSConfigFromFile(tlsCertFile, tlsKeyFile string) (*tls.Config, error) {
 			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
 		},
-	}, nil
+	}
 }

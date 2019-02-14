@@ -16,11 +16,15 @@ func main() {
 
 	// server peer
 	srv := tp.NewPeer(tp.PeerConfig{
+		Network:     "quic",
 		CountTime:   true,
 		ListenPort:  9090,
 		PrintDetail: true,
 	})
-	// srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
+	e := srv.SetTLSConfigFromFile("cert.pem", "key.pem")
+	if e != nil {
+		tp.Fatalf("%v", e)
+	}
 
 	// router
 	srv.RouteCall(new(Math))
