@@ -105,7 +105,7 @@ go get -u -f github.com/henrylee2cn/teleport
 - Support setting the size of the reading message (if exceed disconnect it)
 - Provide the context of the handler
 - Client session support automatically redials after disconnection
-- Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and so on
+- Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and `quic`
 - Provide an operating interface to control the connection file descriptor
 
 ## Example
@@ -603,7 +603,7 @@ peer.SetUnknownPush(XxxUnknownPush)
 
 ```go
 type PeerConfig struct {
-    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix or unixpacket"`
+    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket or quic"`
     LocalIP            string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
     ListenPort         uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
     DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`

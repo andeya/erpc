@@ -24,6 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/henrylee2cn/teleport/quic"
+
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
@@ -44,7 +46,7 @@ type (
 		// SetTLSConfig sets the TLS config.
 		SetTLSConfig(tlsConfig *tls.Config)
 		// SetTLSConfigFromFile sets the TLS config from file.
-		SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string) error
+		SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string, insecureSkipVerifyForClient ...bool) error
 		// TLSConfig returns the TLS config.
 		TLSConfig() *tls.Config
 		// PluginContainer returns the global plugin container.
@@ -77,8 +79,6 @@ type (
 		ListenAndServe(protoFunc ...ProtoFunc) error
 		// Dial connects with the peer of the destination address.
 		Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
-		// DialContext connects with the peer of the destination address, using the provided context.
-		DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
 		// ServeConn serves the connection and returns a session.
 		// NOTE:
 		//  Not support automatically redials after disconnection;
@@ -190,9 +190,9 @@ func (p *peer) SetTLSConfig(tlsConfig *tls.Config) {
 }
 
 // SetTLSConfigFromFile sets the TLS config from file.
-func (p *peer) SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string) error {
+func (p *peer) SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string, insecureSkipVerifyForClient ...bool) error {
 	var err error
-	p.tlsConfig, err = NewTLSConfigFromFile(tlsCertFile, tlsKeyFile)
+	p.tlsConfig, err = NewTLSConfigFromFile(tlsCertFile, tlsKeyFile, insecureSkipVerifyForClient...)
 	return err
 }
 
@@ -217,22 +217,24 @@ func (p *peer) CountSession() int {
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror) {
 	return p.newSessionForClient(func() (net.Conn, error) {
-		d := net.Dialer{
+		if p.network == "quic" {
+			ctx := context.Background()
+			if p.defaultDialTimeout > 0 {
+				ctx, _ = context.WithTimeout(ctx, p.defaultDialTimeout)
+			}
+			if p.tlsConfig == nil {
+				return quic.DialAddrContext(ctx, addr, &tls.Config{InsecureSkipVerify: true}, nil)
+			}
+			return quic.DialAddrContext(ctx, addr, p.tlsConfig, nil)
+		}
+		d := &net.Dialer{
 			LocalAddr: p.localAddr,
 			Timeout:   p.defaultDialTimeout,
 		}
-		return d.Dial(p.network, addr)
-	}, addr, protoFunc)
-}
-
-// DialContext connects with the peer of the destination address,
-// using the provided context.
-func (p *peer) DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror) {
-	return p.newSessionForClient(func() (net.Conn, error) {
-		d := net.Dialer{
-			LocalAddr: p.localAddr,
+		if p.tlsConfig != nil {
+			return tls.DialWithDialer(d, p.network, addr, p.tlsConfig)
 		}
-		return d.DialContext(ctx, p.network, addr)
+		return d.Dial(p.network, addr)
 	}, addr, protoFunc)
 }
 
@@ -248,9 +250,6 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	if dialErr != nil {
 		rerr := rerrDialFailed.Copy().SetReason(dialErr.Error())
 		return nil, rerr
-	}
-	if p.tlsConfig != nil {
-		conn = tls.Client(conn, p.tlsConfig)
 	}
 	var sess = newSession(p, conn, protoFuncs)
 
@@ -330,7 +329,10 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error) {
 	network := conn.LocalAddr().Network()
 	if strings.Contains(network, "udp") {
-		return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix or unixpacket", network)
+		if _, ok := conn.(*quic.Conn); !ok {
+			return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic", network)
+		}
+		network = "quic"
 	}
 	var sess = newSession(p, conn, protoFunc)
 	if rerr := p.pluginContainer.postAccept(sess); rerr != nil {
@@ -353,6 +355,9 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 	p.listeners[lis] = struct{}{}
 
 	network := lis.Addr().Network()
+	if _, ok := lis.(*quic.Listener); ok {
+		network = "quic"
+	}
 	addr := lis.Addr().String()
 	Printf("listen and serve (network:%s, addr:%s)", network, addr)
 
@@ -418,7 +423,7 @@ func (p *peer) ListenAndServe(protoFunc ...ProtoFunc) error {
 	if len(p.listenAddr) == 0 {
 		Fatalf("listenAddress can not be empty")
 	}
-	lis, err := NewInheritListener(p.network, p.listenAddr, p.tlsConfig)
+	lis, err := NewListener(p.network, p.listenAddr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
 	}
