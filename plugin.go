@@ -31,98 +31,122 @@ type (
 	}
 	// PreNewPeerPlugin is executed before creating peer.
 	PreNewPeerPlugin interface {
+		Plugin
 		PreNewPeer(*PeerConfig, *PluginContainer) error
 	}
 	// PostNewPeerPlugin is executed after creating peer.
 	PostNewPeerPlugin interface {
+		Plugin
 		PostNewPeer(EarlyPeer) error
 	}
 	// PostRegPlugin is executed after registering handler.
 	PostRegPlugin interface {
+		Plugin
 		PostReg(*Handler) error
 	}
 	// PostListenPlugin is executed between listening and accepting.
 	PostListenPlugin interface {
+		Plugin
 		PostListen(net.Addr) error
 	}
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
+		Plugin
 		PostDial(PreSession) *Rerror
 	}
 	// PostAcceptPlugin is executed after accepting connection.
 	PostAcceptPlugin interface {
+		Plugin
 		PostAccept(PreSession) *Rerror
 	}
 	// PreWriteCallPlugin is executed before writing CALL message.
 	PreWriteCallPlugin interface {
+		Plugin
 		PreWriteCall(WriteCtx) *Rerror
 	}
 	// PostWriteCallPlugin is executed after successful writing CALL message.
 	PostWriteCallPlugin interface {
+		Plugin
 		PostWriteCall(WriteCtx) *Rerror
 	}
 	// PreWriteReplyPlugin is executed before writing REPLY message.
 	PreWriteReplyPlugin interface {
+		Plugin
 		PreWriteReply(WriteCtx) *Rerror
 	}
 	// PostWriteReplyPlugin is executed after successful writing REPLY message.
 	PostWriteReplyPlugin interface {
+		Plugin
 		PostWriteReply(WriteCtx) *Rerror
 	}
 	// PreWritePushPlugin is executed before writing PUSH message.
 	PreWritePushPlugin interface {
+		Plugin
 		PreWritePush(WriteCtx) *Rerror
 	}
 	// PostWritePushPlugin is executed after successful writing PUSH message.
 	PostWritePushPlugin interface {
+		Plugin
 		PostWritePush(WriteCtx) *Rerror
 	}
 	// PreReadHeaderPlugin is executed before reading message header.
 	PreReadHeaderPlugin interface {
+		Plugin
 		PreReadHeader(PreCtx) error
 	}
 	// PostReadCallHeaderPlugin is executed after reading CALL message header.
 	PostReadCallHeaderPlugin interface {
+		Plugin
 		PostReadCallHeader(ReadCtx) *Rerror
 	}
 	// PreReadCallBodyPlugin is executed before reading CALL message body.
 	PreReadCallBodyPlugin interface {
+		Plugin
 		PreReadCallBody(ReadCtx) *Rerror
 	}
 	// PostReadCallBodyPlugin is executed after reading CALL message body.
 	PostReadCallBodyPlugin interface {
+		Plugin
 		PostReadCallBody(ReadCtx) *Rerror
 	}
 	// PostReadPushHeaderPlugin is executed after reading PUSH message header.
 	PostReadPushHeaderPlugin interface {
+		Plugin
 		PostReadPushHeader(ReadCtx) *Rerror
 	}
 	// PreReadPushBodyPlugin is executed before reading PUSH message body.
 	PreReadPushBodyPlugin interface {
+		Plugin
 		PreReadPushBody(ReadCtx) *Rerror
 	}
 	// PostReadPushBodyPlugin is executed after reading PUSH message body.
 	PostReadPushBodyPlugin interface {
+		Plugin
 		PostReadPushBody(ReadCtx) *Rerror
 	}
 	// PostReadReplyHeaderPlugin is executed after reading REPLY message header.
 	PostReadReplyHeaderPlugin interface {
+		Plugin
 		PostReadReplyHeader(ReadCtx) *Rerror
 	}
 	// PreReadReplyBodyPlugin is executed before reading REPLY message body.
 	PreReadReplyBodyPlugin interface {
+		Plugin
 		PreReadReplyBody(ReadCtx) *Rerror
 	}
 	// PostReadReplyBodyPlugin is executed after reading REPLY message body.
 	PostReadReplyBodyPlugin interface {
+		Plugin
 		PostReadReplyBody(ReadCtx) *Rerror
 	}
 	// PostDisconnectPlugin is executed after disconnection.
 	PostDisconnectPlugin interface {
+		Plugin
 		PostDisconnect(BaseSession) *Rerror
 	}
 )
 
+// PluginContainer a plugin container
 type PluginContainer struct {
 	*pluginSingleContainer
 	left        *pluginSingleContainer
@@ -256,7 +280,7 @@ func (p *pluginSingleContainer) GetAll() []Plugin {
 // remove removes a plugin by it's name.
 func (p *pluginSingleContainer) remove(pluginName string) error {
 	if p.plugins == nil {
-		return errors.New("no plugins are registered yet!")
+		return errors.New("no plugins are registered yet")
 	}
 	if len(pluginName) == 0 {
 		//return error: cannot delete an unamed plugin
