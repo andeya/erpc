@@ -31,48 +31,47 @@ import (
 // Client a websocket client
 type Client struct {
 	tp.Peer
-	addr string
 }
 
 // NewClient creates a websocket client.
-func NewClient(addr, pattern string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Client {
-	globalLeftPlugin = append(globalLeftPlugin, NewDialPlugin(pattern))
+func NewClient(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Client {
+	globalLeftPlugin = append(globalLeftPlugin, NewDialPlugin(rootPath))
 	peer := tp.NewPeer(cfg, globalLeftPlugin...)
 	return &Client{
 		Peer: peer,
-		addr: addr,
 	}
 }
 
 // DialJSON connects with the JSON protocol.
-func (c *Client) DialJSON() (tp.Session, *tp.Rerror) {
-	return c.Dial(jsonSubProto.NewJSONSubProtoFunc())
+func (c *Client) DialJSON(addr string) (tp.Session, *tp.Rerror) {
+	return c.Dial(addr, jsonSubProto.NewJSONSubProtoFunc())
 }
 
 // DialProtobuf connects with the Protobuf protocol.
-func (c *Client) DialProtobuf() (tp.Session, *tp.Rerror) {
-	return c.Dial(pbSubProto.NewPbSubProtoFunc())
+func (c *Client) DialProtobuf(addr string) (tp.Session, *tp.Rerror) {
+	return c.Dial(addr, pbSubProto.NewPbSubProtoFunc())
 }
 
 // Dial connects with the peer of the destination address.
-func (c *Client) Dial(protoFunc ...tp.ProtoFunc) (tp.Session, *tp.Rerror) {
+func (c *Client) Dial(addr string, protoFunc ...tp.ProtoFunc) (tp.Session, *tp.Rerror) {
 	if len(protoFunc) == 0 {
-		return c.Peer.Dial(c.addr, defaultProto)
+		return c.Peer.Dial(addr, defaultProto)
 	}
-	return c.Peer.Dial(c.addr, protoFunc...)
+	return c.Peer.Dial(addr, protoFunc...)
 }
 
 // NewDialPlugin creates a websocket plugin for client.
-func NewDialPlugin(pattern string) tp.Plugin {
-	pattern = path.Join("/", strings.TrimRight(pattern, "/"))
-	if pattern == "/" {
-		pattern = ""
-	}
-	return &clientPlugin{pattern}
+func NewDialPlugin(rootPath string) tp.Plugin {
+	return &clientPlugin{fixRootPath(rootPath)}
+}
+
+func fixRootPath(rootPath string) string {
+	rootPath = path.Join("/", strings.TrimRight(rootPath, "/"))
+	return rootPath
 }
 
 type clientPlugin struct {
-	pattern string
+	rootPath string
 }
 
 var (
@@ -86,11 +85,11 @@ func (*clientPlugin) Name() string {
 func (c *clientPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
 	var location, origin string
 	if sess.Peer().TLSConfig() == nil {
-		location = "ws://" + sess.RemoteAddr().String() + c.pattern
-		origin = "ws://" + sess.LocalAddr().String() + c.pattern
+		location = "ws://" + sess.RemoteAddr().String() + c.rootPath
+		origin = "ws://" + sess.LocalAddr().String() + c.rootPath
 	} else {
-		location = "wss://" + sess.RemoteAddr().String() + c.pattern
-		origin = "wss://" + sess.LocalAddr().String() + c.pattern
+		location = "wss://" + sess.RemoteAddr().String() + c.rootPath
+		origin = "wss://" + sess.LocalAddr().String() + c.rootPath
 	}
 	cfg, err := ws.NewConfig(location, origin)
 	if err != nil {

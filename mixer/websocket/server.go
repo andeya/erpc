@@ -33,20 +33,20 @@ type Server struct {
 	cfg       tp.PeerConfig
 	serveMux  *http.ServeMux
 	server    *http.Server
-	pattern   string
+	rootPath  string
 	lis       net.Listener
 	handshake func(*ws.Config, *http.Request) error
 }
 
 // NewServer creates a websocket server.
-func NewServer(pattern string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Server {
+func NewServer(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Server {
 	p := tp.NewPeer(cfg, globalLeftPlugin...)
 	serveMux := http.NewServeMux()
 	return &Server{
 		Peer:     p,
 		cfg:      cfg,
 		serveMux: serveMux,
-		pattern:  pattern,
+		rootPath: fixRootPath(rootPath),
 		server:   &http.Server{Addr: cfg.ListenerAddr(), Handler: serveMux},
 	}
 }
@@ -77,7 +77,7 @@ func (srv *Server) ListenAndServe(protoFunc ...tp.ProtoFunc) (err error) {
 		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6")
 	case "tcp", "tcp4", "tcp6":
 	}
-	srv.Handle(srv.pattern, NewServeHandler(srv.Peer, srv.handshake, protoFunc...))
+	srv.Handle(srv.rootPath, NewServeHandler(srv.Peer, srv.handshake, protoFunc...))
 	addr := srv.cfg.ListenerAddr()
 	if addr == "" {
 		if srv.Peer.TLSConfig() != nil {
@@ -115,15 +115,15 @@ func (srv *Server) SetHandshake(handshake func(*ws.Config, *http.Request) error)
 	srv.handshake = handshake
 }
 
-// Handle registers the handler for the given pattern.
-// If a handler already exists for pattern, Handle panics.
-func (srv *Server) Handle(pattern string, handler http.Handler) {
-	srv.serveMux.Handle(pattern, handler)
+// Handle registers the handler for the given rootPath.
+// If a handler already exists for rootPath, Handle panics.
+func (srv *Server) Handle(rootPath string, handler http.Handler) {
+	srv.serveMux.Handle(rootPath, handler)
 }
 
-// HandleFunc registers the handler function for the given pattern.
-func (srv *Server) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	srv.serveMux.HandleFunc(pattern, handler)
+// HandleFunc registers the handler function for the given rootPath.
+func (srv *Server) HandleFunc(rootPath string, handler func(http.ResponseWriter, *http.Request)) {
+	srv.serveMux.HandleFunc(rootPath, handler)
 }
 
 // NewJSONServeHandler creates a websocket json handler.
