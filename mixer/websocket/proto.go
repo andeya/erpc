@@ -34,9 +34,8 @@ func NewWsProtoFunc(subProto ...tp.ProtoFunc) tp.ProtoFunc {
 			tp.Warnf("connection does not support websocket protocol")
 			if len(subProto) > 0 {
 				return subProto[0](rw)
-			} else {
-				return socket.DefaultProtoFunc()(rw)
 			}
+			return socket.DefaultProtoFunc()(rw)
 		}
 		subConn := newVirtualConn()
 		p := &wsProto{

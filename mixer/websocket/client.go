@@ -1,4 +1,4 @@
-// Websocket is an extension package that makes the Teleport framework compatible
+// Package websocket is an extension package that makes the Teleport framework compatible
 // with websocket protocol as specified in RFC 6455.
 //
 // Copyright 2018 HenryLee. All Rights Reserved.
