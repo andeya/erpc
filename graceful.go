@@ -108,7 +108,7 @@ func SetShutdown(timeout time.Duration, firstSweep, beforeExiting func() error) 
 	}
 	FirstSweep = func() error {
 		setParentLaddrList()
-		return errors.Merge(firstSweep(), inherit_net.SetInherited())
+		return errors.Merge(firstSweep(), inherit_net.SetInherited(), quic.SetInherited())
 	}
 	BeforeExiting = func() error {
 		return errors.Merge(shutdown(), beforeExiting())
@@ -130,21 +130,24 @@ func Reboot(timeout ...time.Duration) {
 
 var testTLSConfig = GenerateTLSConfigForServer()
 
-// NewListener creates a new listener.
-// If the network is not "quic", the listener can be inherited on reboot.
-func NewListener(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
+// NewInheritedListener creates a new inherited listener.
+func NewInheritedListener(network, laddr string, tlsConfig *tls.Config) (net.Listener, error) {
 	host, port, err := net.SplitHostPort(laddr)
 	if err != nil {
 		return nil, err
 	}
 	if port == "0" {
-		laddr = popParentLaddr(network, host, laddr)
+		if network == "quic" {
+			laddr = popParentLaddr("udp", host, laddr)
+		} else {
+			laddr = popParentLaddr(network, host, laddr)
+		}
 	}
 	if network == "quic" {
 		if tlsConfig == nil {
 			tlsConfig = testTLSConfig
 		}
-		return quic.ListenAddr(laddr, tlsConfig, nil)
+		return quic.InheritedListen(laddr, tlsConfig, nil)
 	}
 	lis, err := inherit_net.Listen(network, laddr)
 	if err != nil {

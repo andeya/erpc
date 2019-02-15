@@ -38,21 +38,32 @@ func DialAddrContext(ctx context.Context, addr string, tlsConf *tls.Config, conf
 //
 // Multiple goroutines may invoke methods on a Listener simultaneously.
 type Listener struct {
-	lis quic.Listener
+	lis  quic.Listener
+	conn net.PacketConn
 }
 
+var _ net.Listener = (*Listener)(nil)
+
 // ListenAddr announces on the local network address laddr.
-// The network net must be QUIC network.
 // The tls.Config must not be nil and must contain a certificate configuration.
 // The quic.Config may be nil, in that case the default values will be used.
-func ListenAddr(addr string, tlsConf *tls.Config, config *quic.Config) (net.Listener, error) {
-	lis, err := quic.ListenAddr(addr, tlsConf, config)
+func ListenAddr(addr string, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		return nil, err
 	}
-	return &Listener{
-		lis: lis,
-	}, nil
+	return ListenUDPAddr(udpAddr, tlsConf, config)
+}
+
+// ListenUDPAddr announces on the local network address laddr.
+// The tls.Config must not be nil and must contain a certificate configuration.
+// The quic.Config may be nil, in that case the default values will be used.
+func ListenUDPAddr(udpAddr *net.UDPAddr, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
+	conn, err := net.ListenUDP("udp", udpAddr)
+	if err != nil {
+		return nil, err
+	}
+	return Listen(conn, tlsConf, config)
 }
 
 // Listen listens for QUIC connections on a given net.PacketConn.
@@ -61,14 +72,20 @@ func ListenAddr(addr string, tlsConf *tls.Config, config *quic.Config) (net.List
 // QUIC connection IDs are used for demultiplexing the different connections.
 // The tls.Config must not be nil and must contain a certificate configuration.
 // The quic.Config may be nil, in that case the default values will be used.
-func Listen(conn net.PacketConn, tlsConf *tls.Config, config *quic.Config) (net.Listener, error) {
+func Listen(conn net.PacketConn, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
 	lis, err := quic.Listen(conn, tlsConf, config)
 	if err != nil {
 		return nil, err
 	}
 	return &Listener{
-		lis: lis,
+		lis:  lis,
+		conn: conn,
 	}, nil
+}
+
+// PacketConn returns the net.PacketConn.
+func (l *Listener) PacketConn() net.PacketConn {
+	return l.conn
 }
 
 // Accept waits for and returns the next connection to the listener.
@@ -87,11 +104,16 @@ func (l *Listener) Accept() (net.Conn, error) {
 	}, nil
 }
 
-// Close closes the listener.
-// Any blocked Accept operations will be unblocked and return errors.
+// Close closes the listener PacketConn.
 func (l *Listener) Close() error {
 	return l.lis.Close()
 }
+
+// // Destroy destroys the listener.
+// // Any blocked Accept operations will be unblocked and return errors.
+// func (l *Listener) Destroy() error {
+// 	return l.lis.Close()
+// }
 
 // Addr returns the listener's network address.
 func (l *Listener) Addr() net.Addr {
