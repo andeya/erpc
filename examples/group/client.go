@@ -7,8 +7,7 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	tp.SetLoggerLevel("ERROR")
+	defer tp.SetLoggerLevel("ERROR")()
 
 	cli := tp.NewPeer(
 		tp.PeerConfig{},

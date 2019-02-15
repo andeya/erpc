@@ -179,31 +179,39 @@ var loggerOutputter = func() LoggerOutputter {
 	}
 }()
 
+// FlushLogger writes any buffered log to the underlying io.Writer.
+func FlushLogger() error {
+	return loggerOutputter.Flush()
+}
+
 // SetLoggerOutputter sets logger outputter.
 // NOTE: Concurrent is not safe!
-func SetLoggerOutputter(outputter LoggerOutputter) {
+func SetLoggerOutputter(outputter LoggerOutputter) (flusher func() error) {
 	loggerOutputter = outputter
+	return FlushLogger
 }
 
 // SetLoggerLevel sets the logger's level by string.
-func SetLoggerLevel(level string) {
+func SetLoggerLevel(level string) (flusher func() error) {
 	for k, v := range loggerLevelMap {
 		if v == level {
 			loggerLevel = k
-			return
+			return FlushLogger
 		}
 	}
 	log.Printf("Unknown level string: %s", level)
+	return FlushLogger
 }
 
 // SetLoggerLevel2 sets the logger's level by number.
-func SetLoggerLevel2(level LoggerLevel) {
+func SetLoggerLevel2(level LoggerLevel) (flusher func() error) {
 	_, ok := loggerLevelMap[level]
 	if !ok {
 		log.Printf("Unknown level number: %d", level)
-		return
+		return FlushLogger
 	}
 	loggerLevel = level
+	return FlushLogger
 }
 
 // GetLoggerLevel gets the logger's level.
@@ -222,11 +230,6 @@ func EnableLoggerLevel(level LoggerLevel) bool {
 // GetLogger returns the global logger object.
 func GetLogger() Logger {
 	return logger
-}
-
-// FlushLogger writes any buffered log to the underlying io.Writer.
-func FlushLogger() error {
-	return loggerOutputter.Flush()
 }
 
 func loggerOutput(loggerLevel LoggerLevel, format string, a ...interface{}) {

@@ -33,7 +33,7 @@ func main() {
 
 	log.Printf("concurrency: %d\nrequests per client: %d\n\n", n, m)
 
-	tp.SetLoggerLevel("ERROR")
+	defer tp.SetLoggerLevel("ERROR")()
 	tp.SetGopool(1024*1024*100, time.Minute*10)
 
 	serviceMethod := "Hello.Say"
