@@ -541,9 +541,33 @@ func newTLSConfig(cert tls.Certificate, insecureSkipVerifyForClient ...bool) *tl
 }
 
 // ListenerAddress a listener address plugin
-type ListenerAddress struct{ net.Addr }
+type ListenerAddress struct {
+	addr net.Addr
+	host string
+	port string
+}
 
 var _ PostListenPlugin = new(ListenerAddress)
+
+// Addr returns the address object.
+func (la *ListenerAddress) Addr() net.Addr {
+	return la.addr
+}
+
+// Port returns the port.
+func (la *ListenerAddress) Port() string {
+	return la.port
+}
+
+// Host returns the host.
+func (la *ListenerAddress) Host() string {
+	return la.host
+}
+
+// String returns the address string.
+func (la *ListenerAddress) String() string {
+	return la.addr.String()
+}
 
 // Name returns plugin name.
 func (la *ListenerAddress) Name() string {
@@ -551,7 +575,8 @@ func (la *ListenerAddress) Name() string {
 }
 
 // PostListen gets the listener address.
-func (la *ListenerAddress) PostListen(addr net.Addr) error {
-	la.Addr = addr
-	return nil
+func (la *ListenerAddress) PostListen(addr net.Addr) (err error) {
+	la.addr = addr
+	la.host, la.port, err = net.SplitHostPort(addr.String())
+	return
 }
