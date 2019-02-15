@@ -421,9 +421,9 @@ func (p *peer) ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 // ListenAndServe turns on the listening service.
 func (p *peer) ListenAndServe(protoFunc ...ProtoFunc) error {
 	if len(p.listenAddr) == 0 {
-		Fatalf("listenAddress can not be empty")
+		Fatalf("listen address can not be empty")
 	}
-	lis, err := NewListener(p.network, p.listenAddr, p.tlsConfig)
+	lis, err := NewInheritedListener(p.network, p.listenAddr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
 	}
@@ -439,7 +439,9 @@ func (p *peer) Close() (err error) {
 	}()
 	close(p.closeCh)
 	for lis := range p.listeners {
-		lis.Close()
+		if _, ok := lis.(*quic.Listener); !ok {
+			lis.Close()
+		}
 	}
 	deletePeer(p)
 	var (
@@ -459,6 +461,11 @@ func (p *peer) Close() (err error) {
 		err = errors.Merge(err, <-errCh)
 	}
 	close(errCh)
+	for lis := range p.listeners {
+		if qlis, ok := lis.(*quic.Listener); ok {
+			err = errors.Merge(err, qlis.Close())
+		}
+	}
 	return err
 }
 
