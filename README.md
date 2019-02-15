@@ -105,8 +105,15 @@ go get -u -f github.com/henrylee2cn/teleport
 - Support setting the size of the reading message (if exceed disconnect it)
 - Provide the context of the handler
 - Client session support automatically redials after disconnection
-- Support network list: `tcp`, `tcp4`, `tcp6`, `unix`, `unixpacket` and `quic`
 - Provide an operating interface to control the connection file descriptor
+- Support network list:
+    - `tcp`
+    - `tcp4`
+    - `tcp6`
+    - `unix`
+    - `unixpacket`
+    - `quic`
+
 
 ## Example
 
