@@ -105,15 +105,15 @@ type (
 )
 
 var (
-	_ tp.PreWriteCallPlugin      = (*encryptPlugin)(nil)
-	_ tp.PreWritePushPlugin      = (*encryptPlugin)(nil)
-	_ tp.PreWriteReplyPlugin     = (*encryptPlugin)(nil)
-	_ tp.PreReadCallBodyPlugin   = (*decryptPlugin)(nil)
-	_ tp.PostReadCallBodyPlugin  = (*decryptPlugin)(nil)
-	_ tp.PreReadReplyBodyPlugin  = (*decryptPlugin)(nil)
-	_ tp.PostReadReplyBodyPlugin = (*decryptPlugin)(nil)
-	_ tp.PreReadPushBodyPlugin   = (*decryptPlugin)(nil)
-	_ tp.PostReadPushBodyPlugin  = (*decryptPlugin)(nil)
+	_ tp.PreWriteCallPlugin      = (*securePlugin)(nil)
+	_ tp.PreWritePushPlugin      = (*securePlugin)(nil)
+	_ tp.PreWriteReplyPlugin     = (*securePlugin)(nil)
+	_ tp.PreReadCallBodyPlugin   = (*securePlugin)(nil)
+	_ tp.PostReadCallBodyPlugin  = (*securePlugin)(nil)
+	_ tp.PreReadReplyBodyPlugin  = (*securePlugin)(nil)
+	_ tp.PostReadReplyBodyPlugin = (*securePlugin)(nil)
+	_ tp.PreReadPushBodyPlugin   = (*securePlugin)(nil)
+	_ tp.PostReadPushBodyPlugin  = (*securePlugin)(nil)
 )
 
 func (e *securePlugin) Name() string {

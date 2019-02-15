@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"os"
 	"path"
 	"strconv"
@@ -537,4 +538,20 @@ func newTLSConfig(cert tls.Certificate, insecureSkipVerifyForClient ...bool) *tl
 			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
 		},
 	}
+}
+
+// ListenerAddress a listener address plugin
+type ListenerAddress struct{ net.Addr }
+
+var _ PostListenPlugin = new(ListenerAddress)
+
+// Name returns plugin name.
+func (la *ListenerAddress) Name() string {
+	return "ListenerAddressPlugin"
+}
+
+// PostListen gets the listener address.
+func (la *ListenerAddress) PostListen(addr net.Addr) error {
+	la.Addr = addr
+	return nil
 }
