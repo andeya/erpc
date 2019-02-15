@@ -256,7 +256,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	// create redial func
 	if p.redialTimes > 0 {
 		sess.redialForClientLocked = func(oldConn net.Conn) bool {
-			if oldConn != sess.conn {
+			if oldConn != sess.getConn() {
 				return true
 			}
 			var err error
@@ -302,10 +302,10 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	}
 	oldIP := sess.LocalAddr().String()
 	oldID := sess.ID()
-	if sess.conn != nil {
-		sess.conn.Close()
+	oldConn := sess.getConn()
+	if oldConn != nil {
+		oldConn.Close()
 	}
-	sess.conn = conn
 	sess.socket.Reset(conn, protoFuncs...)
 	if oldIP == oldID {
 		sess.socket.SetID(sess.LocalAddr().String())

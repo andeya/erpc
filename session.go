@@ -156,7 +156,6 @@ type session struct {
 	contextAge                     time.Duration
 	sessionAgeLock                 sync.RWMutex
 	contextAgeLock                 sync.RWMutex
-	conn                           net.Conn
 	lock                           sync.RWMutex
 	// only for client role
 	redialForClientLocked func(oldConn net.Conn) bool
@@ -169,7 +168,6 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 		getPushHandler: peer.router.subRouter.getPush,
 		timeSince:      peer.timeSince,
 		timeNow:        peer.timeNow,
-		conn:           conn,
 		protoFuncs:     protoFuncs,
 		socket:         socket.NewSocket(conn, protoFuncs...),
 		closeNotifyCh:  make(chan struct{}),
@@ -214,10 +212,7 @@ func (s *session) ControlFD(f func(fd uintptr)) error {
 }
 
 func (s *session) getConn() net.Conn {
-	s.lock.RLock()
-	c := s.conn
-	s.lock.RUnlock()
-	return c
+	return s.socket.Raw()
 }
 
 // ModifySocket modifies the socket.
@@ -229,11 +224,8 @@ func (s *session) getConn() net.Conn {
 func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc ProtoFunc)) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	modifiedConn, newProtoFunc := fn(s.conn)
+	modifiedConn, newProtoFunc := fn(s.getConn())
 	isModifiedConn := modifiedConn != nil
-	if isModifiedConn {
-		s.conn = modifiedConn
-	}
 	isNewProtoFunc := newProtoFunc != nil
 	if isNewProtoFunc {
 		s.protoFuncs = s.protoFuncs[:0]
@@ -250,7 +242,7 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 	if count > 0 {
 		pub = s.socket.Swap()
 	}
-	s.socket = socket.NewSocket(s.conn, s.protoFuncs...)
+	s.socket = socket.NewSocket(modifiedConn, s.protoFuncs...)
 	if count > 0 {
 		newPub := s.socket.Swap()
 		pub.Range(func(key, value interface{}) bool {
@@ -628,7 +620,6 @@ func (s *session) Close() error {
 
 	s.peer.sessHub.Delete(s.ID())
 	s.notifyClosed()
-
 	s.graceCtxWaitGroup.Wait()
 	s.graceCallCmdWaitGroup.Wait()
 
@@ -712,14 +703,14 @@ func (s *session) startReadAndHandle() {
 	}
 
 	var (
-		err  error
-		conn = s.getConn()
+		err      error
+		usedConn = s.getConn()
 	)
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
-		s.readDisconnected(conn, err)
+		s.readDisconnected(usedConn, err)
 	}()
 
 	// read call, call reple or push
@@ -740,9 +731,7 @@ func (s *session) startReadAndHandle() {
 		}
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
-			defer func() {
-				s.peer.putContext(ctx, true)
-			}()
+			defer s.peer.putContext(ctx, true)
 			ctx.handle()
 		}) {
 			s.peer.putContext(ctx, true)
@@ -751,11 +740,11 @@ func (s *session) startReadAndHandle() {
 }
 
 func (s *session) write(message Message) (net.Conn, *Rerror) {
-	conn := s.getConn()
+	usedConn := s.getConn()
 	status := s.getStatus()
 	if status != statusOk &&
 		!(status == statusActiveClosing && message.Mtype() == TypeReply) {
-		return conn, rerrConnClosed
+		return usedConn, rerrConnClosed
 	}
 
 	var (
@@ -784,18 +773,18 @@ func (s *session) write(message Message) (net.Conn, *Rerror) {
 	}
 
 	if err == nil {
-		return conn, nil
+		return usedConn, nil
 	}
 
 	if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
-		return conn, rerrConnClosed
+		return usedConn, rerrConnClosed
 	}
 
 	Debugf("write error: %s", err.Error())
 
 ERR:
 	rerr = rerrWriteFailed.Copy().SetReason(err.Error())
-	return conn, rerr
+	return usedConn, rerr
 }
 
 // SessionHub sessions hub
