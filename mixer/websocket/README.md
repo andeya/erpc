@@ -34,14 +34,14 @@ func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
 }
 
 func TestJSONWebsocket(t *testing.T) {
-	srv := ws.NewServer("/ws", tp.PeerConfig{ListenPort: 9090})
+	srv := ws.NewServer("/", tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(P))
 	go srv.ListenAndServe()
 
 	time.Sleep(time.Second * 1)
 
-	cli := ws.NewClient(":9090", "/ws", tp.PeerConfig{})
-	sess, err := cli.Dial()
+	cli := ws.NewClient("/", tp.PeerConfig{})
+	sess, err := cli.Dial(":9090")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,9 +66,9 @@ func TestPbWebsocketTLS(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
-	cli := ws.NewClient(":9091", "/ws", tp.PeerConfig{})
+	cli := ws.NewClient("/ws", tp.PeerConfig{})
 	cli.SetTLSConfig(&tls.Config{InsecureSkipVerify: true})
-	sess, err := cli.DialProtobuf()
+	sess, err := cli.DialProtobuf(":9091")
 	if err != nil {
 		t.Fatal(err)
 	}
