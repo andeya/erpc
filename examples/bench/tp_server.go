@@ -39,7 +39,7 @@ var (
 func main() {
 	flag.Parse()
 
-	tp.SetLoggerLevel("ERROR")
+	defer tp.SetLoggerLevel("ERROR")()
 	tp.SetGopool(1024*1024*100, time.Minute*10)
 
 	go func() {
