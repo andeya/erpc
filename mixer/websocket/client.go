@@ -23,8 +23,44 @@ import (
 	"strings"
 
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/teleport/mixer/websocket/pbSubProto"
 	ws "github.com/henrylee2cn/teleport/mixer/websocket/websocket"
 )
+
+// Client a websocket client
+type Client struct {
+	tp.Peer
+	addr string
+}
+
+// NewClient creates a websocket client.
+func NewClient(addr, pattern string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Client {
+	globalLeftPlugin = append(globalLeftPlugin, NewDialPlugin(pattern))
+	peer := tp.NewPeer(cfg, globalLeftPlugin...)
+	return &Client{
+		Peer: peer,
+		addr: addr,
+	}
+}
+
+// DialJSON connects with the JSON protocol.
+func (c *Client) DialJSON() (tp.Session, *tp.Rerror) {
+	return c.Dial(jsonSubProto.NewJSONSubProtoFunc())
+}
+
+// DialProtobuf connects with the Protobuf protocol.
+func (c *Client) DialProtobuf() (tp.Session, *tp.Rerror) {
+	return c.Dial(pbSubProto.NewPbSubProtoFunc())
+}
+
+// Dial connects with the peer of the destination address.
+func (c *Client) Dial(protoFunc ...tp.ProtoFunc) (tp.Session, *tp.Rerror) {
+	if len(protoFunc) == 0 {
+		return c.Peer.Dial(c.addr, defaultProto)
+	}
+	return c.Peer.Dial(c.addr, protoFunc...)
+}
 
 // NewDialPlugin creates a websocket plugin for client.
 func NewDialPlugin(pattern string) tp.Plugin {
