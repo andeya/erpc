@@ -84,9 +84,6 @@ type (
 		//  Not support automatically redials after disconnection;
 		//  Execute the PostAcceptPlugin plugins.
 		ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
-		// ServeListener serves the listener.
-		// NOTE: The caller ensures that the listener supports graceful shutdown.
-		ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error
 	}
 )
 
@@ -348,9 +345,9 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
 // ErrListenClosed listener is closed error.
 var ErrListenClosed = errors.New("listener is closed")
 
-// ServeListener serves the listener.
+// serveListener serves the listener.
 // NOTE: The caller ensures that the listener supports graceful shutdown.
-func (p *peer) ServeListener(lis net.Listener, protoFunc ...ProtoFunc) error {
+func (p *peer) serveListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 	defer lis.Close()
 	p.listeners[lis] = struct{}{}
 
@@ -427,7 +424,7 @@ func (p *peer) ListenAndServe(protoFunc ...ProtoFunc) error {
 	if err != nil {
 		Fatalf("%v", err)
 	}
-	return p.ServeListener(lis, protoFunc...)
+	return p.serveListener(lis, protoFunc...)
 }
 
 // Close closes peer.
