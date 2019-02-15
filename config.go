@@ -51,6 +51,12 @@ type PeerConfig struct {
 
 var _ cfgo.Config = new(PeerConfig)
 
+// ListenerAddr returns the listener address.
+func (p *PeerConfig) ListenerAddr() string {
+	p.check()
+	return p.listenAddrStr
+}
+
 // Reload Bi-directionally synchronizes config between YAML file and memory.
 func (p *PeerConfig) Reload(bind cfgo.BindFunc) error {
 	err := bind()
@@ -72,7 +78,7 @@ func (p *PeerConfig) check() error {
 	var err error
 	switch p.Network {
 	default:
-		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic.")
+		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
 	case "":
 		p.Network = "tcp"
 		fallthrough
