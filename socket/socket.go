@@ -96,9 +96,6 @@ type (
 		SetID(string)
 		// Reset reset net.Conn and ProtoFunc.
 		Reset(netConn net.Conn, protoFunc ...ProtoFunc)
-	}
-	// RawConn raw conn
-	RawConn interface {
 		// Raw returns the raw net.Conn
 		Raw() net.Conn
 	}
@@ -120,10 +117,7 @@ const (
 	activeClose int32 = 1
 )
 
-var (
-	_ net.Conn = Socket(nil)
-	_ RawConn  = (*socket)(nil)
-)
+var _ net.Conn = Socket(nil)
 
 // ErrProactivelyCloseSocket proactively close the socket error.
 var ErrProactivelyCloseSocket = errors.New("socket is closed proactively")
@@ -156,13 +150,16 @@ func newSocket(c net.Conn, protoFuncs []ProtoFunc) *socket {
 		readerWithBuffer: bufio.NewReaderSize(c, readerSize),
 	}
 	s.protocol = getProto(protoFuncs, s)
-	s.optimize()
+	s.initOptimize()
 	return s
 }
 
 // Raw returns the raw net.Conn
 func (s *socket) Raw() net.Conn {
-	return s.Conn
+	s.mu.RLock()
+	conn := s.Conn
+	s.mu.RUnlock()
+	return conn
 }
 
 // Read reads data from the connection.
@@ -177,7 +174,7 @@ func (s *socket) Read(b []byte) (int, error) {
 // The file descriptor fd is guaranteed to remain valid while
 // f executes but not after f returns.
 func (s *socket) ControlFD(f func(fd uintptr)) error {
-	syscallConn, ok := s.Conn.(syscall.Conn)
+	syscallConn, ok := s.Raw().(syscall.Conn)
 	if !ok {
 		return syscall.EINVAL
 	}
@@ -260,7 +257,7 @@ func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	s.protocol = getProto(protoFunc, s)
 	s.SetID("")
 	atomic.StoreInt32(&s.curState, normal)
-	s.optimize()
+	s.initOptimize()
 	s.mu.Unlock()
 }
 
@@ -295,7 +292,7 @@ func (s *socket) isActiveClosed() bool {
 	return atomic.LoadInt32(&s.curState) == activeClose
 }
 
-func (s *socket) optimize() {
+func (s *socket) initOptimize() {
 	if c, ok := s.Conn.(ifaceSetKeepAlive); ok {
 		if changeKeepAlive {
 			c.SetKeepAlive(keepAlive)
