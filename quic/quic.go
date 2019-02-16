@@ -73,6 +73,9 @@ func ListenUDPAddr(udpAddr *net.UDPAddr, tlsConf *tls.Config, config *quic.Confi
 // The tls.Config must not be nil and must contain a certificate configuration.
 // The quic.Config may be nil, in that case the default values will be used.
 func Listen(conn net.PacketConn, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
+	if config == nil {
+		config = &quic.Config{KeepAlive: true}
+	}
 	lis, err := quic.Listen(conn, tlsConf, config)
 	if err != nil {
 		return nil, err
