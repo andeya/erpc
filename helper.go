@@ -491,7 +491,12 @@ func NewTLSConfigFromFile(tlsCertFile, tlsKeyFile string, insecureSkipVerifyForC
 	return newTLSConfig(cert, insecureSkipVerifyForClient...), nil
 }
 
-// GenerateTLSConfigForServer setup a bare-bones TLS config for the server.
+// GenerateTLSConfigForClient setup a bare-bones(skip verify) TLS config for client.
+func GenerateTLSConfigForClient() *tls.Config {
+	return &tls.Config{InsecureSkipVerify: true}
+}
+
+// GenerateTLSConfigForServer setup a bare-bones TLS config for server.
 func GenerateTLSConfigForServer() *tls.Config {
 	key, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
