@@ -1,4 +1,4 @@
-package epllo
+package evio
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/mixer/epllo/evio"
+	"github.com/henrylee2cn/teleport/mixer/evio/evio"
 	"github.com/henrylee2cn/teleport/utils"
 )
 
@@ -136,7 +136,7 @@ func (srv *Server) serveConn(evioConn evio.Conn) error {
 	return err
 }
 
-// conn is a evio(epllo) network connection.
+// conn is a evio(evio) network connection.
 //
 // Multiple goroutines may invoke methods on a Conn simultaneously.
 type conn struct {
@@ -235,22 +235,3 @@ func (c *conn) SetReadDeadline(t time.Time) error {
 func (c *conn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
-
-// type wakeWritePlugin struct{}
-
-// func (w *wakeWritePlugin) Name() string {
-// 	return "Wake-Write"
-// }
-
-// var wakeWriteKey wakeWritePlugin
-
-// func (w *wakeWritePlugin) PostWritePush(ctx tp.WriteCtx) *tp.Rerror {
-// 	return w.PostWriteReply(ctx)
-// }
-
-// func (w *wakeWritePlugin) PostWriteReply(ctx tp.WriteCtx) *tp.Rerror {
-// 	v, _ := ctx.Swap().Load(wakeWriteKey)
-// 	c := v.(*conn)
-// 	c.conn.Wake()
-// 	return nil
-// }

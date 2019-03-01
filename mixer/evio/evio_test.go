@@ -1,22 +1,22 @@
-package epllo_test
+package evio_test
 
 import (
 	"testing"
 	"time"
 
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/mixer/epllo"
+	"github.com/henrylee2cn/teleport/mixer/evio"
 )
 
 func Test(t *testing.T) {
 	// server
-	srv := epllo.NewServer(1, tp.PeerConfig{ListenPort: 9090})
+	srv := evio.NewServer(1, tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
 	// client
-	cli := epllo.NewClient(tp.PeerConfig{})
+	cli := evio.NewClient(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
 	sess, err := cli.Dial(":9090")
 	if err != nil {
