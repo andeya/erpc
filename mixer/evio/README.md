@@ -1,8 +1,6 @@
 ## evio
 
-`evio` is a fast event-loop networking framework that uses the teleport API layer.
-
-From third-party library [evio](https://github.com/tidwall/evio)
+A fast event-loop networking framework that uses the teleport API layer. (From [evio](https://github.com/tidwall/evio))
 
 It makes direct [epoll](https://en.wikipedia.org/wiki/Epoll) and [kqueue](https://en.wikipedia.org/wiki/Kqueue) syscalls rather than using the standard Go [net](https://golang.org/pkg/net/) package, and works in a similar manner as [libuv](https://github.com/libuv/libuv) and [libevent](https://github.com/libevent/libevent).
 
