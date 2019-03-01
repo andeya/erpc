@@ -3,13 +3,13 @@
 // DO NOT EDIT!
 
 /*
-	Package main is a generated protocol buffer package.
+	Package msg is a generated protocol buffer package.
 	It is generated from these files:
 		benchmark.proto
 	It has these top-level messages:
 		BenchmarkMessage
 */
-package main
+package msg
 
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"

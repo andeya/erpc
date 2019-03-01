@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package main;
+package msg;
 
 option optimize_for = SPEED;
 

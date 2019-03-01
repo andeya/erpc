@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -11,10 +10,11 @@ import (
 
 	proto "github.com/gogo/protobuf/proto"
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/examples/bench/msg"
 	"github.com/montanaflynn/stats"
 )
 
-//go:generate go build $GOFILE benchmark.pb.go
+//go:generate go build $GOFILE
 
 var concurrency = flag.Int("c", 1, "concurrency")
 var total = flag.Int("n", 1, "total requests for all clients")
@@ -41,7 +41,7 @@ func main() {
 		DefaultBodyCodec: "protobuf",
 	})
 
-	args := prepareArgs()
+	args := msg.PrepareArgs()
 
 	b, _ := proto.Marshal(args)
 	log.Printf("message size: %d bytes\n\n", len(b))
@@ -67,7 +67,7 @@ func main() {
 				log.Fatalf("did not connect: %v", rerr)
 			}
 			defer sess.Close()
-			var reply BenchmarkMessage
+			var reply msg.BenchmarkMessage
 
 			//warmup
 			for j := 0; j < 5; j++ {
@@ -124,39 +124,4 @@ func main() {
 	tp.Printf("mean: %.f ns, median: %.f ns, max: %.f ns, min: %.f ns, p99: %.f ns\n", mean, median, max, min, p99)
 	tp.Printf("mean: %d ms, median: %d ms, max: %d ms, min: %d ms, p99: %d ms\n", int64(mean/1000000), int64(median/1000000), int64(max/1000000), int64(min/1000000), int64(p99/1000000))
 
-}
-
-func prepareArgs() *BenchmarkMessage {
-	b := true
-	var i int32 = 100000
-	var s = "许多往事在眼前一幕一幕，变的那麼模糊"
-
-	var args BenchmarkMessage
-
-	v := reflect.ValueOf(&args).Elem()
-	num := v.NumField()
-	for k := 0; k < num; k++ {
-		field := v.Field(k)
-		if field.Type().Kind() == reflect.Ptr {
-			switch v.Field(k).Type().Elem().Kind() {
-			case reflect.Int, reflect.Int32, reflect.Int64:
-				field.Set(reflect.ValueOf(&i))
-			case reflect.Bool:
-				field.Set(reflect.ValueOf(&b))
-			case reflect.String:
-				field.Set(reflect.ValueOf(&s))
-			}
-		} else {
-			switch field.Kind() {
-			case reflect.Int, reflect.Int32, reflect.Int64:
-				field.SetInt(100000)
-			case reflect.Bool:
-				field.SetBool(true)
-			case reflect.String:
-				field.SetString(s)
-			}
-		}
-
-	}
-	return &args
 }

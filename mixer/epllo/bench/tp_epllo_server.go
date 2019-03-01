@@ -10,6 +10,7 @@ import (
 
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/examples/bench/msg"
+	"github.com/henrylee2cn/teleport/mixer/epllo"
 )
 
 //go:generate go build $GOFILE
@@ -48,7 +49,7 @@ func main() {
 	}()
 
 	tp.SetServiceMethodMapper(tp.RPCServiceMethodMapper)
-	server := tp.NewPeer(tp.PeerConfig{
+	server := epllo.NewServer(1, tp.PeerConfig{
 		DefaultBodyCodec: "protobuf",
 		ListenPort:       uint16(*port),
 	})
