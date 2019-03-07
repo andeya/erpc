@@ -19,7 +19,7 @@ import (
 //  receiver peer error code range: [500,599].
 const (
 	CodeUnknownError        = -1
-	CodeNoError             = 0 // nil error
+	CodeNoError             = 0 // nil error (ok)
 	CodeConnClosed          = 102
 	CodeWriteFailed         = 104
 	CodeDialFailed          = 105
@@ -47,6 +47,8 @@ const (
 // If the type is undefined returns 'Unknown Error'.
 func CodeText(rerrCode int32) string {
 	switch rerrCode {
+	case CodeNoError:
+		return "OK"
 	case CodeBadMessage:
 		return "Bad Message"
 	case CodeUnauthorized:
