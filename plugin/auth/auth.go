@@ -22,6 +22,7 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
+// NewBearerPlugin creates a auth bearer plugin for client.
 func NewBearerPlugin(fn Bearer, infoSetting ...tp.MessageSetting) tp.Plugin {
 	return &authBearerPlugin{
 		bearerFunc: fn,
@@ -29,6 +30,7 @@ func NewBearerPlugin(fn Bearer, infoSetting ...tp.MessageSetting) tp.Plugin {
 	}
 }
 
+// NewCheckerPlugin creates a auth checker plugin for server.
 func NewCheckerPlugin(fn Checker, retSetting ...tp.MessageSetting) tp.Plugin {
 	return &authCheckerPlugin{
 		checkerFunc: fn,
@@ -37,10 +39,16 @@ func NewCheckerPlugin(fn Checker, retSetting ...tp.MessageSetting) tp.Plugin {
 }
 
 type (
-	Bearer   func(sess Session, fn Sender) *tp.Rerror
-	Checker  func(sess Session, fn Receiver) (ret interface{}, rerr *tp.Rerror)
-	Sender   func(info, retRecv interface{}) *tp.Rerror
+	// Bearer initiates an authorization request and handles the response.
+	Bearer func(sess Session, fn Sender) *tp.Rerror
+	// Sender sends authorization request.
+	Sender func(info, retRecv interface{}) *tp.Rerror
+
+	// Checker checks the authorization request.
+	Checker func(sess Session, fn Receiver) (ret interface{}, rerr *tp.Rerror)
+	// Receiver receives authorization request.
 	Receiver func(infoRecv interface{}) *tp.Rerror
+
 	// Session auth session provides SetID, RemoteAddr and Swap methods in base session
 	Session interface {
 		// Peer returns the peer.
