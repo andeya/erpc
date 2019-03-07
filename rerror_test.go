@@ -8,7 +8,10 @@ import (
 )
 
 func TestRerror(t *testing.T) {
-	rerr := new(Rerror)
+	var rerr *Rerror
+	t.Logf("%v", rerr.HasError())
+	rerr = new(Rerror)
+	t.Logf("%v", rerr.HasError())
 	t.Logf("%v", rerr)
 	rerr.Code = 400
 	rerr.Message = "msg"

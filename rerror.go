@@ -48,7 +48,7 @@ const (
 func CodeText(rerrCode int32) string {
 	switch rerrCode {
 	case CodeNoError:
-		return "OK"
+		return ""
 	case CodeBadMessage:
 		return "Bad Message"
 	case CodeUnauthorized:
@@ -140,6 +140,11 @@ func NewRerrorFromMeta(meta *utils.Args) *Rerror {
 	r := new(Rerror)
 	r.UnmarshalJSON(b)
 	return r
+}
+
+// HasError returns true if there are no error.
+func (r *Rerror) HasError() bool {
+	return r != nil && r.Code != CodeNoError
 }
 
 // SetToMeta sets self to 'X-Reply-Error' metadata.
