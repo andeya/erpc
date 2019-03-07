@@ -22,19 +22,25 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
-// A auth plugin for verifying peer at the first time.
-
-// NewLaunchPlugin creates a plugin for initiating authorization.
-func NewLaunchPlugin(fn GenerateAuthInfoFunc) tp.Plugin {
-	return &auth{generateAuthInfoFunc: fn}
+func NewBearerPlugin(fn Bearer, infoSetting ...tp.MessageSetting) tp.Plugin {
+	return &authBearerPlugin{
+		bearerFunc: fn,
+		msgSetting: infoSetting,
+	}
 }
 
-// NewVerifyPlugin creates a plugin for verifying authorization.
-func NewVerifyPlugin(fn VerifyAuthInfoFunc) tp.Plugin {
-	return &auth{verifyAuthInfoFunc: fn}
+func NewCheckerPlugin(fn Checker, retSetting ...tp.MessageSetting) tp.Plugin {
+	return &authCheckerPlugin{
+		checkerFunc: fn,
+		msgSetting:  retSetting,
+	}
 }
 
 type (
+	Bearer   func(sess Session, fn Sender) *tp.Rerror
+	Checker  func(sess Session, fn Receiver) (ret interface{}, rerr *tp.Rerror)
+	Sender   func(info, retRecv interface{}) *tp.Rerror
+	Receiver func(infoRecv interface{}) *tp.Rerror
 	// Session auth session provides SetID, RemoteAddr and Swap methods in base session
 	Session interface {
 		// Peer returns the peer.
@@ -46,63 +52,88 @@ type (
 		// Swap returns custom data swap of the session(socket).
 		Swap() goutil.Map
 	}
-	// GenerateAuthInfoFunc the function used to generate auth info
-	GenerateAuthInfoFunc func() string
-	// VerifyAuthInfoFunc the function used to verify auth info
-	VerifyAuthInfoFunc func(authInfo string, sess Session) *tp.Rerror
-	auth               struct {
-		generateAuthInfoFunc GenerateAuthInfoFunc
-		verifyAuthInfoFunc   VerifyAuthInfoFunc
-	}
 )
+
+type authBearerPlugin struct {
+	bearerFunc Bearer
+	msgSetting []tp.MessageSetting
+}
+
+type authCheckerPlugin struct {
+	checkerFunc Checker
+	msgSetting  []tp.MessageSetting
+}
 
 var (
-	_ tp.PostDialPlugin   = new(auth)
-	_ tp.PostAcceptPlugin = new(auth)
+	_ tp.PostDialPlugin   = new(authBearerPlugin)
+	_ tp.PostAcceptPlugin = new(authCheckerPlugin)
 )
 
-const authServiceMethod = "/auth/verify"
-
-func (a *auth) Name() string {
-	return "auth"
+func (a *authBearerPlugin) Name() string {
+	return "auth-bearer"
 }
 
-func (a *auth) PostDial(sess tp.PreSession) *tp.Rerror {
-	if a.generateAuthInfoFunc == nil {
-		return nil
-	}
-	rerr := sess.Send(authServiceMethod, a.generateAuthInfoFunc(), nil, tp.WithBodyCodec('s'), tp.WithMtype(tp.TypeCall))
-	if rerr != nil {
-		return rerr
-	}
-	_, rerr = sess.Receive(func(header tp.Header) interface{} {
-		return nil
-	})
-	return rerr
+func (a *authCheckerPlugin) Name() string {
+	return "auth-checker"
 }
 
-func (a *auth) PostAccept(sess tp.PreSession) *tp.Rerror {
-	if a.verifyAuthInfoFunc == nil {
+func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
+	if a.bearerFunc == nil {
 		return nil
 	}
-	input, rerr := sess.Receive(func(header tp.Header) interface{} {
-		if header.Mtype() == tp.TypeCall && header.ServiceMethod() == authServiceMethod {
-			return new(string)
+	return a.bearerFunc(sess, func(info, retRecv interface{}) *tp.Rerror {
+		rerr := sess.Send("", info, nil, append(a.msgSetting, tp.WithMtype(tp.TypeAuthCall))...)
+		if rerr.HasError() {
+			return rerr
+		}
+		retMsg, rerr := sess.Receive(func(header tp.Header) interface{} {
+			if header.Mtype() != tp.TypeAuthReply {
+				return nil
+			}
+			return retRecv
+		})
+		if rerr.HasError() {
+			return rerr
+		}
+		if retMsg.Mtype() != tp.TypeAuthReply {
+			return tp.NewRerror(
+				tp.CodeUnauthorized,
+				tp.CodeText(tp.CodeUnauthorized),
+				fmt.Sprintf("auth message(1st) expect: AUTH_REPLY, but received: %s",
+					tp.TypeText(retMsg.Mtype())),
+			)
 		}
 		return nil
 	})
-	if rerr != nil {
-		return rerr
+}
+
+func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Rerror {
+	if a.checkerFunc == nil {
+		return nil
 	}
-	authInfoPtr, ok := input.Body().(*string)
-	if !ok || input.Mtype() != tp.TypeCall || input.ServiceMethod() != authServiceMethod {
-		rerr = tp.NewRerror(
-			tp.CodeUnauthorized,
-			tp.CodeText(tp.CodeUnauthorized),
-			fmt.Sprintf("the 1th package want: CALL %s, but have: %s %s", authServiceMethod, tp.TypeText(input.Mtype()), input.ServiceMethod()),
-		)
-	} else {
-		rerr = a.verifyAuthInfoFunc(*authInfoPtr, sess)
+	ret, rerr := a.checkerFunc(sess, func(infoRecv interface{}) *tp.Rerror {
+		infoMsg, rerr := sess.Receive(func(header tp.Header) interface{} {
+			if header.Mtype() != tp.TypeAuthCall {
+				return nil
+			}
+			return infoRecv
+		})
+		if rerr.HasError() {
+			return rerr
+		}
+		if infoMsg.Mtype() != tp.TypeAuthCall {
+			return tp.NewRerror(
+				tp.CodeUnauthorized,
+				tp.CodeText(tp.CodeUnauthorized),
+				fmt.Sprintf("auth message(1st) expect: AUTH_CALL, but received: %s",
+					tp.TypeText(infoMsg.Mtype())),
+			)
+		}
+		return nil
+	})
+	rerr2 := sess.Send("", ret, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+	if rerr2.HasError() {
+		return rerr2
 	}
-	return sess.Send(authServiceMethod, nil, rerr, tp.WithMtype(tp.TypeReply))
+	return rerr
 }

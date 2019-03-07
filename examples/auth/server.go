@@ -13,7 +13,7 @@ func main() {
 		tp.PeerConfig{
 			ListenPort: 9090,
 		},
-		auth.NewVerifyPlugin(verifyAuthInfo),
+		auth.NewCheckerPlugin(authChecker),
 	)
 	srv.ListenAndServe()
 }
@@ -25,10 +25,15 @@ const (
 	detailAuthFail = "auth fail detail"
 )
 
-func verifyAuthInfo(authInfo string, sess auth.Session) *tp.Rerror {
+func authChecker(sess auth.Session, fn auth.Receiver) (ret interface{}, rerr *tp.Rerror) {
+	var authInfo string
+	rerr = fn(&authInfo)
+	if rerr.HasError() {
+		return
+	}
 	tp.Infof("auth info: %v", authInfo)
 	if clientAuthInfo != authInfo {
-		return tp.NewRerror(codeAuthFail, textAuthFail, detailAuthFail)
+		return nil, tp.NewRerror(codeAuthFail, textAuthFail, detailAuthFail)
 	}
-	return nil
+	return "pass", nil
 }

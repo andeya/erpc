@@ -9,7 +9,7 @@ import (
 
 func main() {
 	defer tp.FlushLogger()
-	cli := tp.NewPeer(tp.PeerConfig{}, auth.NewLaunchPlugin(generateAuthInfo))
+	cli := tp.NewPeer(tp.PeerConfig{}, auth.NewBearerPlugin(authBearer))
 	defer cli.Close()
 	_, rerr := cli.Dial(":9090")
 	if rerr != nil {
@@ -19,7 +19,13 @@ func main() {
 
 const clientAuthInfo = "client-auth-info-12345"
 
-func generateAuthInfo() string {
-	tp.Infof("generate auth info: %s", clientAuthInfo)
-	return clientAuthInfo
+func authBearer(sess auth.Session, fn auth.Sender) *tp.Rerror {
+	var ret string
+	rerr := fn(clientAuthInfo, &ret)
+	if rerr.HasError() {
+		tp.Infof("auth info: %s, error: %s", clientAuthInfo, rerr)
+		return rerr
+	}
+	tp.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
+	return nil
 }

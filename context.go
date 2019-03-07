@@ -343,7 +343,7 @@ func (c *handlerCtx) binding(header Header) (body interface{}) {
 	}
 }
 
-const logFormatDisconnected = "disconnected due to unsupported message type: %d\n%s %s %q\nRECV(%s)"
+const logFormatDisconnected = "disconnected due to unsupported message type: %d %s %s %q RECV(%s)"
 
 // Be executed asynchronously after readed message
 func (c *handlerCtx) handle() {
@@ -371,7 +371,9 @@ func (c *handlerCtx) handle() {
 E:
 	// if unsupported, disconnected.
 	rerrCodeMtypeNotAllowed.SetToMeta(c.output.Meta())
-	Errorf(logFormatDisconnected, c.input.Mtype(), c.IP(), c.input.ServiceMethod(), c.input.Seq(), messageLogBytes(c.input, c.sess.peer.printDetail))
+	Errorf(logFormatDisconnected,
+		c.input.Mtype(), c.IP(), c.input.ServiceMethod(), c.input.Seq(),
+		messageLogBytes(c.input, c.sess.peer.printDetail))
 	go c.sess.Close()
 }
 
