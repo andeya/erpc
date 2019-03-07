@@ -19,6 +19,7 @@ import (
 //  receiver peer error code range: [500,599].
 const (
 	CodeUnknownError        = -1
+	CodeNoError             = 0 // nil error
 	CodeConnClosed          = 102
 	CodeWriteFailed         = 104
 	CodeDialFailed          = 105
@@ -214,7 +215,7 @@ func getRerrorBytes(meta *utils.Args) []byte {
 
 // ToError converts to error
 func (r *Rerror) ToError() error {
-	if r == nil {
+	if r == nil || r.Code == CodeNoError {
 		return nil
 	}
 	return (*rerror)(unsafe.Pointer(r))
