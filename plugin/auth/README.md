@@ -53,15 +53,14 @@ func Test(t *testing.T) {
 const clientAuthInfo = "client-auth-info-12345"
 
 var authBearer = auth.NewBearerPlugin(
-	func(sess auth.Session, fn auth.SendOnce) *tp.Rerror {
+	func(sess auth.Session, fn auth.SendOnce) (rerr *tp.Rerror) {
 		var ret string
-		rerr := fn(clientAuthInfo, &ret)
+		rerr = fn(clientAuthInfo, &ret)
 		if rerr.HasError() {
-			tp.Infof("auth info: %s, error: %s", clientAuthInfo, rerr)
-			return rerr
+			return
 		}
 		tp.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
-		return nil
+		return
 	},
 	tp.WithBodyCodec('s'),
 )

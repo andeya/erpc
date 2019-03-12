@@ -96,7 +96,7 @@ var MultiSendErr = tp.NewRerror(
 
 // MultiRecvErr the error of multiple call RecvOnce function
 var MultiRecvErr = tp.NewRerror(
-	tp.CodeWriteFailed,
+	tp.CodeInternalServerError,
 	"auth-checker plugin usage is incorrect",
 	"multiple call RecvOnce function",
 )
@@ -163,11 +163,13 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Rerror {
 		}
 		return nil
 	})
-	if rerr != MultiRecvErr {
-		rerr2 := sess.Send("", ret, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
-		if rerr2.HasError() {
-			return rerr2
-		}
+	if rerr == MultiRecvErr {
+		sess.Send("", nil, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+		return rerr
+	}
+	rerr2 := sess.Send("", ret, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+	if rerr2.HasError() {
+		return rerr2
 	}
 	return rerr
 }
