@@ -18,6 +18,7 @@ package auth
 import (
 	"fmt"
 	"net"
+	"sync/atomic"
 
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
@@ -41,14 +42,14 @@ func NewCheckerPlugin(fn Checker, retSetting ...tp.MessageSetting) tp.Plugin {
 
 type (
 	// Bearer initiates an authorization request and handles the response.
-	Bearer func(sess Session, fn Sender) *tp.Rerror
-	// Sender sends authorization request.
-	Sender func(info, retRecv interface{}) *tp.Rerror
+	Bearer func(sess Session, fn SendOnce) *tp.Rerror
+	// SendOnce sends authorization request once.
+	SendOnce func(info, retRecv interface{}) *tp.Rerror
 
 	// Checker checks the authorization request.
-	Checker func(sess Session, fn Receiver) (ret interface{}, rerr *tp.Rerror)
-	// Receiver receives authorization request.
-	Receiver func(infoRecv interface{}) *tp.Rerror
+	Checker func(sess Session, fn RecvOnce) (ret interface{}, rerr *tp.Rerror)
+	// RecvOnce receives authorization request once.
+	RecvOnce func(infoRecv interface{}) *tp.Rerror
 
 	// Session auth session provides SetID, RemoteAddr and Swap methods in base session
 	Session interface {
@@ -86,11 +87,29 @@ func (a *authCheckerPlugin) Name() string {
 	return "auth-checker"
 }
 
+// MultiSendErr the error of multiple call SendOnce function
+var MultiSendErr = tp.NewRerror(
+	tp.CodeWriteFailed,
+	"auth-bearer plugin usage is incorrect",
+	"multiple call SendOnce function",
+)
+
+// MultiRecvErr the error of multiple call RecvOnce function
+var MultiRecvErr = tp.NewRerror(
+	tp.CodeWriteFailed,
+	"auth-checker plugin usage is incorrect",
+	"multiple call RecvOnce function",
+)
+
 func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
 	if a.bearerFunc == nil {
 		return nil
 	}
+	var called int32
 	return a.bearerFunc(sess, func(info, retRecv interface{}) *tp.Rerror {
+		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
+			return MultiSendErr
+		}
 		rerr := sess.Send("", info, nil, append(a.msgSetting, tp.WithMtype(tp.TypeAuthCall))...)
 		if rerr.HasError() {
 			return rerr
@@ -120,7 +139,11 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Rerror {
 	if a.checkerFunc == nil {
 		return nil
 	}
+	var called int32
 	ret, rerr := a.checkerFunc(sess, func(infoRecv interface{}) *tp.Rerror {
+		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
+			return MultiRecvErr
+		}
 		infoMsg, rerr := sess.Receive(func(header tp.Header) interface{} {
 			if header.Mtype() != tp.TypeAuthCall {
 				return nil
@@ -140,9 +163,11 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Rerror {
 		}
 		return nil
 	})
-	rerr2 := sess.Send("", ret, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
-	if rerr2.HasError() {
-		return rerr2
+	if rerr != MultiRecvErr {
+		rerr2 := sess.Send("", ret, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+		if rerr2.HasError() {
+			return rerr2
+		}
 	}
 	return rerr
 }

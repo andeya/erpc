@@ -45,7 +45,7 @@ func Test(t *testing.T) {
 const clientAuthInfo = "client-auth-info-12345"
 
 var authBearer = auth.NewBearerPlugin(
-	func(sess auth.Session, fn auth.Sender) *tp.Rerror {
+	func(sess auth.Session, fn auth.SendOnce) *tp.Rerror {
 		var ret string
 		rerr := fn(clientAuthInfo, &ret)
 		if rerr.HasError() {
@@ -59,7 +59,7 @@ var authBearer = auth.NewBearerPlugin(
 )
 
 var authChecker = auth.NewCheckerPlugin(
-	func(sess auth.Session, fn auth.Receiver) (ret interface{}, rerr *tp.Rerror) {
+	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, rerr *tp.Rerror) {
 		var authInfo string
 		rerr = fn(&authInfo)
 		if rerr.HasError() {
