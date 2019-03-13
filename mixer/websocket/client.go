@@ -35,7 +35,7 @@ type Client struct {
 
 // NewClient creates a websocket client.
 func NewClient(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Client {
-	globalLeftPlugin = append(globalLeftPlugin, NewDialPlugin(rootPath))
+	globalLeftPlugin = append([]tp.Plugin{NewDialPlugin(rootPath)}, globalLeftPlugin...)
 	peer := tp.NewPeer(cfg, globalLeftPlugin...)
 	return &Client{
 		Peer: peer,

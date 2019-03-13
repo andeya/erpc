@@ -183,6 +183,7 @@ func (w *serverHandler) handler(conn *ws.Conn) {
 	sess, err := w.peer.ServeConn(conn, w.protoFunc)
 	if err != nil {
 		tp.Errorf("serverHandler: %v", err)
+		return
 	}
 	<-sess.CloseNotify()
 }
