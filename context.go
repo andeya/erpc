@@ -417,7 +417,7 @@ func (c *handlerCtx) handlePush() {
 
 	defer func() {
 		if p := recover(); p != nil {
-			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
+			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 		c.cost = c.sess.timeSince(c.start)
 		c.sess.printAccessLog(c.RealIP(), c.cost, c.input, nil, typePushHandle)
@@ -478,7 +478,7 @@ func (c *handlerCtx) handleCall() {
 	var writed bool
 	defer func() {
 		if p := recover(); p != nil {
-			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
+			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 			if !writed {
 				if c.handleErr == nil {
 					c.handleErr = rerrInternalServerError.Copy().SetReason(fmt.Sprint(p))
@@ -615,7 +615,7 @@ func (c *handlerCtx) handleReply() {
 
 	defer func() {
 		if p := recover(); p != nil {
-			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
+			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 		c.callCmd.result = c.input.Body()
 		c.handleErr = c.callCmd.rerr
