@@ -97,7 +97,6 @@ func (j *jsonproto) Pack(m tp.Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-// NOTE: Concurrent unsafe!
 func (j *jsonproto) Unpack(m tp.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()

@@ -92,7 +92,6 @@ func (pp *pbproto) Pack(m tp.Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-// NOTE: Concurrent unsafe!
 func (pp *pbproto) Unpack(m tp.Message) error {
 	pp.rMu.Lock()
 	defer pp.rMu.Unlock()
