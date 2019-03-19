@@ -25,9 +25,17 @@ import (
 	"github.com/henrylee2cn/teleport/xfer"
 )
 
+var ids = map[byte]bool{}
+
 // Reg registers a gzip filter for transfer.
 func Reg(id byte, name string, level int) {
 	xfer.Reg(newGzip(id, name, level))
+	ids[id] = true
+}
+
+// Is determines if the id is gzip.
+func Is(id byte) bool {
+	return ids[id]
 }
 
 // newGzip creates a new gizp filter.
