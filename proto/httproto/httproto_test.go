@@ -33,6 +33,7 @@ func TestHTTProto(t *testing.T) {
 	go srv.ListenAndServe(httproto.NewHTTProtoFunc(true))
 	time.Sleep(1e9)
 
+	url := "http://localhost:9090/home/test?peer_id=110"
 	// TP Client
 	cli := tp.NewPeer(tp.PeerConfig{})
 	sess, rerr := cli.Dial(":9090", httproto.NewHTTProtoFunc())
@@ -44,7 +45,7 @@ func TestHTTProto(t *testing.T) {
 		"author": "henrylee2cn",
 	}
 	rerr = sess.Call(
-		"/home/test?peer_id=110",
+		url,
 		arg,
 		&result,
 		// tp.WithXferPipe('g'),
@@ -56,7 +57,7 @@ func TestHTTProto(t *testing.T) {
 
 	// HTTP Client
 	contentType, body, _ := httpbody.NewJSONBody(arg)
-	resp, err := http.Post("http://localhost:9090/home/test?peer_id=110", contentType, body)
+	resp, err := http.Post(url, contentType, body)
 	if err != nil {
 		t.Fatal(err)
 	}

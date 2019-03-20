@@ -43,11 +43,11 @@ var (
 		"text/xml":                          codec.ID_XML,
 	}
 	contentTypeMapping = map[byte]string{
-		codec.ID_PROTOBUF: "application/x-protobuf",
-		codec.ID_JSON:     "application/json",
-		codec.ID_FORM:     "application/x-www-form-urlencoded",
-		codec.ID_PLAIN:    "text/plain",
-		codec.ID_XML:      "text/xml",
+		codec.ID_PROTOBUF: "application/x-protobuf;charset=utf-8",
+		codec.ID_JSON:     "application/json;charset=utf-8",
+		codec.ID_FORM:     "application/x-www-form-urlencoded;charset=utf-8",
+		codec.ID_PLAIN:    "text/plain;charset=utf-8",
+		codec.ID_XML:      "text/xml;charset=utf-8",
 	}
 )
 
@@ -176,13 +176,25 @@ var (
 )
 
 func (h *httproto) packRequest(m tp.Message, header http.Header, bb *utils.ByteBuffer, bodyBytes []byte) error {
+	u, err := url.Parse(m.ServiceMethod())
+	if err != nil {
+		return err
+	}
+	if u.Host != "" {
+		header.Set("Host", u.Host)
+	}
+	header.Set("User-Agent", "teleport-httproto/1.1")
 	bb.Write(methodBytes)
 	bb.WriteByte(' ')
-	bb.WriteString(m.ServiceMethod())
+	if u.RawQuery == "" {
+		bb.WriteString(u.Path)
+	} else {
+		bb.WriteString(u.Path + "?" + u.RawQuery)
+	}
 	bb.WriteByte(' ')
 	bb.Write(versionBytes)
 	bb.Write(crlfBytes)
-	header.Set("Content-Type", GetContentType(m.BodyCodec(), "text/plain"))
+	header.Set("Content-Type", GetContentType(m.BodyCodec(), "text/plain;charset=utf-8"))
 	header.Set("Content-Length", strconv.Itoa(len(bodyBytes)))
 	header.Set("Accept-Encoding", "gzip")
 	header.Write(bb)

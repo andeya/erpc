@@ -12,11 +12,11 @@ example:
 
 ```
 POST /home/test?peer_id=110 HTTP/1.1
-Host: localhost:9090
-User-Agent: Go-http-client/1.1
+Accept-Encoding: gzip
 Content-Length: 24
 Content-Type: application/json;charset=utf-8
-Accept-Encoding: gzip
+Host: localhost:9090
+User-Agent: teleport-httproto/1.1
 X-Mtype: 1
 X-Seq: 1
 
@@ -28,7 +28,7 @@ X-Seq: 1
 ```
 HTTP/1.1 200 OK
 Content-Length: 32
-Content-Type: application/json
+Content-Type: application/json;charset=utf-8
 X-Mtype: 2
 X-Seq: 1
 
@@ -45,8 +45,12 @@ X-Seq: 1
 package httproto_test
 
 import (
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
+
+	"github.com/henrylee2cn/goutil/httpbody"
 
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/proto/httproto"
@@ -70,28 +74,40 @@ func TestHTTProto(t *testing.T) {
 	// Server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
-	go srv.ListenAndServe(httproto.NewHTTProtoFunc())
+	go srv.ListenAndServe(httproto.NewHTTProtoFunc(true))
 	time.Sleep(1e9)
 
-	// Client
+	url := "http://localhost:9090/home/test?peer_id=110"
+	// TP Client
 	cli := tp.NewPeer(tp.PeerConfig{})
-	sess, err := cli.Dial(":9090", httproto.NewHTTProtoFunc())
-	if err != nil {
-		t.Error(err)
+	sess, rerr := cli.Dial(":9090", httproto.NewHTTProtoFunc())
+	if rerr != nil {
+		t.Fatal(rerr)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/test?peer_id=110",
-		map[string]string{
-			"author": "henrylee2cn",
-		},
+	var arg = map[string]string{
+		"author": "henrylee2cn",
+	}
+	rerr = sess.Call(
+		url,
+		arg,
 		&result,
-		tp.WithXferPipe('g'),
+		// tp.WithXferPipe('g'),
 	).Rerror()
 	if rerr != nil {
-		t.Error(rerr)
+		t.Fatal(rerr)
 	}
-	t.Logf("result:%v", result)
-	time.Sleep(3e9)
+	t.Logf("teleport client response: %v", result)
+
+	// HTTP Client
+	contentType, body, _ := httpbody.NewJSONBody(arg)
+	resp, err := http.Post(url, contentType, body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	t.Logf("http client response: %s", b)
 }
 ```
 
