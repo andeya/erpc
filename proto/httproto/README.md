@@ -4,7 +4,7 @@ httproto is implemented HTTP style socket communication protocol.
 
 NOTE: It simply transfers data in HTTP style instead of the full HTTP protocol.
 
-### Message Bytes
+### Message
 
 example:
 
@@ -33,6 +33,21 @@ X-Mtype: 2
 X-Seq: 1
 
 {"arg":{"author":"henrylee2cn"}}
+```
+
+
+- Default Support Content-Type
+	- codec.ID_PROTOBUF: "application/x-protobuf;charset=utf-8"
+	- codec.ID_JSON:     "application/json;charset=utf-8"
+	- codec.ID_FORM:     "application/x-www-form-urlencoded;charset=utf-8"
+	- codec.ID_PLAIN:    "text/plain;charset=utf-8"
+	- codec.ID_XML:      "text/xml;charset=utf-8"
+
+
+- RegBodyCodec registers a mapping of content type to body coder
+
+```go
+func RegBodyCodec(contentType string, codecID byte)
 ```
 
 ### Usage
