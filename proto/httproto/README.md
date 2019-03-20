@@ -37,11 +37,11 @@ X-Seq: 1
 
 
 - Default Support Content-Type
-	- codec.ID_PROTOBUF: "application/x-protobuf;charset=utf-8"
-	- codec.ID_JSON:     "application/json;charset=utf-8"
-	- codec.ID_FORM:     "application/x-www-form-urlencoded;charset=utf-8"
-	- codec.ID_PLAIN:    "text/plain;charset=utf-8"
-	- codec.ID_XML:      "text/xml;charset=utf-8"
+	- codec.ID_PROTOBUF: application/x-protobuf;charset=utf-8
+	- codec.ID_JSON:     application/json;charset=utf-8
+	- codec.ID_FORM:     application/x-www-form-urlencoded;charset=utf-8
+	- codec.ID_PLAIN:    text/plain;charset=utf-8
+	- codec.ID_XML:      text/xml;charset=utf-8
 
 
 - RegBodyCodec registers a mapping of content type to body coder
