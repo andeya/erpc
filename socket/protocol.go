@@ -71,7 +71,7 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
 {1 bytes sequence length}
-{sequence}
+{sequence (HEX 36 string of int32)}
 {1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
 {1 bytes service method length}
 {service method}
