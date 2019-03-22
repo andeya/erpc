@@ -4,6 +4,8 @@ rawproto is the protocol default frame splicing format protocol.
 
 ### Message Bytes
 
+raw protocol format(Big Endian):
+
 ```sh
 {4 bytes message length}
 {1 byte protocol version}

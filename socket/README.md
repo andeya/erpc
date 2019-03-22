@@ -335,7 +335,6 @@ func NewSocket(net.Conn, ...ProtoFunc) Socket
 Default protocol `RawProto`(Big Endian):
 
 ```sh
-# raw protocol format(Big Endian):
 {4 bytes message length}
 {1 byte protocol version}
 {1 byte transfer pipe length}
