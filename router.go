@@ -484,7 +484,7 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 			obj := pool.Get().(*CallCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
-			rerr, _ := rets[1].Interface().(*Rerror)
+			rerr := (*Rerror)(unsafe.Pointer(rets[1].Pointer()))
 			if rerr != nil {
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
@@ -567,7 +567,7 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			rets := cValue.Call([]reflect.Value{reflect.ValueOf(ctx), argValue})
-			rerr, _ := rets[1].Interface().(*Rerror)
+			rerr := (*Rerror)(unsafe.Pointer(rets[1].Pointer()))
 			if rerr != nil {
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
@@ -608,7 +608,7 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 			obj := pool.Get().(*CallCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := cValue.Call([]reflect.Value{obj.ctrl, argValue})
-			rerr, _ := rets[1].Interface().(*Rerror)
+			rerr := (*Rerror)(unsafe.Pointer(rets[1].Pointer()))
 			if rerr != nil {
 				ctx.handleErr = rerr
 				rerr.SetToMeta(ctx.output.Meta())
@@ -732,7 +732,7 @@ func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, plugi
 			obj := pool.Get().(*PushCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := methodFunc.Call([]reflect.Value{obj.ctrl, argValue})
-			ctx.handleErr, _ = rets[0].Interface().(*Rerror)
+			ctx.handleErr = (*Rerror)(unsafe.Pointer(rets[0].Pointer()))
 			pool.Put(obj)
 		}
 		handlers = append(handlers, &Handler{
@@ -801,7 +801,7 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
 			rets := cValue.Call([]reflect.Value{reflect.ValueOf(ctx), argValue})
-			ctx.handleErr, _ = rets[0].Interface().(*Rerror)
+			ctx.handleErr = (*Rerror)(unsafe.Pointer(rets[0].Pointer()))
 		}
 
 	case reflect.Ptr:
@@ -836,7 +836,7 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 			obj := pool.Get().(*PushCtrlValue)
 			*obj.ctxPtr = ctx
 			rets := cValue.Call([]reflect.Value{obj.ctrl, argValue})
-			ctx.handleErr, _ = rets[0].Interface().(*Rerror)
+			ctx.handleErr = (*Rerror)(unsafe.Pointer(rets[0].Pointer()))
 			pool.Put(obj)
 		}
 	}
