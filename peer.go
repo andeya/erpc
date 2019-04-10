@@ -235,13 +235,33 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror) {
 	}, addr, protoFunc)
 }
 
+type redialTimes int32
+
+func (p *peer) newRedialTimes() *redialTimes {
+	r := redialTimes(p.redialTimes)
+	return &r
+}
+
+func (r *redialTimes) next() bool {
+	t := *r
+	if t == 0 {
+		return false
+	}
+	if t > 0 {
+		*r--
+	}
+	return true
+}
+
 func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) (*session, *Rerror) {
-	var conn net.Conn
-	var dialErr error
-	for i := p.redialTimes + 1; i > 0; i-- {
-		conn, dialErr = dialFunc()
-		if dialErr == nil {
-			break
+	conn, dialErr := dialFunc()
+	if dialErr != nil {
+		redialTimes := p.newRedialTimes()
+		for redialTimes.next() {
+			conn, dialErr = dialFunc()
+			if dialErr == nil {
+				break
+			}
 		}
 	}
 	if dialErr != nil {
@@ -251,13 +271,14 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	var sess = newSession(p, conn, protoFuncs)
 
 	// create redial func
-	if p.redialTimes > 0 {
+	if p.redialTimes != 0 {
 		sess.redialForClientLocked = func(oldConn net.Conn) bool {
 			if oldConn != sess.getConn() {
 				return true
 			}
 			var err error
-			for i := p.redialTimes; i > 0; i-- {
+			redialTimes := p.newRedialTimes()
+			for redialTimes.next() {
 				time.Sleep(p.redialInterval)
 				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 				err = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
