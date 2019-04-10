@@ -269,10 +269,6 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 		rerr := rerrDialFailed.Copy().SetReason(dialErr.Error())
 		return nil, rerr
 	}
-	if dialErr != nil {
-		rerr := rerrDialFailed.Copy().SetReason(dialErr.Error())
-		return nil, rerr
-	}
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
 	}
