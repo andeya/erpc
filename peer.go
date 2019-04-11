@@ -258,6 +258,8 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	if dialErr != nil {
 		redialTimes := p.newRedialTimes()
 		for redialTimes.next() {
+			time.Sleep(p.redialInterval)
+			Debugf("trying to redial... (network:%s, addr:%s)", p.network, addr)
 			conn, dialErr = dialFunc()
 			if dialErr == nil {
 				break
