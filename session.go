@@ -713,7 +713,7 @@ func (s *session) startReadAndHandle() {
 		s.readDisconnected(usedConn, err)
 	}()
 
-	// read call, call reple or push
+	// read call, call reply or push
 	for s.goonRead() {
 		var ctx = s.peer.getContext(s, false)
 		withContext(ctx.input)
@@ -833,7 +833,7 @@ func (sh *SessionHub) Range(fn func(*session) bool) {
 }
 
 // Random gets a *session randomly.
-// If third returned arg is false, mean no *session is exist.
+// If second returned arg is false, mean no *session is exist.
 func (sh *SessionHub) Random() (*session, bool) {
 	_, sess, exist := sh.sessions.Random()
 	if !exist {
