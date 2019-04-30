@@ -713,7 +713,7 @@ func (s *session) startReadAndHandle() {
 		s.readDisconnected(usedConn, err)
 	}()
 
-	// read call, call reple or push
+	// read call, call reply or push
 	for s.goonRead() {
 		var ctx = s.peer.getContext(s, false)
 		withContext(ctx.input)
