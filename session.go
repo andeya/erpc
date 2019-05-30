@@ -151,6 +151,7 @@ type session struct {
 	statusLock                     sync.Mutex
 	writeLock                      sync.Mutex
 	graceCtxWaitGroup              sync.WaitGroup
+	graceCtxMutex                  sync.Mutex
 	graceCallCmdWaitGroup          sync.WaitGroup
 	sessionAge                     time.Duration
 	contextAge                     time.Duration
@@ -604,6 +605,12 @@ func (s *session) notifyClosed() {
 	}
 }
 
+func (s *session) graceCtxWait() {
+	s.graceCtxMutex.Lock()
+	s.graceCtxWaitGroup.Wait()
+	s.graceCtxMutex.Unlock()
+}
+
 // Close closes the session.
 func (s *session) Close() error {
 	s.lock.Lock()
@@ -620,7 +627,7 @@ func (s *session) Close() error {
 
 	s.peer.sessHub.Delete(s.ID())
 	s.notifyClosed()
-	s.graceCtxWaitGroup.Wait()
+	s.graceCtxWait()
 	s.graceCallCmdWaitGroup.Wait()
 
 	s.statusLock.Lock()
@@ -653,7 +660,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
 		Debugf("disconnect(%s) when reading: %s", s.RemoteAddr().String(), err.Error())
 	}
-	s.graceCtxWaitGroup.Wait()
+	s.graceCtxWait()
 
 	// cancel the callCmd that is waiting for a reply
 	s.callCmdMap.Range(func(_, v interface{}) bool {
