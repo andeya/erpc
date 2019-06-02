@@ -99,10 +99,11 @@ type (
 		// Raw returns the raw net.Conn
 		Raw() net.Conn
 	}
-	// IOWithRawLocked more RawLocked method than Socket interface
-	IOWithRawLocked interface {
+	// UnsafeSocket has more unsafe methods than Socket interface.
+	UnsafeSocket interface {
 		Socket
-		// RawLocked returns the raw net.Conn
+		// RawLocked returns the raw net.Conn,
+		// can be called in ProtoFunc.
 		// NOTE:
 		//  Make sure the external is locked before calling
 		RawLocked() net.Conn
@@ -126,8 +127,8 @@ const (
 )
 
 var (
-	_ net.Conn        = Socket(nil)
-	_ IOWithRawLocked = new(socket)
+	_ net.Conn     = Socket(nil)
+	_ UnsafeSocket = new(socket)
 )
 
 // ErrProactivelyCloseSocket proactively close the socket error.
@@ -173,7 +174,8 @@ func (s *socket) Raw() net.Conn {
 	return conn
 }
 
-// RawLocked returns the raw net.Conn
+// RawLocked returns the raw net.Conn,
+// can be called in ProtoFunc.
 // NOTE:
 //  Make sure the external is locked before calling
 func (s *socket) RawLocked() net.Conn {

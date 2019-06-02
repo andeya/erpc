@@ -31,7 +31,7 @@ func NewWsProtoFunc(subProto ...tp.ProtoFunc) tp.ProtoFunc {
 	return func(rw tp.IOWithReadBuffer) socket.Proto {
 		// When called, the lock of the external socket.Socket is already locked,
 		// so it is concurrent security.
-		conn, ok := rw.(socket.IOWithRawLocked).RawLocked().(*ws.Conn)
+		conn, ok := rw.(socket.UnsafeSocket).RawLocked().(*ws.Conn)
 		if !ok {
 			tp.Warnf("connection does not support websocket protocol")
 			if len(subProto) > 0 {
