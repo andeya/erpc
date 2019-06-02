@@ -29,7 +29,9 @@ var defaultProto = jsonSubProto.NewJSONSubProtoFunc()
 // NewWsProtoFunc wraps a protocol to a new websocket protocol.
 func NewWsProtoFunc(subProto ...tp.ProtoFunc) tp.ProtoFunc {
 	return func(rw tp.IOWithReadBuffer) socket.Proto {
-		conn, ok := rw.(socket.Socket).Raw().(*ws.Conn)
+		// When called, the lock of the external socket.Socket is already locked,
+		// so it is concurrent security.
+		conn, ok := rw.(socket.IOWithRawLocked).RawLocked().(*ws.Conn)
 		if !ok {
 			tp.Warnf("connection does not support websocket protocol")
 			if len(subProto) > 0 {
