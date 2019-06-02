@@ -99,6 +99,14 @@ type (
 		// Raw returns the raw net.Conn
 		Raw() net.Conn
 	}
+	// IOWithRawLocked more RawLocked method than Socket interface
+	IOWithRawLocked interface {
+		Socket
+		// RawLocked returns the raw net.Conn
+		// NOTE:
+		//  Make sure the external is locked before calling
+		RawLocked() net.Conn
+	}
 	socket struct {
 		net.Conn
 		readerWithBuffer *bufio.Reader
@@ -117,7 +125,10 @@ const (
 	activeClose int32 = 1
 )
 
-var _ net.Conn = Socket(nil)
+var (
+	_ net.Conn        = Socket(nil)
+	_ IOWithRawLocked = new(socket)
+)
 
 // ErrProactivelyCloseSocket proactively close the socket error.
 var ErrProactivelyCloseSocket = errors.New("socket is closed proactively")
@@ -160,6 +171,13 @@ func (s *socket) Raw() net.Conn {
 	conn := s.Conn
 	s.mu.RUnlock()
 	return conn
+}
+
+// RawLocked returns the raw net.Conn
+// NOTE:
+//  Make sure the external is locked before calling
+func (s *socket) RawLocked() net.Conn {
+	return s.Conn
 }
 
 // Read reads data from the connection.
