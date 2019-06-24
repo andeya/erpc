@@ -138,7 +138,7 @@ func (ctx *pongPush) heartbeat(_ *struct{}) *tp.Rerror {
 	return handelHeartbeat(ctx.Session(), ctx.PeekMeta)
 }
 
-func handelHeartbeat(sess tp.Session, peekMeta func(string) []byte) *tp.Rerror {
+func handelHeartbeat(sess tp.CtxSession, peekMeta func(string) []byte) *tp.Rerror {
 	rateStr := goutil.BytesToString(peekMeta(heartbeatMetaKey))
 	rateSecond := parseHeartbeatRateSecond(rateStr)
 	isFirst := updateHeartbeatInfo(sess.Swap(), time.Second*time.Duration(rateSecond))

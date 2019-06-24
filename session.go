@@ -80,10 +80,10 @@ type (
 	}
 	// BaseSession a connection session with the common method set.
 	BaseSession interface {
-		// ID returns the session id.
-		ID() string
 		// Peer returns the peer.
 		Peer() Peer
+		// ID returns the session id.
+		ID() string
 		// LocalAddr returns the local network address.
 		LocalAddr() net.Addr
 		// RemoteAddr returns the remote network address.
@@ -93,13 +93,16 @@ type (
 		// Logger logger interface
 		Logger
 	}
-	// Session a connection session.
-	Session interface {
-		BaseSession
-		// SetID sets the session id.
-		SetID(newID string)
-		// Close closes the session.
-		Close() error
+	// CtxSession a connection session that can be used in the handler context.
+	CtxSession interface {
+		// ID returns the session id.
+		ID() string
+		// LocalAddr returns the local network address.
+		LocalAddr() net.Addr
+		// RemoteAddr returns the remote network address.
+		RemoteAddr() net.Addr
+		// Swap returns custom data swap of the session(socket).
+		Swap() goutil.Map
 		// CloseNotify returns a channel that closes when the connection has gone away.
 		CloseNotify() <-chan struct{}
 		// Health checks if the session is usable.
@@ -127,13 +130,26 @@ type (
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
 		ContextAge() time.Duration
+		// Logger logger interface
+		Logger
+	}
+	// Session a connection session.
+	Session interface {
+		// Peer returns the peer.
+		Peer() Peer
+		// SetID sets the session id.
+		SetID(newID string)
+		// Close closes the session.
+		Close() error
+		CtxSession
 	}
 )
 
 var (
 	_ PreSession  = new(session)
-	_ Session     = new(session)
 	_ BaseSession = new(session)
+	_ CtxSession  = new(session)
+	_ Session     = new(session)
 )
 
 type session struct {
