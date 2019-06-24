@@ -33,7 +33,7 @@ type (
 		// Peer returns the peer.
 		Peer() Peer
 		// Session returns the session.
-		Session() Session
+		Session() CtxSession
 		// IP returns the remote addr.
 		IP() string
 		// RealIP returns the the current real remote addr.
@@ -218,7 +218,7 @@ func (c *handlerCtx) Peer() Peer {
 }
 
 // Session returns the session.
-func (c *handlerCtx) Session() Session {
+func (c *handlerCtx) Session() CtxSession {
 	return c.sess
 }
 
@@ -729,11 +729,11 @@ func (c *callCmd) Peer() Peer {
 
 // TraceSession trace back the session.
 func (c *callCmd) TraceSession() (Session, bool) {
-	return c.Session(), true
+	return c.sess, true
 }
 
 // Session returns the session.
-func (c *callCmd) Session() Session {
+func (c *callCmd) Session() CtxSession {
 	return c.sess
 }
 
