@@ -338,9 +338,29 @@ func (s *session) Send(serviceMethod string, body interface{}, rerr *Rerror, set
 		ctxTimout, _ := context.WithTimeout(output.Context(), age)
 		socket.WithContext(ctxTimout)(output)
 	}
-	_, replyErr = s.write(output)
-	socket.PutMessage(output)
-	return replyErr
+
+	defer socket.PutMessage(output)
+
+	s.writeLock.Lock()
+	defer s.writeLock.Unlock()
+
+	ctx := output.Context()
+	select {
+	case <-ctx.Done():
+		return rerrWriteFailed.Copy().SetReason(ctx.Err().Error())
+	default:
+		deadline, _ := ctx.Deadline()
+		s.socket.SetWriteDeadline(deadline)
+		err := s.socket.WriteMessage(output)
+		if err == nil {
+			return nil
+		}
+		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
+			return rerrConnClosed
+		}
+		Debugf("write error: %s", err.Error())
+		return rerrWriteFailed.Copy().SetReason(err.Error())
+	}
 }
 
 // Receive receives a message from peer, before the formal connection.
