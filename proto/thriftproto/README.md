@@ -50,13 +50,13 @@ func TestTProto(t *testing.T) {
 	// server
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
-	go srv.ListenAndServe(thriftproto.NewTProtoFunc())
+	go srv.ListenAndServe(thriftproto.NewTProtoFunc(nil, nil))
 	time.Sleep(1e9)
 
 	// client
 	cli := tp.NewPeer(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
-	sess, err := cli.Dial(":9090", thriftproto.NewTProtoFunc())
+	sess, err := cli.Dial(":9090", thriftproto.NewTProtoFunc(nil, nil))
 	if err != nil {
 		t.Error(err)
 	}

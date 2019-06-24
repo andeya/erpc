@@ -7,6 +7,7 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 	tp "github.com/henrylee2cn/teleport"
 	"github.com/henrylee2cn/teleport/proto/thriftproto/gen-go/payload"
+	"github.com/henrylee2cn/teleport/utils"
 )
 
 func init() {
@@ -16,21 +17,29 @@ func init() {
 
 // NewTProtoFunc creates tp.ProtoFunc of Thrift protocol.
 // NOTE:
-//  If @factory is not provided, use the default binary protocol.
-func NewTProtoFunc(factory ...thrift.TProtocolFactory) tp.ProtoFunc {
-	var fa thrift.TProtocolFactory
-	if len(factory) > 0 {
-		fa = factory[0]
-	} else {
-		fa = thrift.NewTBinaryProtocolFactoryDefault()
+//  If @protoFactory is not provided, use the default binary protocol.
+func NewTProtoFunc(transFactory thrift.TTransportFactory, protoFactory thrift.TProtocolFactory) tp.ProtoFunc {
+	if protoFactory == nil {
+		protoFactory = thrift.NewTBinaryProtocolFactoryDefault()
 	}
 	return func(rw tp.IOWithReadBuffer) tp.Proto {
 		p := &thriftproto{
-			id:   't',
-			name: "thrift",
-			rw:   rw,
+			id:        't',
+			name:      "thrift",
+			rwCounter: utils.NewReadWriteCounter(rw),
 		}
-		p.ioprot = fa.GetProtocol(p)
+		var tTransport thrift.TTransport = &BaseTTransport{
+			ReadWriteCounter: p.rwCounter,
+		}
+		if transFactory != nil {
+			t, err := transFactory.GetTransport(tTransport)
+			if err != nil {
+				tp.Errorf("still using the base transport because it failed to wrap it: %s", err.Error())
+			} else {
+				tTransport = t
+			}
+		}
+		p.tProtocol = protoFactory.GetProtocol(tTransport)
 		p.payloadPool = sync.Pool{
 			New: func() interface{} {
 				return payload.NewPayload()
@@ -43,12 +52,10 @@ func NewTProtoFunc(factory ...thrift.TProtocolFactory) tp.ProtoFunc {
 type thriftproto struct {
 	id          byte
 	name        string
-	rw          tp.IOWithReadBuffer
-	ioprot      thrift.TProtocol
+	rwCounter   *utils.ReadWriteCounter
+	tProtocol   thrift.TProtocol
 	packLock    sync.Mutex
 	unpackLock  sync.Mutex
-	currReaded  int
-	currWrited  int
 	payloadPool sync.Pool
 }
 
@@ -94,24 +101,24 @@ func (t *thriftproto) Pack(m tp.Message) error {
 	defer t.packLock.Unlock()
 
 	// pack
-	t.currWrited = 0
-	if err := t.ioprot.WriteMessageBegin(m.ServiceMethod(), typeID, m.Seq()); err != nil {
+	t.rwCounter.WriteCounter.Zero()
+	if err := t.tProtocol.WriteMessageBegin(m.ServiceMethod(), typeID, m.Seq()); err != nil {
 		return err
 	}
 
-	if err = pd.Write(t.ioprot); err != nil {
+	if err = pd.Write(t.tProtocol); err != nil {
 		return err
 	}
 
-	if err = t.ioprot.WriteMessageEnd(); err != nil {
+	if err = t.tProtocol.WriteMessageEnd(); err != nil {
 		return err
 	}
-	if err = t.ioprot.Flush(nil); err != nil {
+	if err = t.tProtocol.Flush(nil); err != nil {
 		return err
 	}
 
 	// set size
-	m.SetSize(uint32(t.currWrited))
+	m.SetSize(uint32(t.rwCounter.Writed()))
 
 	return nil
 }
@@ -139,13 +146,13 @@ func (t *thriftproto) Unpack(m tp.Message) error {
 func (t *thriftproto) unpack(m tp.Message) (*payload.Payload, error) {
 	t.unpackLock.Lock()
 	defer t.unpackLock.Unlock()
-	t.currWrited = 0
-	rMethod, rTypeID, rSeqID, err := t.ioprot.ReadMessageBegin()
+	t.rwCounter.WriteCounter.Zero()
+	rMethod, rTypeID, rSeqID, err := t.tProtocol.ReadMessageBegin()
 	if err != nil {
 		return nil, err
 	}
 
-	err = m.SetSize(uint32(t.currWrited))
+	err = m.SetSize(uint32(t.rwCounter.Writed()))
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +160,7 @@ func (t *thriftproto) unpack(m tp.Message) (*payload.Payload, error) {
 	pd := t.payloadPool.Get().(*payload.Payload)
 	*pd = payload.Payload{}
 
-	if err = pd.Read(t.ioprot); err != nil {
+	if err = pd.Read(t.tProtocol); err != nil {
 		t.payloadPool.Put(pd)
 		return nil, err
 	}
@@ -171,49 +178,42 @@ func (t *thriftproto) unpack(m tp.Message) (*payload.Payload, error) {
 	default:
 		m.SetMtype(tp.TypePush)
 	}
-	if err = t.ioprot.ReadMessageEnd(); err != nil {
+	if err = t.tProtocol.ReadMessageEnd(); err != nil {
 		t.payloadPool.Put(pd)
 		return nil, err
 	}
 	return pd, nil
 }
 
-func (t *thriftproto) IsOpen() bool {
+// BaseTTransport the base thrift transport
+type BaseTTransport struct {
+	*utils.ReadWriteCounter
+}
+
+var _ thrift.TTransport = new(BaseTTransport)
+
+// Open opens the transport for communication.
+func (*BaseTTransport) Open() error {
+	return nil
+}
+
+// IsOpen returns true if the transport is open.
+func (*BaseTTransport) IsOpen() bool {
 	return true
 }
 
-func (t *thriftproto) Open() error {
+// Close close the transport.
+func (*BaseTTransport) Close() error {
 	return nil
 }
 
-func (t *thriftproto) Close() error {
+// Flush flushing a memory buffer is a no-op.
+func (*BaseTTransport) Flush(context.Context) error {
 	return nil
 }
 
-func (t *thriftproto) Read(p []byte) (int, error) {
-	n, err := t.rw.Read(p)
-	if err != nil {
-		return 0, err
-	}
-	t.currReaded += n
-	return n, err
-}
-
-func (t *thriftproto) Write(p []byte) (int, error) {
-	n, err := t.rw.Write(p)
-	if err != nil {
-		return 0, err
-	}
-	t.currWrited += n
-	return n, err
-}
-
-// Flushing a memory buffer is a no-op
-func (t *thriftproto) Flush(context.Context) error {
-	return nil
-}
-
-func (t *thriftproto) RemainingBytes() (num_bytes uint64) {
+// RemainingBytes returns the number of remaining bytes.
+func (*BaseTTransport) RemainingBytes() (numBytes uint64) {
 	const maxSize = ^uint64(0)
 	return maxSize // the thruth is, we just don't know unless framed is used
 }
