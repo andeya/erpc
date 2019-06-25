@@ -67,9 +67,11 @@ func ThriftMarshal(v interface{}) ([]byte, error) {
 	p := thrift.NewTBinaryProtocol(trans, false, false)
 	switch s := v.(type) {
 	case thrift.TStruct:
-		return trans.Buffer.Bytes(), s.Write(p)
+		err := s.Write(p)
+		return trans.Buffer.Bytes(), err
 	case nil, *struct{}, struct{}:
-		return trans.Buffer.Bytes(), ThriftEmptyStruct.Write(p)
+		err := ThriftEmptyStruct.Write(p)
+		return trans.Buffer.Bytes(), err
 	}
 	return nil, fmt.Errorf("thrift codec: %T does not implement thrift.TStruct", v)
 }
