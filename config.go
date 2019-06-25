@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/cfgo"
+	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -98,11 +99,28 @@ func (p *PeerConfig) check() error {
 		p.slowCometDuration = p.SlowCometDuration
 	}
 	if len(p.DefaultBodyCodec) == 0 {
-		p.DefaultBodyCodec = "json"
+		p.DefaultBodyCodec = DefaultBodyCodec().Name()
 	}
 	if p.RedialInterval <= 0 {
 		p.RedialInterval = time.Millisecond * 100
 	}
+	return nil
+}
+
+var defaultBodyCodec codec.Codec = new(codec.JSONCodec)
+
+// DefaultBodyCodec gets the default body codec.
+func DefaultBodyCodec() codec.Codec {
+	return defaultBodyCodec
+}
+
+// SetDefaultBodyCodec sets the default body codec.
+func SetDefaultBodyCodec(codecID byte) error {
+	c, err := codec.Get(codecID)
+	if err != nil {
+		return err
+	}
+	defaultBodyCodec = c
 	return nil
 }
 
