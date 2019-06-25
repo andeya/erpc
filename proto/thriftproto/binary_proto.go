@@ -21,7 +21,7 @@ const (
 )
 
 func init() {
-	tp.Printf("Setting thrift-style service method mapper and default thrift body codec...")
+	tp.Printf("Setting thrift service method mapper and default thrift body codec...")
 	tp.SetServiceMethodMapper(tp.RPCServiceMethodMapper)
 	tp.SetDefaultBodyCodec(codec.ID_THRIFT)
 }
@@ -33,8 +33,8 @@ func init() {
 func NewBinaryProtoFunc() tp.ProtoFunc {
 	return func(rw tp.IOWithReadBuffer) tp.Proto {
 		p := &tBinaryProto{
-			id:        't',
-			name:      "thrift",
+			id:        'b',
+			name:      "thrift-binary",
 			rwCounter: utils.NewReadWriteCounter(rw),
 		}
 		p.tProtocol = thrift.NewTHeaderProtocol(&BaseTTransport{
