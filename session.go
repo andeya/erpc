@@ -693,8 +693,10 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 
 	s.peer.sessHub.Delete(s.ID())
 
-	if err != nil && err != io.EOF && err != socket.ErrProactivelyCloseSocket {
-		Debugf("disconnect(%s) when reading: %s", s.RemoteAddr().String(), err.Error())
+	if err != nil && err != socket.ErrProactivelyCloseSocket {
+		if errStr := err.Error(); errStr != "EOF" {
+			Debugf("disconnect(%s) when reading: %T %s", s.RemoteAddr().String(), err, errStr)
+		}
 	}
 	s.graceCtxWait()
 
