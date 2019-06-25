@@ -6,7 +6,6 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/proto/thriftproto/gen-go/payload"
 	"github.com/henrylee2cn/teleport/utils"
 )
 
@@ -17,6 +16,7 @@ func init() {
 
 // NewTProtoFunc creates tp.ProtoFunc of Thrift protocol.
 // NOTE:
+//  If @transFactory is not provided, use the base transport;
 //  If @protoFactory is not provided, use the default binary protocol.
 func NewTProtoFunc(transFactory thrift.TTransportFactory, protoFactory thrift.TProtocolFactory) tp.ProtoFunc {
 	if protoFactory == nil {
@@ -42,7 +42,7 @@ func NewTProtoFunc(transFactory thrift.TTransportFactory, protoFactory thrift.TP
 		p.tProtocol = protoFactory.GetProtocol(tTransport)
 		p.payloadPool = sync.Pool{
 			New: func() interface{} {
-				return payload.NewPayload()
+				return NewPayload()
 			},
 		}
 		return p
@@ -79,8 +79,8 @@ func (t *thriftproto) Pack(m tp.Message) error {
 		return err
 	}
 
-	pd := t.payloadPool.Get().(*payload.Payload)
-	*pd = payload.Payload{}
+	pd := t.payloadPool.Get().(*Payload)
+	*pd = Payload{}
 	defer t.payloadPool.Put(pd)
 
 	var typeID thrift.TMessageType
@@ -143,7 +143,7 @@ func (t *thriftproto) Unpack(m tp.Message) error {
 	return m.UnmarshalBody(body)
 }
 
-func (t *thriftproto) unpack(m tp.Message) (*payload.Payload, error) {
+func (t *thriftproto) unpack(m tp.Message) (*Payload, error) {
 	t.unpackLock.Lock()
 	defer t.unpackLock.Unlock()
 	t.rwCounter.WriteCounter.Zero()
@@ -157,8 +157,8 @@ func (t *thriftproto) unpack(m tp.Message) (*payload.Payload, error) {
 		return nil, err
 	}
 
-	pd := t.payloadPool.Get().(*payload.Payload)
-	*pd = payload.Payload{}
+	pd := t.payloadPool.Get().(*Payload)
+	*pd = Payload{}
 
 	if err = pd.Read(t.tProtocol); err != nil {
 		t.payloadPool.Put(pd)
