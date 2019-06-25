@@ -55,18 +55,17 @@ func (ProtoCodec) Unmarshal(data []byte, v interface{}) error {
 }
 
 var (
-	// EmptyStruct empty struct for protobuf
-	EmptyStruct = new(PbEmpty)
+	// PbEmptyStruct empty struct for protobuf
+	PbEmptyStruct = new(PbEmpty)
 )
 
 // ProtoMarshal returns the Protobuf encoding of v.
 func ProtoMarshal(v interface{}) ([]byte, error) {
-	if p, ok := v.(proto.Message); ok {
+	switch p := v.(type) {
+	case proto.Message:
 		return proto.Marshal(p)
-	}
-	switch v.(type) {
 	case nil, *struct{}, struct{}:
-		return proto.Marshal(EmptyStruct)
+		return proto.Marshal(PbEmptyStruct)
 	}
 	return nil, fmt.Errorf("protobuf codec: %T does not implement proto.Message", v)
 }
@@ -74,10 +73,9 @@ func ProtoMarshal(v interface{}) ([]byte, error) {
 // ProtoUnmarshal parses the Protobuf-encoded data and stores the result
 // in the value pointed to by v.
 func ProtoUnmarshal(data []byte, v interface{}) error {
-	if p, ok := v.(proto.Message); ok {
+	switch p := v.(type) {
+	case proto.Message:
 		return proto.Unmarshal(data, p)
-	}
-	switch v.(type) {
 	case nil, *struct{}, struct{}:
 		return nil
 	}
