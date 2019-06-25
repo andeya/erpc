@@ -45,6 +45,7 @@ func TestBinaryProto(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090, DefaultBodyCodec: "thrift"})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe(thriftproto.NewBinaryProtoFunc())
+	defer srv.Close()
 	time.Sleep(1e9)
 
 	// client
@@ -75,6 +76,7 @@ func TestStructProto(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe(thriftproto.NewStructProtoFunc(true))
+	defer srv.Close()
 	time.Sleep(1e9)
 
 	// client
@@ -104,6 +106,7 @@ func TestStructProtoWithoutHeaders(t *testing.T) {
 	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe(thriftproto.NewStructProtoFunc(false))
+	defer srv.Close()
 	time.Sleep(1e9)
 
 	// client
