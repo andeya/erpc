@@ -1,15 +1,17 @@
-namespace go payload
-namespace perl payload
-namespace py payload
-namespace cpp payload
-namespace rb payload
-namespace java payload
-
-// thrift-0.11.0
+namespace go thriftproto
+namespace perl thriftproto
+namespace py thriftproto
+namespace cpp thriftproto
+namespace rb thriftproto
+namespace java thriftproto
 
 struct payload {
     1: binary  meta,
     2: binary  xferPipe,
     3: i32     bodyCodec,
     4: binary  body
+}
+
+struct test {
+    1: string  author,
 }
