@@ -1,5 +1,32 @@
 package goutil
 
+// IntersectStrings calculate intersection of two sets.
+func IntersectStrings(set1, set2 []string) []string {
+	var intersect []string
+	var long, short = set1, set2
+	if len(set1) < len(set2) {
+		long, short = set2, set1
+	}
+
+	buf := make([]string, len(short))
+	copy(buf, short)
+	short = buf
+
+	for _, m := range long {
+		if len(short) == 0 {
+			break
+		}
+		for j, n := range short {
+			if m == n {
+				intersect = append(intersect, n)
+				short = short[:j+copy(short[j:], short[j+1:])]
+				break
+			}
+		}
+	}
+	return intersect
+}
+
 // SetToStrings sets a element to the string set.
 func SetToStrings(set []string, a string) []string {
 	for _, s := range set {

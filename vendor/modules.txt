@@ -1,4 +1,4 @@
-# git.apache.org/thrift.git v0.12.0
+# git.apache.org/thrift.git v0.0.0-20190623124756-03bf84826900
 git.apache.org/thrift.git/lib/go/thrift
 # github.com/cheekybits/genny v1.0.0
 github.com/cheekybits/genny/generic
@@ -8,7 +8,7 @@ github.com/gogo/protobuf/proto
 github.com/golang/protobuf/proto
 # github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21
 github.com/henrylee2cn/cfgo
-# github.com/henrylee2cn/goutil v0.0.0-20190324055015-285ef038ae58
+# github.com/henrylee2cn/goutil v0.0.0-20190624131610-6d4b61142aef
 github.com/henrylee2cn/goutil
 github.com/henrylee2cn/goutil/coarsetime
 github.com/henrylee2cn/goutil/errors

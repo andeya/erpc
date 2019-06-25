@@ -1,3 +1,5 @@
+git.apache.org/thrift.git v0.0.0-20190623124756-03bf84826900 h1:wWXD6NJJ1D3ucSPbOlGPqrOISlpwYDgFN3MWlUWRB0o=
+git.apache.org/thrift.git v0.0.0-20190623124756-03bf84826900/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 git.apache.org/thrift.git v0.12.0 h1:CMxsZlAmxKs+VAZMlDDL0wXciMblJcutQbEe3A9CYUM=
 git.apache.org/thrift.git v0.12.0/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 github.com/bifurcation/mint v0.0.0-20190129141059-83ba9bc2ead9 h1:cJwkHhcmnrWFPCg8eUPm7JJCnhnF93lFUe2ukQnXvJ4=
@@ -29,6 +31,8 @@ github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21 h1:LM2kOY1tjXcSuI
 github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21/go.mod h1:lfF29QC4YBzvpcYuZIFsOb2SKywK47MV8F1VOPH0cUM=
 github.com/henrylee2cn/goutil v0.0.0-20190324055015-285ef038ae58 h1:ThVORN4IIdRdiS/Z6TvW1J0rs5viYVU4iKkCVf43jJ8=
 github.com/henrylee2cn/goutil v0.0.0-20190324055015-285ef038ae58/go.mod h1:I9qYeMYwdKC7UFXMECNzCEv0fYuolqLeBMqsmeG7IVo=
+github.com/henrylee2cn/goutil v0.0.0-20190624131610-6d4b61142aef h1:usQVGroKooQPEjcTMCQRzNqJOLVbd6sokAlV+XQjlBA=
+github.com/henrylee2cn/goutil v0.0.0-20190624131610-6d4b61142aef/go.mod h1:I9qYeMYwdKC7UFXMECNzCEv0fYuolqLeBMqsmeG7IVo=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/kavu/go_reuseport v1.4.0 h1:YIp/96RZ3sJfn0LN+FFkkXIq3H3dfVOdRUtNejhDcxc=

@@ -47,7 +47,7 @@ func Append(ln net.Listener) error {
 }
 
 // SetInherited adds the files and envs to be inherited by the new process.
-// Notes:
+// NOTE:
 //  Only for reboot!
 //  Windows system are not supported!
 func SetInherited() error {
@@ -268,7 +268,7 @@ func isSameAddr(a1, a2 net.Addr) bool {
 }
 
 // SetInherited adds the files and envs to be inherited by the new process.
-// Notes:
+// NOTE:
 //  Only for reboot!
 //  Windows system are not supported!
 func (n *inheritNet) SetInherited() error {
