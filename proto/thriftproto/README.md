@@ -22,7 +22,7 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *thriftproto.Test) (*thriftproto.Test, *tp.Rerror) {
+func (h *Home) Test(arg *Test) (*Test, *tp.Rerror) {
 	if withoutHeader {
 		if h.CopyMeta().Len() != 0 {
 			panic("except meta is empty")
@@ -32,7 +32,7 @@ func (h *Home) Test(arg *thriftproto.Test) (*thriftproto.Test, *tp.Rerror) {
 			panic("except meta: peer_id=110")
 		}
 	}
-	return &thriftproto.Test{
+	return &Test{
 		Author: arg.Author + "->OK",
 	}, nil
 }
@@ -53,9 +53,9 @@ func TestBinaryProto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	var result thriftproto.Test
+	var result Test
 	rerr := sess.Call("Home.Test",
-		&thriftproto.Test{Author: "henrylee2cn"},
+		&Test{Author: "henrylee2cn"},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
 		tp.WithXferPipe('g'),
@@ -83,9 +83,9 @@ func TestStructProto(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	var result thriftproto.Test
+	var result Test
 	rerr := sess.Call("Home.Test",
-		&thriftproto.Test{Author: "henrylee2cn"},
+		&Test{Author: "henrylee2cn"},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
 	).Rerror()
@@ -112,9 +112,9 @@ func TestStructProtoWithoutHeaders(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	var result thriftproto.Test
+	var result Test
 	rerr := sess.Call("Home.Test",
-		&thriftproto.Test{Author: "henrylee2cn"},
+		&Test{Author: "henrylee2cn"},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
 	).Rerror()
