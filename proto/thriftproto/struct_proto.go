@@ -15,15 +15,12 @@ import (
 // NOTE:
 //  The body codec must be thrift, directly encoded as a thrift.TStruct;
 //  Support the Meta, but not support the BodyCodec and XferPipe.
-func NewStructProtoFunc(supportHeaders bool) tp.ProtoFunc {
+func NewStructProtoFunc() tp.ProtoFunc {
 	return func(rw tp.IOWithReadBuffer) tp.Proto {
 		p := &tStructProto{
-			tBinaryProto: tBinaryProto{
-				id:        't',
-				name:      "thrift",
-				rwCounter: utils.NewReadWriteCounter(rw),
-			},
-			supportHeaders: supportHeaders,
+			id:        's',
+			name:      "thrift-struct",
+			rwCounter: utils.NewReadWriteCounter(rw),
 		}
 		p.tProtocol = thrift.NewTHeaderProtocol(&BaseTTransport{
 			ReadWriteCounter: p.rwCounter,
@@ -32,9 +29,11 @@ func NewStructProtoFunc(supportHeaders bool) tp.ProtoFunc {
 	}
 }
 
-type tStructProto struct {
-	tBinaryProto
-	supportHeaders bool
+type tStructProto tBinaryProto
+
+// Version returns the protocol's id and name.
+func (t *tStructProto) Version() (byte, string) {
+	return t.id, t.name
 }
 
 // Pack writes the Message into the connection.
@@ -82,10 +81,8 @@ func (t *tStructProto) structPack(m tp.Message) error {
 		return err
 	}
 
-	if t.supportHeaders {
-		t.tProtocol.ClearWriteHeaders()
-		t.tProtocol.SetWriteHeader(HeaderMeta, goutil.BytesToString(m.Meta().QueryString()))
-	}
+	t.tProtocol.ClearWriteHeaders()
+	t.tProtocol.SetWriteHeader(HeaderMeta, goutil.BytesToString(m.Meta().QueryString()))
 
 	if err = t.tProtocol.WriteMessageEnd(); err != nil {
 		return err
@@ -119,10 +116,8 @@ func (t *tStructProto) structUnpack(m tp.Message) error {
 		return err
 	}
 
-	if t.supportHeaders {
-		headers := t.tProtocol.GetReadHeaders()
-		m.Meta().Parse(headers[HeaderMeta])
-	}
+	headers := t.tProtocol.GetReadHeaders()
+	m.Meta().Parse(headers[HeaderMeta])
 
 	m.SetBodyCodec(codec.ID_THRIFT)
 	return m.SetSize(uint32(t.rwCounter.Readed()))
