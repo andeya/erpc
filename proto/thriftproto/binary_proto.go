@@ -5,102 +5,105 @@ import (
 	"sync"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/utils"
 )
 
+const (
+	// HeaderMeta the Meta key in header of thrift message
+	HeaderMeta = "Tp-Meta"
+	// HeaderBodyCodec the BodyCodec key in header of thrift message
+	HeaderBodyCodec = "Tp-BodyCodec"
+	// HeaderXferPipe the XferPipe key in header of thrift message
+	HeaderXferPipe = "Tp-XferPipe"
+)
+
 func init() {
-	tp.Printf("Setting thrift-style service method mapper...")
+	tp.Printf("Setting thrift-style service method mapper and default thrift body codec...")
 	tp.SetServiceMethodMapper(tp.RPCServiceMethodMapper)
+	tp.SetDefaultBodyCodec(codec.ID_THRIFT)
 }
 
-// NewTProtoFunc creates tp.ProtoFunc of Thrift protocol.
+// NewBinaryProtoFunc creates tp.ProtoFunc of Thrift protocol.
 // NOTE:
-//  If @transFactory is not provided, use the base transport;
-//  If @protoFactory is not provided, use the default binary protocol.
-func NewTProtoFunc(transFactory thrift.TTransportFactory, protoFactory thrift.TProtocolFactory) tp.ProtoFunc {
-	if protoFactory == nil {
-		protoFactory = thrift.NewTBinaryProtocolFactoryDefault()
-	}
+//  Marshal the body into binary;
+//  Support the Meta, BodyCodec and XferPipe.
+func NewBinaryProtoFunc() tp.ProtoFunc {
 	return func(rw tp.IOWithReadBuffer) tp.Proto {
-		p := &thriftproto{
+		p := &tBinaryProto{
 			id:        't',
 			name:      "thrift",
 			rwCounter: utils.NewReadWriteCounter(rw),
 		}
-		p.tTransport = &BaseTTransport{
+		p.tProtocol = thrift.NewTHeaderProtocol(&BaseTTransport{
 			ReadWriteCounter: p.rwCounter,
-		}
-		if transFactory != nil {
-			trans, err := transFactory.GetTransport(p.tTransport)
-			if err != nil {
-				tp.Errorf("still using the base transport because it failed to wrap it: %s", err.Error())
-			} else {
-				p.tTransport = trans
-			}
-		}
-		p.tProtocol = protoFactory.GetProtocol(p.tTransport)
-		p.payloadPool = sync.Pool{
-			New: func() interface{} {
-				return NewPayload()
-			},
-		}
+		})
 		return p
 	}
 }
 
-type thriftproto struct {
-	id          byte
-	name        string
-	rwCounter   *utils.ReadWriteCounter
-	tProtocol   thrift.TProtocol
-	tTransport  thrift.TTransport
-	packLock    sync.Mutex
-	unpackLock  sync.Mutex
-	payloadPool sync.Pool
+type tBinaryProto struct {
+	id         byte
+	name       string
+	rwCounter  *utils.ReadWriteCounter
+	tProtocol  *thrift.THeaderProtocol
+	packLock   sync.Mutex
+	unpackLock sync.Mutex
 }
 
 // Version returns the protocol's id and name.
-func (t *thriftproto) Version() (byte, string) {
+func (t *tBinaryProto) Version() (byte, string) {
 	return t.id, t.name
 }
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (t *thriftproto) Pack(m tp.Message) error {
+func (t *tBinaryProto) Pack(m tp.Message) error {
+	err := t.binaryPack(m)
+	if err != nil {
+		t.tProtocol.Transport().Close()
+	}
+	return err
+}
+
+func (t *tBinaryProto) Unpack(m tp.Message) error {
+	err := t.binaryUnpack(m)
+	if err != nil {
+		t.tProtocol.Transport().Close()
+	}
+	return err
+}
+
+func (t *tBinaryProto) binaryPack(m tp.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
 		return err
 	}
-
 	// do transfer pipe
 	bodyBytes, err = m.XferPipe().OnPack(bodyBytes)
 	if err != nil {
 		return err
 	}
 
-	pd := t.payloadPool.Get().(*Payload)
-	*pd = Payload{}
-	defer t.payloadPool.Put(pd)
-
-	pd.Meta = m.Meta().QueryString()
-	pd.BodyCodec = int32(m.BodyCodec())
-	pd.XferPipe = m.XferPipe().IDs()
-	pd.Body = bodyBytes
-
 	t.packLock.Lock()
 	defer t.packLock.Unlock()
-
-	// pack
 	t.rwCounter.WriteCounter.Zero()
+
 	if err := WriteMessageBegin(t.tProtocol, m); err != nil {
 		return err
 	}
 
-	if err = pd.Write(t.tProtocol); err != nil {
+	if err = t.tProtocol.WriteBinary(bodyBytes); err != nil {
 		return err
 	}
+
+	t.tProtocol.ClearWriteHeaders()
+	t.tProtocol.SetWriteHeader(HeaderMeta, goutil.BytesToString(m.Meta().QueryString()))
+	t.tProtocol.SetWriteHeader(HeaderBodyCodec, string(m.BodyCodec()))
+	t.tProtocol.SetWriteHeader(HeaderXferPipe, goutil.BytesToString(m.XferPipe().IDs()))
 
 	if err = t.tProtocol.WriteMessageEnd(); err != nil {
 		return err
@@ -109,60 +112,48 @@ func (t *thriftproto) Pack(m tp.Message) error {
 		return err
 	}
 
-	// set size
-	m.SetSize(uint32(t.rwCounter.Writed()))
-
-	return nil
+	return m.SetSize(uint32(t.rwCounter.Writed()))
 }
 
-func (t *thriftproto) Unpack(m tp.Message) error {
-	pd, err := t.unpack(m)
-	if err != nil {
-		return err
-	}
-	defer t.payloadPool.Put(pd)
-
-	err = m.XferPipe().Append(pd.XferPipe...)
-	if err != nil {
-		return err
-	}
-	body, err := m.XferPipe().OnUnpack(pd.Body)
-	if err != nil {
-		return err
-	}
-	m.Meta().ParseBytes(pd.Meta)
-	m.SetBodyCodec(byte(pd.BodyCodec))
-	return m.UnmarshalBody(body)
-}
-
-func (t *thriftproto) unpack(m tp.Message) (*Payload, error) {
+func (t *tBinaryProto) binaryUnpack(m tp.Message) error {
 	t.unpackLock.Lock()
 	defer t.unpackLock.Unlock()
 	t.rwCounter.WriteCounter.Zero()
 
 	err := ReadMessageBegin(t.tProtocol, m)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = m.SetSize(uint32(t.rwCounter.Writed()))
+	bodyBytes, err := t.tProtocol.ReadBinary()
 	if err != nil {
-		return nil, err
-	}
-
-	pd := t.payloadPool.Get().(*Payload)
-	*pd = Payload{}
-
-	if err = pd.Read(t.tProtocol); err != nil {
-		t.payloadPool.Put(pd)
-		return nil, err
+		return err
 	}
 
 	if err = t.tProtocol.ReadMessageEnd(); err != nil {
-		t.payloadPool.Put(pd)
-		return nil, err
+		return err
 	}
-	return pd, nil
+
+	headers := t.tProtocol.GetReadHeaders()
+	m.Meta().Parse(headers[HeaderMeta])
+	if codecID := headers[HeaderBodyCodec]; codecID != "" {
+		m.SetBodyCodec(byte(codecID[0]))
+	}
+	err = m.XferPipe().Append(goutil.StringToBytes(headers[HeaderXferPipe])...)
+	if err != nil {
+		return err
+	}
+
+	body, err := m.XferPipe().OnUnpack(bodyBytes)
+	if err != nil {
+		return err
+	}
+	err = m.UnmarshalBody(body)
+	if err != nil {
+		return err
+	}
+
+	return m.SetSize(uint32(t.rwCounter.Readed()))
 }
 
 // WriteMessageBegin write a message header to the wire.

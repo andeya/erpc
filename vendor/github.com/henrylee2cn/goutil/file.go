@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -39,18 +40,27 @@ func SelfChdir() {
 }
 
 // FileExists reports whether the named file or directory exists.
-func FileExists(name string) bool {
-	if _, err := os.Stat(name); err != nil {
-		return !os.IsNotExist(err)
+func FileExists(name string) (existed bool) {
+	existed, _ = FileExist(name)
+	return
+}
+
+// FileExist reports whether the named file or directory exists.
+func FileExist(name string) (existed bool, isDir bool) {
+	info, err := os.Stat(name)
+	if err != nil {
+		return !os.IsNotExist(err), false
 	}
-	return true
+	return true, info.IsDir()
 }
 
 // SearchFile Search a file in paths.
 // this is often used in search config file in /etc ~/
 func SearchFile(filename string, paths ...string) (fullpath string, err error) {
 	for _, path := range paths {
-		if fullpath = filepath.Join(path, filename); FileExists(fullpath) {
+		fullpath = filepath.Join(path, filename)
+		existed, _ := FileExist(fullpath)
+		if existed {
 			return
 		}
 	}
@@ -134,4 +144,25 @@ func WalkDirs(targpath string, suffixes ...string) (dirlist []string) {
 	}
 
 	return
+}
+
+// RewriteFile rewrite file.
+func RewriteFile(name string, fn func(content []byte) (newContent []byte, err error)) error {
+	f, err := os.OpenFile(name, os.O_RDWR, 0777)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	cnt, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	newContent, err := fn(cnt)
+	if err != nil {
+		return err
+	}
+	f.Seek(0, 0)
+	f.Truncate(0)
+	_, err = f.Write(newContent)
+	return err
 }

@@ -40,7 +40,7 @@ func graceSignal() {
 }
 
 // Reboot all the frame process gracefully.
-// Notes: Windows system are not supported!
+// NOTE: Windows system are not supported!
 func Reboot(timeout ...time.Duration) {
 	defer os.Exit(0)
 	log.Infof("rebooting process...")
@@ -108,7 +108,7 @@ var (
 )
 
 // AddInherited adds the files and envs to be inherited by the new process.
-// Notes:
+// NOTE:
 //  Only for reboot!
 //  Windows system are not supported!
 func AddInherited(procFiles []*os.File, envs []*Env) {

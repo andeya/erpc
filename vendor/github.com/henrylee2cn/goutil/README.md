@@ -15,14 +15,16 @@ Common and useful utils for the Go project development.
 - [Cmder](#cmder) Cmder exec cmd and catch the result
 - [CoarseTime](#coarsetime) Current time truncated to the nearest 100ms
 - [Errors](#errors) Improved errors package.
-- [Graceful](#graceful) Shutdown or reboot current process gracefully.
+- [Graceful](#graceful) Shutdown or reboot current process gracefully
 - [GoPool](#gopool) Goroutines' pool
 - [HTTPBody](#httpbody) HTTP body builder
 - [ResPool](#respool) Resources' pool
+- [Status](#status) A handling status with code, msg, cause and stack
 - [Tpack](#tpack) Go underlying type data
 - [Workshop](#workshop) Non-blocking asynchronous multiplex resource pool
 - [Password](#password) Check password
 - [Various](#various) Various small functions
+- [Versioning](#versioning) Version comparison tool that conforms to semantic version 2.0.0
 
 
 ## 3. UtilsAPI
@@ -56,7 +58,7 @@ A bit set.
     ```
 
 - And returns all the "AND" bit sets.
-<br>Notes:
+<br>NOTE:
 <br>If the bitSets are empty, returns b.
 
     ```go
@@ -64,7 +66,7 @@ A bit set.
     ```
 
 - Or returns all the "OR" bit sets.
-<br>Notes:
+<br>NOTE:
 <br>If the bitSets are empty, returns b.
 
     ```go
@@ -72,7 +74,7 @@ A bit set.
     ```
 
 - Xor returns all the "XOR" bit sets.
-<br>Notes:
+<br>NOTE:
 <br>If the bitSets are empty, returns b.
 
     ```go
@@ -81,7 +83,7 @@ A bit set.
 
 
 - AndNot returns all the "&^" bit sets.
-<br>Notes:
+<br>NOTE:
 <br>If the bitSets are empty, returns b.
 
     ```go
@@ -90,7 +92,7 @@ A bit set.
 
 - Set sets the bit bool value on the specified offset,
 and returns the value of before setting.
-<br>Notes:
+<br>NOTE:
 <br>0 means the 1st bit, -1 means the bottom 1th bit, -2 means the bottom 2th bit and so on;
 <br>If offset>=len(b.set), automatically grow the bit set;
 <br>If the bit offset is out of the left range, returns error.
@@ -100,7 +102,7 @@ and returns the value of before setting.
     ```
 
 - Get gets the bit bool value on the specified offset.
-<br>Notes:
+<br>NOTE:
 <br>0 means the 1st bit, -1 means the bottom 1th bit, -2 means the bottom 2th bit and so on;
 <br>If offset>=len(b.set), returns false.
 
@@ -115,7 +117,7 @@ and returns the value of before setting.
     ```
 
 - Count counts the amount of bit set to 1 within the specified range of the bit set.
-<br>Notes:
+<br>NOTE:
 <br>0 means the 1st bit, -1 means the bottom 1th bit, -2 means the bottom 2th bit and so on.
 
     ```go
@@ -141,7 +143,7 @@ and returns the value of before setting.
     ```
 
 - Binary returns the bit set by binary type.
-<br>Notes:
+<br>NOTE:
 <br>Paramter sep is the separator between chars.
 
     ```go
@@ -155,7 +157,7 @@ and returns the value of before setting.
     ```
 
 - Sub returns the bit subset within the specified range of the bit set.
-<br>Notes:
+<br>NOTE:
 <br>0 means the 1st bit, -1 means the bottom 1th bit, -2 means the bottom 2th bit and so on.
 
     ```go
@@ -286,7 +288,7 @@ Parameter timeout is used to reset time-out period for the process shutdown.
     ```
 
 - Reboot all the frame process gracefully.
-<br>Notes:
+<br>NOTE:
 <br>Windows system are not supported!
 
     ```go
@@ -294,7 +296,7 @@ Parameter timeout is used to reset time-out period for the process shutdown.
     ```
 
 - AddInherited adds the files and envs to be inherited by the new process.
-<br>Notes:
+<br>NOTE:
 <br>Only for reboot!
 <br>Windows system are not supported!
 
@@ -568,6 +570,56 @@ If the same name exists, will close and cover it.
     func (c *ResPools) Set(pool ResPool)
     ```
 
+### Status
+
+A handling status with code, msg, cause and stack.
+
+- import it
+
+    ```go
+    "github.com/henrylee2cn/goutil/status"
+    ```
+
+- New creates a handling status with code, msg and cause.
+<br>code=0 means no error
+
+    ```go
+    func New(code int32, msg string, cause interface{}) *Status
+    ```
+
+- NewWithStack creates a handling status with code, msg and cause and stack.
+<br>code=0 means no error
+
+    ```go
+    func NewWithStack(code int32, msg string, cause interface{}) *Status
+    ```
+
+- Throw creates a status with stack, and panic.
+
+    ```go
+    func Throw(code int32, msg string, cause interface{})
+    ```
+
+- Panic panic with stack trace.
+
+    ```go
+    func Panic(stat *Status)
+    ```
+
+- Check if err!=nil, create a status with stack, and panic.
+
+    ```go
+    func Check(err error, code int32, msg string)
+    ```
+
+- Catch recovers the panic and returns status.
+<br>NOTE:
+<br>Set `realStat` to true if a `Status` type is recovered
+
+    ```go
+    func Catch(statPtr **Status, realStat ...*bool)
+    ```
+
 ### Tpack
 
 Go underlying type data.
@@ -581,27 +633,57 @@ Go underlying type data.
 - doc
 
     ```go
-    // T go underlying type data
-    type T struct {
+    // U go underlying type data
+    type U struct {
         // Has unexported fields.
     }
 
-    // Unpack unpack i to go underlying type data.
-    func Unpack(i interface{}) T
+    // Unpack unpacks i to go underlying type data.
+    func Unpack(i interface{}) U
+   
+    // From gets go underlying type data from reflect.Value.
+    func From(v reflect.Value) U
+    
+    // RuntimeTypeID gets the underlying type ID in current runtime from reflect.Type.
+    // NOTE:
+    //  *A and A gets the same runtime type ID;
+    //  It is 10 times performance of t.String().
+    func RuntimeTypeID(t reflect.Type) int32
+    
+    // RuntimeTypeID gets the underlying type ID in current runtime.
+    // NOTE:
+    //  *A and A gets the same runtime type ID;
+    //  It is 10 times performance of reflect.TypeOf(i).String().
+    func (u U) RuntimeTypeID() int32
 
-    // TypeID returns the underlying type ID.
-    // It is 10 times performance of reflect.TypeOf(i).String()
-    func (t T) TypeID() int32
+    // Kind gets the reflect.Kind fastly.
+    func (u U) Kind() reflect.Kind
 
-    // TypeOf is equivalent to reflect.TypeOf.
-    func (t T) TypeOf() reflect.Type
+    // Elem returns the U that the interface i contains
+    // or that the pointer i points to.
+    func (u U) Elem() U
 
-    // ValueOf is equivalent to reflect.ValueOf.
-    func (t T) ValueOf() reflect.Value
+    // UnderlyingElem returns the underlying U that the interface i contains
+    // or that the pointer i points to.
+    func (u U) UnderlyingElem() U
 
-    // TypeID get underlying type ID from reflect.Type.
-    // It is 10 times performance of t.String()
-    func TypeID(t reflect.Type) int32
+    // Pointer gets the pointer of i.
+    // NOTE:
+    //  *T and T, gets diffrent pointer
+    func (u U) Pointer() uintptr
+
+    // IsNil reports whether its argument i is nil.
+    func (u U) IsNil() bool
+    
+    // FuncForPC returns a *Func describing the function that contains the
+    // given program counter address, or else nil.
+    //
+    // If pc represents multiple functions because of inlining, it returns
+    // the a *Func describing the innermost function, but with an entry
+    // of the outermost function.
+    //
+    // NOTE: Its kind must be a reflect.Func, otherwise it returns nil
+    func (u U) FuncForPC() *runtime.Func
     ```
 
 ### Workshop
@@ -647,7 +729,7 @@ Performance:
 - NewWorkshop creates a new workshop(non-blocking asynchronous multiplex resource pool).
 <br>If maxQuota<=0, will use default value.
 <br>If maxIdleDuration<=0, will use default value.
-<br>Notes:
+<br>NOTE:
 <br>Worker can not be implemented using empty structures(struct{})!
 
     ```go
@@ -728,6 +810,12 @@ Various small functions.
 
     ```go
     func SpaceInOne(s string) string
+    ```
+
+- StringMarshalJSON converts the string to JSON byte stream.
+
+    ```go
+    func StringMarshalJSON(s string, escapeHTML bool) []byte
     ```
 
 - NewRandom creates a new padded Encoding defined by the given alphabet string.
@@ -857,10 +945,10 @@ From go v1.9 sync.Map.
     func SelfChdir()
     ```
 
-- FileExists reports whether the named file or directory exists.
+- ExistFile reports whether the named file or directory exists.
 
     ```go
-    func FileExists(name string) bool
+    FileExist(name string) (existed bool, isDir bool)
     ```
 
 - SearchFile Search a file in paths.
@@ -883,6 +971,12 @@ From go v1.9 sync.Map.
 
     ```go
     func WalkDirs(targpath string, suffixes ...string) (dirlist []string)
+    ```
+
+- RewriteFile rewrite file.
+
+    ```go
+    func RewriteFile(name string, fn func(content []byte) (newContent []byte, err error)) error
     ```
 
 - IsExportedOrBuiltinType is this type exported or a builtin?
@@ -1043,11 +1137,94 @@ to select AES-128, AES-192, or AES-256.
 - TarGz compresses and archives tar.gz file.
 
     ```go
-    func TarGz(src, dst string, includePrefix bool, logOutput func(string, ...interface{}), ignoreBaseName ...string) (err error)
+    func TarGz(src, dst string, includePrefix bool, logOutput func(string, ...interface{}), ignoreElem ...string) (err error)
     ```
 
 - TarGzTo compresses and archives tar.gz to dst writer.
 
     ```go
-    TarGzTo(src string, dstWriter io.Writer, includePrefix bool, logOutput func(string, ...interface{}), ignoreBaseName ...string) (err error)
+    TarGzTo(src string, dstWriter io.Writer, includePrefix bool, logOutput func(string, ...interface{}), ignoreElem ...string) (err error)
+    ```
+
+- IsGoTest check if the current process is a test.
+
+    ```go
+    func IsGoTest() bool
+    ```
+
+### Versioning
+
+Version comparison tool that conforms to semantic version 2.0.0.
+
+- import it
+
+    ```go
+    "github.com/henrylee2cn/goutil/versioning"
+    ```
+
+- Create creates a semantic version object.
+
+    ```go
+    func Create(major, minor, patch uint32, metadata string) *SemVer
+    ```
+
+- Parse parses the semantic version string to object.
+<br>NOTE:
+<br>If metadata part exists, the separator must not be a number.
+
+    ```go
+    func Parse(semVer string) (*SemVer, error)
+    ```
+
+- Compare compares 'a' and 'b'.
+<br>The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
+<br>If compareMetadata==nil, will not compare metadata.
+
+    ```go
+    func Compare(a, b string, compareMetadata func(aMeta, bMeta string) int) (int, error)
+    ```
+
+- Compare compares whether 's' and 'semVer'.
+<br>The result will be 0 if s==semVer, -1 if s < semVer, and +1 if s > semVer.
+<br>If compareMetadata==nil, will not compare metadata.
+
+    ```go
+    func (s *SemVer) Compare(semVer *SemVer, compareMetadata func(sMeta, semVerMeta string) int) int
+    ```
+
+- Major returns the version major.
+
+    ```go
+    func (s *SemVer) Major() string
+    ```
+
+
+- Minor returns the version minor.
+
+    ```go
+    func (s *SemVer) Minor() string
+    ```
+
+- Patch returns the version patch.
+
+    ```go
+    func (s *SemVer) Patch() string
+    ```
+
+- Metadata returns the version metadata.
+<br>Examples:
+<br> 1.0.0-alpha+001 => -alpha+001
+<br> 1.0.0+20130313144700 => +20130313144700
+<br> 1.0.0-beta+exp.sha.5114f85 => -beta+exp.sha.5114f85
+<br> 1.0.0rc => rc
+
+    ```go
+    func (s *SemVer) Metadata() string
+    ```
+
+
+- Metadata returns the version metadata.
+
+    ```go
+    func (s *SemVer) String() string
     ```
