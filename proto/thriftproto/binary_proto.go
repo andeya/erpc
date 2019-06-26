@@ -169,8 +169,6 @@ func writeMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 	return tProtocol.WriteMessageBegin(m.ServiceMethod(), typeID, m.Seq())
 }
 
-const typeExceptionReply byte = 255
-
 // readMessageBegin read a message header.
 func readMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 	rMethod, rTypeID, rSeqID, err := tProtocol.ReadMessageBegin()
