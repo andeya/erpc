@@ -68,7 +68,7 @@ func (t *tStructProto) structPack(m tp.Message) error {
 	defer t.packLock.Unlock()
 	t.rwCounter.WriteCounter.Zero()
 
-	err := WriteMessageBegin(t.tProtocol, m)
+	err := writeMessageBegin(t.tProtocol, m)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (t *tStructProto) structUnpack(m tp.Message) error {
 	t.unpackLock.Lock()
 	defer t.unpackLock.Unlock()
 	t.rwCounter.WriteCounter.Zero()
-	err := ReadMessageBegin(t.tProtocol, m)
+	err := readMessageBegin(t.tProtocol, m)
 	if err != nil {
 		return err
 	}

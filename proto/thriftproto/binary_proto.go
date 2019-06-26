@@ -92,7 +92,7 @@ func (t *tBinaryProto) binaryPack(m tp.Message) error {
 	defer t.packLock.Unlock()
 	t.rwCounter.WriteCounter.Zero()
 
-	if err := WriteMessageBegin(t.tProtocol, m); err != nil {
+	if err := writeMessageBegin(t.tProtocol, m); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (t *tBinaryProto) binaryUnpack(m tp.Message) error {
 	defer t.unpackLock.Unlock()
 	t.rwCounter.WriteCounter.Zero()
 
-	err := ReadMessageBegin(t.tProtocol, m)
+	err := readMessageBegin(t.tProtocol, m)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,6 @@ func (t *tBinaryProto) binaryUnpack(m tp.Message) error {
 	if err != nil {
 		return err
 	}
-
 	if err = t.tProtocol.ReadMessageEnd(); err != nil {
 		return err
 	}
@@ -156,8 +155,8 @@ func (t *tBinaryProto) binaryUnpack(m tp.Message) error {
 	return m.SetSize(uint32(t.rwCounter.Readed()))
 }
 
-// WriteMessageBegin write a message header to the wire.
-func WriteMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
+// writeMessageBegin write a message header to the wire.
+func writeMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 	var typeID thrift.TMessageType
 	switch m.Mtype() {
 	case tp.TypeCall:
@@ -170,8 +169,10 @@ func WriteMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 	return tProtocol.WriteMessageBegin(m.ServiceMethod(), typeID, m.Seq())
 }
 
-// ReadMessageBegin read a message header.
-func ReadMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
+const typeExceptionReply byte = 255
+
+// readMessageBegin read a message header.
+func readMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 	rMethod, rTypeID, rSeqID, err := tProtocol.ReadMessageBegin()
 	if err != nil {
 		return err
@@ -185,6 +186,13 @@ func ReadMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 		m.SetMtype(tp.TypeReply)
 	case thrift.ONEWAY:
 		m.SetMtype(tp.TypePush)
+	case thrift.EXCEPTION:
+		error0 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
+		err = error0.Read(tProtocol)
+		if err != nil {
+			return err
+		}
+		return error0
 	default:
 		m.SetMtype(tp.TypePush)
 	}
