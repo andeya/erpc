@@ -693,8 +693,10 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 
 	s.peer.sessHub.Delete(s.ID())
 
+	var reason string
 	if err != nil && err != socket.ErrProactivelyCloseSocket {
 		if errStr := err.Error(); errStr != "EOF" {
+			reason = errStr
 			Debugf("disconnect(%s) when reading: %T %s", s.RemoteAddr().String(), err, errStr)
 		}
 	}
@@ -705,7 +707,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 		callCmd := v.(*callCmd)
 		callCmd.mu.Lock()
 		if !callCmd.hasReply() && callCmd.rerr == nil {
-			callCmd.cancel()
+			callCmd.cancel(reason)
 		}
 		callCmd.mu.Unlock()
 		return true

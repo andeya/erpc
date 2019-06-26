@@ -827,9 +827,13 @@ func (c *callCmd) done() {
 	c.sess.graceCallCmdWaitGroup.Done()
 }
 
-func (c *callCmd) cancel() {
+func (c *callCmd) cancel(reason string) {
 	c.sess.callCmdMap.Delete(c.output.Seq())
-	c.rerr = rerrConnClosed
+	if reason != "" {
+		c.rerr = rerrConnClosed.Copy().SetReason(reason)
+	} else {
+		c.rerr = rerrConnClosed
+	}
 	c.callCmdChan <- c
 	close(c.doneChan)
 	// free count call-launch
