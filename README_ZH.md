@@ -165,7 +165,7 @@ type Math struct {
 }
 
 // Add handles addition request
-func (m *Math) Add(arg *[]int) (int, *tp.Rerror) {
+func (m *Math) Add(arg *[]int) (int, *tp.Status) {
 	// test query parameter
 	tp.Infof("author: %s", m.Query().Get("author"))
 	// add
@@ -198,18 +198,18 @@ func main() {
 
 	cli.RoutePush(new(Push))
 
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 
 	var result int
-	rerr := sess.Call("/math/add?author=henrylee2cn",
+	stat = sess.Call("/math/add?author=henrylee2cn",
 		[]int{1, 2, 3, 4, 5},
 		&result,
-	).Rerror()
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	).Status()
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result: %d", result)
 
@@ -223,7 +223,7 @@ type Push struct {
 }
 
 // Push handles '/push/status' message
-func (p *Push) Status(arg *string) *tp.Rerror {
+func (p *Push) Status(arg *string) *tp.Status {
 	tp.Printf("%s", *arg)
 	return nil
 }
@@ -289,8 +289,8 @@ func SetDefaultProtoFunc(ProtoFunc)
 type Peer interface {
     ...
     ServeConn(conn net.Conn, protoFunc ...ProtoFunc) Session
-    DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
-    Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
+    DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Status)
+    Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status)
     Listen(protoFunc ...ProtoFunc) error
     ...
 }
@@ -445,7 +445,7 @@ var sess, err = peer2.Dial("127.0.0.1:8080")
 type Aaa struct {
     tp.CallCtx
 }
-func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Rerror) {
+func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Status) {
     ...
     return r, nil
 }
@@ -468,7 +468,7 @@ peer.RouteCallFunc((*Aaa).XxZz)
 ### Call-Function 接口模板
 
 ```go
-func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Rerror) {
+func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Status) {
     ...
     return r, nil
 }
@@ -489,7 +489,7 @@ peer.RouteCallFunc(XxZz)
 type Bbb struct {
     tp.PushCtx
 }
-func (b *Bbb) YyZz(arg *<T>) *tp.Rerror {
+func (b *Bbb) YyZz(arg *<T>) *tp.Status {
     ...
     return nil
 }
@@ -513,7 +513,7 @@ peer.RoutePushFunc((*Bbb).YyZz)
 
 ```go
 // YyZz register the handler
-func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Rerror {
+func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Status {
     ...
     return nil
 }
@@ -531,7 +531,7 @@ peer.RoutePushFunc(YyZz)
 ### Unknown-Call-Function 接口模板
 
 ```go
-func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
+func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Status) {
     ...
     return r, nil
 }
@@ -547,7 +547,7 @@ peer.SetUnknownCall(XxxUnknownCall)
 ### Unknown-Push-Function 接口模板
 
 ```go
-func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Rerror {
+func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Status {
     ...
     return nil
 }
@@ -579,13 +579,13 @@ func (i *ignoreCase) Name() string {
     return "ignoreCase"
 }
 
-func (i *ignoreCase) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (i *ignoreCase) PostReadCallHeader(ctx tp.ReadCtx) *tp.Status {
     // Dynamic transformation path is lowercase
     ctx.UriObject().Path = strings.ToLower(ctx.UriObject().Path)
     return nil
 }
 
-func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Status {
     // Dynamic transformation path is lowercase
     ctx.UriObject().Path = strings.ToLower(ctx.UriObject().Path)
     return nil

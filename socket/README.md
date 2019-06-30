@@ -345,6 +345,8 @@ Default protocol `RawProto`(Big Endian):
 {1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
 {1 bytes service method length}
 {service method}
+{2 bytes status length}
+{status(urlencoded)}
 {2 bytes metadata length}
 {metadata(urlencoded)}
 {1 byte body codec id}

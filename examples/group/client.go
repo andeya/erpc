@@ -16,19 +16,19 @@ func main() {
 	group := cli.SubRoute("/cli")
 	group.RoutePush(new(push))
 
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 
 	var result int
-	rerr := sess.Call("/srv/math/v2/add_2",
+	stat = sess.Call("/srv/math/v2/add_2",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 		tp.WithSetMeta("push_status", "yes"),
-	).Rerror()
+	).Status()
 
-	if rerr != nil {
+	if !stat.OK() {
 		tp.Fatalf("%v", err)
 	}
 	tp.Printf("result: %d", result)
@@ -38,7 +38,7 @@ type push struct {
 	tp.PushCtx
 }
 
-func (p *push) ServerStatus(arg *string) *tp.Rerror {
+func (p *push) ServerStatus(arg *string) *tp.Status {
 	tp.Printf("server status: %s", *arg)
 	return nil
 }

@@ -37,13 +37,13 @@ type (
 		// PostNewPeer runs ping woker.
 		PostNewPeer(peer tp.EarlyPeer) error
 		// PostWriteCall updates heartbeat information.
-		PostWriteCall(ctx tp.WriteCtx) *tp.Rerror
+		PostWriteCall(ctx tp.WriteCtx) *tp.Status
 		// PostWritePush updates heartbeat information.
-		PostWritePush(ctx tp.WriteCtx) *tp.Rerror
+		PostWritePush(ctx tp.WriteCtx) *tp.Status
 		// PostReadCallHeader updates heartbeat information.
-		PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror
+		PostReadCallHeader(ctx tp.ReadCtx) *tp.Status
 		// PostReadPushHeader updates heartbeat information.
-		PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror
+		PostReadPushHeader(ctx tp.ReadCtx) *tp.Status
 	}
 	heartPong struct{}
 )
@@ -88,21 +88,21 @@ func (h *heartPong) PostNewPeer(peer tp.EarlyPeer) error {
 	return nil
 }
 
-func (h *heartPong) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (h *heartPong) PostReadCallHeader(ctx tp.ReadCtx) *tp.Status {
 	h.update(ctx)
 	return nil
 }
 
-func (h *heartPong) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (h *heartPong) PostReadPushHeader(ctx tp.ReadCtx) *tp.Status {
 	h.update(ctx)
 	return nil
 }
 
-func (h *heartPong) PostWriteCall(ctx tp.WriteCtx) *tp.Rerror {
+func (h *heartPong) PostWriteCall(ctx tp.WriteCtx) *tp.Status {
 	return h.PostWritePush(ctx)
 }
 
-func (h *heartPong) PostWritePush(ctx tp.WriteCtx) *tp.Rerror {
+func (h *heartPong) PostWritePush(ctx tp.WriteCtx) *tp.Status {
 	sess := ctx.Session()
 	if !sess.Health() {
 		return nil
@@ -126,7 +126,7 @@ type pongCall struct {
 	tp.CallCtx
 }
 
-func (ctx *pongCall) heartbeat(_ *struct{}) (*struct{}, *tp.Rerror) {
+func (ctx *pongCall) heartbeat(_ *struct{}) (*struct{}, *tp.Status) {
 	return nil, handelHeartbeat(ctx.Session(), ctx.PeekMeta)
 }
 
@@ -134,16 +134,16 @@ type pongPush struct {
 	tp.PushCtx
 }
 
-func (ctx *pongPush) heartbeat(_ *struct{}) *tp.Rerror {
+func (ctx *pongPush) heartbeat(_ *struct{}) *tp.Status {
 	return handelHeartbeat(ctx.Session(), ctx.PeekMeta)
 }
 
-func handelHeartbeat(sess tp.CtxSession, peekMeta func(string) []byte) *tp.Rerror {
+func handelHeartbeat(sess tp.CtxSession, peekMeta func(string) []byte) *tp.Status {
 	rateStr := goutil.BytesToString(peekMeta(heartbeatMetaKey))
 	rateSecond := parseHeartbeatRateSecond(rateStr)
 	isFirst := updateHeartbeatInfo(sess.Swap(), time.Second*time.Duration(rateSecond))
 	if isFirst && rateSecond == -1 {
-		return tp.NewRerror(tp.CodeBadMessage, "Invalid Heartbeat Rate", rateStr)
+		return tp.NewStatus(tp.CodeBadMessage, "Invalid Heartbeat Rate", rateStr)
 	}
 	if rateSecond == 0 {
 		tp.Tracef("heart-pong: %s", sess.ID())

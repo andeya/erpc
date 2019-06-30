@@ -75,6 +75,8 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 {1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
 {1 bytes service method length}
 {service method}
+{2 bytes status length}
+{status(urlencoded)}
 {2 bytes metadata length}
 {metadata(urlencoded)}
 {1 byte body codec id}
@@ -172,6 +174,10 @@ func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m Message) error {
 	}
 	bb.WriteByte(byte(serviceMethodLength))
 	bb.Write(serviceMethod)
+
+	statusBytes := m.Status().EncodeQuery()
+	binary.Write(bb, binary.BigEndian, uint16(len(statusBytes)))
+	bb.Write(statusBytes)
 
 	metaBytes := m.Meta().QueryString()
 	binary.Write(bb, binary.BigEndian, uint16(len(metaBytes)))
@@ -274,11 +280,18 @@ func (r *rawProto) readHeader(data []byte, m Message) ([]byte, error) {
 	m.SetServiceMethod(string(data[:serviceMethodLen]))
 	data = data[serviceMethodLen:]
 
+	// status
+	statusLen := binary.BigEndian.Uint16(data)
+	data = data[2:]
+	m.Status().DecodeQuery(data[:statusLen])
+	data = data[statusLen:]
+
 	// meta
 	metaLen := binary.BigEndian.Uint16(data)
 	data = data[2:]
 	m.Meta().ParseBytes(data[:metaLen])
 	data = data[metaLen:]
+
 	return data, nil
 }
 

@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
+	"github.com/henrylee2cn/goutil/status"
 	"github.com/henrylee2cn/teleport/codec"
 	"github.com/henrylee2cn/teleport/utils"
 	"github.com/henrylee2cn/teleport/xfer"
@@ -83,6 +84,10 @@ type (
 		// SetServiceMethod sets the serviec method.
 		// SUGGEST: max len ≤ 255!
 		SetServiceMethod(string)
+		// Status the message status with code, msg, cause or stack.
+		Status() *Status
+		// SetStatus the message status.
+		SetStatus(*Status)
 		// Meta returns the metadata.
 		// SUGGEST: urlencoded string max len ≤ 65535!
 		Meta() *utils.Args
@@ -116,11 +121,14 @@ type (
 	// NewBodyFunc creates a new body by header,
 	// and only for reading form connection.
 	NewBodyFunc func(Header) interface{}
+
+	// Status a message status with code, msg, cause or stack.
+	Status = status.Status
 )
 
 // message a socket message data.
 type message struct {
-	// Head: required message fields
+	/* Head: required message fields */
 
 	// message sequence
 	// 32-bit, compatible with various system platforms and other languages
@@ -130,11 +138,13 @@ type message struct {
 	// service method
 	// SUGGEST: max len ≤ 255!
 	serviceMethod string
+	// status message status
+	status *Status
 	// metadata
 	// SUGGEST: urlencoded string max len ≤ 65535!
 	meta *utils.Args
 
-	// Body: optional message fields
+	/* Body: optional message fields */
 
 	// body codec type
 	bodyCodec byte
@@ -146,7 +156,7 @@ type message struct {
 	//  should be nil when reading message.
 	newBodyFunc NewBodyFunc
 
-	// Other
+	/* Other */
 
 	// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
 	// SUGGEST: the length can not be bigger than 255!
@@ -194,6 +204,22 @@ func NewMessage(settings ...MessageSetting) Message {
 	return m
 }
 
+var (
+	// NewStatus creates a message status with code, msg and cause.
+	// NOTE:
+	//  code=0 means no error
+	// TYPE:
+	//  func NewStatus(code int32, msg string, cause interface{}) *Status
+	NewStatus = status.New
+
+	// NewStatusWithStack creates a message status with code, msg and cause and stack.
+	// NOTE:
+	//  code=0 means no error
+	// TYPE:
+	//  func NewStatusWithStack(code int32, msg string, cause interface{}) *Status
+	NewStatusWithStack = status.NewWithStack
+)
+
 func (m *message) messageIdentity() {}
 
 // Reset resets itself.
@@ -201,6 +227,9 @@ func (m *message) messageIdentity() {}
 //  settings are only for writing to connection.
 func (m *message) Reset(settings ...MessageSetting) {
 	m.body = nil
+	if m.status != nil {
+		m.status.Clear()
+	}
 	m.meta.Reset()
 	m.xferPipe.Reset()
 	m.newBodyFunc = nil
@@ -259,6 +288,19 @@ func (m *message) ServiceMethod() string {
 // SUGGEST: max len ≤ 255!
 func (m *message) SetServiceMethod(serviceMethod string) {
 	m.serviceMethod = serviceMethod
+}
+
+// SetStatus the message status.
+func (m *message) SetStatus(stat *Status) {
+	m.status = stat
+}
+
+// Status the message status with code, msg, cause or stack.
+func (m *message) Status() *Status {
+	if m.status == nil {
+		m.status = new(Status)
+	}
+	return m.status
 }
 
 // Meta returns the metadata.
@@ -378,6 +420,7 @@ const messageFormat = `
   "seq": %d,
   "mtype": %d,
   "serviceMethod": %q,
+  "status": %q,
   "meta": %q,
   "bodyCodec": %d,
   "body": %s,
@@ -399,6 +442,7 @@ func (m *message) String() string {
 			m.seq,
 			m.mtype,
 			m.serviceMethod,
+			m.status.QueryString(),
 			m.meta.QueryString(),
 			m.bodyCodec,
 			b,
@@ -437,6 +481,13 @@ func WithMtype(mtype byte) MessageSetting {
 func WithServiceMethod(serviceMethod string) MessageSetting {
 	return func(m Message) {
 		m.SetServiceMethod(serviceMethod)
+	}
+}
+
+// WithStatus sets the message status.
+func WithStatus(stat *Status) MessageSetting {
+	return func(m Message) {
+		m.SetStatus(stat)
 	}
 }
 

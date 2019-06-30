@@ -20,7 +20,7 @@ type Result struct {
 
 type math struct{ tp.CallCtx }
 
-func (m *math) Add(arg *Arg) (*Result, *tp.Rerror) {
+func (m *math) Add(arg *Arg) (*Result, *tp.Status) {
 	// enforces the body of the encrypted reply message.
 	// secure.EnforceSecure(m.Output())
 	return &Result{C: arg.A + arg.B}, nil
@@ -39,9 +39,9 @@ func newSession(t *testing.T, port uint16) tp.Session {
 	cli := tp.NewPeer(tp.PeerConfig{
 		PrintDetail: true,
 	}, p)
-	sess, err := cli.Dial(":" + strconv.Itoa(int(port)))
-	if err != nil {
-		t.Fatal(err)
+	sess, stat := cli.Dial(":" + strconv.Itoa(int(port)))
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	return sess
 }
@@ -50,15 +50,15 @@ func TestSecurePlugin(t *testing.T) {
 	sess := newSession(t, 9090)
 	// test secure
 	var result Result
-	rerr := sess.Call(
+	stat := sess.Call(
 		"/math/add",
 		&Arg{A: 10, B: 2},
 		&result,
 		secure.WithSecureMeta(),
 		// secure.WithAcceptSecureMeta(false),
-	).Rerror()
-	if rerr != nil {
-		t.Fatal(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	if result.C != 12 {
 		t.Fatalf("expect 12, but get %d", result.C)
@@ -70,14 +70,14 @@ func TestAcceptSecurePlugin(t *testing.T) {
 	sess := newSession(t, 9091)
 	// test accept secure
 	var result Result
-	rerr := sess.Call(
+	stat := sess.Call(
 		"/math/add",
 		&Arg{A: 20, B: 4},
 		&result,
 		secure.WithAcceptSecureMeta(true),
-	).Rerror()
-	if rerr != nil {
-		t.Fatal(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	if result.C != 24 {
 		t.Fatalf("expect 24, but get %d", result.C)

@@ -43,17 +43,17 @@ func NewClient(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin
 }
 
 // DialJSON connects with the JSON protocol.
-func (c *Client) DialJSON(addr string) (tp.Session, *tp.Rerror) {
+func (c *Client) DialJSON(addr string) (tp.Session, *tp.Status) {
 	return c.Dial(addr, jsonSubProto.NewJSONSubProtoFunc())
 }
 
 // DialProtobuf connects with the Protobuf protocol.
-func (c *Client) DialProtobuf(addr string) (tp.Session, *tp.Rerror) {
+func (c *Client) DialProtobuf(addr string) (tp.Session, *tp.Status) {
 	return c.Dial(addr, pbSubProto.NewPbSubProtoFunc())
 }
 
 // Dial connects with the peer of the destination address.
-func (c *Client) Dial(addr string, protoFunc ...tp.ProtoFunc) (tp.Session, *tp.Rerror) {
+func (c *Client) Dial(addr string, protoFunc ...tp.ProtoFunc) (tp.Session, *tp.Status) {
 	if len(protoFunc) == 0 {
 		return c.Peer.Dial(addr, defaultProto)
 	}
@@ -82,7 +82,7 @@ func (*clientPlugin) Name() string {
 	return "websocket"
 }
 
-func (c *clientPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
+func (c *clientPlugin) PostDial(sess tp.PreSession) *tp.Status {
 	var location, origin string
 	if sess.Peer().TLSConfig() == nil {
 		location = "ws://" + sess.RemoteAddr().String() + c.rootPath
@@ -93,16 +93,16 @@ func (c *clientPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
 	}
 	cfg, err := ws.NewConfig(location, origin)
 	if err != nil {
-		return tp.NewRerror(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
+		return tp.NewStatus(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
 	}
-	var rerr *tp.Rerror
+	var stat *tp.Status
 	sess.ModifySocket(func(conn net.Conn) (net.Conn, tp.ProtoFunc) {
 		conn, err := ws.NewClient(cfg, conn)
 		if err != nil {
-			rerr = tp.NewRerror(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
+			stat = tp.NewStatus(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
 			return nil, nil
 		}
 		return conn, NewWsProtoFunc(sess.GetProtoFunc())
 	})
-	return rerr
+	return stat
 }

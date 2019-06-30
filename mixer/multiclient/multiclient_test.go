@@ -15,7 +15,7 @@ type Arg struct {
 
 type P struct{ tp.CallCtx }
 
-func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
+func (p *P) Divide(arg *Arg) (int, *tp.Status) {
 	return arg.A / arg.B, nil
 }
 
@@ -42,12 +42,12 @@ func TestMultiClient(t *testing.T) {
 	go func() {
 		var result int
 		for i := 0; ; i++ {
-			rerr := cli.Call("/p/divide", &Arg{
+			stat := cli.Call("/p/divide", &Arg{
 				A: i,
 				B: 2,
-			}, &result).Rerror()
-			if rerr != nil {
-				t.Log(rerr)
+			}, &result).Status()
+			if !stat.OK() {
+				t.Log(stat)
 			} else {
 				t.Logf("%d/2=%v", i, result)
 			}

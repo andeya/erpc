@@ -19,6 +19,7 @@ func TestMessageString(t *testing.T) {
 	m.SetBody(map[string]int{"a": 1})
 	m.SetServiceMethod("service/method")
 	m.SetBodyCodec(5)
+	m.SetStatus(NewStatus(400, "this is msg", "this is cause"))
 	m.Meta().Set("key", "value")
 	t.Logf("%%s:%s", m.String())
 	t.Logf("%%v:%v", m)

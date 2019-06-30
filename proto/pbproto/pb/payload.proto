@@ -6,7 +6,8 @@ message payload {
     int32  seq           = 1;
     int32  mtype         = 2;
     string serviceMethod = 3;
-    bytes  meta          = 4;
-    int32  bodyCodec     = 5;
-    bytes  body          = 6;
+    bytes  status        = 4;
+    bytes  meta          = 5;
+    int32  bodyCodec     = 6;
+    bytes  body          = 7;
 }

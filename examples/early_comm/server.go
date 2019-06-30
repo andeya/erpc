@@ -24,34 +24,34 @@ func (e *earlyResult) Name() string {
 	return "early_result"
 }
 
-func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Rerror {
+func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Status {
 	var rigthServiceMethod bool
-	input, rerr := sess.Receive(func(header tp.Header) interface{} {
+	input, stat := sess.Receive(func(header tp.Header) interface{} {
 		if header.ServiceMethod() == "/early/ping" {
 			rigthServiceMethod = true
 			return new(map[string]string)
 		}
 		return nil
 	})
-	if rerr != nil {
-		return rerr
+	if !stat.OK() {
+		return stat
 	}
 
 	var result string
 	if !rigthServiceMethod {
-		rerr = tp.NewRerror(10005, "unexpected request", "")
+		stat = tp.NewStatus(10005, "unexpected request", "")
 	} else {
 		body := *input.Body().(*map[string]string)
 		if body["author"] != "henrylee2cn" {
-			rerr = tp.NewRerror(10005, "incorrect author", body["author"])
+			stat = tp.NewStatus(10005, "incorrect author", body["author"])
 		} else {
-			rerr = nil
+			stat = nil
 			result = "OK"
 		}
 	}
 	return sess.Send(
 		"/early/pong",
 		result,
-		rerr,
+		stat,
 	)
 }

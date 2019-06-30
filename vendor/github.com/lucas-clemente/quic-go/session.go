@@ -41,7 +41,7 @@ type streamManager interface {
 	AcceptStream() (Stream, error)
 	AcceptUniStream() (ReceiveStream, error)
 	DeleteStream(protocol.StreamID) error
-	UpdateLimits(*handshake.TransportParameters)
+	UpdateLimits(*handshake.TransportParameters) error
 	HandleMaxStreamsFrame(*wire.MaxStreamsFrame) error
 	CloseWithError(error)
 }
@@ -50,7 +50,7 @@ type cryptoStreamHandler interface {
 	RunHandshake() error
 	ChangeConnectionID(protocol.ConnectionID) error
 	io.Closer
-	ConnectionState() handshake.ConnectionState
+	ConnectionState() tls.ConnectionState
 }
 
 type receivedPacket struct {
@@ -191,17 +191,13 @@ var newSession = func(
 	initialStream := newCryptoStream()
 	handshakeStream := newCryptoStream()
 	oneRTTStream := newPostHandshakeCryptoStream(s.framer)
-	eetp := &handshake.EncryptedExtensionsTransportParameters{
-		NegotiatedVersion: s.version,
-		SupportedVersions: protocol.GetGreasedVersions(conf.Versions),
-		Parameters:        *params,
-	}
 	cs, err := handshake.NewCryptoSetupServer(
 		initialStream,
 		handshakeStream,
 		oneRTTStream,
 		clientDestConnID,
-		eetp,
+		conn.RemoteAddr(),
+		params,
 		s.processTransportParameters,
 		tlsConf,
 		logger,
@@ -223,7 +219,7 @@ var newSession = func(
 		s.perspective,
 		s.version,
 	)
-	s.cryptoStreamManager = newCryptoStreamManager(cs, initialStream, handshakeStream)
+	s.cryptoStreamManager = newCryptoStreamManager(cs, initialStream, handshakeStream, oneRTTStream)
 
 	if err := s.postSetup(); err != nil {
 		return nil, err
@@ -263,16 +259,13 @@ var newClientSession = func(
 	initialStream := newCryptoStream()
 	handshakeStream := newCryptoStream()
 	oneRTTStream := newPostHandshakeCryptoStream(s.framer)
-	chtp := &handshake.ClientHelloTransportParameters{
-		InitialVersion: initialVersion,
-		Parameters:     *params,
-	}
 	cs, clientHelloWritten, err := handshake.NewCryptoSetupClient(
 		initialStream,
 		handshakeStream,
 		oneRTTStream,
 		s.destConnID,
-		chtp,
+		conn.RemoteAddr(),
+		params,
 		s.processTransportParameters,
 		tlsConf,
 		logger,
@@ -282,7 +275,7 @@ var newClientSession = func(
 	}
 	s.clientHelloWritten = clientHelloWritten
 	s.cryptoStreamHandler = cs
-	s.cryptoStreamManager = newCryptoStreamManager(cs, initialStream, handshakeStream)
+	s.cryptoStreamManager = newCryptoStreamManager(cs, initialStream, handshakeStream, oneRTTStream)
 	s.unpacker = newPacketUnpacker(cs, s.version)
 	s.streamsMap = newStreamsMap(
 		s,
@@ -446,7 +439,7 @@ func (s *session) Context() context.Context {
 	return s.ctx
 }
 
-func (s *session) ConnectionState() ConnectionState {
+func (s *session) ConnectionState() tls.ConnectionState {
 	return s.cryptoStreamHandler.ConnectionState()
 }
 
@@ -860,9 +853,9 @@ func (s *session) closeLocal(e error) {
 func (s *session) destroy(e error) {
 	s.closeOnce.Do(func() {
 		if nerr, ok := e.(net.Error); ok && nerr.Timeout() {
-			s.logger.Errorf("Destroying session: %s", e)
+			s.logger.Errorf("Destroying session %s: %s", s.destConnID, e)
 		} else {
-			s.logger.Errorf("Destroying session with error: %s", e)
+			s.logger.Errorf("Destroying session %s with error: %s", s.destConnID, e)
 		}
 		s.sessionRunner.Remove(s.srcConnID)
 		s.closeChan <- closeError{err: e, sendClose: false, remote: false}
@@ -939,7 +932,10 @@ func (s *session) processTransportParameters(data []byte) {
 	}
 	s.logger.Debugf("Received Transport Parameters: %s", params)
 	s.peerParams = params
-	s.streamsMap.UpdateLimits(params)
+	if err := s.streamsMap.UpdateLimits(params); err != nil {
+		s.closeLocal(err)
+		return
+	}
 	s.packer.HandleTransportParameters(params)
 	s.frameParser.SetAckDelayExponent(params.AckDelayExponent)
 	s.connFlowController.UpdateSendWindow(params.InitialMaxData)
@@ -949,31 +945,11 @@ func (s *session) processTransportParameters(data []byte) {
 }
 
 func (s *session) processTransportParametersForClient(data []byte) (*handshake.TransportParameters, error) {
-	eetp := handshake.EncryptedExtensionsTransportParameters{}
-	if err := eetp.Unmarshal(data); err != nil {
+	params := &handshake.TransportParameters{}
+	if err := params.Unmarshal(data, s.perspective.Opposite()); err != nil {
 		return nil, err
 	}
-	// check that the negotiated_version is the current version
-	if eetp.NegotiatedVersion != s.version {
-		return nil, qerr.Error(qerr.VersionNegotiationError, "current version doesn't match negotiated_version")
-	}
-	// check that the current version is included in the supported versions
-	if !protocol.IsSupportedVersion(eetp.SupportedVersions, s.version) {
-		return nil, qerr.Error(qerr.VersionNegotiationError, "current version not included in the supported versions")
-	}
-	// if version negotiation was performed, check that we would have selected the current version based on the supported versions sent by the server
-	if s.version != s.initialVersion {
-		negotiatedVersion, ok := protocol.ChooseSupportedVersion(s.config.Versions, eetp.SupportedVersions)
-		if !ok || s.version != negotiatedVersion {
-			return nil, qerr.Error(qerr.VersionNegotiationError, "would have picked a different version")
-		}
-	}
 
-	params := &eetp.Parameters
-	// check that the server sent a stateless reset token
-	if params.StatelessResetToken == nil {
-		return nil, errors.New("server didn't send stateless_reset_token")
-	}
 	// check the Retry token
 	if !params.OriginalConnectionID.Equal(s.origDestConnID) {
 		return nil, fmt.Errorf("expected original_connection_id to equal %s, is %s", s.origDestConnID, params.OriginalConnectionID)
@@ -983,17 +959,11 @@ func (s *session) processTransportParametersForClient(data []byte) (*handshake.T
 }
 
 func (s *session) processTransportParametersForServer(data []byte) (*handshake.TransportParameters, error) {
-	chtp := handshake.ClientHelloTransportParameters{}
-	if err := chtp.Unmarshal(data); err != nil {
+	params := &handshake.TransportParameters{}
+	if err := params.Unmarshal(data, s.perspective.Opposite()); err != nil {
 		return nil, err
 	}
-	// perform the stateless version negotiation validation:
-	// make sure that we would have sent a Version Negotiation Packet if the client offered the initial version
-	// this is the case if and only if the initial version is not contained in the supported versions
-	if chtp.InitialVersion != s.version && protocol.IsSupportedVersion(s.config.Versions, chtp.InitialVersion) {
-		return nil, qerr.Error(qerr.VersionNegotiationError, "Client should have used the initial version")
-	}
-	return &chtp.Parameters, nil
+	return params, nil
 }
 
 func (s *session) sendPackets() error {
@@ -1077,21 +1047,9 @@ func (s *session) maybeSendAckOnlyPacket() error {
 // maybeSendRetransmission sends retransmissions for at most one packet.
 // It takes care that Initials aren't retransmitted, if a packet from the server was already received.
 func (s *session) maybeSendRetransmission() (bool, error) {
-	var retransmitPacket *ackhandler.Packet
-	for {
-		retransmitPacket = s.sentPacketHandler.DequeuePacketForRetransmission()
-		if retransmitPacket == nil {
-			return false, nil
-		}
-
-		// Don't retransmit Initial packets if we already received a response.
-		// An Initial might have been retransmitted multiple times before we receive a response.
-		// As soon as we receive one response, we don't need to send any more Initials.
-		if s.perspective == protocol.PerspectiveClient && s.receivedFirstPacket && retransmitPacket.PacketType == protocol.PacketTypeInitial {
-			s.logger.Debugf("Skipping retransmission of packet %d. Already received a response to an Initial.", retransmitPacket.PacketNumber)
-			continue
-		}
-		break
+	retransmitPacket := s.sentPacketHandler.DequeuePacketForRetransmission()
+	if retransmitPacket == nil {
+		return false, nil
 	}
 
 	s.logger.Debugf("Dequeueing retransmission for packet 0x%x (%s)", retransmitPacket.PacketNumber, retransmitPacket.EncryptionLevel)
@@ -1240,9 +1198,9 @@ func (s *session) newFlowController(id protocol.StreamID) flowcontrol.StreamFlow
 			initialSendWindow = s.peerParams.InitialMaxStreamDataUni
 		} else {
 			if id.InitiatedBy() == s.perspective {
-				initialSendWindow = s.peerParams.InitialMaxStreamDataBidiLocal
-			} else {
 				initialSendWindow = s.peerParams.InitialMaxStreamDataBidiRemote
+			} else {
+				initialSendWindow = s.peerParams.InitialMaxStreamDataBidiLocal
 			}
 		}
 	}

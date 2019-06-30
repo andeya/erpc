@@ -21,7 +21,7 @@ type math struct {
 	tp.CallCtx
 }
 
-func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
+func (m *math) Add(arg *[]int) (int, *tp.Status) {
 	var r int
 	for _, a := range *arg {
 		r += a
@@ -33,7 +33,7 @@ type chat struct {
 	tp.PushCtx
 }
 
-func (c *chat) Say(arg *string) *tp.Rerror {
+func (c *chat) Say(arg *string) *tp.Status {
 	tp.Printf("%s say: %q", c.PeekMeta("X-ID"), *arg)
 	return nil
 }

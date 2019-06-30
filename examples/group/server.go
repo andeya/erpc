@@ -24,7 +24,7 @@ type math_v2 struct {
 	tp.CallCtx
 }
 
-func (m *math_v2) Add__2(arg *[]int) (int, *tp.Rerror) {
+func (m *math_v2) Add__2(arg *[]int) (int, *tp.Status) {
 	if string(m.PeekMeta("push_status")) == "yes" {
 		m.Session().Push(
 			"/cli/push/server_status",

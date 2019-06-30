@@ -43,33 +43,31 @@ func TestCombined(t *testing.T) {
 
 	// Client
 	cli := tp.NewPeer(tp.PeerConfig{})
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		if err != nil {
-			t.Error(err)
-		}
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/test?peer_id=110",
+	stat = sess.Call("/home/test",
 		map[string]interface{}{
-			"bytes": []byte("test bytes"),
+			"bytes": "test bytes",
 		},
 		&result,
 		// Use custom filter
 		tp.WithXferPipe('m'),
-	).Rerror()
-	if rerr != nil {
-		t.Error(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Error(stat)
 	}
-	t.Logf("=========result:%v", result)
+	t.Logf("result:%v", result)
 }
 
 type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Rerror) {
+func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Status) {
 	return map[string]interface{}{
-		"your_id": h.Query().Get("peer_id"),
+		"result": "your request is:" + (*arg)["bytes"].(string),
 	}, nil
 }

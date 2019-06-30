@@ -61,7 +61,7 @@ type (
 	}
 	// PushForwarder the object used to push
 	PushForwarder interface {
-		Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Rerror
+		Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Status
 	}
 	// Label proxy label information
 	Label struct {
@@ -91,7 +91,7 @@ func (p *proxy) PostNewPeer(peer tp.EarlyPeer) error {
 	return nil
 }
 
-func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
+func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Status) {
 	var (
 		label    Label
 		settings = make([]tp.MessageSetting, 0, 16)
@@ -115,15 +115,15 @@ func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
 	callcmd.InputMeta().VisitAll(func(key, value []byte) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
-	rerr := callcmd.Rerror()
-	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
-		rerr.Code = tp.CodeBadGateway
-		rerr.Message = tp.CodeText(tp.CodeBadGateway)
+	stat := callcmd.Status()
+	if !stat.OK() && stat.Code < 200 && stat.Code > 99 {
+		stat.Code = tp.CodeBadGateway
+		stat.Message = tp.CodeText(tp.CodeBadGateway)
 	}
-	return result, rerr
+	return result, stat
 }
 
-func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
+func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Status {
 	var (
 		label    Label
 		settings = make([]tp.MessageSetting, 0, 16)
@@ -139,12 +139,12 @@ func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Rerror {
 		label.RealIP = goutil.BytesToString(realIPBytes)
 	}
 	label.ServiceMethod = ctx.ServiceMethod()
-	rerr := p.pushForwarder(&label).Push(label.ServiceMethod, ctx.InputBodyBytes(), settings...)
-	if rerr != nil && rerr.Code < 200 && rerr.Code > 99 {
-		rerr.Code = tp.CodeBadGateway
-		rerr.Message = tp.CodeText(tp.CodeBadGateway)
+	stat := p.pushForwarder(&label).Push(label.ServiceMethod, ctx.InputBodyBytes(), settings...)
+	if !stat.OK() && stat.Code < 200 && stat.Code > 99 {
+		stat.Code = tp.CodeBadGateway
+		stat.Message = tp.CodeText(tp.CodeBadGateway)
 	}
-	return rerr
+	return stat
 }
 
 var peerName = filepath.Base(os.Args[0])

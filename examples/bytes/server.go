@@ -29,19 +29,19 @@ type Home struct {
 }
 
 // Test handler
-func (h *Home) Test(arg *[]byte) ([]byte, *tp.Rerror) {
+func (h *Home) Test(arg *[]byte) ([]byte, *tp.Status) {
 	h.Session().Push("/push/test", []byte("test push text"))
 	tp.Debugf("HomeCallHandle: codec: %d, arg: %s", h.GetBodyCodec(), *arg)
 	return []byte("test call result text"), nil
 }
 
 // UnknownCallHandle handles unknown call message
-func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Rerror) {
+func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Status) {
 	ctx.Session().Push("/push/test", []byte("test unknown push text"))
 	var arg []byte
 	codecID, err := ctx.Bind(&arg)
 	if err != nil {
-		return nil, tp.NewRerror(1001, "bind error", err.Error())
+		return nil, tp.NewStatus(1001, "bind error", err.Error())
 	}
 	tp.Debugf("UnknownCallHandle: codec: %d, arg: %s", codecID, arg)
 	return []byte("test unknown call result text"), nil

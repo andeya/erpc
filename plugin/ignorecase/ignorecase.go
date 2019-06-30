@@ -23,13 +23,13 @@ func (i *ignoreCase) Name() string {
 	return "ignoreCase"
 }
 
-func (i *ignoreCase) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (i *ignoreCase) PostReadCallHeader(ctx tp.ReadCtx) *tp.Status {
 	// Dynamic transformation path is lowercase
 	ctx.ResetServiceMethod(strings.ToLower(ctx.ServiceMethod()))
 	return nil
 }
 
-func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (i *ignoreCase) PostReadPushHeader(ctx tp.ReadCtx) *tp.Status {
 	// Dynamic transformation path is lowercase
 	ctx.ResetServiceMethod(strings.ToLower(ctx.ServiceMethod()))
 	return nil

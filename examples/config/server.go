@@ -27,7 +27,7 @@ type math struct {
 	tp.CallCtx
 }
 
-func (m *math) Add(arg *[]int) (int, *tp.Rerror) {
+func (m *math) Add(arg *[]int) (int, *tp.Status) {
 	var r int
 	for _, a := range *arg {
 		r += a

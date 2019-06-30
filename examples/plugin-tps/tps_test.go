@@ -11,7 +11,7 @@ type Call struct {
 	tp.CallCtx
 }
 
-func (*Call) Test(*struct{}) (*struct{}, *tp.Rerror) {
+func (*Call) Test(*struct{}) (*struct{}, *tp.Status) {
 	return nil, nil
 }
 
@@ -19,7 +19,7 @@ type Push struct {
 	tp.PushCtx
 }
 
-func (*Push) Test(*struct{}) *tp.Rerror {
+func (*Push) Test(*struct{}) *tp.Status {
 	return nil
 }
 
@@ -34,25 +34,21 @@ func TestTPS(t *testing.T) {
 
 	// Client
 	cli := tp.NewPeer(tp.PeerConfig{})
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		if err != nil {
-			t.Error(err)
-		}
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		t.Error(stat)
 	}
-	var (
-		rerr   *tp.Rerror
-		ticker = time.NewTicker(time.Millisecond * 10)
-	)
+
+	ticker := time.NewTicker(time.Millisecond * 10)
 	for i := 0; i < 1<<10; i++ {
 		<-ticker.C
-		rerr = sess.Call("/call/test", nil, nil).Rerror()
-		if rerr != nil {
-			t.Error(rerr)
+		stat = sess.Call("/call/test", nil, nil).Status()
+		if !stat.OK() {
+			t.Error(stat)
 		}
-		rerr = sess.Push("/push/test", nil)
-		if rerr != nil {
-			t.Error(rerr)
+		stat = sess.Push("/push/test", nil)
+		if !stat.OK() {
+			t.Error(stat)
 		}
 	}
 }

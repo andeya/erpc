@@ -13,9 +13,9 @@ import (
 	"time"
 	"unicode/utf16"
 	"unicode/utf8"
-	"unsafe"
 
 	"github.com/tidwall/match"
+	"github.com/tidwall/pretty"
 )
 
 // Type is Result type
@@ -78,7 +78,20 @@ func (t Result) String() string {
 	case False:
 		return "false"
 	case Number:
-		return strconv.FormatFloat(t.Num, 'f', -1, 64)
+		if len(t.Raw) == 0 {
+			// calculated result
+			return strconv.FormatFloat(t.Num, 'f', -1, 64)
+		}
+		var i int
+		if t.Raw[0] == '-' {
+			i++
+		}
+		for ; i < len(t.Raw); i++ {
+			if t.Raw[i] < '0' || t.Raw[i] > '9' {
+				return strconv.FormatFloat(t.Num, 'f', -1, 64)
+			}
+		}
+		return t.Raw
 	case String:
 		return t.Str
 	case JSON:
@@ -96,7 +109,7 @@ func (t Result) Bool() bool {
 	case True:
 		return true
 	case String:
-		return t.Str != "" && t.Str != "0"
+		return t.Str != "" && t.Str != "0" && t.Str != "false"
 	case Number:
 		return t.Num != 0
 	}
@@ -174,11 +187,12 @@ func (t Result) Time() time.Time {
 }
 
 // Array returns back an array of values.
-// If the result represents a non-existent value, then an empty array will be returned.
-// If the result is not a JSON array, the return value will be an array containing one result.
+// If the result represents a non-existent value, then an empty array will be
+// returned. If the result is not a JSON array, the return value will be an
+// array containing one result.
 func (t Result) Array() []Result {
-	if !t.Exists() {
-		return nil
+	if t.Type == Null {
+		return []Result{}
 	}
 	if t.Type != JSON {
 		return []Result{t}
@@ -192,16 +206,17 @@ func (t Result) IsObject() bool {
 	return t.Type == JSON && len(t.Raw) > 0 && t.Raw[0] == '{'
 }
 
-// IsObject returns true if the result value is a JSON array.
+// IsArray returns true if the result value is a JSON array.
 func (t Result) IsArray() bool {
 	return t.Type == JSON && len(t.Raw) > 0 && t.Raw[0] == '['
 }
 
 // ForEach iterates through values.
-// If the result represents a non-existent value, then no values will be iterated.
-// If the result is an Object, the iterator will pass the key and value of each item.
-// If the result is an Array, the iterator will only pass the value of each item.
-// If the result is not a JSON array or object, the iterator will pass back one value equal to the result.
+// If the result represents a non-existent value, then no values will be
+// iterated. If the result is an Object, the iterator will pass the key and
+// value of each item. If the result is an Array, the iterator will only pass
+// the value of each item. If the result is not a JSON array or object, the
+// iterator will pass back one value equal to the result.
 func (t Result) ForEach(iterator func(key, value Result) bool) {
 	if !t.Exists() {
 		return
@@ -345,24 +360,30 @@ func (t Result) arrayOrMap(vc byte, valueize bool) (r arrayOrMapResult) {
 			if (json[i] >= '0' && json[i] <= '9') || json[i] == '-' {
 				value.Type = Number
 				value.Raw, value.Num = tonum(json[i:])
+				value.Str = ""
 			} else {
 				continue
 			}
 		case '{', '[':
 			value.Type = JSON
 			value.Raw = squash(json[i:])
+			value.Str, value.Num = "", 0
 		case 'n':
 			value.Type = Null
 			value.Raw = tolit(json[i:])
+			value.Str, value.Num = "", 0
 		case 't':
 			value.Type = True
 			value.Raw = tolit(json[i:])
+			value.Str, value.Num = "", 0
 		case 'f':
 			value.Type = False
 			value.Raw = tolit(json[i:])
+			value.Str, value.Num = "", 0
 		case '"':
 			value.Type = String
 			value.Raw, value.Str = tostr(json[i:])
+			value.Num = 0
 		}
 		i += len(value.Raw) - 1
 
@@ -371,9 +392,13 @@ func (t Result) arrayOrMap(vc byte, valueize bool) (r arrayOrMapResult) {
 				key = value
 			} else {
 				if valueize {
-					r.oi[key.Str] = value.Value()
+					if _, ok := r.oi[key.Str]; !ok {
+						r.oi[key.Str] = value.Value()
+					}
 				} else {
-					r.o[key.Str] = value
+					if _, ok := r.o[key.Str]; !ok {
+						r.o[key.Str] = value
+					}
 				}
 			}
 			count++
@@ -390,6 +415,11 @@ end:
 }
 
 // Parse parses the json and returns a result.
+//
+// This function expects that the json is well-formed, and does not validate.
+// Invalid json will not panic, but it may return back unexpected results.
+// If you are consuming JSON from an unpredictable source then you may want to
+// use the Valid function first.
 func Parse(json string) Result {
 	var value Result
 	for i := 0; i < len(json); i++ {
@@ -578,6 +608,8 @@ func (t Result) Exists() bool {
 //	Number, for JSON numbers
 //	string, for JSON string literals
 //	nil, for JSON null
+//	map[string]interface{}, for JSON objects
+//	[]interface{}, for JSON arrays
 //
 func (t Result) Value() interface{} {
 	if t.Type == String {
@@ -645,7 +677,8 @@ func parseNumber(json string, i int) (int, string) {
 	var s = i
 	i++
 	for ; i < len(json); i++ {
-		if json[i] <= ' ' || json[i] == ',' || json[i] == ']' || json[i] == '}' {
+		if json[i] <= ' ' || json[i] == ',' || json[i] == ']' ||
+			json[i] == '}' {
 			return i, json[s:i]
 		}
 	}
@@ -666,6 +699,8 @@ func parseLiteral(json string, i int) (int, string) {
 type arrayPathResult struct {
 	part    string
 	path    string
+	pipe    string
+	piped   bool
 	more    bool
 	alogok  bool
 	arrch   bool
@@ -681,6 +716,14 @@ type arrayPathResult struct {
 
 func parseArrayPath(path string) (r arrayPathResult) {
 	for i := 0; i < len(path); i++ {
+		if !DisableChaining {
+			if path[i] == '|' {
+				r.part = path[:i]
+				r.pipe = path[i+1:]
+				r.piped = true
+				return
+			}
+		}
 		if path[i] == '.' {
 			r.part = path[:i]
 			r.path = path[i+1:]
@@ -726,7 +769,8 @@ func parseArrayPath(path string) (r arrayPathResult) {
 					if i < len(path) {
 						s = i
 						if path[i] == '!' {
-							if i < len(path)-1 && path[i+1] == '=' {
+							if i < len(path)-1 && (path[i+1] == '=' ||
+								path[i+1] == '%') {
 								i++
 							}
 						} else if path[i] == '<' || path[i] == '>' {
@@ -799,19 +843,39 @@ func parseArrayPath(path string) (r arrayPathResult) {
 	return
 }
 
+// DisableChaining will disable the chaining (pipe) syntax
+var DisableChaining = false
+
 type objectPathResult struct {
-	part string
-	path string
-	wild bool
-	more bool
+	part  string
+	path  string
+	pipe  string
+	piped bool
+	wild  bool
+	more  bool
 }
 
 func parseObjectPath(path string) (r objectPathResult) {
 	for i := 0; i < len(path); i++ {
+		if !DisableChaining {
+			if path[i] == '|' {
+				r.part = path[:i]
+				r.pipe = path[i+1:]
+				r.piped = true
+				return
+			}
+		}
 		if path[i] == '.' {
+			// peek at the next byte and see if it's a '@' modifier.
 			r.part = path[:i]
-			r.path = path[i+1:]
-			r.more = true
+			if !DisableModifiers && !DisableChaining &&
+				i < len(path)-1 && path[i+1] == '@' {
+				r.pipe = path[i+1:]
+				r.piped = true
+			} else {
+				r.path = path[i+1:]
+				r.more = true
+			}
 			return
 		}
 		if path[i] == '*' || path[i] == '?' {
@@ -835,8 +899,21 @@ func parseObjectPath(path string) (r objectPathResult) {
 						continue
 					} else if path[i] == '.' {
 						r.part = string(epart)
-						r.path = path[i+1:]
+						// peek at the next byte and see if it's a '@' modifier
+						if !DisableModifiers && !DisableChaining &&
+							i < len(path)-1 && path[i+1] == '@' {
+							r.pipe = path[i+1:]
+							r.piped = true
+						} else {
+							r.path = path[i+1:]
+							r.more = true
+						}
 						r.more = true
+						return
+					} else if path[i] == '|' {
+						r.part = string(epart)
+						r.pipe = path[i+1:]
+						r.piped = true
 						return
 					} else if path[i] == '*' || path[i] == '?' {
 						r.wild = true
@@ -905,6 +982,10 @@ func parseObject(c *parseContext, i int, path string) (int, bool) {
 	var pmatch, kesc, vesc, ok, hit bool
 	var key, val string
 	rp := parseObjectPath(path)
+	if !rp.more && rp.piped {
+		c.pipe = rp.pipe
+		c.piped = true
+	}
 	for i < len(c.json) {
 		for ; i < len(c.json); i++ {
 			if c.json[i] == '"' {
@@ -1070,6 +1151,8 @@ func queryMatches(rp *arrayPathResult, value Result) bool {
 			return value.Str >= rpv
 		case "%":
 			return match.Match(value.Str, rpv)
+		case "!%":
+			return !match.Match(value.Str, rpv)
 		}
 	case Number:
 		rpvn, _ := strconv.ParseFloat(rpv, 64)
@@ -1077,7 +1160,7 @@ func queryMatches(rp *arrayPathResult, value Result) bool {
 		case "=":
 			return value.Num == rpvn
 		case "!=":
-			return value.Num == rpvn
+			return value.Num != rpvn
 		case "<":
 			return value.Num < rpvn
 		case "<=":
@@ -1128,7 +1211,58 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 			partidx = int(n)
 		}
 	}
-	for i < len(c.json) {
+	if !rp.more && rp.piped {
+		c.pipe = rp.pipe
+		c.piped = true
+	}
+
+	procQuery := func(qval Result) bool {
+		if rp.query.all {
+			if len(multires) == 0 {
+				multires = append(multires, '[')
+			}
+		}
+		var res Result
+		if qval.Type == JSON {
+			res = qval.Get(rp.query.path)
+		} else {
+			if rp.query.path != "" {
+				return false
+			}
+			res = qval
+		}
+		if queryMatches(&rp, res) {
+			if rp.more {
+				left, right, ok := splitPossiblePipe(rp.path)
+				if ok {
+					rp.path = left
+					c.pipe = right
+					c.piped = true
+				}
+				res = qval.Get(rp.path)
+			} else {
+				res = qval
+			}
+			if rp.query.all {
+				raw := res.Raw
+				if len(raw) == 0 {
+					raw = res.String()
+				}
+				if raw != "" {
+					if len(multires) > 1 {
+						multires = append(multires, ',')
+					}
+					multires = append(multires, raw...)
+				}
+			} else {
+				c.value = res
+				return true
+			}
+		}
+		return false
+	}
+
+	for i < len(c.json)+1 {
 		if !rp.arrch {
 			pmatch = partidx == h
 			hit = pmatch && !rp.more
@@ -1137,8 +1271,16 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 		if rp.alogok {
 			alog = append(alog, i)
 		}
-		for ; i < len(c.json); i++ {
-			switch c.json[i] {
+		for ; ; i++ {
+			var ch byte
+			if i > len(c.json) {
+				break
+			} else if i == len(c.json) {
+				ch = ']'
+			} else {
+				ch = c.json[i]
+			}
+			switch ch {
 			default:
 				continue
 			case '"':
@@ -1147,7 +1289,19 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				if !ok {
 					return i, false
 				}
-				if hit {
+				if rp.query.on {
+					var qval Result
+					if vesc {
+						qval.Str = unescape(val[1 : len(val)-1])
+					} else {
+						qval.Str = val[1 : len(val)-1]
+					}
+					qval.Raw = val
+					qval.Type = String
+					if procQuery(qval) {
+						return i, true
+					}
+				} else if hit {
 					if rp.alogok {
 						break
 					}
@@ -1172,24 +1326,8 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				} else {
 					i, val = parseSquash(c.json, i)
 					if rp.query.on {
-						res := Get(val, rp.query.path)
-						if queryMatches(&rp, res) {
-							if rp.more {
-								res = Get(val, rp.path)
-							} else {
-								res = Result{Raw: val, Type: JSON}
-							}
-							if rp.query.all {
-								if len(multires) == 0 {
-									multires = append(multires, '[')
-								} else {
-									multires = append(multires, ',')
-								}
-								multires = append(multires, res.Raw...)
-							} else {
-								c.value = res
-								return i, true
-							}
+						if procQuery(Result{Raw: val, Type: JSON}) {
+							return i, true
 						}
 					} else if hit {
 						if rp.alogok {
@@ -1211,7 +1349,11 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 					}
 				} else {
 					i, val = parseSquash(c.json, i)
-					if hit {
+					if rp.query.on {
+						if procQuery(Result{Raw: val, Type: JSON}) {
+							return i, true
+						}
+					} else if hit {
 						if rp.alogok {
 							break
 						}
@@ -1222,7 +1364,15 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 				}
 			case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 				i, val = parseNumber(c.json, i)
-				if hit {
+				if rp.query.on {
+					var qval Result
+					qval.Raw = val
+					qval.Type = Number
+					qval.Num, _ = strconv.ParseFloat(val, 64)
+					if procQuery(qval) {
+						return i, true
+					}
+				} else if hit {
 					if rp.alogok {
 						break
 					}
@@ -1234,7 +1384,19 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 			case 't', 'f', 'n':
 				vc := c.json[i]
 				i, val = parseLiteral(c.json, i)
-				if hit {
+				if rp.query.on {
+					var qval Result
+					qval.Raw = val
+					switch vc {
+					case 't':
+						qval.Type = True
+					case 'f':
+						qval.Type = False
+					}
+					if procQuery(qval) {
+						return i, true
+					}
+				} else if hit {
 					if rp.alogok {
 						break
 					}
@@ -1250,16 +1412,29 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 			case ']':
 				if rp.arrch && rp.part == "#" {
 					if rp.alogok {
+						left, right, ok := splitPossiblePipe(rp.alogkey)
+						if ok {
+							rp.alogkey = left
+							c.pipe = right
+							c.piped = true
+						}
 						var jsons = make([]byte, 0, 64)
 						jsons = append(jsons, '[')
 						for j, k := 0, 0; j < len(alog); j++ {
-							res := Get(c.json[alog[j]:], rp.alogkey)
-							if res.Exists() {
-								if k > 0 {
-									jsons = append(jsons, ',')
+							_, res, ok := parseAny(c.json, alog[j], true)
+							if ok {
+								res := res.Get(rp.alogkey)
+								if res.Exists() {
+									if k > 0 {
+										jsons = append(jsons, ',')
+									}
+									raw := res.Raw
+									if len(raw) == 0 {
+										raw = res.String()
+									}
+									jsons = append(jsons, []byte(raw)...)
+									k++
 								}
-								jsons = append(jsons, []byte(res.Raw)...)
-								k++
 							}
 						}
 						jsons = append(jsons, ']')
@@ -1270,7 +1445,7 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 					if rp.alogok {
 						break
 					}
-					c.value.Raw = val
+					c.value.Raw = ""
 					c.value.Type = Number
 					c.value.Num = float64(h - 1)
 					c.calcd = true
@@ -1290,22 +1465,106 @@ func parseArray(c *parseContext, i int, path string) (int, bool) {
 	return i, false
 }
 
+func splitPossiblePipe(path string) (left, right string, ok bool) {
+	// take a quick peek for the pipe character. If found we'll split the piped
+	// part of the path into the c.pipe field and shorten the rp.
+	var possible bool
+	for i := 0; i < len(path); i++ {
+		if path[i] == '|' {
+			possible = true
+			break
+		}
+	}
+	if !possible {
+		return
+	}
+
+	// split the left and right side of the path with the pipe character as
+	// the delimiter. This is a little tricky because we'll need to basically
+	// parse the entire path.
+
+	for i := 0; i < len(path); i++ {
+		if path[i] == '\\' {
+			i++
+		} else if path[i] == '.' {
+			if i == len(path)-1 {
+				return
+			}
+			if path[i+1] == '#' {
+				i += 2
+				if i == len(path) {
+					return
+				}
+				if path[i] == '[' {
+					// inside selector, balance brackets
+					i++
+					depth := 1
+					for ; i < len(path); i++ {
+						if path[i] == '\\' {
+							i++
+						} else if path[i] == '[' {
+							depth++
+						} else if path[i] == ']' {
+							depth--
+							if depth == 0 {
+								break
+							}
+						} else if path[i] == '"' {
+							// inside selector string, balance quotes
+							i++
+							for ; i < len(path); i++ {
+								if path[i] == '\\' {
+									i++
+								} else if path[i] == '"' {
+									break
+								}
+							}
+						}
+					}
+				}
+			}
+		} else if path[i] == '|' {
+			return path[:i], path[i+1:], true
+		}
+	}
+	return
+}
+
+// ForEachLine iterates through lines of JSON as specified by the JSON Lines
+// format (http://jsonlines.org/).
+// Each line is returned as a GJSON Result.
+func ForEachLine(json string, iterator func(line Result) bool) {
+	var res Result
+	var i int
+	for {
+		i, res, _ = parseAny(json, i, true)
+		if !res.Exists() {
+			break
+		}
+		if !iterator(res) {
+			return
+		}
+	}
+}
+
 type parseContext struct {
 	json  string
 	value Result
+	pipe  string
+	piped bool
 	calcd bool
+	lines bool
 }
 
 // Get searches json for the specified path.
 // A path is in dot syntax, such as "name.last" or "age".
-// This function expects that the json is well-formed, and does not validate.
-// Invalid json will not panic, but it may return back unexpected results.
 // When the value is found it's returned immediately.
 //
 // A path is a series of keys searated by a dot.
 // A key may contain special wildcard characters '*' and '?'.
 // To access an array value use the index as the key.
-// To get the number of elements in an array or to access a child path, use the '#' character.
+// To get the number of elements in an array or to access a child path, use
+// the '#' character.
 // The dot and wildcard character can be escaped with '\'.
 //
 //  {
@@ -1326,79 +1585,59 @@ type parseContext struct {
 //  "c?ildren.0"         >> "Sara"
 //  "friends.#.first"    >> ["James","Roger"]
 //
+// This function expects that the json is well-formed, and does not validate.
+// Invalid json will not panic, but it may return back unexpected results.
+// If you are consuming JSON from an unpredictable source then you may want to
+// use the Valid function first.
 func Get(json, path string) Result {
+	if !DisableModifiers {
+		if len(path) > 1 && path[0] == '@' {
+			// possible modifier
+			var ok bool
+			var rjson string
+			path, rjson, ok = execModifier(json, path)
+			if ok {
+				if len(path) > 0 && (path[0] == '|' || path[0] == '.') {
+					res := Get(rjson, path[1:])
+					res.Index = 0
+					return res
+				}
+				return Parse(rjson)
+			}
+		}
+	}
 	var i int
 	var c = &parseContext{json: json}
-	for ; i < len(c.json); i++ {
-		if c.json[i] == '{' {
-			i++
-			parseObject(c, i, path)
-			break
-		}
-		if c.json[i] == '[' {
-			i++
-			parseArray(c, i, path)
-			break
-		}
-	}
-	if len(c.value.Raw) > 0 && !c.calcd {
-		jhdr := *(*reflect.StringHeader)(unsafe.Pointer(&json))
-		rhdr := *(*reflect.StringHeader)(unsafe.Pointer(&(c.value.Raw)))
-		c.value.Index = int(rhdr.Data - jhdr.Data)
-		if c.value.Index < 0 || c.value.Index >= len(json) {
-			c.value.Index = 0
-		}
-	}
-	return c.value
-}
-func fromBytesGet(result Result) Result {
-	// safely get the string headers
-	rawhi := *(*reflect.StringHeader)(unsafe.Pointer(&result.Raw))
-	strhi := *(*reflect.StringHeader)(unsafe.Pointer(&result.Str))
-	// create byte slice headers
-	rawh := reflect.SliceHeader{Data: rawhi.Data, Len: rawhi.Len}
-	strh := reflect.SliceHeader{Data: strhi.Data, Len: strhi.Len}
-	if strh.Data == 0 {
-		// str is nil
-		if rawh.Data == 0 {
-			// raw is nil
-			result.Raw = ""
-		} else {
-			// raw has data, safely copy the slice header to a string
-			result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
-		}
-		result.Str = ""
-	} else if rawh.Data == 0 {
-		// raw is nil
-		result.Raw = ""
-		// str has data, safely copy the slice header to a string
-		result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
-	} else if strh.Data >= rawh.Data &&
-		int(strh.Data)+strh.Len <= int(rawh.Data)+rawh.Len {
-		// Str is a substring of Raw.
-		start := int(strh.Data - rawh.Data)
-		// safely copy the raw slice header
-		result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
-		// substring the raw
-		result.Str = result.Raw[start : start+strh.Len]
+	if len(path) >= 2 && path[0] == '.' && path[1] == '.' {
+		c.lines = true
+		parseArray(c, 0, path[2:])
 	} else {
-		// safely copy both the raw and str slice headers to strings
-		result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
-		result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
+		for ; i < len(c.json); i++ {
+			if c.json[i] == '{' {
+				i++
+				parseObject(c, i, path)
+				break
+			}
+			if c.json[i] == '[' {
+				i++
+				parseArray(c, i, path)
+				break
+			}
+		}
 	}
-	return result
+	if c.piped {
+		res := c.value.Get(c.pipe)
+		res.Index = 0
+		return res
+	}
+	fillIndex(json, c)
+	return c.value
 }
 
 // GetBytes searches json for the specified path.
 // If working with bytes, this method preferred over Get(string(data), path)
 func GetBytes(json []byte, path string) Result {
-	var result Result
-	if json != nil {
-		// unsafe cast to string
-		result = Get(*(*string)(unsafe.Pointer(&json)), path)
-		result = fromBytesGet(result)
-	}
-	return result
+	return getBytes(json, path)
 }
 
 // runeit returns the rune from the the \uXXXX
@@ -1448,7 +1687,8 @@ func unescape(json string) string { //, error) {
 				i += 5
 				if utf16.IsSurrogate(r) {
 					// need another code
-					if len(json[i:]) >= 6 && json[i] == '\\' && json[i+1] == 'u' {
+					if len(json[i:]) >= 6 && json[i] == '\\' &&
+						json[i+1] == 'u' {
 						// we expect it to be correct so just consume it
 						r = utf16.DecodeRune(r, runeit(json[i+2:]))
 						i += 6
@@ -1595,405 +1835,26 @@ var ( // used for testing
 	testLastWasFallback  bool
 )
 
-// areSimplePaths returns true if all the paths are simple enough
-// to parse quickly for GetMany(). Allows alpha-numeric, dots,
-// underscores, and the dollar sign. It does not allow non-alnum,
-// escape characters, or keys which start with a numbers.
-// For example:
-//   "name.last" == OK
-//   "user.id0" == OK
-//   "user.ID" == OK
-//   "user.first_name" == OK
-//   "user.firstName" == OK
-//   "user.0item" == BAD
-//   "user.#id" == BAD
-//   "user\.name" == BAD
-func areSimplePaths(paths []string) bool {
-	for _, path := range paths {
-		var fi int // first key index, for keys with numeric prefix
-		for i := 0; i < len(path); i++ {
-			if path[i] >= 'a' && path[i] <= 'z' {
-				// a-z is likely to be the highest frequency charater.
-				continue
-			}
-			if path[i] == '.' {
-				fi = i + 1
-				continue
-			}
-			if path[i] >= 'A' && path[i] <= 'Z' {
-				continue
-			}
-			if path[i] == '_' || path[i] == '$' {
-				continue
-			}
-			if i > fi && path[i] >= '0' && path[i] <= '9' {
-				continue
-			}
-			return false
-		}
-	}
-	return true
-}
-
 // GetMany searches json for the multiple paths.
 // The return value is a Result array where the number of items
 // will be equal to the number of input paths.
-func GetMany(json string, paths ...string) []Result {
-	if len(paths) < 4 {
-		if testWatchForFallback {
-			testLastWasFallback = false
-		}
-		switch len(paths) {
-		case 0:
-			// return nil when no paths are specified.
-			return nil
-		case 1:
-			return []Result{Get(json, paths[0])}
-		case 2:
-			return []Result{Get(json, paths[0]), Get(json, paths[1])}
-		case 3:
-			return []Result{Get(json, paths[0]), Get(json, paths[1]), Get(json, paths[2])}
-		}
+func GetMany(json string, path ...string) []Result {
+	res := make([]Result, len(path))
+	for i, path := range path {
+		res[i] = Get(json, path)
 	}
-	var results []Result
-	var ok bool
-	var i int
-	if len(paths) > 512 {
-		// we can only support up to 512 paths. Is that too many?
-		goto fallback
-	}
-	if !areSimplePaths(paths) {
-		// If there is even one path that is not considered "simple" then
-		// we need to use the fallback method.
-		goto fallback
-	}
-	// locate the object token.
-	for ; i < len(json); i++ {
-		if json[i] == '{' {
-			i++
-			break
-		}
-		if json[i] <= ' ' {
-			continue
-		}
-		goto fallback
-	}
-	// use the call function table.
-	if len(paths) <= 8 {
-		results, ok = getMany8(json, i, paths)
-	} else if len(paths) <= 16 {
-		results, ok = getMany16(json, i, paths)
-	} else if len(paths) <= 32 {
-		results, ok = getMany32(json, i, paths)
-	} else if len(paths) <= 64 {
-		results, ok = getMany64(json, i, paths)
-	} else if len(paths) <= 128 {
-		results, ok = getMany128(json, i, paths)
-	} else if len(paths) <= 256 {
-		results, ok = getMany256(json, i, paths)
-	} else if len(paths) <= 512 {
-		results, ok = getMany512(json, i, paths)
-	}
-	if !ok {
-		// there was some fault while parsing. we should try the
-		// fallback method. This could result in performance
-		// degregation in some cases.
-		goto fallback
-	}
-	if testWatchForFallback {
-		testLastWasFallback = false
-	}
-	return results
-fallback:
-	results = results[:0]
-	for i := 0; i < len(paths); i++ {
-		results = append(results, Get(json, paths[i]))
-	}
-	if testWatchForFallback {
-		testLastWasFallback = true
-	}
-	return results
+	return res
 }
 
-// GetManyBytes searches json for the specified path.
-// If working with bytes, this method preferred over
-// GetMany(string(data), paths...)
-func GetManyBytes(json []byte, paths ...string) []Result {
-	if json == nil {
-		return GetMany("", paths...)
+// GetManyBytes searches json for the multiple paths.
+// The return value is a Result array where the number of items
+// will be equal to the number of input paths.
+func GetManyBytes(json []byte, path ...string) []Result {
+	res := make([]Result, len(path))
+	for i, path := range path {
+		res[i] = GetBytes(json, path)
 	}
-	results := GetMany(*(*string)(unsafe.Pointer(&json)), paths...)
-	for i := range results {
-		results[i] = fromBytesGet(results[i])
-	}
-	return results
-}
-
-// parseGetMany parses a json object for keys that match against the callers
-// paths. It's a best-effort attempt and quickly locating and assigning the
-// values to the []Result array. If there are failures such as bad json, or
-// invalid input paths, or too much recursion, the function will exit with a
-// return value of 'false'.
-func parseGetMany(
-	json string, i int,
-	level uint, kplen int,
-	paths []string, completed []bool, matches []uint64, results []Result,
-) (int, bool) {
-	if level > 62 {
-		// The recursion level is limited because the matches []uint64
-		// array cannot handle more the 64-bits.
-		return i, false
-	}
-	// At this point the last character read was a '{'.
-	// Read all object keys and try to match against the paths.
-	var key string
-	var val string
-	var vesc, ok bool
-next_key:
-	for ; i < len(json); i++ {
-		if json[i] == '"' {
-			// read the key
-			i, val, vesc, ok = parseString(json, i+1)
-			if !ok {
-				return i, false
-			}
-			if vesc {
-				// the value is escaped
-				key = unescape(val[1 : len(val)-1])
-			} else {
-				// just a plain old ascii key
-				key = val[1 : len(val)-1]
-			}
-			var hasMatch bool
-			var parsedVal bool
-			var valOrgIndex int
-			var valPathIndex int
-			for j := 0; j < len(key); j++ {
-				if key[j] == '.' {
-					// we need to look for keys with dot and ignore them.
-					if i, _, ok = parseAny(json, i, false); !ok {
-						return i, false
-					}
-					continue next_key
-				}
-			}
-			var usedPaths int
-			// loop through paths and look for matches
-			for j := 0; j < len(paths); j++ {
-				if completed[j] {
-					usedPaths++
-					// ignore completed paths
-					continue
-				}
-				if level > 0 && (matches[j]>>(level-1))&1 == 0 {
-					// ignore unmatched paths
-					usedPaths++
-					continue
-				}
-				// try to match the key to the path
-				// this is spaghetti code but the idea is to minimize
-				// calls and variable assignments when comparing the
-				// key to paths
-				if len(paths[j])-kplen >= len(key) {
-					i, k := kplen, 0
-					for ; k < len(key); k, i = k+1, i+1 {
-						if key[k] != paths[j][i] {
-							// no match
-							goto nomatch
-						}
-					}
-					if i < len(paths[j]) {
-						if paths[j][i] == '.' {
-							// matched, but there are still more keys in path
-							goto match_not_atend
-						}
-					}
-					if len(paths[j]) <= len(key) || kplen != 0 {
-						if len(paths[j]) != i {
-							goto nomatch
-						}
-						// matched and at the end of the path
-						goto match_atend
-					}
-				}
-				// no match, jump to the nomatch label
-				goto nomatch
-			match_atend:
-				// found a match
-				// at the end of the path. we must take the value.
-				usedPaths++
-				if !parsedVal {
-					// the value has not been parsed yet. let's do so.
-					valOrgIndex = i // keep track of the current position.
-					i, results[j], ok = parseAny(json, i, true)
-					if !ok {
-						return i, false
-					}
-					parsedVal = true
-					valPathIndex = j
-				} else {
-					results[j] = results[valPathIndex]
-				}
-				// mark as complete
-				completed[j] = true
-				// jump over the match_not_atend label
-				goto nomatch
-			match_not_atend:
-				// found a match
-				// still in the middle of the path.
-				usedPaths++
-				// mark the path as matched
-				matches[j] |= 1 << level
-				if !hasMatch {
-					hasMatch = true
-				}
-			nomatch: // noop label
-			}
-
-			if !hasMatch && i < len(json) && json[i] == '}' {
-				return i + 1, true
-			}
-			if !parsedVal {
-				if hasMatch {
-					// we found a match and the value has not been parsed yet.
-					// let's find out if the next value type is an object.
-					for ; i < len(json); i++ {
-						if json[i] <= ' ' || json[i] == ':' {
-							continue
-						}
-						break
-					}
-					if i < len(json) {
-						if json[i] == '{' {
-							// it's an object. let's go deeper
-							i, ok = parseGetMany(json, i+1, level+1, kplen+len(key)+1, paths, completed, matches, results)
-							if !ok {
-								return i, false
-							}
-						} else {
-							// not an object. just parse and ignore.
-							if i, _, ok = parseAny(json, i, false); !ok {
-								return i, false
-							}
-						}
-					}
-				} else {
-					// Since there was no matches we can just parse the value and
-					// ignore the result.
-					if i, _, ok = parseAny(json, i, false); !ok {
-						return i, false
-					}
-				}
-			} else if hasMatch && len(results[valPathIndex].Raw) > 0 && results[valPathIndex].Raw[0] == '{' {
-				// The value was already parsed and the value type is an object.
-				// Rewind the json index and let's parse deeper.
-				i = valOrgIndex
-				for ; i < len(json); i++ {
-					if json[i] == '{' {
-						break
-					}
-				}
-				i, ok = parseGetMany(json, i+1, level+1, kplen+len(key)+1, paths, completed, matches, results)
-				if !ok {
-					return i, false
-				}
-			}
-			if usedPaths == len(paths) {
-				// all paths have been used, either completed or matched.
-				// we should stop parsing this object to save CPU cycles.
-				if level > 0 && i < len(json) {
-					i, _ = parseSquash(json, i)
-				}
-				return i, true
-			}
-		} else if json[i] == '}' {
-			// reached the end of the object. end it here.
-			return i + 1, true
-		}
-	}
-	return i, true
-}
-
-// Call table for GetMany. Using an isolated function allows for allocating
-// arrays with know capacities on the stack, as opposed to dynamically
-// allocating on the heap. This can provide a tremendous performance boost
-// by avoiding the GC.
-func getMany8(json string, i int, paths []string) ([]Result, bool) {
-	const max = 8
-	var completed = make([]bool, 0, max)
-	var matches = make([]uint64, 0, max)
-	var results = make([]Result, 0, max)
-	completed = completed[0:len(paths):max]
-	matches = matches[0:len(paths):max]
-	results = results[0:len(paths):max]
-	_, ok := parseGetMany(json, i, 0, 0, paths, completed, matches, results)
-	return results, ok
-}
-func getMany16(json string, i int, paths []string) ([]Result, bool) {
-	const max = 16
-	var completed = make([]bool, 0, max)
-	var matches = make([]uint64, 0, max)
-	var results = make([]Result, 0, max)
-	completed = completed[0:len(paths):max]
-	matches = matches[0:len(paths):max]
-	results = results[0:len(paths):max]
-	_, ok := parseGetMany(json, i, 0, 0, paths, completed, matches, results)
-	return results, ok
-}
-func getMany32(json string, i int, paths []string) ([]Result, bool) {
-	const max = 32
-	var completed = make([]bool, 0, max)
-	var matches = make([]uint64, 0, max)
-	var results = make([]Result, 0, max)
-	completed = completed[0:len(paths):max]
-	matches = matches[0:len(paths):max]
-	results = results[0:len(paths):max]
-	_, ok := parseGetMany(json, i, 0, 0, paths, completed, matches, results)
-	return results, ok
-}
-func getMany64(json string, i int, paths []string) ([]Result, bool) {
-	const max = 64
-	var completed = make([]bool, 0, max)
-	var matches = make([]uint64, 0, max)
-	var results = make([]Result, 0, max)
-	completed = completed[0:len(paths):max]
-	matches = matches[0:len(paths):max]
-	results = results[0:len(paths):max]
-	_, ok := parseGetMany(json, i, 0, 0, paths, completed, matches, results)
-	return results, ok
-}
-func getMany128(json string, i int, paths []string) ([]Result, bool) {
-	const max = 128
-	var completed = make([]bool, 0, max)
-	var matches = make([]uint64, 0, max)
-	var results = make([]Result, 0, max)
-	completed = completed[0:len(paths):max]
-	matches = matches[0:len(paths):max]
-	results = results[0:len(paths):max]
-	_, ok := parseGetMany(json, i, 0, 0, paths, completed, matches, results)
-	return results, ok
-}
-func getMany256(json string, i int, paths []string) ([]Result, bool) {
-	const max = 256
-	var completed = make([]bool, 0, max)
-	var matches = make([]uint64, 0, max)
-	var results = make([]Result, 0, max)
-	completed = completed[0:len(paths):max]
-	matches = matches[0:len(paths):max]
-	results = results[0:len(paths):max]
-	_, ok := parseGetMany(json, i, 0, 0, paths, completed, matches, results)
-	return results, ok
-}
-func getMany512(json string, i int, paths []string) ([]Result, bool) {
-	const max = 512
-	var completed = make([]bool, 0, max)
-	var matches = make([]uint64, 0, max)
-	var results = make([]Result, 0, max)
-	completed = completed[0:len(paths):max]
-	matches = matches[0:len(paths):max]
-	results = results[0:len(paths):max]
-	_, ok := parseGetMany(json, i, 0, 0, paths, completed, matches, results)
-	return results, ok
+	return res
 }
 
 var fieldsmu sync.RWMutex
@@ -2047,7 +1908,8 @@ func assign(jsval Result, goval reflect.Value) {
 			return true
 		})
 	case reflect.Slice:
-		if goval.Type().Elem().Kind() == reflect.Uint8 && jsval.Type == String {
+		if goval.Type().Elem().Kind() == reflect.Uint8 &&
+			jsval.Type == String {
 			data, _ := base64.StdEncoding.DecodeString(jsval.String())
 			goval.Set(reflect.ValueOf(data))
 		} else {
@@ -2069,7 +1931,8 @@ func assign(jsval Result, goval reflect.Value) {
 			return true
 		})
 	case reflect.Map:
-		if goval.Type().Key().Kind() == reflect.String && goval.Type().Elem().Kind() == reflect.Interface {
+		if goval.Type().Key().Kind() == reflect.String &&
+			goval.Type().Elem().Kind() == reflect.Interface {
 			goval.Set(reflect.ValueOf(jsval.Value()))
 		}
 	case reflect.Interface:
@@ -2078,9 +1941,11 @@ func assign(jsval Result, goval reflect.Value) {
 		goval.SetBool(jsval.Bool())
 	case reflect.Float32, reflect.Float64:
 		goval.SetFloat(jsval.Float())
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
+		reflect.Int64:
 		goval.SetInt(jsval.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
+		reflect.Uint64:
 		goval.SetUint(jsval.Uint())
 	case reflect.String:
 		goval.SetString(jsval.String())
@@ -2113,8 +1978,9 @@ func UnmarshalValidationEnabled(enabled bool) {
 //
 // This function works almost identically to json.Unmarshal except  that
 // gjson.Unmarshal will automatically attempt to convert JSON values to any Go
-// type. For example, the JSON string "100" or the JSON number 100 can be equally
-// assigned to Go string, int, byte, uint64, etc. This rule applies to all types.
+// type. For example, the JSON string "100" or the JSON number 100 can be
+// equally assigned to Go string, int, byte, uint64, etc. This rule applies to
+// all types.
 //
 // Deprecated: Use encoder/json.Unmarshal instead
 func Unmarshal(data []byte, v interface{}) error {
@@ -2204,8 +2070,14 @@ func validobject(data []byte, i int) (outi int, ok bool) {
 			if data[i] == '}' {
 				return i + 1, true
 			}
+			i++
 			for ; i < len(data); i++ {
-				if data[i] == '"' {
+				switch data[i] {
+				default:
+					return i, false
+				case ' ', '\t', '\n', '\r':
+					continue
+				case '"':
 					goto key
 				}
 			}
@@ -2367,27 +2239,50 @@ func validnumber(data []byte, i int) (outi int, ok bool) {
 }
 
 func validtrue(data []byte, i int) (outi int, ok bool) {
-	if i+3 <= len(data) && data[i] == 'r' && data[i+1] == 'u' && data[i+2] == 'e' {
+	if i+3 <= len(data) && data[i] == 'r' && data[i+1] == 'u' &&
+		data[i+2] == 'e' {
 		return i + 3, true
 	}
 	return i, false
 }
 func validfalse(data []byte, i int) (outi int, ok bool) {
-	if i+4 <= len(data) && data[i] == 'a' && data[i+1] == 'l' && data[i+2] == 's' && data[i+3] == 'e' {
+	if i+4 <= len(data) && data[i] == 'a' && data[i+1] == 'l' &&
+		data[i+2] == 's' && data[i+3] == 'e' {
 		return i + 4, true
 	}
 	return i, false
 }
 func validnull(data []byte, i int) (outi int, ok bool) {
-	if i+3 <= len(data) && data[i] == 'u' && data[i+1] == 'l' && data[i+2] == 'l' {
+	if i+3 <= len(data) && data[i] == 'u' && data[i+1] == 'l' &&
+		data[i+2] == 'l' {
 		return i + 3, true
 	}
 	return i, false
 }
 
 // Valid returns true if the input is valid json.
+//
+//  if !gjson.Valid(json) {
+//  	return errors.New("invalid json")
+//  }
+//  value := gjson.Get(json, "name.last")
+//
 func Valid(json string) bool {
-	_, ok := validpayload([]byte(json), 0)
+	_, ok := validpayload(stringBytes(json), 0)
+	return ok
+}
+
+// ValidBytes returns true if the input is valid json.
+//
+//  if !gjson.Valid(json) {
+//  	return errors.New("invalid json")
+//  }
+//  value := gjson.Get(json, "name.last")
+//
+// If working with bytes, this method preferred over ValidBytes(string(data))
+//
+func ValidBytes(json []byte) bool {
+	_, ok := validpayload(json, 0)
 	return ok
 }
 
@@ -2448,4 +2343,152 @@ func floatToInt(f float64) (n int64, ok bool) {
 		return n, true
 	}
 	return 0, false
+}
+
+// execModifier parses the path to find a matching modifier function.
+// then input expects that the path already starts with a '@'
+func execModifier(json, path string) (pathOut, res string, ok bool) {
+	name := path[1:]
+	var hasArgs bool
+	for i := 1; i < len(path); i++ {
+		if path[i] == ':' {
+			pathOut = path[i+1:]
+			name = path[1:i]
+			hasArgs = len(pathOut) > 0
+			break
+		}
+		if !DisableChaining {
+			if path[i] == '|' {
+				pathOut = path[i:]
+				name = path[1:i]
+				break
+			}
+		}
+		if path[i] == '.' {
+			pathOut = path[i:]
+			name = path[1:i]
+			break
+		}
+	}
+	if fn, ok := modifiers[name]; ok {
+		var args string
+		if hasArgs {
+			var parsedArgs bool
+			switch pathOut[0] {
+			case '{', '[', '"':
+				res := Parse(pathOut)
+				if res.Exists() {
+					_, args = parseSquash(pathOut, 0)
+					pathOut = pathOut[len(args):]
+					parsedArgs = true
+				}
+			}
+			if !parsedArgs {
+				idx := -1
+				if !DisableChaining {
+					idx = strings.IndexByte(pathOut, '|')
+				}
+				if idx == -1 {
+					args = pathOut
+					pathOut = ""
+				} else {
+					args = pathOut[:idx]
+					pathOut = pathOut[idx:]
+				}
+			}
+		}
+		return pathOut, fn(json, args), true
+	}
+	return pathOut, res, false
+}
+
+// DisableModifiers will disable the modifier syntax
+var DisableModifiers = false
+
+var modifiers = map[string]func(json, arg string) string{
+	"pretty":  modPretty,
+	"ugly":    modUgly,
+	"reverse": modReverse,
+}
+
+// AddModifier binds a custom modifier command to the GJSON syntax.
+// This operation is not thread safe and should be executed prior to
+// using all other gjson function.
+func AddModifier(name string, fn func(json, arg string) string) {
+	modifiers[name] = fn
+}
+
+// ModifierExists returns true when the specified modifier exists.
+func ModifierExists(name string, fn func(json, arg string) string) bool {
+	_, ok := modifiers[name]
+	return ok
+}
+
+// @pretty modifier makes the json look nice.
+func modPretty(json, arg string) string {
+	if len(arg) > 0 {
+		opts := *pretty.DefaultOptions
+		Parse(arg).ForEach(func(key, value Result) bool {
+			switch key.String() {
+			case "sortKeys":
+				opts.SortKeys = value.Bool()
+			case "indent":
+				opts.Indent = value.String()
+			case "prefix":
+				opts.Prefix = value.String()
+			case "width":
+				opts.Width = int(value.Int())
+			}
+			return true
+		})
+		return bytesString(pretty.PrettyOptions(stringBytes(json), &opts))
+	}
+	return bytesString(pretty.Pretty(stringBytes(json)))
+}
+
+// @ugly modifier removes all whitespace.
+func modUgly(json, arg string) string {
+	return bytesString(pretty.Ugly(stringBytes(json)))
+}
+
+// @reverse reverses array elements or root object members.
+func modReverse(json, arg string) string {
+	res := Parse(json)
+	if res.IsArray() {
+		var values []Result
+		res.ForEach(func(_, value Result) bool {
+			values = append(values, value)
+			return true
+		})
+		out := make([]byte, 0, len(json))
+		out = append(out, '[')
+		for i, j := len(values)-1, 0; i >= 0; i, j = i-1, j+1 {
+			if j > 0 {
+				out = append(out, ',')
+			}
+			out = append(out, values[i].Raw...)
+		}
+		out = append(out, ']')
+		return bytesString(out)
+	}
+	if res.IsObject() {
+		var keyValues []Result
+		res.ForEach(func(key, value Result) bool {
+			keyValues = append(keyValues, key, value)
+			return true
+		})
+		out := make([]byte, 0, len(json))
+		out = append(out, '{')
+		for i, j := len(keyValues)-2, 0; i >= 0; i, j = i-2, j+1 {
+			if j > 0 {
+				out = append(out, ',')
+			}
+			out = append(out, keyValues[i+0].Raw...)
+			out = append(out, ':')
+			out = append(out, keyValues[i+1].Raw...)
+		}
+		out = append(out, '}')
+		return bytesString(out)
+	}
+	return json
 }

@@ -50,7 +50,7 @@ type Math struct {
 }
 
 // Add handles addition request
-func (m *Math) Add(arg *[]int) (int, *tp.Rerror) {
+func (m *Math) Add(arg *[]int) (int, *tp.Status) {
 	// test query parameter
 	tp.Infof("author: %s", m.PeekMeta("author"))
 	// add

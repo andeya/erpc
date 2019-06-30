@@ -17,19 +17,19 @@ func main() {
 
 	cli.RoutePush(new(Push))
 
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 
 	var result int
-	rerr := sess.Call("/math/add",
+	stat = sess.Call("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 		tp.WithAddMeta("author", "henrylee2cn"),
-	).Rerror()
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	).Status()
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result: %d", result)
 
@@ -43,7 +43,7 @@ type Push struct {
 }
 
 // Push handles '/push/status' message
-func (p *Push) Status(arg *string) *tp.Rerror {
+func (p *Push) Status(arg *string) *tp.Status {
 	tp.Printf("%s", *arg)
 	return nil
 }

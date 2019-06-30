@@ -1196,6 +1196,10 @@ func (c *Conn) handleRenegotiation() error {
 	return c.handshakeErr
 }
 
+func (c *Conn) HandlePostHandshakeMessage() error {
+	return c.handlePostHandshakeMessage()
+}
+
 // handlePostHandshakeMessage processes a handshake message arrived after the
 // handshake is complete. Up to TLS 1.2, it indicates the start of a renegotiation.
 func (c *Conn) handlePostHandshakeMessage() error {

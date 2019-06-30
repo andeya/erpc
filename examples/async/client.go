@@ -13,9 +13,9 @@ func main() {
 	defer tp.SetLoggerLevel("INFO")()
 	cli := tp.NewPeer(tp.PeerConfig{})
 	defer cli.Close()
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 
 	// Single asynchronous call
@@ -30,7 +30,7 @@ WAIT:
 	for {
 		select {
 		case <-callCmd.Done():
-			tp.Infof("test 1: result: %#v, error: %v", result, callCmd.Rerror())
+			tp.Infof("test 1: result: %#v, error: %v", result, callCmd.Status())
 			break WAIT
 		default:
 			tp.Warnf("test 1: Not yet returned to the result, try again later...")
@@ -50,9 +50,9 @@ WAIT:
 		)
 	}
 	for callCmd := range callCmdChan {
-		result, rerr := callCmd.Reply()
-		if rerr != nil {
-			tp.Errorf("test 2: error: %v", rerr)
+		result, stat := callCmd.Reply()
+		if !stat.OK() {
+			tp.Errorf("test 2: error: %v", stat)
 		} else {
 			tp.Infof("test 2: result: %v", *result.(*string))
 		}

@@ -5,6 +5,11 @@ import (
 	"unsafe"
 )
 
+// AddrInt returns a pointer int representing the address of i.
+func AddrInt(i int) *int {
+	return &i
+}
+
 // InitAndGetString if strPtr is empty string, initialize it with def,
 // and return the final value.
 func InitAndGetString(strPtr *string, def string) string {

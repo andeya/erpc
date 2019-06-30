@@ -15,30 +15,30 @@ func main() {
 	cli.RoutePushFunc((*ctrl).ServerStatus1)
 	cli.RoutePushFunc(ServerStatus2)
 
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 
 	var result int
-	rerr := sess.Call("/math/add1",
+	stat = sess.Call("/math/add1",
 		[]int{1, 2, 3, 4, 5},
 		&result,
-	).Rerror()
+	).Status()
 
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result1: %d", result)
 
-	rerr = sess.Call("/math/add2",
+	stat = sess.Call("/math/add2",
 		[]int{1, 2, 3, 4, 5},
 		&result,
 		tp.WithAddMeta("push_status", "yes"),
-	).Rerror()
+	).Status()
 
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result2: %d", result)
 }
@@ -47,11 +47,11 @@ type ctrl struct {
 	tp.PushCtx
 }
 
-func (c *ctrl) ServerStatus1(arg *string) *tp.Rerror {
+func (c *ctrl) ServerStatus1(arg *string) *tp.Status {
 	return ServerStatus2(c, arg)
 }
 
-func ServerStatus2(ctx tp.PushCtx, arg *string) *tp.Rerror {
+func ServerStatus2(ctx tp.PushCtx, arg *string) *tp.Status {
 	tp.Printf("server status(%s): %s", ctx.ServiceMethod(), *arg)
 	return nil
 }

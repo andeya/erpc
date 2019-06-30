@@ -26,16 +26,16 @@ type test struct {
 	tp.CallCtx
 }
 
-func (t *test) Ok(arg *string) (string, *tp.Rerror) {
+func (t *test) Ok(arg *string) (string, *tp.Status) {
 	return *arg + " -> OK", nil
 }
 
-func (t *test) Timeout(arg *string) (string, *tp.Rerror) {
+func (t *test) Timeout(arg *string) (string, *tp.Status) {
 	tCtx, _ := context.WithTimeout(t.Context(), time.Second)
 	time.Sleep(time.Second)
 	select {
 	case <-tCtx.Done():
-		return "", tp.NewRerror(
+		return "", tp.NewStatus(
 			tp.CodeHandleTimeout,
 			tp.CodeText(tp.CodeHandleTimeout),
 			tCtx.Err().Error(),
@@ -45,12 +45,12 @@ func (t *test) Timeout(arg *string) (string, *tp.Rerror) {
 	}
 }
 
-func (t *test) Break(*struct{}) (*struct{}, *tp.Rerror) {
+func (t *test) Break(*struct{}) (*struct{}, *tp.Status) {
 	time.Sleep(time.Second * 3)
 	select {
 	case <-t.Session().CloseNotify():
 		tp.Infof("the connection has gone away!")
-		return nil, tp.NewRerror(tp.CodeConnClosed, "", "")
+		return nil, tp.NewStatus(tp.CodeConnClosed, "", "")
 	default:
 		return nil, nil
 	}

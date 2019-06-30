@@ -17,28 +17,28 @@ func main() {
 	)
 	defer cli.Close()
 
-	sess, err := cli.Dial(":8080")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat := cli.Dial(":8080")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 
 	var result int
-	rerr := sess.Call("/math/add",
+	stat = sess.Call("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&result,
-	).Rerror()
+	).Status()
 
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result: %d", result)
 
-	rerr = sess.Push(
+	stat = sess.Push(
 		"/chat/say",
 		fmt.Sprintf("I get result %d", result),
 		socket.WithSetMeta("X-ID", "client-001"),
 	)
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 }

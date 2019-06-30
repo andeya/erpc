@@ -53,17 +53,17 @@ type (
 		// PostNewPeer runs ping woker.
 		PostNewPeer(peer tp.EarlyPeer) error
 		// PostDial initializes heartbeat information.
-		PostDial(sess tp.PreSession) *tp.Rerror
+		PostDial(sess tp.PreSession) *tp.Status
 		// PostAccept initializes heartbeat information.
-		PostAccept(sess tp.PreSession) *tp.Rerror
+		PostAccept(sess tp.PreSession) *tp.Status
 		// PostWriteCall updates heartbeat information.
-		PostWriteCall(ctx tp.WriteCtx) *tp.Rerror
+		PostWriteCall(ctx tp.WriteCtx) *tp.Status
 		// PostWritePush updates heartbeat information.
-		PostWritePush(ctx tp.WriteCtx) *tp.Rerror
+		PostWritePush(ctx tp.WriteCtx) *tp.Status
 		// PostReadCallHeader updates heartbeat information.
-		PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror
+		PostReadCallHeader(ctx tp.ReadCtx) *tp.Status
 		// PostReadPushHeader updates heartbeat information.
-		PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror
+		PostReadPushHeader(ctx tp.ReadCtx) *tp.Status
 	}
 	heartPing struct {
 		peer           tp.Peer
@@ -167,35 +167,35 @@ func (h *heartPing) PostNewPeer(peer tp.EarlyPeer) error {
 }
 
 // PostDial initializes heartbeat information.
-func (h *heartPing) PostDial(sess tp.PreSession) *tp.Rerror {
+func (h *heartPing) PostDial(sess tp.PreSession) *tp.Status {
 	return h.PostAccept(sess)
 }
 
 // PostAccept initializes heartbeat information.
-func (h *heartPing) PostAccept(sess tp.PreSession) *tp.Rerror {
+func (h *heartPing) PostAccept(sess tp.PreSession) *tp.Status {
 	rate := h.getRate()
 	initHeartbeatInfo(sess.Swap(), rate)
 	return nil
 }
 
 // PostWriteCall updates heartbeat information.
-func (h *heartPing) PostWriteCall(ctx tp.WriteCtx) *tp.Rerror {
+func (h *heartPing) PostWriteCall(ctx tp.WriteCtx) *tp.Status {
 	return h.PostWritePush(ctx)
 }
 
 // PostWritePush updates heartbeat information.
-func (h *heartPing) PostWritePush(ctx tp.WriteCtx) *tp.Rerror {
+func (h *heartPing) PostWritePush(ctx tp.WriteCtx) *tp.Status {
 	h.update(ctx)
 	return nil
 }
 
 // PostReadCallHeader updates heartbeat information.
-func (h *heartPing) PostReadCallHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (h *heartPing) PostReadCallHeader(ctx tp.ReadCtx) *tp.Status {
 	return h.PostReadPushHeader(ctx)
 }
 
 // PostReadPushHeader updates heartbeat information.
-func (h *heartPing) PostReadPushHeader(ctx tp.ReadCtx) *tp.Rerror {
+func (h *heartPing) PostReadPushHeader(ctx tp.ReadCtx) *tp.Status {
 	h.update(ctx)
 	return nil
 }
@@ -205,7 +205,7 @@ func (h *heartPing) goCall(sess tp.Session) {
 		if sess.Call(
 			HeartbeatServiceMethod, nil, nil,
 			tp.WithSetMeta(heartbeatMetaKey, h.getPingRateSecond()),
-		).Rerror() != nil {
+		).Status() != nil {
 			sess.Close()
 		}
 	})

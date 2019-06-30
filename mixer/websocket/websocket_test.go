@@ -19,7 +19,7 @@ type Arg struct {
 
 type P struct{ tp.CallCtx }
 
-func (p *P) Divide(arg *Arg) (int, *tp.Rerror) {
+func (p *P) Divide(arg *Arg) (int, *tp.Status) {
 	return arg.A / arg.B, nil
 }
 
@@ -31,18 +31,18 @@ func TestJSONWebsocket(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	cli := ws.NewClient("/", tp.PeerConfig{})
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		t.Fatal(err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result int
-	rerr := sess.Call("/p/divide", &Arg{
+	stat = sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 2,
 	}, &result,
-	).Rerror()
-	if rerr != nil {
-		t.Fatal(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	t.Logf("10/2=%d", result)
 	time.Sleep(time.Second)
@@ -63,13 +63,13 @@ func TestPbWebsocketTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 	var result int
-	rerr := sess.Call("/p/divide", &Arg{
+	stat := sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 2,
 	}, &result,
-	).Rerror()
-	if rerr != nil {
-		t.Fatal(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	t.Logf("10/2=%d", result)
 	time.Sleep(time.Second)
@@ -83,18 +83,18 @@ func TestCustomizedWebsocket(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	cli := tp.NewPeer(tp.PeerConfig{}, ws.NewDialPlugin("/ws"))
-	sess, err := cli.Dial(":9092", jsonSubProto.NewJSONSubProtoFunc())
-	if err != nil {
-		t.Fatal(err)
+	sess, stat := cli.Dial(":9092", jsonSubProto.NewJSONSubProtoFunc())
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result int
-	rerr := sess.Call("/p/divide", &Arg{
+	stat = sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 2,
 	}, &result,
-	).Rerror()
-	if rerr != nil {
-		t.Fatal(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	t.Logf("10/2=%d", result)
 	time.Sleep(time.Second)
@@ -116,18 +116,18 @@ func TestJSONWebsocketAuth(t *testing.T) {
 		tp.PeerConfig{},
 		authBearer,
 	)
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		t.Fatal(err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result int
-	rerr := sess.Call("/p/divide", &Arg{
+	stat = sess.Call("/p/divide", &Arg{
 		A: 10,
 		B: 2,
 	}, &result,
-	).Rerror()
-	if rerr != nil {
-		t.Fatal(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	t.Logf("10/2=%d", result)
 	time.Sleep(time.Second)
@@ -136,10 +136,10 @@ func TestJSONWebsocketAuth(t *testing.T) {
 const clientAuthInfo = "client-auth-info-12345"
 
 var authBearer = auth.NewBearerPlugin(
-	func(sess auth.Session, fn auth.SendOnce) (rerr *tp.Rerror) {
+	func(sess auth.Session, fn auth.SendOnce) (stat *tp.Status) {
 		var ret string
-		rerr = fn(clientAuthInfo, &ret)
-		if rerr.HasError() {
+		stat = fn(clientAuthInfo, &ret)
+		if !stat.OK() {
 			return
 		}
 		tp.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
@@ -149,15 +149,15 @@ var authBearer = auth.NewBearerPlugin(
 )
 
 var authChecker = auth.NewCheckerPlugin(
-	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, rerr *tp.Rerror) {
+	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, stat *tp.Status) {
 		var authInfo string
-		rerr = fn(&authInfo)
-		if rerr.HasError() {
+		stat = fn(&authInfo)
+		if !stat.OK() {
 			return
 		}
 		tp.Infof("auth info: %v", authInfo)
 		if clientAuthInfo != authInfo {
-			return nil, tp.NewRerror(403, "auth fail", "auth fail detail")
+			return nil, tp.NewStatus(403, "auth fail", "auth fail detail")
 		}
 		return "pass", nil
 	},

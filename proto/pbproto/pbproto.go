@@ -63,6 +63,7 @@ func (pp *pbproto) Pack(m tp.Message) error {
 		Seq:           m.Seq(),
 		Mtype:         int32(m.Mtype()),
 		ServiceMethod: m.ServiceMethod(),
+		Status:        m.Status().EncodeQuery(),
 		Meta:          m.Meta().QueryString(),
 		BodyCodec:     int32(m.BodyCodec()),
 		Body:          bodyBytes,
@@ -141,6 +142,7 @@ func (pp *pbproto) Unpack(m tp.Message) error {
 	m.SetSeq(s.Seq)
 	m.SetMtype(byte(s.Mtype))
 	m.SetServiceMethod(s.ServiceMethod)
+	m.Status().DecodeQuery(s.Status)
 	m.Meta().ParseBytes(s.Meta)
 
 	// read body
