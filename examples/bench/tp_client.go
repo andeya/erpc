@@ -75,9 +75,9 @@ func main() {
 				}
 			}()
 
-			sess, rerr := client.Dial(*host)
-			if rerr != nil {
-				log.Fatalf("did not connect: %v", rerr)
+			sess, stat := client.Dial(*host)
+			if !stat.OK() {
+				log.Fatalf("did not connect: %v", stat)
 			}
 			defer sess.Close()
 
@@ -90,17 +90,17 @@ func main() {
 
 			for j := 0; j < m; j++ {
 				t := time.Now().UnixNano()
-				rerr := sess.Call(serviceMethod, args, &reply).Rerror()
+				stat := sess.Call(serviceMethod, args, &reply).Status()
 				t = time.Now().UnixNano() - t
 
 				d[i] = append(d[i], t)
 
-				if rerr == nil && reply.Field1 == "OK" {
+				if stat.OK() && reply.Field1 == "OK" {
 					atomic.AddUint64(&transOK, 1)
 				}
 
-				// if rerr != nil {
-				// 	log.Print(rerr.String())
+				// if !stat.OK() {
+				// 	log.Print(stat.String())
 				// }
 
 				atomic.AddUint64(&trans, 1)

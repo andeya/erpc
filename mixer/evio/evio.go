@@ -51,9 +51,9 @@ func NewServer(loops int, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Ser
 	}
 
 	srv.events.Opened = func(c evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
-		err := srv.serveConn(c)
-		if err != nil {
-			tp.Debugf("serve connection fail: %s", err.Error())
+		stat := srv.serveConn(c)
+		if !stat.OK() {
+			tp.Debugf("serve connection fail: %s", stat.String())
 			action = evio.Close
 		}
 		opts.ReuseInputBuffer = true
@@ -120,7 +120,7 @@ func (srv *Server) ListenAndServe(protoFunc ...tp.ProtoFunc) error {
 	return evio.Serve(srv.events, srv.addr)
 }
 
-func (srv *Server) serveConn(evioConn evio.Conn) error {
+func (srv *Server) serveConn(evioConn evio.Conn) (stat *tp.Status) {
 	c := &conn{
 		conn:        evioConn,
 		events:      srv.events,
@@ -129,11 +129,10 @@ func (srv *Server) serveConn(evioConn evio.Conn) error {
 		in:          make(chan *utils.ByteBuffer, srv.readBufferSize/128),
 		out:         make(chan []byte, srv.writeBufferSize/128),
 	}
-	var err error
-	c.sess, err = srv.Peer.ServeConn(c)
+	c.sess, stat = srv.Peer.ServeConn(c)
 	// c.sess.Swap().Store(wakeWriteKey, c)
 	evioConn.SetContext(c)
-	return err
+	return stat
 }
 
 // conn is a evio(evio) network connection.

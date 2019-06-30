@@ -32,8 +32,8 @@ type MultiClient struct {
 // New creates a client session which is has connection pool.
 func New(peer tp.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.Duration, protoFunc ...tp.ProtoFunc) *MultiClient {
 	newWorkerFunc := func() (pool.Worker, error) {
-		sess, rerr := peer.Dial(addr, protoFunc...)
-		return sess, rerr.ToError()
+		sess, stat := peer.Dial(addr, protoFunc...)
+		return sess, stat.Cause()
 	}
 	return &MultiClient{
 		addr: addr,
@@ -73,7 +73,7 @@ func (c *MultiClient) AsyncCall(
 ) tp.CallCmd {
 	_sess, err := c.pool.Hire()
 	if err != nil {
-		callCmd := tp.NewFakeCallCmd(uri, arg, result, tp.ToRerror(err))
+		callCmd := tp.NewFakeCallCmd(uri, arg, result, tp.NewStatusByCodeText(tp.CodeWrongConn, err, false))
 		if callCmdChan != nil && cap(callCmdChan) == 0 {
 			tp.Panicf("*MultiClient.AsyncCall(): callCmdChan channel is unbuffered")
 		}
@@ -99,10 +99,10 @@ func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, sett
 // NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *MultiClient) Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Rerror {
+func (c *MultiClient) Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Status {
 	_sess, err := c.pool.Hire()
 	if err != nil {
-		return tp.ToRerror(err)
+		return tp.NewStatusByCodeText(tp.CodeWrongConn, err, false)
 	}
 	sess := _sess.(tp.Session)
 	defer c.pool.Fire(sess)

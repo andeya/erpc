@@ -6,8 +6,18 @@ import (
 	"strings"
 )
 
-// IsGoTest check if the current process is a test.
+// IsGoTest returns whether the current process is a test.
 func IsGoTest() bool {
+	return isGoTest
+}
+
+var isGoTest bool
+
+func init() {
+	isGoTest = checkGoTestEnv()
+}
+
+func checkGoTestEnv() bool {
 	maybe := flag.Lookup("test.v") != nil ||
 		flag.Lookup("test.run") != nil ||
 		flag.Lookup("test.bench") != nil

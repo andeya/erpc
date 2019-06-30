@@ -7,11 +7,11 @@ import (
 	tp "github.com/henrylee2cn/teleport"
 )
 
-func panic_call(tp.CallCtx, *interface{}) (interface{}, *tp.Rerror) {
+func panic_call(tp.CallCtx, *interface{}) (interface{}, *tp.Status) {
 	panic("panic_call")
 }
 
-func panic_push(tp.PushCtx, *interface{}) *tp.Rerror {
+func panic_push(tp.PushCtx, *interface{}) *tp.Status {
 	panic("panic_push")
 }
 
@@ -28,17 +28,17 @@ func TestPanic(t *testing.T) {
 
 	cli := tp.NewPeer(tp.PeerConfig{})
 	defer cli.Close()
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		t.Fatalf("%v", err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
-	rerr := sess.Call("/panic/call", nil, nil).Rerror()
-	if rerr == nil {
+	stat = sess.Call("/panic/call", nil, nil).Status()
+	if stat.OK() {
 		t.Fatalf("/panic/call: expect error!")
 	}
-	t.Logf("/panic/call error: %v", rerr)
-	rerr = sess.Push("/panic/push", nil)
-	if rerr != nil {
+	t.Logf("/panic/call error: %v", stat)
+	stat = sess.Push("/panic/push", nil)
+	if !stat.OK() {
 		t.Fatalf("/panic/push: expect ok!")
 	}
 	t.Logf("/panic/push: ok")

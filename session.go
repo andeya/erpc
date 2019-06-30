@@ -63,10 +63,10 @@ type (
 		// NOTE:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
-		Send(serviceMethod string, body interface{}, rerr *Rerror, setting ...MessageSetting) *Rerror
+		Send(serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) *Status
 		// Receive receives a message from peer, before the formal connection.
 		// NOTE: does not support automatic redial after disconnection.
-		Receive(NewBodyFunc, ...MessageSetting) (Message, *Rerror)
+		Receive(NewBodyFunc, ...MessageSetting) (Message, *Status)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -125,7 +125,7 @@ type (
 		// NOTE:
 		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Rerror
+		Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Status
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -327,11 +327,10 @@ func (s *session) SetContextAge(duration time.Duration) {
 // NOTE:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(serviceMethod string, body interface{}, rerr *Rerror, setting ...MessageSetting) (replyErr *Rerror) {
+func (s *session) Send(serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (replyErr *Status) {
 	defer func() {
 		if p := recover(); p != nil {
-			replyErr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
-			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
+			replyErr = statBadMessage.Copy(p, 3)
 		}
 	}()
 
@@ -347,8 +346,8 @@ func (s *session) Send(serviceMethod string, body interface{}, rerr *Rerror, set
 	if body != nil {
 		output.SetBody(body)
 	}
-	if rerr != nil {
-		rerr.SetToMeta(output.Meta())
+	if !stat.OK() {
+		output.SetStatus(stat)
 	}
 	if age := s.ContextAge(); age > 0 {
 		ctxTimout, _ := context.WithTimeout(output.Context(), age)
@@ -363,7 +362,7 @@ func (s *session) Send(serviceMethod string, body interface{}, rerr *Rerror, set
 	ctx := output.Context()
 	select {
 	case <-ctx.Done():
-		return rerrWriteFailed.Copy().SetReason(ctx.Err().Error())
+		return statWriteFailed.Copy(ctx.Err())
 	default:
 		deadline, _ := ctx.Deadline()
 		s.socket.SetWriteDeadline(deadline)
@@ -372,10 +371,10 @@ func (s *session) Send(serviceMethod string, body interface{}, rerr *Rerror, set
 			return nil
 		}
 		if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
-			return rerrConnClosed
+			return statConnClosed
 		}
 		Debugf("write error: %s", err.Error())
-		return rerrWriteFailed.Copy().SetReason(err.Error())
+		return statWriteFailed.Copy(err)
 	}
 }
 
@@ -383,12 +382,11 @@ func (s *session) Send(serviceMethod string, body interface{}, rerr *Rerror, set
 // NOTE:
 //  Does not support automatic redial after disconnection;
 //  Recommend to reuse unused Message: PutMessage(input).
-func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input Message, rerr *Rerror) {
+func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input Message, stat *Status) {
 	defer func() {
 		if p := recover(); p != nil {
-			rerr = rerrBadMessage.Copy().SetReason(fmt.Sprintf("%v", p))
+			stat = statBadMessage.Copy(p, 3)
 			socket.PutMessage(input)
-			Debugf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 
@@ -403,12 +401,10 @@ func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (i
 	s.socket.SetReadDeadline(deadline)
 
 	if err := s.socket.ReadMessage(input); err != nil {
-		rerr := rerrConnClosed.Copy().SetReason(err.Error())
 		socket.PutMessage(input)
-		return nil, rerr
+		return nil, statConnClosed.Copy(err)
 	}
-	rerr = NewRerrorFromMeta(input.Meta())
-	return input, rerr
+	return input, input.Status()
 }
 
 // AsyncCall sends a message and receives reply asynchronously.
@@ -486,15 +482,15 @@ func (s *session) AsyncCall(
 		}
 	}()
 
-	cmd.rerr = s.peer.pluginContainer.preWriteCall(cmd)
-	if cmd.rerr != nil {
+	cmd.stat = s.peer.pluginContainer.preWriteCall(cmd)
+	if !cmd.stat.OK() {
 		cmd.done()
 		return cmd
 	}
 	var usedConn net.Conn
 W:
-	if usedConn, cmd.rerr = s.write(output); cmd.rerr != nil {
-		if cmd.rerr == rerrConnClosed && s.redialForClient(usedConn) {
+	if usedConn, cmd.stat = s.write(output); !cmd.stat.OK() {
+		if cmd.stat == statConnClosed && s.redialForClient(usedConn) {
 			goto W
 		}
 		cmd.done()
@@ -519,7 +515,7 @@ func (s *session) Call(serviceMethod string, arg interface{}, result interface{}
 // NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Rerror {
+func (s *session) Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Status {
 	ctx := s.peer.getContext(s, true)
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
@@ -548,18 +544,18 @@ func (s *session) Push(serviceMethod string, arg interface{}, setting ...Message
 		}
 		s.peer.putContext(ctx, true)
 	}()
-	rerr := s.peer.pluginContainer.preWritePush(ctx)
-	if rerr != nil {
-		return rerr
+	stat := s.peer.pluginContainer.preWritePush(ctx)
+	if !stat.OK() {
+		return stat
 	}
 
 	var usedConn net.Conn
 W:
-	if usedConn, rerr = s.write(output); rerr != nil {
-		if rerr == rerrConnClosed && s.redialForClient(usedConn) {
+	if usedConn, stat = s.write(output); !stat.OK() {
+		if stat == statConnClosed && s.redialForClient(usedConn) {
 			goto W
 		}
-		return rerr
+		return stat
 	}
 
 	s.printAccessLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
@@ -706,7 +702,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	s.callCmdMap.Range(func(_, v interface{}) bool {
 		callCmd := v.(*callCmd)
 		callCmd.mu.Lock()
-		if !callCmd.hasReply() && callCmd.rerr == nil {
+		if !callCmd.hasReply() && callCmd.stat.OK() {
 			callCmd.cancel(reason)
 		}
 		callCmd.mu.Unlock()
@@ -774,7 +770,7 @@ func (s *session) startReadAndHandle() {
 			return
 		}
 		if err != nil {
-			ctx.handleErr = rerrBadMessage.Copy().SetReason(err.Error())
+			ctx.stat = statBadMessage.Copy(err)
 		}
 		s.graceCtxWaitGroup.Add(1)
 		if !Go(func() {
@@ -786,16 +782,15 @@ func (s *session) startReadAndHandle() {
 	}
 }
 
-func (s *session) write(message Message) (net.Conn, *Rerror) {
+func (s *session) write(message Message) (net.Conn, *Status) {
 	usedConn := s.getConn()
 	status := s.getStatus()
 	if status != statusOk &&
 		!(status == statusActiveClosing && message.Mtype() == TypeReply) {
-		return usedConn, rerrConnClosed
+		return usedConn, statConnClosed
 	}
 
 	var (
-		rerr        *Rerror
 		err         error
 		ctx         = message.Context()
 		deadline, _ = ctx.Deadline()
@@ -824,14 +819,13 @@ func (s *session) write(message Message) (net.Conn, *Rerror) {
 	}
 
 	if err == io.EOF || err == socket.ErrProactivelyCloseSocket {
-		return usedConn, rerrConnClosed
+		return usedConn, statConnClosed
 	}
 
 	Debugf("write error: %s", err.Error())
 
 ERR:
-	rerr = rerrWriteFailed.Copy().SetReason(err.Error())
-	return usedConn, rerr
+	return usedConn, statWriteFailed.Copy(err)
 }
 
 // SessionHub sessions hub
@@ -964,9 +958,9 @@ func messageLogBytes(message Message, printDetail bool) []byte {
 	b = append(b, '{')
 	b = append(b, '"', 's', 'i', 'z', 'e', '"', ':')
 	b = append(b, strconv.FormatUint(uint64(message.Size()), 10)...)
-	if rerrBytes := getRerrorBytes(message.Meta()); len(rerrBytes) > 0 {
-		b = append(b, ',', '"', 'e', 'r', 'r', 'o', 'r', '"', ':')
-		b = append(b, utils.ToJSONStr(rerrBytes, false)...)
+	if statBytes := message.Status().EncodeQuery(); len(statBytes) > 0 {
+		b = append(b, ',', '"', 's', 't', 'a', 't', 'u', 's', '"', ':')
+		b = append(b, statBytes...)
 	}
 	if printDetail {
 		if message.Meta().Len() > 0 {

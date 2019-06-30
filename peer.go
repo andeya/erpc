@@ -17,7 +17,6 @@ package tp
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"strings"
 	"sync"
@@ -68,9 +67,9 @@ type (
 		// RoutePushFunc registers PUSH handler, and returns the path.
 		RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) string
 		// SetUnknownCall sets the default handler, which is called when no handler for CALL is found.
-		SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Rerror), plugin ...Plugin)
+		SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Status), plugin ...Plugin)
 		// SetUnknownPush sets the default handler, which is called when no handler for PUSH is found.
-		SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin)
+		SetUnknownPush(fn func(UnknownPushCtx) *Status, plugin ...Plugin)
 	}
 	// Peer the communication peer which is server or client role
 	Peer interface {
@@ -78,12 +77,12 @@ type (
 		// ListenAndServe turns on the listening service.
 		ListenAndServe(protoFunc ...ProtoFunc) error
 		// Dial connects with the peer of the destination address.
-		Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror)
+		Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status)
 		// ServeConn serves the connection and returns a session.
 		// NOTE:
 		//  Not support automatically redials after disconnection;
 		//  Execute the PostAcceptPlugin plugins.
-		ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error)
+		ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status)
 	}
 )
 
@@ -212,7 +211,7 @@ func (p *peer) CountSession() int {
 }
 
 // Dial connects with the peer of the destination address.
-func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Rerror) {
+func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 	return p.newSessionForClient(func() (net.Conn, error) {
 		if p.network == "quic" {
 			ctx := context.Background()
@@ -253,7 +252,7 @@ func (r *redialTimes) next() bool {
 	return true
 }
 
-func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) (*session, *Rerror) {
+func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) (*session, *Status) {
 	conn, dialErr := dialFunc()
 	if dialErr != nil {
 		redialTimes := p.newRedialTimes()
@@ -267,8 +266,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 		}
 	}
 	if dialErr != nil {
-		rerr := rerrDialFailed.Copy().SetReason(dialErr.Error())
-		return nil, rerr
+		return nil, statDialFailed.Copy(dialErr)
 	}
 	var sess = newSession(p, conn, protoFuncs)
 
@@ -278,33 +276,28 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 			if oldConn != sess.getConn() {
 				return true
 			}
-			var err error
+			var stat *Status
 			redialTimes := p.newRedialTimes()
 			for redialTimes.next() {
 				time.Sleep(p.redialInterval)
 				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
-				err = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
-				if err == nil {
+				stat = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
+				if !stat.OK() {
 					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 					return true
 				}
-				// if i > 1 {
-				// 	Warnf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteIP(), sess.ID(), err.Error())
-				// 	// Debug:
-				// 	time.Sleep(5e9)
-				// }
 			}
-			if err != nil {
-				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteAddr().String(), sess.ID(), err.Error())
+			if !stat.OK() {
+				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteAddr().String(), sess.ID(), stat.String())
 			}
 			return false
 		}
 	}
 
 	sess.socket.SetID(sess.LocalAddr().String())
-	if rerr := p.pluginContainer.postDial(sess); rerr != nil {
+	if stat := p.pluginContainer.postDial(sess); !stat.OK() {
 		sess.Close()
-		return nil, rerr
+		return nil, stat
 	}
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
@@ -312,10 +305,10 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	return sess, nil
 }
 
-func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) error {
+func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) *Status {
 	var conn, dialErr = dialFunc()
 	if dialErr != nil {
-		return dialErr
+		return statDialFailed.Copy(dialErr)
 	}
 	if p.tlsConfig != nil {
 		conn = tls.Client(conn, p.tlsConfig)
@@ -332,9 +325,9 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	} else {
 		sess.socket.SetID(oldID)
 	}
-	if rerr := p.pluginContainer.postDial(sess); rerr != nil {
+	if stat := p.pluginContainer.postDial(sess); !stat.OK() {
 		sess.Close()
-		return rerr.ToError()
+		return stat
 	}
 	atomic.StoreInt32(&sess.status, statusOk)
 	AnywayGo(sess.startReadAndHandle)
@@ -346,18 +339,18 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 // NOTE:
 //  Not support automatically redials after disconnection;
 //  Execute the PostAcceptPlugin plugins.
-func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, error) {
+func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status) {
 	network := conn.LocalAddr().Network()
 	if strings.Contains(network, "udp") {
 		if _, ok := conn.(*quic.Conn); !ok {
-			return nil, fmt.Errorf("invalid network: %s,\nrefer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic", network)
+			return nil, NewStatus(CodeWrongConn, "Not support UDP", "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
 		}
 		network = "quic"
 	}
 	var sess = newSession(p, conn, protoFunc)
-	if rerr := p.pluginContainer.postAccept(sess); rerr != nil {
+	if stat := p.pluginContainer.postAccept(sess); !stat.OK() {
 		sess.Close()
-		return nil, rerr.ToError()
+		return nil, stat
 	}
 	Infof("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.ID())
 	p.sessHub.Set(sess)
@@ -427,7 +420,7 @@ func (p *peer) serveListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 				}
 			}
 			var sess = newSession(p, conn, protoFunc)
-			if rerr := p.pluginContainer.postAccept(sess); rerr != nil {
+			if stat := p.pluginContainer.postAccept(sess); !stat.OK() {
 				sess.Close()
 				return
 			}
@@ -546,13 +539,13 @@ func (p *peer) RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) strin
 
 // SetUnknownCall sets the default handler,
 // which is called when no handler for CALL is found.
-func (p *peer) SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Rerror), plugin ...Plugin) {
+func (p *peer) SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Status), plugin ...Plugin) {
 	p.router.SetUnknownCall(fn, plugin...)
 }
 
 // SetUnknownPush sets the default handler,
 // which is called when no handler for PUSH is found.
-func (p *peer) SetUnknownPush(fn func(UnknownPushCtx) *Rerror, plugin ...Plugin) {
+func (p *peer) SetUnknownPush(fn func(UnknownPushCtx) *Status, plugin ...Plugin) {
 	p.router.SetUnknownPush(fn, plugin...)
 }
 

@@ -43,7 +43,7 @@ param |   len    |      no      |   (e.g.`param:"<len:3:6>"`)  | Length range [a
 param |   range  |      no      |   (e.g.`param:"<range:0:10>"`)   | Numerical range [a,b] of parameter's value
 param |  nonzero |      no      |    -    | Not allowed to zero
 param |  regexp  |      no      |   (e.g.`param:"<regexp:^\\w+$>"`)  | Regular expression validation
-param |   rerr   |      no      |(e.g.`param:"<rerr:100002:wrong password format>"`)| Custom error code and message
+param |   stat   |      no      |(e.g.`param:"<stat:100002:wrong password format>"`)| Custom error code and message
 
 NOTES:
 * `param:"-"` means ignore
@@ -78,7 +78,7 @@ type (
 		errFunc ErrorFunc
 	}
 	// ErrorFunc creates an relational error.
-	ErrorFunc func(handlerName, paramName, reason string) *tp.Rerror
+	ErrorFunc func(handlerName, paramName, reason string) *tp.Status
 )
 
 var (
@@ -108,8 +108,8 @@ func (s *StructArgsBinder) SetErrorFunc(fn ErrorFunc) {
 		s.errFunc = fn
 		return
 	}
-	s.errFunc = func(handlerName, paramName, reason string) *tp.Rerror {
-		return tp.NewRerror(
+	s.errFunc = func(handlerName, paramName, reason string) *tp.Status {
+		return tp.NewStatus(
 			tp.CodeBadMessage,
 			"Invalid Parameter",
 			fmt.Sprintf(`{"handler": %q, "param": %q, "reason": %q}`, handlerName, paramName, reason),
@@ -137,15 +137,15 @@ func (s *StructArgsBinder) PostReg(h *tp.Handler) error {
 }
 
 // PostReadCallBody binds and validates the registered struct handler.
-func (s *StructArgsBinder) PostReadCallBody(ctx tp.ReadCtx) *tp.Rerror {
+func (s *StructArgsBinder) PostReadCallBody(ctx tp.ReadCtx) *tp.Status {
 	params, ok := s.binders[ctx.ServiceMethod()]
 	if !ok {
 		return nil
 	}
 	bodyValue := reflect.ValueOf(ctx.Input().Body())
-	rerr := params.bindAndValidate(bodyValue, ctx.CopyMeta(), ctx.Swap())
-	if rerr != nil {
-		return rerr
+	stat := params.bindAndValidate(bodyValue, ctx.CopyMeta(), ctx.Swap())
+	if !stat.OK() {
+		return stat
 	}
 	return nil
 }
@@ -168,7 +168,7 @@ const (
 	KEY_RANGE        = "range"   // numerical range of param's value
 	KEY_NONZERO      = "nonzero" // param`s value can not be zero
 	KEY_REGEXP       = "regexp"  // verify the value of the param with a regular expression(param value can not be null)
-	KEY_RERR         = "rerr"    // the custom error code and message for binding or validating
+	KEY_RERR         = "stat"    // the custom error code and message for binding or validating
 )
 
 func newParams(handlerName string, binder *StructArgsBinder) *Params {
@@ -252,21 +252,21 @@ func (p *Params) addFields(parentIndexPath []int, t reflect.Type, v reflect.Valu
 			rawValue:    value,
 			binder:      p.binder,
 		}
-		rerrTag, ok := fd.tags[KEY_RERR]
+		statTag, ok := fd.tags[KEY_RERR]
 		if ok {
-			idx := strings.Index(rerrTag, ":")
+			idx := strings.Index(statTag, ":")
 			if idx != -1 {
-				if codeStr := strings.TrimSpace(rerrTag[:idx]); len(codeStr) > 0 {
-					rerrCode, err := strconv.Atoi(codeStr)
+				if codeStr := strings.TrimSpace(statTag[:idx]); len(codeStr) > 0 {
+					statCode, err := strconv.Atoi(codeStr)
 					if err == nil {
-						fd.rerrCode = int32(rerrCode)
+						fd.statCode = int32(statCode)
 					} else {
-						return fmt.Errorf("%s.%s invalid `rerr` tag (correct example: `<rerr: 100001: Invalid Parameter>`)", t.String(), field.Name)
+						return fmt.Errorf("%s.%s invalid `stat` tag (correct example: `<stat: 100001: Invalid Parameter>`)", t.String(), field.Name)
 					}
 				}
-				fd.rerrMsg = strings.TrimSpace(rerrTag[idx+1:])
+				fd.statMsg = strings.TrimSpace(statTag[idx+1:])
 			} else {
-				return fmt.Errorf("%s.%s invalid `rerr` tag (correct example: `<rerr: 100001: Invalid Parameter>`)", t.String(), field.Name)
+				return fmt.Errorf("%s.%s invalid `stat` tag (correct example: `<stat: 100001: Invalid Parameter>`)", t.String(), field.Name)
 			}
 		}
 
@@ -303,10 +303,10 @@ func (p *Params) fieldsForBinding(structElem reflect.Value) []reflect.Value {
 	return fields
 }
 
-func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, swap goutil.Map) (rerr *tp.Rerror) {
+func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, swap goutil.Map) (stat *tp.Status) {
 	defer func() {
 		if r := recover(); r != nil {
-			rerr = p.binder.errFunc(p.handlerName, "", fmt.Sprint(r))
+			stat = p.binder.errFunc(p.handlerName, "", fmt.Sprint(r))
 		}
 	}()
 	var (
@@ -321,7 +321,7 @@ func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, sw
 			paramValues := meta.PeekMulti(param.name)
 			if len(paramValues) > 0 {
 				if err = convertAssign(value, toSliceString(paramValues)); err != nil {
-					return param.fixRerror(p.binder.errFunc(param.handlerName, param.name, err.Error()))
+					return param.fixStatus(p.binder.errFunc(param.handlerName, param.name, err.Error()))
 				}
 			}
 		case KEY_SWAP:
@@ -343,7 +343,7 @@ func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, sw
 					}
 				}
 				if !canSet {
-					return param.fixRerror(p.binder.errFunc(
+					return param.fixStatus(p.binder.errFunc(
 						param.handlerName,
 						param.name,
 						value.Type().Name()+" can not be setted"),
@@ -352,8 +352,8 @@ func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, sw
 				value.Set(srcValue)
 			}
 		}
-		if rerr = param.validate(value); rerr != nil {
-			return rerr
+		if stat = param.validate(value); !stat.OK() {
+			return stat
 		}
 	}
 	return
@@ -453,8 +453,8 @@ type Param struct {
 	verifyFuncs []func(reflect.Value) error
 	rawTag      reflect.StructTag // the raw tag
 	rawValue    reflect.Value     // the raw tag value
-	rerrCode    int32             // the custom error code for binding or validating
-	rerrMsg     string            // the custom error message for binding or validating
+	statCode    int32             // the custom error code for binding or validating
+	statMsg     string            // the custom error message for binding or validating
 	binder      *StructArgsBinder
 }
 
@@ -481,16 +481,16 @@ func (param *Param) Description() string {
 
 // validate tests if the param conforms to it's validation constraints specified
 // int the KEY_REGEXP struct tag
-func (param *Param) validate(value reflect.Value) (rerr *tp.Rerror) {
+func (param *Param) validate(value reflect.Value) (stat *tp.Status) {
 	defer func() {
 		if r := recover(); r != nil {
-			rerr = param.fixRerror(param.binder.errFunc(param.handlerName, param.name, fmt.Sprint(r)))
+			stat = param.fixStatus(param.binder.errFunc(param.handlerName, param.name, fmt.Sprint(r)))
 		}
 	}()
 	var err error
 	for _, fn := range param.verifyFuncs {
 		if err = fn(value); err != nil {
-			return param.fixRerror(param.binder.errFunc(param.handlerName, param.name, err.Error()))
+			return param.fixStatus(param.binder.errFunc(param.handlerName, param.name, err.Error()))
 		}
 	}
 	return nil
@@ -667,14 +667,14 @@ func validateRegexp(isStrings bool, reg string) (func(value reflect.Value) error
 	}
 }
 
-func (param *Param) fixRerror(rerr *tp.Rerror) *tp.Rerror {
-	if param.rerrMsg != "" {
-		rerr.SetMessage(param.rerrMsg)
+func (param *Param) fixStatus(stat *tp.Status) *tp.Status {
+	if param.statMsg != "" {
+		stat.SetMsg(param.statMsg)
 	}
-	if param.rerrCode != 0 {
-		rerr.Code = param.rerrCode
+	if param.statCode != 0 {
+		stat.SetCode(param.statCode)
 	}
-	return rerr
+	return stat
 }
 
 func convertAssign(dest reflect.Value, src []string) (err error) {

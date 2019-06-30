@@ -82,6 +82,7 @@ func (t *tStructProto) structPack(m tp.Message) error {
 	}
 
 	t.tProtocol.ClearWriteHeaders()
+	t.tProtocol.SetWriteHeader(HeaderStatus, m.Status().QueryString())
 	t.tProtocol.SetWriteHeader(HeaderMeta, goutil.BytesToString(m.Meta().QueryString()))
 
 	if err = t.tProtocol.WriteMessageEnd(); err != nil {
@@ -117,6 +118,7 @@ func (t *tStructProto) structUnpack(m tp.Message) error {
 	}
 
 	headers := t.tProtocol.GetReadHeaders()
+	m.Status().DecodeQuery(goutil.StringToBytes(headers[HeaderStatus]))
 	m.Meta().Parse(headers[HeaderMeta])
 
 	m.SetBodyCodec(codec.ID_THRIFT)

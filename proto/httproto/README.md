@@ -35,6 +35,17 @@ X-Seq: 1
 {"arg":{"author":"henrylee2cn"}}
 ```
 
+or
+
+```
+HTTP/1.1 299 Business Error
+Content-Length: 56
+Content-Type: application/json
+X-Mtype: 2
+X-Seq: 0
+
+{"code":1,"msg":"test error","cause":"this is test:110"}
+```
 
 - Default Support Content-Type
 	- codec.ID_PROTOBUF: application/x-protobuf;charset=utf-8
@@ -76,7 +87,7 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror) {
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
 	tp.Infof("peer_id: %s", h.PeekMeta("peer_id"))
 	return map[string]interface{}{
 		"arg": *arg,
@@ -95,22 +106,22 @@ func TestHTTProto(t *testing.T) {
 	url := "http://localhost:9090/home/test?peer_id=110"
 	// TP Client
 	cli := tp.NewPeer(tp.PeerConfig{})
-	sess, rerr := cli.Dial(":9090", httproto.NewHTTProtoFunc())
-	if rerr != nil {
-		t.Fatal(rerr)
+	sess, stat := cli.Dial(":9090", httproto.NewHTTProtoFunc())
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result interface{}
 	var arg = map[string]string{
 		"author": "henrylee2cn",
 	}
-	rerr = sess.Call(
+	stat = sess.Call(
 		url,
 		arg,
 		&result,
 		// tp.WithXferPipe('g'),
-	).Rerror()
-	if rerr != nil {
-		t.Fatal(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	t.Logf("teleport client response: %v", result)
 

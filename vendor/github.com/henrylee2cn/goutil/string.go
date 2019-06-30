@@ -2,10 +2,23 @@ package goutil
 
 import (
 	"bytes"
-	"strconv"
 	"strings"
 	"unicode/utf8"
+	"unsafe"
 )
+
+// BytesToString convert []byte type to string type.
+func BytesToString(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+// StringToBytes convert string type to []byte type.
+// NOTE: panic if modify the member value of the []byte.
+func StringToBytes(s string) []byte {
+	sp := *(*[2]uintptr)(unsafe.Pointer(&s))
+	bp := [3]uintptr{sp[0], sp[1], sp[1]}
+	return *(*[]byte)(unsafe.Pointer(&bp))
+}
 
 // SnakeString converts the accepted string to a snake string (XxYy to xx_yy)
 func SnakeString(s string) string {
@@ -367,173 +380,4 @@ var htmlSafeSet = [utf8.RuneSelf]bool{
 	'}':      true,
 	'~':      true,
 	'\u007f': true,
-}
-
-// StringsToBools converts string slice to bool slice.
-func StringsToBools(a []string) ([]bool, error) {
-	r := make([]bool, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseBool(v)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = i
-	}
-	return r, nil
-}
-
-// StringsToFloat32s converts string slice to float32 slice.
-func StringsToFloat32s(a []string) ([]float32, error) {
-	r := make([]float32, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseFloat(v, 32)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = float32(i)
-	}
-	return r, nil
-}
-
-// StringsToFloat64s converts string slice to float64 slice.
-func StringsToFloat64s(a []string) ([]float64, error) {
-	r := make([]float64, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = i
-	}
-	return r, nil
-}
-
-// StringsToInts converts string slice to int slice.
-func StringsToInts(a []string) ([]int, error) {
-	r := make([]int, len(a))
-	for k, v := range a {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = i
-	}
-	return r, nil
-}
-
-// StringsToInt64s converts string slice to int64 slice.
-func StringsToInt64s(a []string) ([]int64, error) {
-	r := make([]int64, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = i
-	}
-	return r, nil
-}
-
-// StringsToInt32s converts string slice to int32 slice.
-func StringsToInt32s(a []string) ([]int32, error) {
-	r := make([]int32, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseInt(v, 10, 32)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = int32(i)
-	}
-	return r, nil
-}
-
-// StringsToInt16s converts string slice to int16 slice.
-func StringsToInt16s(a []string) ([]int16, error) {
-	r := make([]int16, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseInt(v, 10, 16)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = int16(i)
-	}
-	return r, nil
-}
-
-// StringsToInt8s converts string slice to int8 slice.
-func StringsToInt8s(a []string) ([]int8, error) {
-	r := make([]int8, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseInt(v, 10, 8)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = int8(i)
-	}
-	return r, nil
-}
-
-// StringsToUint8s converts string slice to uint8 slice.
-func StringsToUint8s(a []string) ([]uint8, error) {
-	r := make([]uint8, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseUint(v, 10, 8)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = uint8(i)
-	}
-	return r, nil
-}
-
-// StringsToUint16s converts string slice to uint16 slice.
-func StringsToUint16s(a []string) ([]uint16, error) {
-	r := make([]uint16, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseUint(v, 10, 16)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = uint16(i)
-	}
-	return r, nil
-}
-
-// StringsToUint32s converts string slice to uint32 slice.
-func StringsToUint32s(a []string) ([]uint32, error) {
-	r := make([]uint32, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseUint(v, 10, 32)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = uint32(i)
-	}
-	return r, nil
-}
-
-// StringsToUint64s converts string slice to uint64 slice.
-func StringsToUint64s(a []string) ([]uint64, error) {
-	r := make([]uint64, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = uint64(i)
-	}
-	return r, nil
-}
-
-// StringsToUints converts string slice to uint slice.
-func StringsToUints(a []string) ([]uint, error) {
-	r := make([]uint, len(a))
-	for k, v := range a {
-		i, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		r[k] = uint(i)
-	}
-	return r, nil
 }

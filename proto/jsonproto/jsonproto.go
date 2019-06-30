@@ -55,7 +55,7 @@ func (j *jsonproto) Version() (byte, string) {
 	return j.id, j.name
 }
 
-const format = `{"seq":%d,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
+const format = `{"seq":%d,"mtype":%d,"serviceMethod":%q,"status":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
@@ -71,6 +71,7 @@ func (j *jsonproto) Pack(m tp.Message) error {
 		m.Seq(),
 		m.Mtype(),
 		m.ServiceMethod(),
+		m.Status().QueryString(),
 		m.Meta().QueryString(),
 		m.BodyCodec(),
 		bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1),
@@ -141,6 +142,8 @@ func (j *jsonproto) Unpack(m tp.Message) error {
 	m.SetSeq(int32(gjson.Get(s, "seq").Int()))
 	m.SetMtype(byte(gjson.Get(s, "mtype").Int()))
 	m.SetServiceMethod(gjson.Get(s, "serviceMethod").String())
+	stat := gjson.Get(s, "status").String()
+	m.Status().DecodeQuery(goutil.StringToBytes(stat))
 	meta := gjson.Get(s, "meta").String()
 	m.Meta().ParseBytes(goutil.StringToBytes(meta))
 

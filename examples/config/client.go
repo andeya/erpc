@@ -17,19 +17,19 @@ func main() {
 	cli := tp.NewPeer(cfg)
 	defer cli.Close()
 
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 
 	var result int
-	rerr := sess.Call("/math/add",
+	stat = sess.Call("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&result,
-	).Rerror()
+	).Status()
 
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result: 1+2+3+4+5 = %d", result)
 }

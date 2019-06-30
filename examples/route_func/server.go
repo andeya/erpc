@@ -24,11 +24,11 @@ type ctrl struct {
 	tp.CallCtx
 }
 
-func (c *ctrl) math_add1(arg *[]int) (int, *tp.Rerror) {
+func (c *ctrl) math_add1(arg *[]int) (int, *tp.Status) {
 	return math_add2(c, arg)
 }
 
-func math_add2(ctx tp.CallCtx, arg *[]int) (int, *tp.Rerror) {
+func math_add2(ctx tp.CallCtx, arg *[]int) (int, *tp.Status) {
 	if string(ctx.PeekMeta("push_status")) == "yes" {
 		ctx.Session().Push(
 			"/server/status1",

@@ -9,7 +9,7 @@ pbproto is implemented PTOTOBUF socket communication protocol.
 - `{length bytes}`: uint32, 4 bytes, big endian
 - `{xferPipe length byte}`: 1 byte
 - `{xferPipe bytes}`: one byte one xfer
-- `{protobuf bytes}`: {"seq":%d,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}
+- `{protobuf bytes}`: {"seq":%d,"mtype":%d,"serviceMethod":%q,"status":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}
 
 ### Usage
 
@@ -33,7 +33,7 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror) {
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
 	h.Session().Push("/push/test", map[string]string{
 		"your_id": string(h.PeekMeta("peer_id")),
 	})
@@ -54,21 +54,21 @@ func TestPbProto(t *testing.T) {
 	// client
 	cli := tp.NewPeer(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
-	sess, err := cli.Dial(":9090", pbproto.NewPbProtoFunc())
-	if err != nil {
-		t.Error(err)
+	sess, stat := cli.Dial(":9090", pbproto.NewPbProtoFunc())
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/test",
+	stat = sess.Call("/home/test",
 		map[string]string{
 			"author": "henrylee2cn",
 		},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
 		tp.WithXferPipe('g'),
-	).Rerror()
-	if rerr != nil {
-		t.Error(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Error(stat)
 	}
 	t.Logf("result:%v", result)
 	time.Sleep(3e9)
@@ -78,7 +78,7 @@ type Push struct {
 	tp.PushCtx
 }
 
-func (p *Push) Test(arg *map[string]string) *tp.Rerror {
+func (p *Push) Test(arg *map[string]string) *tp.Status {
 	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }

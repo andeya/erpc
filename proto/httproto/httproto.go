@@ -144,10 +144,7 @@ func (h *httproto) Pack(m tp.Message) (err error) {
 	header.Set("X-Seq", strconv.FormatInt(int64(m.Seq()), 10))
 	header.Set("X-Mtype", strconv.Itoa(int(m.Mtype())))
 	m.Meta().VisitAll(func(k, v []byte) {
-		s := goutil.BytesToString(k)
-		if s != tp.MetaRerror {
-			header.Add(s, goutil.BytesToString(v))
-		}
+		header.Add(goutil.BytesToString(k), goutil.BytesToString(v))
 	})
 
 	bb := utils.AcquireByteBuffer()
@@ -214,19 +211,19 @@ var (
 func (h *httproto) packResponse(m tp.Message, header http.Header, bb *utils.ByteBuffer, bodyBytes []byte) error {
 	bb.Write(versionBytes)
 	bb.WriteByte(' ')
-	rerrBytes := m.Meta().Peek(tp.MetaRerror)
-	if len(rerrBytes) > 0 {
+	if stat := m.Status(); !stat.OK() {
+		statBytes, _ := stat.MarshalJSON()
 		bb.Write(bizErrBytes)
 		bb.Write(crlfBytes)
 		if gzipName := header.Get("X-Content-Encoding"); gzipName != "" {
 			gz, _ := xfer.GetByName(gzipName)
-			rerrBytes, _ = gz.OnPack(rerrBytes)
+			statBytes, _ = gz.OnPack(statBytes)
 		}
 		header.Set("Content-Type", "application/json")
-		header.Set("Content-Length", strconv.Itoa(len(rerrBytes)))
+		header.Set("Content-Length", strconv.Itoa(len(statBytes)))
 		header.Write(bb)
 		bb.Write(crlfBytes)
-		bb.Write(rerrBytes)
+		bb.Write(statBytes)
 		return nil
 	}
 	bb.Write(okBytes)
@@ -292,8 +289,7 @@ func (h *httproto) Unpack(m tp.Message) error {
 			return m.UnmarshalBody(bb.B)
 		}
 		m.UnmarshalBody(nil)
-		m.Meta().SetBytesV(tp.MetaRerror, bb.B)
-		return nil
+		return m.Status().UnmarshalJSON(bb.B)
 	}
 
 	// request

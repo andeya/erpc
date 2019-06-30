@@ -23,20 +23,20 @@ func Test(t *testing.T) {
 		tp.PeerConfig{},
 		authBearer,
 	)
-	sess, rerr := cli.Dial(":9090")
-	if rerr.HasError() {
-		t.Fatal(rerr)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result interface{}
-	rerr = sess.Call("/home/test",
+	stat = sess.Call("/home/test",
 		map[string]string{
 			"author": "henrylee2cn",
 		},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
-	).Rerror()
-	if rerr != nil {
-		t.Error(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Error(stat)
 	}
 	t.Logf("result:%v", result)
 	time.Sleep(3e9)
@@ -45,10 +45,10 @@ func Test(t *testing.T) {
 const clientAuthInfo = "client-auth-info-12345"
 
 var authBearer = auth.NewBearerPlugin(
-	func(sess auth.Session, fn auth.SendOnce) (rerr *tp.Rerror) {
+	func(sess auth.Session, fn auth.SendOnce) (stat *tp.Status) {
 		var ret string
-		rerr = fn(clientAuthInfo, &ret)
-		if rerr.HasError() {
+		stat = fn(clientAuthInfo, &ret)
+		if !stat.OK() {
 			return
 		}
 		tp.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
@@ -58,15 +58,15 @@ var authBearer = auth.NewBearerPlugin(
 )
 
 var authChecker = auth.NewCheckerPlugin(
-	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, rerr *tp.Rerror) {
+	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, stat *tp.Status) {
 		var authInfo string
-		rerr = fn(&authInfo)
-		if rerr.HasError() {
+		stat = fn(&authInfo)
+		if !stat.OK() {
 			return
 		}
 		tp.Infof("auth info: %v", authInfo)
 		if clientAuthInfo != authInfo {
-			return nil, tp.NewRerror(403, "auth fail", "auth fail detail")
+			return nil, tp.NewStatus(403, "auth fail", "auth fail detail")
 		}
 		return "pass", nil
 	},
@@ -77,7 +77,7 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror) {
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
 	return map[string]interface{}{
 		"arg": *arg,
 	}, nil

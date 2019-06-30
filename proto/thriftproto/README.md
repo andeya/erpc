@@ -20,7 +20,7 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *Test) (*Test, *tp.Rerror) {
+func (h *Home) Test(arg *Test) (*Test, *tp.Status) {
 	if string(h.PeekMeta("peer_id")) != "110" {
 		panic("except meta: peer_id=110")
 	}
@@ -41,19 +41,19 @@ func TestBinaryProto(t *testing.T) {
 
 	// client
 	cli := tp.NewPeer(tp.PeerConfig{DefaultBodyCodec: "thrift"})
-	sess, err := cli.Dial(":9090", thriftproto.NewBinaryProtoFunc())
-	if err != nil {
-		t.Error(err)
+	sess, stat := cli.Dial(":9090", thriftproto.NewBinaryProtoFunc())
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result Test
-	rerr := sess.Call("Home.Test",
+	stat = sess.Call("Home.Test",
 		&Test{Author: "henrylee2cn"},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
 		tp.WithXferPipe('g'),
-	).Rerror()
-	if rerr != nil {
-		t.Error(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Error(stat)
 	}
 	if result.Author != "henrylee2cn->OK" {
 		t.FailNow()
@@ -71,18 +71,18 @@ func TestStructProto(t *testing.T) {
 
 	// client
 	cli := tp.NewPeer(tp.PeerConfig{})
-	sess, err := cli.Dial(":9090", thriftproto.NewStructProtoFunc())
-	if err != nil {
-		t.Error(err)
+	sess, stat := cli.Dial(":9090", thriftproto.NewStructProtoFunc())
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result Test
-	rerr := sess.Call("Home.Test",
+	stat = sess.Call("Home.Test",
 		&Test{Author: "henrylee2cn"},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
-	).Rerror()
-	if rerr != nil {
-		t.Error(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Error(stat)
 	}
 	if result.Author != "henrylee2cn->OK" {
 		t.FailNow()

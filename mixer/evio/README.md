@@ -41,20 +41,20 @@ func Test(t *testing.T) {
 	// client
 	cli := evio.NewClient(tp.PeerConfig{})
 	cli.RoutePush(new(Push))
-	sess, err := cli.Dial(":9090")
-	if err != nil {
-		t.Error(err)
+	sess, stat := cli.Dial(":9090")
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	var result interface{}
-	rerr := sess.Call("/home/test",
+	stat = sess.Call("/home/test",
 		map[string]string{
 			"author": "henrylee2cn",
 		},
 		&result,
 		tp.WithAddMeta("peer_id", "110"),
-	).Rerror()
-	if rerr != nil {
-		t.Error(rerr)
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
 	}
 	t.Logf("result:%v", result)
 	time.Sleep(2e9)
@@ -64,7 +64,7 @@ type Home struct {
 	tp.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Rerror) {
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
 	h.Session().Push("/push/test", map[string]string{
 		"your_id": string(h.PeekMeta("peer_id")),
 	})
@@ -77,11 +77,10 @@ type Push struct {
 	tp.PushCtx
 }
 
-func (p *Push) Test(arg *map[string]string) *tp.Rerror {
+func (p *Push) Test(arg *map[string]string) *tp.Status {
 	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }
-
 ```
 
 test command:

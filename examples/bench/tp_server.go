@@ -18,7 +18,7 @@ type Hello struct {
 	tp.CallCtx
 }
 
-func (t *Hello) Say(args *msg.BenchmarkMessage) (*msg.BenchmarkMessage, *tp.Rerror) {
+func (t *Hello) Say(args *msg.BenchmarkMessage) (*msg.BenchmarkMessage, *tp.Status) {
 	s := "OK"
 	var i int32 = 100
 	args.Field1 = s

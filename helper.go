@@ -111,36 +111,11 @@ func toServiceMethods(name string, sep rune, toSnake bool) string {
 }
 
 const (
-	// MetaRerror reply error metadata key
-	MetaRerror = "X-Reply-Error"
 	// MetaRealIP real IP metadata key
 	MetaRealIP = "X-Real-IP"
 	// MetaAcceptBodyCodec the key of body codec that the sender wishes to accept
 	MetaAcceptBodyCodec = "X-Accept-Body-Codec"
 )
-
-// WithRerror sets the real IP to metadata.
-func WithRerror(rerr *Rerror) MessageSetting {
-	b, _ := rerr.MarshalJSON()
-	if len(b) == 0 {
-		return nil
-	}
-	return socket.WithAddMeta(MetaRerror, goutil.BytesToString(b))
-}
-
-// WithRealIP sets the real IP to metadata.
-func WithRealIP(ip string) MessageSetting {
-	return socket.WithAddMeta(MetaRealIP, ip)
-}
-
-// WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
-// NOTE: If the specified codec is invalid, the receiver will ignore the mate data.
-func WithAcceptBodyCodec(bodyCodec byte) MessageSetting {
-	if bodyCodec == codec.NilCodecID {
-		return WithNothing()
-	}
-	return socket.WithAddMeta(MetaAcceptBodyCodec, strconv.FormatUint(uint64(bodyCodec), 10))
-}
 
 // GetAcceptBodyCodec gets the body codec that the sender wishes to accept.
 // NOTE: If the specified codec is invalid, the receiver will ignore the mate data.
@@ -189,6 +164,25 @@ type Body = socket.Body
 
 // MessageSetting is a pipe function type for setting message.
 type MessageSetting = socket.MessageSetting
+
+// WithStatus sets the message status.
+// TYPE:
+//  func WithStatus(stat *Status) MessageSetting
+var WithStatus = socket.WithStatus
+
+// WithRealIP sets the real IP to metadata.
+func WithRealIP(ip string) MessageSetting {
+	return socket.WithAddMeta(MetaRealIP, ip)
+}
+
+// WithAcceptBodyCodec sets the body codec that the sender wishes to accept.
+// NOTE: If the specified codec is invalid, the receiver will ignore the mate data.
+func WithAcceptBodyCodec(bodyCodec byte) MessageSetting {
+	if bodyCodec == codec.NilCodecID {
+		return WithNothing()
+	}
+	return socket.WithAddMeta(MetaAcceptBodyCodec, strconv.FormatUint(uint64(bodyCodec), 10))
+}
 
 // WithContext sets the message handling context.
 //  func WithContext(ctx context.Context) MessageSetting
@@ -295,12 +289,12 @@ func doPrintPid() {
 type fakeCallCmd struct {
 	output    Message
 	result    interface{}
-	rerr      *Rerror
+	stat      *Status
 	inputMeta *utils.Args
 }
 
 // NewFakeCallCmd creates a fake CallCmd.
-func NewFakeCallCmd(serviceMethod string, arg, result interface{}, rerr *Rerror) CallCmd {
+func NewFakeCallCmd(serviceMethod string, arg, result interface{}, stat *Status) CallCmd {
 	return &fakeCallCmd{
 		output: socket.NewMessage(
 			socket.WithMtype(TypeCall),
@@ -308,7 +302,7 @@ func NewFakeCallCmd(serviceMethod string, arg, result interface{}, rerr *Rerror)
 			socket.WithBody(arg),
 		),
 		result: result,
-		rerr:   rerr,
+		stat:   stat,
 	}
 }
 
@@ -345,13 +339,13 @@ func (f *fakeCallCmd) Context() context.Context {
 }
 
 // Reply returns the call reply.
-func (f *fakeCallCmd) Reply() (interface{}, *Rerror) {
-	return f.result, f.rerr
+func (f *fakeCallCmd) Reply() (interface{}, *Status) {
+	return f.result, f.stat
 }
 
-// Rerror returns the call error.
-func (f *fakeCallCmd) Rerror() *Rerror {
-	return f.rerr
+// Status returns the call error.
+func (f *fakeCallCmd) Status() *Status {
+	return f.stat
 }
 
 // InputBodyCodec gets the body codec type of the input message.

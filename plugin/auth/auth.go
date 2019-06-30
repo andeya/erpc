@@ -42,14 +42,14 @@ func NewCheckerPlugin(fn Checker, retSetting ...tp.MessageSetting) tp.Plugin {
 
 type (
 	// Bearer initiates an authorization request and handles the response.
-	Bearer func(sess Session, fn SendOnce) *tp.Rerror
+	Bearer func(sess Session, fn SendOnce) *tp.Status
 	// SendOnce sends authorization request once.
-	SendOnce func(info, retRecv interface{}) *tp.Rerror
+	SendOnce func(info, retRecv interface{}) *tp.Status
 
 	// Checker checks the authorization request.
-	Checker func(sess Session, fn RecvOnce) (ret interface{}, rerr *tp.Rerror)
+	Checker func(sess Session, fn RecvOnce) (ret interface{}, stat *tp.Status)
 	// RecvOnce receives authorization request once.
-	RecvOnce func(infoRecv interface{}) *tp.Rerror
+	RecvOnce func(infoRecv interface{}) *tp.Status
 
 	// Session auth session provides SetID, RemoteAddr and Swap methods in base session
 	Session interface {
@@ -88,43 +88,43 @@ func (a *authCheckerPlugin) Name() string {
 }
 
 // MultiSendErr the error of multiple call SendOnce function
-var MultiSendErr = tp.NewRerror(
+var MultiSendErr = tp.NewStatus(
 	tp.CodeWriteFailed,
 	"auth-bearer plugin usage is incorrect",
 	"multiple call SendOnce function",
 )
 
 // MultiRecvErr the error of multiple call RecvOnce function
-var MultiRecvErr = tp.NewRerror(
+var MultiRecvErr = tp.NewStatus(
 	tp.CodeInternalServerError,
 	"auth-checker plugin usage is incorrect",
 	"multiple call RecvOnce function",
 )
 
-func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
+func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Status {
 	if a.bearerFunc == nil {
 		return nil
 	}
 	var called int32
-	return a.bearerFunc(sess, func(info, retRecv interface{}) *tp.Rerror {
+	return a.bearerFunc(sess, func(info, retRecv interface{}) *tp.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiSendErr
 		}
-		rerr := sess.Send("", info, nil, append(a.msgSetting, tp.WithMtype(tp.TypeAuthCall))...)
-		if rerr.HasError() {
-			return rerr
+		stat := sess.Send("", info, nil, append(a.msgSetting, tp.WithMtype(tp.TypeAuthCall))...)
+		if !stat.OK() {
+			return stat
 		}
-		retMsg, rerr := sess.Receive(func(header tp.Header) interface{} {
+		retMsg, stat := sess.Receive(func(header tp.Header) interface{} {
 			if header.Mtype() != tp.TypeAuthReply {
 				return nil
 			}
 			return retRecv
 		})
-		if rerr.HasError() {
-			return rerr
+		if !stat.OK() {
+			return stat
 		}
 		if retMsg.Mtype() != tp.TypeAuthReply {
-			return tp.NewRerror(
+			return tp.NewStatus(
 				tp.CodeUnauthorized,
 				tp.CodeText(tp.CodeUnauthorized),
 				fmt.Sprintf("auth message(1st) expect: AUTH_REPLY, but received: %s",
@@ -135,26 +135,26 @@ func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Rerror {
 	})
 }
 
-func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Rerror {
+func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Status {
 	if a.checkerFunc == nil {
 		return nil
 	}
 	var called int32
-	ret, rerr := a.checkerFunc(sess, func(infoRecv interface{}) *tp.Rerror {
+	ret, stat := a.checkerFunc(sess, func(infoRecv interface{}) *tp.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiRecvErr
 		}
-		infoMsg, rerr := sess.Receive(func(header tp.Header) interface{} {
+		infoMsg, stat := sess.Receive(func(header tp.Header) interface{} {
 			if header.Mtype() != tp.TypeAuthCall {
 				return nil
 			}
 			return infoRecv
 		})
-		if rerr.HasError() {
-			return rerr
+		if !stat.OK() {
+			return stat
 		}
 		if infoMsg.Mtype() != tp.TypeAuthCall {
-			return tp.NewRerror(
+			return tp.NewStatus(
 				tp.CodeUnauthorized,
 				tp.CodeText(tp.CodeUnauthorized),
 				fmt.Sprintf("auth message(1st) expect: AUTH_CALL, but received: %s",
@@ -163,13 +163,13 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Rerror {
 		}
 		return nil
 	})
-	if rerr == MultiRecvErr {
-		sess.Send("", nil, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
-		return rerr
+	if stat == MultiRecvErr {
+		sess.Send("", nil, stat, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+		return stat
 	}
-	rerr2 := sess.Send("", ret, rerr, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
-	if rerr2.HasError() {
-		return rerr2
+	stat2 := sess.Send("", ret, stat, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+	if !stat2.OK() {
+		return stat2
 	}
-	return rerr
+	return stat
 }

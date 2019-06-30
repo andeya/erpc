@@ -23,11 +23,11 @@ func main() {
 func newProxyPlugin() tp.Plugin {
 	cli := tp.NewPeer(tp.PeerConfig{RedialTimes: 3})
 	var sess tp.Session
-	var rerr *tp.Rerror
+	var stat *tp.Status
 DIAL:
-	sess, rerr = cli.Dial(":9090")
-	if rerr != nil {
-		tp.Warnf("%v", rerr)
+	sess, stat = cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Warnf("%v", stat)
 		time.Sleep(time.Second * 3)
 		goto DIAL
 	}

@@ -2,11 +2,11 @@ package quic
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"net"
 	"time"
 
-	"github.com/lucas-clemente/quic-go/internal/handshake"
 	"github.com/lucas-clemente/quic-go/internal/protocol"
 )
 
@@ -21,9 +21,6 @@ type Cookie struct {
 	RemoteAddr string
 	SentTime   time.Time
 }
-
-// ConnectionState records basic details about the QUIC connection.
-type ConnectionState = handshake.ConnectionState
 
 // An ErrorCode is an application-defined error code.
 type ErrorCode = protocol.ApplicationErrorCode
@@ -64,7 +61,8 @@ type Stream interface {
 	// When called multiple times or after reading the io.EOF it is a no-op.
 	CancelRead(ErrorCode)
 	// The context is canceled as soon as the write-side of the stream is closed.
-	// This happens when Close() is called, or when the stream is reset (either locally or remotely).
+	// This happens when Close() or CancelWrite() is called, or when the peer
+	// cancels the read-side of their stream.
 	// Warning: This API should not be considered stable and might change soon.
 	Context() context.Context
 	// SetReadDeadline sets the deadline for future Read calls and
@@ -164,7 +162,7 @@ type Session interface {
 	Context() context.Context
 	// ConnectionState returns basic details about the QUIC connection.
 	// Warning: This API should not be considered stable and might change soon.
-	ConnectionState() ConnectionState
+	ConnectionState() tls.ConnectionState
 }
 
 // Config contains all configuration data needed for a QUIC server or client.

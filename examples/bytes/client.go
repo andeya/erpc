@@ -19,19 +19,19 @@ func main() {
 	defer peer.Close()
 	peer.RoutePush(new(Push))
 
-	var sess, rerr = peer.Dial("127.0.0.1:9090")
-	if rerr != nil {
-		tp.Fatalf("%v", rerr)
+	var sess, stat = peer.Dial("127.0.0.1:9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	var result []byte
 	for {
-		if rerr = sess.Call(
+		if stat = sess.Call(
 			"/group/home/test",
 			[]byte("call text"),
 			&result,
 			tp.WithAddMeta("peer_id", "call-1"),
-		).Rerror(); rerr != nil {
-			tp.Errorf("call error: %v", rerr)
+		).Status(); !stat.OK() {
+			tp.Errorf("call error: %v", stat)
 			time.Sleep(time.Second * 2)
 		} else {
 			break
@@ -39,17 +39,17 @@ func main() {
 	}
 	tp.Infof("test result: %s", result)
 
-	rerr = sess.Call(
+	stat = sess.Call(
 		"/group/home/test_unknown",
 		[]byte("unknown call text"),
 		&result,
 		tp.WithAddMeta("peer_id", "call-2"),
-	).Rerror()
-	if tp.IsConnRerror(rerr) {
-		tp.Fatalf("has conn rerror: %v", rerr)
+	).Status()
+	if tp.IsConnStatus(stat) {
+		tp.Fatalf("has conn stator: %v", stat)
 	}
-	if rerr != nil {
-		tp.Fatalf("call error: %v", rerr)
+	if !stat.OK() {
+		tp.Fatalf("call error: %v", stat)
 	}
 	tp.Infof("test_unknown: %s", result)
 }
@@ -60,7 +60,7 @@ type Push struct {
 }
 
 // Test handler
-func (p *Push) Test(arg *[]byte) *tp.Rerror {
+func (p *Push) Test(arg *[]byte) *tp.Status {
 	tp.Infof("receive push(%s):\narg: %s\n", p.IP(), *arg)
 	return nil
 }
