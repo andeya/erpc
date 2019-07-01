@@ -227,9 +227,7 @@ func (m *message) messageIdentity() {}
 //  settings are only for writing to connection.
 func (m *message) Reset(settings ...MessageSetting) {
 	m.body = nil
-	if m.status != nil {
-		m.status.Clear()
-	}
+	m.status = nil
 	m.meta.Reset()
 	m.xferPipe.Reset()
 	m.newBodyFunc = nil
