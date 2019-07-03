@@ -47,7 +47,7 @@ func TestTPS(t *testing.T) {
 	cli := tp.NewPeer(tp.PeerConfig{})
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
-		t.Error(stat)
+		t.Fatal(stat)
 	}
 
 	ticker := time.NewTicker(time.Millisecond * 10)
@@ -55,11 +55,11 @@ func TestTPS(t *testing.T) {
 		<-ticker.C
 		stat = sess.Call("/call/test", nil, nil).Status()
 		if !stat.OK() {
-			t.Error(stat)
+			t.Fatal(stat)
 		}
 		stat = sess.Push("/push/test", nil)
 		if !stat.OK() {
-			t.Error(stat)
+			t.Fatal(stat)
 		}
 	}
 }
