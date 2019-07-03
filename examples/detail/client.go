@@ -71,7 +71,7 @@ func main() {
 		&result,
 		tp.WithXferPipe('g'),
 	).Status()
-	if tp.IsConnStatus(stat) {
+	if tp.IsConnError(stat) {
 		tp.Fatalf("has conn stator: %v", stat)
 	}
 	if !stat.OK() {

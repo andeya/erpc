@@ -29,7 +29,7 @@ func main() {
 	).Status()
 
 	if !stat.OK() {
-		tp.Fatalf("%v", err)
+		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result: %d", result)
 }

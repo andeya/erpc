@@ -45,11 +45,11 @@ func main() {
 	time.Sleep(time.Second * 6)
 	result = ""
 	stat = sess.Call("/test/ok", "test4", &result).Status()
-	tp.Warnf("test sync3: disconnect due to server session timeout: %v", stat.ToError())
+	tp.Warnf("test sync3: disconnect due to server session timeout: %v", stat.Cause())
 
-	sess, err = cli.Dial(":9090")
-	if err != nil {
-		tp.Fatalf("%v", err)
+	sess, stat = cli.Dial(":9090")
+	if !stat.OK() {
+		tp.Fatalf("%v", stat)
 	}
 	sess.AsyncCall(
 		"/test/break",
