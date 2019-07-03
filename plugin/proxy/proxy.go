@@ -116,9 +116,9 @@ func (p *proxy) call(ctx tp.UnknownCallCtx) (interface{}, *tp.Status) {
 		ctx.SetMeta(goutil.BytesToString(key), goutil.BytesToString(value))
 	})
 	stat := callcmd.Status()
-	if !stat.OK() && stat.Code < 200 && stat.Code > 99 {
-		stat.Code = tp.CodeBadGateway
-		stat.Message = tp.CodeText(tp.CodeBadGateway)
+	if !stat.OK() && stat.Code() < 200 && stat.Code() > 99 {
+		stat.SetCode(tp.CodeBadGateway)
+		stat.SetMsg(tp.CodeText(tp.CodeBadGateway))
 	}
 	return result, stat
 }
@@ -140,9 +140,9 @@ func (p *proxy) push(ctx tp.UnknownPushCtx) *tp.Status {
 	}
 	label.ServiceMethod = ctx.ServiceMethod()
 	stat := p.pushForwarder(&label).Push(label.ServiceMethod, ctx.InputBodyBytes(), settings...)
-	if !stat.OK() && stat.Code < 200 && stat.Code > 99 {
-		stat.Code = tp.CodeBadGateway
-		stat.Message = tp.CodeText(tp.CodeBadGateway)
+	if !stat.OK() && stat.Code() < 200 && stat.Code() > 99 {
+		stat.SetCode(tp.CodeBadGateway)
+		stat.SetMsg(tp.CodeText(tp.CodeBadGateway))
 	}
 	return stat
 }
