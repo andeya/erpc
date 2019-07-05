@@ -336,7 +336,7 @@ Default protocol `RawProto`(Big Endian):
 
 ```sh
 {4 bytes message length}
-{1 byte protocol version}
+{1 byte protocol version} # 6
 {1 byte transfer pipe length}
 {transfer pipe IDs}
 # The following is handled data by transfer pipe
