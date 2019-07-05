@@ -557,8 +557,9 @@ W:
 		}
 		return stat
 	}
-
-	s.printAccessLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+	if enablePrintRunLog() {
+		s.printRunLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+	}
 	s.peer.pluginContainer.postWritePush(ctx)
 	return nil
 }
@@ -908,10 +909,11 @@ const (
 	logFormatCallHandle = "CALL<- %s %s %q RECV(%s) SEND(%s)"
 )
 
-func (s *session) printAccessLog(realIP string, costTime time.Duration, input, output Message, logType int8) {
-	if !EnableLoggerLevel(WARNING) {
-		return
-	}
+func enablePrintRunLog() bool {
+	return EnableLoggerLevel(WARNING)
+}
+
+func (s *session) printRunLog(realIP string, costTime time.Duration, input, output Message, logType int8) {
 	var addr = s.RemoteAddr().String()
 	if realIP != "" && realIP == addr {
 		realIP = "same"

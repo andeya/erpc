@@ -413,15 +413,15 @@ func (c *handlerCtx) handlePush() {
 		ctxTimout, _ := context.WithTimeout(context.Background(), age)
 		c.setContext(ctxTimout)
 	}
-
 	defer func() {
 		if p := recover(); p != nil {
 			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.printAccessLog(c.RealIP(), c.cost, c.input, nil, typePushHandle)
+		if enablePrintRunLog() {
+			c.sess.printRunLog(c.RealIP(), c.cost, c.input, nil, typePushHandle)
+		}
 	}()
-
 	if c.stat.OK() && c.handler != nil {
 		if c.pluginContainer.postReadPushBody(c) == nil {
 			if c.handler.isUnknown {
@@ -486,7 +486,9 @@ func (c *handlerCtx) handleCall() {
 			}
 		}
 		c.cost = c.sess.timeSince(c.start)
-		c.sess.printAccessLog(c.RealIP(), c.cost, c.input, c.output, typeCallHandle)
+		if enablePrintRunLog() {
+			c.sess.printRunLog(c.RealIP(), c.cost, c.input, c.output, typeCallHandle)
+		}
 	}()
 
 	c.output.SetMtype(TypeReply)
@@ -608,10 +610,6 @@ func (c *handlerCtx) handleReply() {
 	if c.callCmd == nil {
 		return
 	}
-
-	// lock: bindReply
-	defer c.callCmd.mu.Unlock()
-
 	defer func() {
 		if p := recover(); p != nil {
 			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
@@ -620,16 +618,19 @@ func (c *handlerCtx) handleReply() {
 		c.stat = c.callCmd.stat
 		c.callCmd.done()
 		c.callCmd.cost = c.sess.timeSince(c.callCmd.start)
-		c.sess.printAccessLog(c.RealIP(), c.callCmd.cost, c.input, c.callCmd.output, typeCallLaunch)
+		if enablePrintRunLog() {
+			c.sess.printRunLog(c.RealIP(), c.callCmd.cost, c.input, c.callCmd.output, typeCallLaunch)
+		}
+		// lock: bindReply
+		c.callCmd.mu.Unlock()
 	}()
-	if !c.callCmd.stat.OK() {
-		return
+	if c.callCmd.stat.OK() {
+		stat := c.input.Status()
+		if stat.OK() {
+			stat = c.pluginContainer.postReadReplyBody(c)
+		}
+		c.callCmd.stat = stat
 	}
-	stat := c.input.Status()
-	if stat.OK() {
-		stat = c.pluginContainer.postReadReplyBody(c)
-	}
-	c.callCmd.stat = stat
 }
 
 // Status returns the handle error.
