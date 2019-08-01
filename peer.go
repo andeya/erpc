@@ -282,7 +282,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 				time.Sleep(p.redialInterval)
 				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 				stat = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
-				if !stat.OK() {
+				if stat.OK() {
 					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 					return true
 				}
