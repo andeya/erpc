@@ -82,16 +82,13 @@ func (g *Gzip) Name() string {
 
 // OnPack performs filtering on packing.
 func (g *Gzip) OnPack(src []byte) ([]byte, error) {
-	gw := g.wPool.Get().(*gzip.Writer)
-	defer g.wPool.Put(gw)
 	bb := utils.AcquireByteBuffer()
+	gw := g.wPool.Get().(*gzip.Writer)
 	gw.Reset(bb)
-	_, err := gw.Write(src)
-	if err != nil {
-		utils.ReleaseByteBuffer(bb)
-		return nil, err
-	}
-	err = gw.Flush()
+	gw.Write(src)
+	err := gw.Close()
+	gw.Reset(nil)
+	g.wPool.Put(gw)
 	if err != nil {
 		utils.ReleaseByteBuffer(bb)
 		return nil, err
@@ -100,16 +97,16 @@ func (g *Gzip) OnPack(src []byte) ([]byte, error) {
 }
 
 // OnUnpack performs filtering on unpacking.
-func (g *Gzip) OnUnpack(src []byte) ([]byte, error) {
+func (g *Gzip) OnUnpack(src []byte) (dest []byte, err error) {
 	if len(src) == 0 {
 		return src, nil
 	}
 	gr := g.rPool.Get().(*gzip.Reader)
-	defer g.rPool.Put(gr)
-	err := gr.Reset(bytes.NewReader(src))
-	if err != nil {
-		return nil, err
+	err = gr.Reset(bytes.NewReader(src))
+	if err == nil {
+		dest, err = ioutil.ReadAll(gr)
 	}
-	dest, _ := ioutil.ReadAll(gr)
-	return dest, nil
+	gr.Close()
+	g.rPool.Put(gr)
+	return dest, err
 }
