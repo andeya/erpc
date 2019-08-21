@@ -79,7 +79,7 @@ type (
 		//  Does not support automatic redial after disconnection.
 		RawCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (stat *Status)
 		// RawHandle receives a message, or sends a message, without executing other plugins.
-		RawHandle(newInputBody NewBodyFunc, handle func(MessageInfo) (result Message, toReply bool), ctx ...context.Context) *Status
+		RawHandle(newInputBody NewBodyFunc, handle func(Message) (result Message, toReply bool), ctx ...context.Context) *Status
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -470,7 +470,7 @@ func (s *session) RawCall(serviceMethod string, args, reply interface{}, callSet
 }
 
 // RawHandle receives a message, or sends a message, without executing other plugins.
-func (s *session) RawHandle(newInputBody NewBodyFunc, handle func(MessageInfo) (result Message, toReply bool), ctx ...context.Context) *Status {
+func (s *session) RawHandle(newInputBody NewBodyFunc, handle func(Message) (result Message, toReply bool), ctx ...context.Context) *Status {
 	input := s.Receive(newInputBody, ctx...)
 	output, toReply := handle(input)
 	if toReply {

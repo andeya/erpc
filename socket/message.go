@@ -67,8 +67,6 @@ type (
 		AsHeader() Header
 		// AsBody converts it to Body interface.
 		AsBody() Body
-		// AsInfo converts it to MessageInfo interface.
-		AsInfo() MessageInfo
 
 		// messageIdentity prevents implementation outside the package.
 		messageIdentity() *message
@@ -136,49 +134,6 @@ type (
 
 	// Status a message status with code, msg, cause or stack.
 	Status = status.Status
-
-	// MessageInfo the information of the message
-	MessageInfo interface {
-		// Reset resets and returns itself.
-		Reset(settings ...MessageSetting) Message
-
-		// Seq returns the message sequence.
-		Seq() int32
-		// Mtype returns the message type, such as CALL, REPLY, PUSH.
-		Mtype() byte
-		// ServiceMethod returns the serviec method.
-		// SUGGEST: max len ≤ 255!
-		ServiceMethod() string
-		// Meta returns the metadata.
-		// SUGGEST: urlencoded string max len ≤ 65535!
-		Meta() *utils.Args
-		// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-		// SUGGEST: The length can not be bigger than 255!
-		XferPipe() *xfer.XferPipe
-		// Size returns the size of message.
-		// SUGGEST: For better statistics, Proto interfaces should support it.
-		Size() uint32
-		// BodyCodec returns the body codec type id.
-		BodyCodec() byte
-		// Body returns the body object.
-		Body() interface{}
-		// MarshalBody returns the encoding of body.
-		// NOTE: when the body is a stream of bytes, no marshalling is done.
-		MarshalBody() ([]byte, error)
-		// Context returns the message handling context.
-		Context() context.Context
-		// StatusOK returns the message status is OK.
-		StatusOK() bool
-		// Status returns the message status with code, msg, cause or stack.
-		// NOTE:
-		//  If it is nil and autoInit = true, assign a new object;
-		//  Should use StatusOK to judge whether it is ok.
-		Status(autoInit ...bool) *Status
-		// String returns printing message information.
-		String() string
-		// messageIdentity prevents implementation outside the package.
-		messageIdentity() *message
-	}
 )
 
 // message a socket message data.
@@ -223,8 +178,6 @@ type message struct {
 	// and other values across API boundaries.
 	ctx context.Context
 }
-
-var _ MessageInfo = Message(new(message))
 
 var messagePool = sync.Pool{
 	New: func() interface{} {
@@ -282,9 +235,6 @@ func (m *message) AsHeader() Header { return m }
 
 // AsBody converts it to Body interface.
 func (m *message) AsBody() Body { return m }
-
-// AsInfo converts it to MessageInfo interface.
-func (m *message) AsInfo() MessageInfo { return m }
 
 // messageIdentity prevents implementation outside the package.
 func (*message) messageIdentity() *message { return nil }
