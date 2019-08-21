@@ -89,7 +89,7 @@ type (
 		// SetServiceMethod sets the serviec method.
 		// SUGGEST: max len ≤ 255!
 		SetServiceMethod(string)
-		// StatusOK returns the message status is OK.
+		// StatusOK returns  the message status is OK or not.
 		StatusOK() bool
 		// Status returns the message status with code, msg, cause or stack.
 		// NOTE:
@@ -306,7 +306,7 @@ func (m *message) SetServiceMethod(serviceMethod string) {
 	m.serviceMethod = serviceMethod
 }
 
-// StatusOK returns the message status is OK.
+// StatusOK returns  the message status is OK or not.
 func (m *message) StatusOK() bool {
 	return m.status.OK()
 }
