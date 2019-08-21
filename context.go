@@ -50,7 +50,9 @@ type (
 		PreCtx
 		// Output returns writed message.
 		Output() Message
-		// Status returns the handle error.
+		// StatusOK returns the handle status is OK or not.
+		StatusOK() bool
+		// Status returns the handle status.
 		Status() *Status
 	}
 	// inputCtx common context method set.
@@ -77,7 +79,9 @@ type (
 		inputCtx
 		// Input returns readed message.
 		Input() Message
-		// Status returns the handle error.
+		// StatusOK returns the handle status is OK or not.
+		StatusOK() bool
+		// Status returns the handle status.
 		Status() *Status
 	}
 	// PushCtx context method set for handling the pushed message.
@@ -633,7 +637,12 @@ func (c *handlerCtx) handleReply() {
 	}
 }
 
-// Status returns the handle error.
+// StatusOK returns the handle status is OK or not.
+func (c *handlerCtx) StatusOK() bool {
+	return c.stat.OK()
+}
+
+// Status returns the handle status.
 func (c *handlerCtx) Status() *Status {
 	return c.stat
 }
@@ -670,6 +679,8 @@ type (
 		Context() context.Context
 		// Output returns writed message.
 		Output() Message
+		// StatusOK returns the call status is OK or not.
+		StatusOK() bool
 		// Status returns the call status.
 		Status() *Status
 		// Done returns the chan that indicates whether it has been completed.
@@ -770,6 +781,11 @@ func (c *callCmd) Output() Message {
 // API boundaries.
 func (c *callCmd) Context() context.Context {
 	return c.output.Context()
+}
+
+// StatusOK returns the call status is OK or not.
+func (c *callCmd) StatusOK() bool {
+	return c.stat.OK()
 }
 
 // Status returns the call status.

@@ -343,6 +343,11 @@ func (f *fakeCallCmd) Reply() (interface{}, *Status) {
 	return f.result, f.stat
 }
 
+// StatusOK returns the call status is OK or not.
+func (f *fakeCallCmd) StatusOK() bool {
+	return f.stat.OK()
+}
+
 // Status returns the call error.
 func (f *fakeCallCmd) Status() *Status {
 	return f.stat
