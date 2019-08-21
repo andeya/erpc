@@ -71,7 +71,7 @@ func (j *jsonproto) Pack(m tp.Message) error {
 		m.Seq(),
 		m.Mtype(),
 		m.ServiceMethod(),
-		m.Status().QueryString(),
+		m.Status(true).QueryString(),
 		m.Meta().QueryString(),
 		m.BodyCodec(),
 		bytes.Replace(bodyBytes, []byte{'"'}, []byte{'\\', '"'}, -1),
@@ -143,7 +143,7 @@ func (j *jsonproto) Unpack(m tp.Message) error {
 	m.SetMtype(byte(gjson.Get(s, "mtype").Int()))
 	m.SetServiceMethod(gjson.Get(s, "serviceMethod").String())
 	stat := gjson.Get(s, "status").String()
-	m.Status().DecodeQuery(goutil.StringToBytes(stat))
+	m.Status(true).DecodeQuery(goutil.StringToBytes(stat))
 	meta := gjson.Get(s, "meta").String()
 	m.Meta().ParseBytes(goutil.StringToBytes(meta))
 

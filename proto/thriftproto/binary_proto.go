@@ -103,7 +103,7 @@ func (t *tBinaryProto) binaryPack(m tp.Message) error {
 	}
 
 	t.tProtocol.ClearWriteHeaders()
-	t.tProtocol.SetWriteHeader(HeaderStatus, m.Status().QueryString())
+	t.tProtocol.SetWriteHeader(HeaderStatus, m.Status(true).QueryString())
 	t.tProtocol.SetWriteHeader(HeaderMeta, goutil.BytesToString(m.Meta().QueryString()))
 	t.tProtocol.SetWriteHeader(HeaderBodyCodec, string(m.BodyCodec()))
 	t.tProtocol.SetWriteHeader(HeaderXferPipe, goutil.BytesToString(m.XferPipe().IDs()))
@@ -137,7 +137,7 @@ func (t *tBinaryProto) binaryUnpack(m tp.Message) error {
 	}
 
 	headers := t.tProtocol.GetReadHeaders()
-	m.Status().DecodeQuery(goutil.StringToBytes(headers[HeaderStatus]))
+	m.Status(true).DecodeQuery(goutil.StringToBytes(headers[HeaderStatus]))
 	m.Meta().Parse(headers[HeaderMeta])
 	if codecID := headers[HeaderBodyCodec]; codecID != "" {
 		m.SetBodyCodec(byte(codecID[0]))

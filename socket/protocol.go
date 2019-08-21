@@ -174,8 +174,7 @@ func (r *rawProto) writeHeader(bb *utils.ByteBuffer, m Message) error {
 	}
 	bb.WriteByte(byte(serviceMethodLength))
 	bb.Write(serviceMethod)
-
-	statusBytes := m.Status().EncodeQuery()
+	statusBytes := m.Status(true).EncodeQuery()
 	binary.Write(bb, binary.BigEndian, uint16(len(statusBytes)))
 	bb.Write(statusBytes)
 
@@ -283,7 +282,7 @@ func (r *rawProto) readHeader(data []byte, m Message) ([]byte, error) {
 	// status
 	statusLen := binary.BigEndian.Uint16(data)
 	data = data[2:]
-	m.Status().DecodeQuery(data[:statusLen])
+	m.Status(true).DecodeQuery(data[:statusLen])
 	data = data[statusLen:]
 
 	// meta

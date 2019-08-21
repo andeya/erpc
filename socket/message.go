@@ -33,6 +33,9 @@ import (
 type (
 	// Message a socket message interface.
 	Message interface {
+		// Reset resets and returns itself.
+		Reset(settings ...MessageSetting) Message
+
 		// Header is an operation interface of required message fields.
 		// NOTE: Must be supported by Proto interface.
 		Header
@@ -54,17 +57,21 @@ type (
 		// SUGGEST: For better statistics, Proto interfaces should support it.
 		SetSize(size uint32) error
 
-		// Reset resets itself.
-		Reset(settings ...MessageSetting)
-
 		// Context returns the message handling context.
 		Context() context.Context
 
 		// String returns printing message information.
 		String() string
 
+		// AsHeader converts it to Header interface.
+		AsHeader() Header
+		// AsBody converts it to Body interface.
+		AsBody() Body
+		// AsInfo converts it to MessageInfo interface.
+		AsInfo() MessageInfo
+
 		// messageIdentity prevents implementation outside the package.
-		messageIdentity()
+		messageIdentity() *message
 	}
 
 	// Header is an operation interface of required message fields.
@@ -84,8 +91,13 @@ type (
 		// SetServiceMethod sets the serviec method.
 		// SUGGEST: max len ≤ 255!
 		SetServiceMethod(string)
-		// Status the message status with code, msg, cause or stack.
-		Status() *Status
+		// StatusOK returns the message status is OK.
+		StatusOK() bool
+		// Status returns the message status with code, msg, cause or stack.
+		// NOTE:
+		//  If it is nil and autoInit = true, assign a new object;
+		//  Should use StatusOK to judge whether it is ok.
+		Status(autoInit ...bool) *Status
 		// SetStatus the message status.
 		SetStatus(*Status)
 		// Meta returns the metadata.
@@ -124,6 +136,49 @@ type (
 
 	// Status a message status with code, msg, cause or stack.
 	Status = status.Status
+
+	// MessageInfo the information of the message
+	MessageInfo interface {
+		// Reset resets and returns itself.
+		Reset(settings ...MessageSetting) Message
+
+		// Seq returns the message sequence.
+		Seq() int32
+		// Mtype returns the message type, such as CALL, REPLY, PUSH.
+		Mtype() byte
+		// ServiceMethod returns the serviec method.
+		// SUGGEST: max len ≤ 255!
+		ServiceMethod() string
+		// Meta returns the metadata.
+		// SUGGEST: urlencoded string max len ≤ 65535!
+		Meta() *utils.Args
+		// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
+		// SUGGEST: The length can not be bigger than 255!
+		XferPipe() *xfer.XferPipe
+		// Size returns the size of message.
+		// SUGGEST: For better statistics, Proto interfaces should support it.
+		Size() uint32
+		// BodyCodec returns the body codec type id.
+		BodyCodec() byte
+		// Body returns the body object.
+		Body() interface{}
+		// MarshalBody returns the encoding of body.
+		// NOTE: when the body is a stream of bytes, no marshalling is done.
+		MarshalBody() ([]byte, error)
+		// Context returns the message handling context.
+		Context() context.Context
+		// StatusOK returns the message status is OK.
+		StatusOK() bool
+		// Status returns the message status with code, msg, cause or stack.
+		// NOTE:
+		//  If it is nil and autoInit = true, assign a new object;
+		//  Should use StatusOK to judge whether it is ok.
+		Status(autoInit ...bool) *Status
+		// String returns printing message information.
+		String() string
+		// messageIdentity prevents implementation outside the package.
+		messageIdentity() *message
+	}
 )
 
 // message a socket message data.
@@ -168,6 +223,8 @@ type message struct {
 	// and other values across API boundaries.
 	ctx context.Context
 }
+
+var _ MessageInfo = Message(new(message))
 
 var messagePool = sync.Pool{
 	New: func() interface{} {
@@ -220,12 +277,22 @@ var (
 	NewStatusWithStack = status.NewWithStack
 )
 
-func (m *message) messageIdentity() {}
+// AsHeader converts it to Header interface.
+func (m *message) AsHeader() Header { return m }
 
-// Reset resets itself.
+// AsBody converts it to Body interface.
+func (m *message) AsBody() Body { return m }
+
+// AsInfo converts it to MessageInfo interface.
+func (m *message) AsInfo() MessageInfo { return m }
+
+// messageIdentity prevents implementation outside the package.
+func (*message) messageIdentity() *message { return nil }
+
+// Reset resets and returns itself.
 // NOTE:
 //  settings are only for writing to connection.
-func (m *message) Reset(settings ...MessageSetting) {
+func (m *message) Reset(settings ...MessageSetting) Message {
 	m.body = nil
 	m.status = nil
 	m.meta.Reset()
@@ -238,6 +305,7 @@ func (m *message) Reset(settings ...MessageSetting) {
 	m.ctx = nil
 	m.bodyCodec = codec.NilCodecID
 	m.doSetting(settings...)
+	return m
 }
 
 func (m *message) doSetting(settings ...MessageSetting) {
@@ -288,17 +356,25 @@ func (m *message) SetServiceMethod(serviceMethod string) {
 	m.serviceMethod = serviceMethod
 }
 
-// SetStatus the message status.
-func (m *message) SetStatus(stat *Status) {
-	m.status = stat
+// StatusOK returns the message status is OK.
+func (m *message) StatusOK() bool {
+	return m.status.OK()
 }
 
-// Status the message status with code, msg, cause or stack.
-func (m *message) Status() *Status {
-	if m.status == nil {
+// Status returns the message status with code, msg, cause or stack.
+// NOTE:
+//  If it is nil and autoInit = true, assign a new object;
+//  Should use StatusOK to judge whether it is ok.
+func (m *message) Status(autoInit ...bool) *Status {
+	if m.status == nil && len(autoInit) > 0 && autoInit[0] {
 		m.status = new(Status)
 	}
 	return m.status
+}
+
+// SetStatus the message status.
+func (m *message) SetStatus(stat *Status) {
+	m.status = stat
 }
 
 // Meta returns the metadata.
