@@ -114,14 +114,14 @@ func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Status {
 		if !stat.OK() {
 			return stat
 		}
-		retMsg, stat := sess.Receive(func(header tp.Header) interface{} {
+		retMsg := sess.Receive(func(header tp.Header) interface{} {
 			if header.Mtype() != tp.TypeAuthReply {
 				return nil
 			}
 			return retRecv
 		})
-		if !stat.OK() {
-			return stat
+		if !retMsg.StatusOK() {
+			return retMsg.Status()
 		}
 		if retMsg.Mtype() != tp.TypeAuthReply {
 			return tp.NewStatus(
@@ -144,14 +144,14 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiRecvErr
 		}
-		infoMsg, stat := sess.Receive(func(header tp.Header) interface{} {
+		infoMsg := sess.Receive(func(header tp.Header) interface{} {
 			if header.Mtype() != tp.TypeAuthCall {
 				return nil
 			}
 			return infoRecv
 		})
-		if !stat.OK() {
-			return stat
+		if !infoMsg.StatusOK() {
+			return infoMsg.Status()
 		}
 		if infoMsg.Mtype() != tp.TypeAuthCall {
 			return tp.NewStatus(

@@ -76,7 +76,7 @@ func TestHTTProto(t *testing.T) {
 			&result,
 		).Status()
 		if stat.OK() {
-			t.FailNow()
+			t.Fatal("test_error expect error")
 		}
 		t.Logf("teleport client response: %v, %v", stat, result)
 

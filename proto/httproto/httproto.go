@@ -289,7 +289,7 @@ func (h *httproto) Unpack(m tp.Message) error {
 			return m.UnmarshalBody(bb.B)
 		}
 		m.UnmarshalBody(nil)
-		return m.Status().UnmarshalJSON(bb.B)
+		return m.Status(true).UnmarshalJSON(bb.B)
 	}
 
 	// request

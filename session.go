@@ -66,7 +66,20 @@ type (
 		Send(serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) *Status
 		// Receive receives a message from peer, before the formal connection.
 		// NOTE: does not support automatic redial after disconnection.
-		Receive(NewBodyFunc, ...MessageSetting) (Message, *Status)
+		Receive(NewBodyFunc, ...context.Context) Message
+		// RawPush sends a message of TypePush type without executing other plugins.
+		// NOTE:
+		// the external setting seq is invalid, the internal will be forced to set;
+		// does not support automatic redial after disconnection.
+		RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) *Status
+		// RawCall sends a message without executing other plugins, and receives a message.
+		// NOTE:
+		//  The reply parameter is the body receiver;
+		//  The external setting seq is invalid, the internal will be forced to set;
+		//  Does not support automatic redial after disconnection.
+		RawCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (stat *Status)
+		// RawHandle receives a message, or sends a message, without executing other plugins.
+		RawHandle(newInputBody NewBodyFunc, handle func(MessageInfo) (result Message, toReply bool), ctx ...context.Context) *Status
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -111,21 +124,21 @@ type (
 		// If the  is []byte or *[]byte type, it can automatically fill in the body codec name.
 		AsyncCall(
 			serviceMethod string,
-			arg interface{},
+			args interface{},
 			result interface{},
 			callCmdChan chan<- CallCmd,
 			setting ...MessageSetting,
 		) CallCmd
 		// Call sends a message and receives reply.
 		// NOTE:
-		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
+		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Call(serviceMethod string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd
-		// Push sends a message, but do not receives reply.
+		Call(serviceMethod string, args interface{}, result interface{}, setting ...MessageSetting) CallCmd
+		// Push sends a message of TypePush type, but do not receives reply.
 		// NOTE:
-		// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
+		// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 		// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-		Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Status
+		Push(serviceMethod string, args interface{}, setting ...MessageSetting) *Status
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -328,15 +341,22 @@ func (s *session) SetContextAge(duration time.Duration) {
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
 func (s *session) Send(serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (replyErr *Status) {
+	var output Message
 	defer func() {
+		if output != nil {
+			socket.PutMessage(output)
+		}
 		if p := recover(); p != nil {
 			replyErr = statBadMessage.Copy(p, 3)
 		}
 	}()
+	output, replyErr = s.send(serviceMethod, body, stat, setting)
+	return replyErr
+}
 
+func (s *session) send(serviceMethod string, body interface{}, stat *Status, setting []MessageSetting) (Message, *Status) {
 	output := socket.GetMessage(setting...)
 	output.SetSeq(atomic.AddInt32(&s.seq, 1))
-
 	if output.BodyCodec() == codec.NilCodecID {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
@@ -349,12 +369,14 @@ func (s *session) Send(serviceMethod string, body interface{}, stat *Status, set
 	if !stat.OK() {
 		output.SetStatus(stat)
 	}
+	return output, s.doSend(output)
+}
+
+func (s *session) doSend(output Message) *Status {
 	if age := s.ContextAge(); age > 0 {
 		ctxTimout, _ := context.WithTimeout(output.Context(), age)
 		socket.WithContext(ctxTimout)(output)
 	}
-
-	defer socket.PutMessage(output)
 
 	s.writeLock.Lock()
 	defer s.writeLock.Unlock()
@@ -382,16 +404,18 @@ func (s *session) Send(serviceMethod string, body interface{}, stat *Status, set
 // NOTE:
 //  Does not support automatic redial after disconnection;
 //  Recommend to reuse unused Message: PutMessage(input).
-func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (input Message, stat *Status) {
+func (s *session) Receive(bodyFactory NewBodyFunc, ctx ...context.Context) (input Message) {
+	if len(ctx) > 0 {
+		input = socket.GetMessage(WithContext(ctx[0]))
+	} else {
+		input = socket.GetMessage()
+	}
+	input.SetNewBody(bodyFactory)
 	defer func() {
 		if p := recover(); p != nil {
-			stat = statBadMessage.Copy(p, 3)
-			socket.PutMessage(input)
+			input.SetStatus(statBadMessage.Copy(p, 3))
 		}
 	}()
-
-	input = socket.GetMessage(setting...)
-	input.SetNewBody(newBodyFunc)
 
 	if age := s.ContextAge(); age > 0 {
 		ctxTimout, _ := context.WithTimeout(input.Context(), age)
@@ -401,19 +425,121 @@ func (s *session) Receive(newBodyFunc NewBodyFunc, setting ...MessageSetting) (i
 	s.socket.SetReadDeadline(deadline)
 
 	if err := s.socket.ReadMessage(input); err != nil {
-		socket.PutMessage(input)
-		return nil, statConnClosed.Copy(err)
+		input.SetStatus(statConnClosed.Copy(err))
 	}
-	return input, input.Status()
+	return input
+}
+
+var setTypePushFunc = WithMtype(TypePush)
+
+// RawPush sends a message without executing other plugins.
+// NOTE:
+// the external setting seq is invalid, the internal will be forced to set;
+// does not support automatic redial after disconnection.
+func (s *session) RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) *Status {
+	a := make([]MessageSetting, len(setting)+1)
+	a[0] = setTypePushFunc
+	copy(a[1:], setting)
+	return s.Send(serviceMethod, args, nil, a...)
+}
+
+var setTypeCallFunc = WithMtype(TypeCall)
+
+// RawCall sends a message without executing other plugins, and receives a message.
+// NOTE:
+//  The reply parameter is the body receiver;
+//  The external setting seq is invalid, the internal will be forced to set;
+//  Does not support automatic redial after disconnection.
+func (s *session) RawCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (stat *Status) {
+	defer func() {
+		if p := recover(); p != nil {
+			stat = statBadMessage.Copy(p, 3)
+		}
+	}()
+	a := make([]MessageSetting, len(callSetting)+1)
+	a[0] = setTypeCallFunc
+	copy(a[1:], callSetting)
+	output, stat := s.send(serviceMethod, args, nil, a)
+	if !stat.OK() {
+		socket.PutMessage(output)
+		return stat
+	}
+	ctx := output.Context()
+	socket.PutMessage(output)
+	return s.Receive(func(Header) interface{} { return reply }, ctx).Status()
+}
+
+// RawHandle receives a message, or sends a message, without executing other plugins.
+func (s *session) RawHandle(newInputBody NewBodyFunc, handle func(MessageInfo) (result Message, toReply bool), ctx ...context.Context) *Status {
+	input := s.Receive(newInputBody, ctx...)
+	output, toReply := handle(input)
+	if toReply {
+		return s.doSend(output)
+	}
+	return output.Status()
+}
+
+// Push sends a message of TypePush type, but do not receives reply.
+// NOTE:
+// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
+func (s *session) Push(serviceMethod string, args interface{}, setting ...MessageSetting) *Status {
+	ctx := s.peer.getContext(s, true)
+	defer func() {
+		s.peer.putContext(ctx, true)
+		if p := recover(); p != nil {
+			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
+		}
+	}()
+
+	ctx.start = s.peer.timeNow()
+	output := ctx.output
+	output.SetMtype(TypePush)
+	output.SetServiceMethod(serviceMethod)
+	output.SetBody(args)
+
+	for _, fn := range setting {
+		if fn != nil {
+			fn(output)
+		}
+	}
+	output.SetSeq(atomic.AddInt32(&s.seq, 1))
+
+	if output.BodyCodec() == codec.NilCodecID {
+		output.SetBodyCodec(s.peer.defaultBodyCodec)
+	}
+	if age := s.ContextAge(); age > 0 {
+		ctxTimout, _ := context.WithTimeout(output.Context(), age)
+		socket.WithContext(ctxTimout)(output)
+	}
+
+	stat := s.peer.pluginContainer.preWritePush(ctx)
+	if !stat.OK() {
+		return stat
+	}
+
+	var usedConn net.Conn
+W:
+	if usedConn, stat = s.write(output); !stat.OK() {
+		if stat == statConnClosed && s.redialForClient(usedConn) {
+			goto W
+		}
+		return stat
+	}
+	if enablePrintRunLog() {
+		s.printRunLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+	}
+	s.peer.pluginContainer.postWritePush(ctx)
+	return nil
 }
 
 // AsyncCall sends a message and receives reply asynchronously.
 // NOTE:
-// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) AsyncCall(
 	serviceMethod string,
-	arg interface{},
+	args interface{},
 	result interface{},
 	callCmdChan chan<- CallCmd,
 	setting ...MessageSetting,
@@ -429,11 +555,10 @@ func (s *session) AsyncCall(
 			Panicf("*session.AsyncCall(): callCmdChan channel is unbuffered")
 		}
 	}
-	output := socket.NewMessage(
-		socket.WithMtype(TypeCall),
-		socket.WithServiceMethod(serviceMethod),
-		socket.WithBody(arg),
-	)
+	output := socket.NewMessage()
+	output.SetServiceMethod(serviceMethod)
+	output.SetBody(args)
+	output.SetMtype(TypeCall)
 	for _, fn := range setting {
 		if fn != nil {
 			fn(output)
@@ -503,66 +628,12 @@ W:
 
 // Call sends a message and receives reply.
 // NOTE:
-// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
+// If the args is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Call(serviceMethod string, arg interface{}, result interface{}, setting ...MessageSetting) CallCmd {
-	callCmd := s.AsyncCall(serviceMethod, arg, result, make(chan CallCmd, 1), setting...)
+func (s *session) Call(serviceMethod string, args interface{}, result interface{}, setting ...MessageSetting) CallCmd {
+	callCmd := s.AsyncCall(serviceMethod, args, result, make(chan CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
-}
-
-// Push sends a message, but do not receives reply.
-// NOTE:
-// If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
-// If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (s *session) Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Status {
-	ctx := s.peer.getContext(s, true)
-	defer func() {
-		s.peer.putContext(ctx, true)
-		if p := recover(); p != nil {
-			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
-		}
-	}()
-
-	ctx.start = s.peer.timeNow()
-	output := ctx.output
-	output.SetMtype(TypePush)
-	output.SetServiceMethod(serviceMethod)
-	output.SetBody(arg)
-
-	for _, fn := range setting {
-		if fn != nil {
-			fn(output)
-		}
-	}
-	output.SetSeq(atomic.AddInt32(&s.seq, 1))
-
-	if output.BodyCodec() == codec.NilCodecID {
-		output.SetBodyCodec(s.peer.defaultBodyCodec)
-	}
-	if age := s.ContextAge(); age > 0 {
-		ctxTimout, _ := context.WithTimeout(output.Context(), age)
-		socket.WithContext(ctxTimout)(output)
-	}
-
-	stat := s.peer.pluginContainer.preWritePush(ctx)
-	if !stat.OK() {
-		return stat
-	}
-
-	var usedConn net.Conn
-W:
-	if usedConn, stat = s.write(output); !stat.OK() {
-		if stat == statConnClosed && s.redialForClient(usedConn) {
-			goto W
-		}
-		return stat
-	}
-	if enablePrintRunLog() {
-		s.printRunLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
-	}
-	s.peer.pluginContainer.postWritePush(ctx)
-	return nil
 }
 
 // Swap returns custom data swap of the session(socket).

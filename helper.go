@@ -153,6 +153,9 @@ type IOWithReadBuffer = socket.IOWithReadBuffer
 // Message a socket message data.
 type Message = socket.Message
 
+// MessageInfo the information of the message
+type MessageInfo = socket.MessageInfo
+
 // NewBodyFunc creates a new body by header.
 type NewBodyFunc = socket.NewBodyFunc
 

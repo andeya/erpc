@@ -177,8 +177,8 @@ const (
 )
 
 // newRouter creates root router.
-func newRouter(rootGroup string, pluginContainer *PluginContainer) *Router {
-	rootGroup = globalServiceMethodMapper("", rootGroup)
+func newRouter(pluginContainer *PluginContainer) *Router {
+	rootGroup := globalServiceMethodMapper("", "")
 	root := &Router{
 		subRouter: &SubRouter{
 			callHandlers:    make(map[string]*Handler),
