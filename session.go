@@ -517,6 +517,13 @@ func (s *session) Call(serviceMethod string, arg interface{}, result interface{}
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
 func (s *session) Push(serviceMethod string, arg interface{}, setting ...MessageSetting) *Status {
 	ctx := s.peer.getContext(s, true)
+	defer func() {
+		s.peer.putContext(ctx, true)
+		if p := recover(); p != nil {
+			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
+		}
+	}()
+
 	ctx.start = s.peer.timeNow()
 	output := ctx.output
 	output.SetMtype(TypePush)
@@ -538,12 +545,6 @@ func (s *session) Push(serviceMethod string, arg interface{}, setting ...Message
 		socket.WithContext(ctxTimout)(output)
 	}
 
-	defer func() {
-		if p := recover(); p != nil {
-			Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
-		}
-		s.peer.putContext(ctx, true)
-	}()
 	stat := s.peer.pluginContainer.preWritePush(ctx)
 	if !stat.OK() {
 		return stat
