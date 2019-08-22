@@ -49,6 +49,7 @@ const (
 	CodeUnknownError        int32 = -1
 	CodeOK                  int32 = 0      // nil error (ok)
 	CodeNoError             int32 = CodeOK // nil error (ok)
+	CodeInvalidOp           int32 = 1
 	CodeWrongConn           int32 = 100
 	CodeConnClosed          int32 = 102
 	CodeWriteFailed         int32 = 104
@@ -79,6 +80,8 @@ func CodeText(statCode int32) string {
 	switch statCode {
 	case CodeNoError:
 		return ""
+	case CodeInvalidOp:
+		return "Invalid Operation"
 	case CodeBadMessage:
 		return "Bad Message"
 	case CodeUnauthorized:
@@ -110,6 +113,7 @@ func CodeText(statCode int32) string {
 
 // Internal Framework Status string.
 var (
+	statInvalidOpError      = NewStatus(CodeInvalidOp, CodeText(CodeInvalidOp), "")
 	statUnknownError        = NewStatus(CodeUnknownError, CodeText(CodeUnknownError), "")
 	statDialFailed          = NewStatus(CodeDialFailed, CodeText(CodeDialFailed), "")
 	statConnClosed          = NewStatus(CodeConnClosed, CodeText(CodeConnClosed), "")

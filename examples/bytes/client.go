@@ -46,7 +46,7 @@ func main() {
 		tp.WithAddMeta("peer_id", "call-2"),
 	).Status()
 	if tp.IsConnError(stat) {
-		tp.Fatalf("has conn stator: %v", stat)
+		tp.Fatalf("has conn error: %v", stat)
 	}
 	if !stat.OK() {
 		tp.Fatalf("call error: %v", stat)
