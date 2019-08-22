@@ -47,12 +47,12 @@ func NewBinaryProtoFunc() tp.ProtoFunc {
 }
 
 type tBinaryProto struct {
-	id         byte
-	name       string
 	rwCounter  *utils.ReadWriteCounter
 	tProtocol  *thrift.THeaderProtocol
 	packLock   sync.Mutex
 	unpackLock sync.Mutex
+	name       string
+	id         byte
 }
 
 // Version returns the protocol's id and name.

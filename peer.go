@@ -92,34 +92,31 @@ var (
 )
 
 type peer struct {
-	router          *Router
-	pluginContainer *PluginContainer
-	sessHub         *SessionHub
-	closeCh         chan struct{}
-	// freeContext       *handlerCtx
-	// ctxLock           sync.Mutex
+	router            *Router
+	pluginContainer   *PluginContainer
+	sessHub           *SessionHub
+	closeCh           chan struct{}
 	defaultSessionAge time.Duration // Default session max age, if less than or equal to 0, no time limit
 	defaultContextAge time.Duration // Default CALL or PUSH context max age, if less than or equal to 0, no time limit
 	tlsConfig         *tls.Config
 	slowCometDuration time.Duration
-	defaultBodyCodec  byte
-	printDetail       bool
-	countTime         bool
 	timeNow           func() time.Time
 	timeSince         func(time.Time) time.Duration
 	mu                sync.Mutex
-
-	network string
-
-	// only for client role
-	defaultDialTimeout time.Duration
-	redialInterval     time.Duration
-	redialTimes        int32
-	localAddr          net.Addr
+	network           string
+	defaultBodyCodec  byte
+	printDetail       bool
+	countTime         bool
 
 	// only for server role
 	listenAddr string
 	listeners  map[net.Listener]struct{}
+
+	// only for client role
+	defaultDialTimeout time.Duration
+	redialInterval     time.Duration
+	localAddr          net.Addr
+	redialTimes        int32
 }
 
 // NewPeer creates a new peer.

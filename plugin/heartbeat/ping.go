@@ -68,10 +68,10 @@ type (
 	heartPing struct {
 		peer           tp.Peer
 		pingRate       time.Duration
-		pingRateSecond string
-		useCall        bool
 		mu             sync.RWMutex
 		once           sync.Once
+		pingRateSecond string
+		useCall        bool
 	}
 )
 

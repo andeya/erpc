@@ -155,13 +155,13 @@ type (
 	// Handler call or push handler type info
 	Handler struct {
 		name              string
-		isUnknown         bool
 		argElem           reflect.Type
 		reply             reflect.Type // only for call handler doc
 		handleFunc        func(*handlerCtx, reflect.Value)
 		unknownHandleFunc func(*handlerCtx)
 		pluginContainer   *PluginContainer
 		routerTypeName    string
+		isUnknown         bool
 	}
 	// HandlersMaker makes []*Handler
 	HandlersMaker func(string, interface{}, *PluginContainer) ([]*Handler, error)
