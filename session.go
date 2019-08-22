@@ -230,6 +230,7 @@ const (
 	statusPassiveClosing
 	statusPassiveClosed
 	statusRedialing
+	statusRedialFailed
 )
 
 func (s *session) changeStatus(stat int32) {
@@ -848,7 +849,7 @@ func (s *session) redialForClient(oldConn net.Conn) bool {
 	if oldConn != s.getConn() {
 		return true
 	}
-	if s.tryChangeStatus(statusRedialing, statusOk, statusPassiveClosing, statusPassiveClosed) {
+	if s.tryChangeStatus(statusRedialing, statusOk, statusPassiveClosing, statusPassiveClosed, statusRedialFailed) {
 		return s.redialForClientLocked()
 	}
 	return false

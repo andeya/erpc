@@ -283,6 +283,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 					return true
 				}
 			}
+			sess.tryChangeStatus(statusRedialFailed, statusRedialing)
 			if !stat.OK() {
 				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteAddr().String(), sess.ID(), stat.String())
 			}
