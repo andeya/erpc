@@ -63,7 +63,7 @@ type (
 		// NOTE:
 		// the external setting seq is invalid, the internal will be forced to set;
 		// does not support automatic redial after disconnection.
-		Send(serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) *Status
+		Send(mtype byte, serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) *Status
 		// Receive receives a message from peer, before the formal connection.
 		// NOTE: does not support automatic redial after disconnection.
 		Receive(NewBodyFunc, ...context.Context) Message
@@ -340,7 +340,7 @@ func (s *session) SetContextAge(duration time.Duration) {
 // NOTE:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
-func (s *session) Send(serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (replyErr *Status) {
+func (s *session) Send(mtype byte, serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (replyErr *Status) {
 	var output Message
 	defer func() {
 		if output != nil {
@@ -350,12 +350,13 @@ func (s *session) Send(serviceMethod string, body interface{}, stat *Status, set
 			replyErr = statBadMessage.Copy(p, 3)
 		}
 	}()
-	output, replyErr = s.send(serviceMethod, body, stat, setting)
+	output, replyErr = s.send(mtype, serviceMethod, body, stat, setting)
 	return replyErr
 }
 
-func (s *session) send(serviceMethod string, body interface{}, stat *Status, setting []MessageSetting) (Message, *Status) {
+func (s *session) send(mtype byte, serviceMethod string, body interface{}, stat *Status, setting []MessageSetting) (Message, *Status) {
 	output := socket.GetMessage(setting...)
+	output.SetMtype(mtype)
 	output.SetSeq(atomic.AddInt32(&s.seq, 1))
 	if output.BodyCodec() == codec.NilCodecID {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
@@ -430,20 +431,13 @@ func (s *session) Receive(bodyFactory NewBodyFunc, ctx ...context.Context) (inpu
 	return input
 }
 
-var setTypePushFunc = WithMtype(TypePush)
-
 // RawPush sends a message without executing other plugins.
 // NOTE:
 // the external setting seq is invalid, the internal will be forced to set;
 // does not support automatic redial after disconnection.
 func (s *session) RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) *Status {
-	a := make([]MessageSetting, len(setting)+1)
-	a[0] = setTypePushFunc
-	copy(a[1:], setting)
-	return s.Send(serviceMethod, args, nil, a...)
+	return s.Send(TypePush, serviceMethod, args, nil, setting...)
 }
-
-var setTypeCallFunc = WithMtype(TypeCall)
 
 // RawCall sends a message without executing other plugins, and receives a message.
 // NOTE:
@@ -456,10 +450,7 @@ func (s *session) RawCall(serviceMethod string, args, reply interface{}, callSet
 			stat = statBadMessage.Copy(p, 3)
 		}
 	}()
-	a := make([]MessageSetting, len(callSetting)+1)
-	a[0] = setTypeCallFunc
-	copy(a[1:], callSetting)
-	output, stat := s.send(serviceMethod, args, nil, a)
+	output, stat := s.send(TypeCall, serviceMethod, args, nil, callSetting)
 	if !stat.OK() {
 		socket.PutMessage(output)
 		return stat

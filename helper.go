@@ -188,9 +188,12 @@ func WithAcceptBodyCodec(bodyCodec byte) MessageSetting {
 //  func WithContext(ctx context.Context) MessageSetting
 var WithContext = socket.WithContext
 
-// WithMtype sets the message type.
-//  func WithMtype(mtype byte) MessageSetting
-var WithMtype = socket.WithMtype
+// withMtype sets the message type.
+func withMtype(mtype byte) MessageSetting {
+	return func(m Message) {
+		m.SetMtype(mtype)
+	}
+}
 
 // WithServiceMethod sets the message service method.
 // SUGGEST: max len ≤ 255!
@@ -297,7 +300,7 @@ type fakeCallCmd struct {
 func NewFakeCallCmd(serviceMethod string, arg, result interface{}, stat *Status) CallCmd {
 	return &fakeCallCmd{
 		output: socket.NewMessage(
-			socket.WithMtype(TypeCall),
+			withMtype(TypeCall),
 			socket.WithServiceMethod(serviceMethod),
 			socket.WithBody(arg),
 		),
