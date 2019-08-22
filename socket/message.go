@@ -493,13 +493,6 @@ func WithContext(ctx context.Context) MessageSetting {
 	}
 }
 
-// WithMtype sets the message type.
-func WithMtype(mtype byte) MessageSetting {
-	return func(m Message) {
-		m.SetMtype(mtype)
-	}
-}
-
 // WithServiceMethod sets the message service method.
 // SUGGEST: max len ≤ 255!
 func WithServiceMethod(serviceMethod string) MessageSetting {

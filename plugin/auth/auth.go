@@ -110,7 +110,7 @@ func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiSendErr
 		}
-		stat := sess.Send("", info, nil, append(a.msgSetting, tp.WithMtype(tp.TypeAuthCall))...)
+		stat := sess.Send(tp.TypeAuthCall, "", info, nil, a.msgSetting...)
 		if !stat.OK() {
 			return stat
 		}
@@ -164,10 +164,10 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Status {
 		return nil
 	})
 	if stat == MultiRecvErr {
-		sess.Send("", nil, stat, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+		sess.Send(tp.TypeAuthReply, "", nil, stat, a.msgSetting...)
 		return stat
 	}
-	stat2 := sess.Send("", ret, stat, append(a.msgSetting, tp.WithMtype(tp.TypeAuthReply))...)
+	stat2 := sess.Send(tp.TypeAuthReply, "", ret, stat, a.msgSetting...)
 	if !stat2.OK() {
 		return stat2
 	}
