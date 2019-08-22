@@ -138,45 +138,17 @@ type (
 
 // message a socket message data.
 type message struct {
-	/* Head: required message fields */
-
-	// message sequence
-	// 32-bit, compatible with various system platforms and other languages
-	seq int32
-	// message type, such as CALL, REPLY, PUSH
-	mtype byte
-	// service method
-	// SUGGEST: max len ≤ 255!
 	serviceMethod string
-	// status message status
-	status *Status
-	// metadata
-	// SUGGEST: urlencoded string max len ≤ 65535!
-	meta *utils.Args
-
-	/* Body: optional message fields */
-
-	// body codec type
-	bodyCodec byte
-	// body object
-	body interface{}
-	// newBodyFunc creates a new body by message type and URI.
-	// NOTE:
-	//  only for writing message;
-	//  should be nil when reading message.
-	newBodyFunc NewBodyFunc
-
-	/* Other */
-
-	// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-	// SUGGEST: the length can not be bigger than 255!
-	xferPipe *xfer.XferPipe
-	// message size
-	size uint32
-	// ctx is the message handling context,
-	// carries a deadline, a cancelation signal,
-	// and other values across API boundaries.
-	ctx context.Context
+	status        *Status
+	meta          *utils.Args
+	body          interface{}
+	newBodyFunc   NewBodyFunc
+	xferPipe      *xfer.XferPipe
+	ctx           context.Context
+	size          uint32
+	seq           int32
+	mtype         byte
+	bodyCodec     byte
 }
 
 var messagePool = sync.Pool{

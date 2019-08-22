@@ -85,11 +85,11 @@ func SetDefaultProtoFunc(protoFunc ProtoFunc) {
 
 // rawProto fast socket communication protocol.
 type rawProto struct {
-	id   byte
-	name string
 	r    io.Reader
 	w    io.Writer
 	rMu  sync.Mutex
+	name string
+	id   byte
 }
 
 // RawProtoFunc is creation function of fast socket protocol.

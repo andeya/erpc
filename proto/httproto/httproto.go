@@ -100,10 +100,10 @@ func NewHTTProtoFunc(printMessage ...bool) tp.ProtoFunc {
 }
 
 type httproto struct {
-	id           byte
-	name         string
 	rw           tp.IOWithReadBuffer
 	rMu          sync.Mutex
+	name         string
+	id           byte
 	printMessage bool
 }
 

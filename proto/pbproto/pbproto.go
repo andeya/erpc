@@ -39,10 +39,10 @@ func NewPbProtoFunc() tp.ProtoFunc {
 }
 
 type pbproto struct {
-	id   byte
-	name string
 	rw   tp.IOWithReadBuffer
 	rMu  sync.Mutex
+	name string
+	id   byte
 }
 
 // Version returns the protocol's id and name.

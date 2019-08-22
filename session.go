@@ -183,13 +183,10 @@ type session struct {
 	getCallHandler, getPushHandler func(serviceMethodPath string) (*Handler, bool)
 	timeSince                      func(time.Time) time.Duration
 	timeNow                        func() time.Time
-	seq                            int32
 	callCmdMap                     goutil.Map
 	protoFuncs                     []ProtoFunc
 	socket                         socket.Socket
-	status                         int32
 	closeNotifyCh                  chan struct{} // closeNotifyCh is the channel returned by CloseNotify.
-	didCloseNotify                 int32
 	writeLock                      sync.Mutex
 	graceCtxWaitGroup              sync.WaitGroup
 	graceCtxMutex                  sync.Mutex
@@ -199,8 +196,10 @@ type session struct {
 	sessionAgeLock                 sync.RWMutex
 	contextAgeLock                 sync.RWMutex
 	lock                           sync.RWMutex
-	// only for client role
-	redialForClientLocked func() bool
+	redialForClientLocked          func() bool // only for client role
+	seq                            int32
+	status                         int32
+	didCloseNotify                 int32
 }
 
 func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
