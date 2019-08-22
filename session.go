@@ -59,27 +59,40 @@ type (
 		ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc ProtoFunc))
 		// GetProtoFunc returns the ProtoFunc
 		GetProtoFunc() ProtoFunc
-		// Send sends message to peer, before the formal connection.
+		// PreSend temporarily sends message when the session is just builded,
+		// do not execute other plugins.
 		// NOTE:
-		// the external setting seq is invalid, the internal will be forced to set;
-		// does not support automatic redial after disconnection.
-		Send(mtype byte, serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) *Status
-		// Receive receives a message from peer, before the formal connection.
-		// NOTE: does not support automatic redial after disconnection.
-		Receive(NewBodyFunc, ...context.Context) Message
-		// RawPush sends a message of TypePush type without executing other plugins.
+		//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
+		//  Does not support automatic redial after disconnection;
+		//  Recommend to reuse unused Message: PutMessage(input).
+		PreSend(mtype byte, serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status)
+		// PreReceive temporarily receives message when the session is just builded,
+		// do not execute other plugins.
 		// NOTE:
-		// the external setting seq is invalid, the internal will be forced to set;
-		// does not support automatic redial after disconnection.
-		RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) *Status
-		// RawCall sends a message without executing other plugins, and receives a message.
+		//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
+		//  Does not support automatic redial after disconnection;
+		//  Recommend to reuse unused Message: PutMessage(input).
+		PreReceive(newArgs NewBodyFunc, ctx ...context.Context) (input Message)
+		// PreCall temporarily sends TypeCall message and receives message,
+		// when the session is just builded, do not execute other plugins.
 		// NOTE:
+		//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
 		//  The reply parameter is the body receiver;
 		//  The external setting seq is invalid, the internal will be forced to set;
 		//  Does not support automatic redial after disconnection.
-		RawCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (stat *Status)
-		// RawHandle receives a message, or sends a message, without executing other plugins.
-		RawHandle(newInputBody NewBodyFunc, handle func(Message) (result Message, toReply bool), ctx ...context.Context) *Status
+		PreCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (opStat *Status)
+		// PreReply temporarily sends TypeReply message when the session is just builded,
+		// do not execute other plugins.
+		// NOTE:
+		//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
+		//  The external setting seq is invalid, the internal will be forced to set;
+		//  Does not support automatic redial after disconnection.
+		PreReply(src Message, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status)
+		// RawPush sends a TypePush message without executing other plugins.
+		// NOTE:
+		//  The external setting seq is invalid, the internal will be forced to set;
+		//  Does not support automatic redial after disconnection.
+		RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) (opStat *Status)
 		// SessionAge returns the session max age.
 		SessionAge() time.Duration
 		// ContextAge returns CALL or PUSH context max age.
@@ -174,10 +187,9 @@ type session struct {
 	callCmdMap                     goutil.Map
 	protoFuncs                     []ProtoFunc
 	socket                         socket.Socket
-	status                         int32         // 0:ok, 1:active closed, 2:disconnect
+	status                         int32
 	closeNotifyCh                  chan struct{} // closeNotifyCh is the channel returned by CloseNotify.
 	didCloseNotify                 int32
-	statusLock                     sync.Mutex
 	writeLock                      sync.Mutex
 	graceCtxWaitGroup              sync.WaitGroup
 	graceCtxMutex                  sync.Mutex
@@ -188,7 +200,7 @@ type session struct {
 	contextAgeLock                 sync.RWMutex
 	lock                           sync.RWMutex
 	// only for client role
-	redialForClientLocked func(oldConn net.Conn) bool
+	redialForClientLocked func() bool
 }
 
 func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
@@ -199,6 +211,7 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 		timeSince:      peer.timeSince,
 		timeNow:        peer.timeNow,
 		protoFuncs:     protoFuncs,
+		status:         statusPreparing,
 		socket:         socket.NewSocket(conn, protoFuncs...),
 		closeNotifyCh:  make(chan struct{}),
 		callCmdMap:     goutil.AtomicMap(),
@@ -206,6 +219,90 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 		contextAge:     peer.defaultContextAge,
 	}
 	return s
+}
+
+// NOTE: Do not change the order
+const (
+	statusPreparing int32 = iota
+	statusOk
+	statusActiveClosing
+	statusActiveClosed
+	statusPassiveClosing
+	statusPassiveClosed
+	statusRedialing
+)
+
+func (s *session) changeStatus(stat int32) {
+	atomic.StoreInt32(&s.status, stat)
+}
+
+func (s *session) tryChangeStatus(to int32, fromList ...int32) (changed bool) {
+	for _, from := range fromList {
+		if atomic.CompareAndSwapInt32(&s.status, from, to) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *session) checkStatus(checkList ...int32) bool {
+	stat := atomic.LoadInt32(&s.status)
+	for _, v := range checkList {
+		if v == stat {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *session) getStatus() int32 {
+	return atomic.LoadInt32(&s.status)
+}
+
+func (s *session) goonRead() bool {
+	return s.checkStatus(statusOk, statusActiveClosing)
+}
+
+func (s *session) notifyClosed() {
+	if atomic.CompareAndSwapInt32(&s.didCloseNotify, 0, 1) {
+		close(s.closeNotifyCh)
+	}
+}
+
+// CloseNotify returns a channel that closes when the connection has gone away.
+func (s *session) CloseNotify() <-chan struct{} {
+	return s.closeNotifyCh
+}
+
+// IsActiveClosed returns whether the connection has been closed, and is actively closed.
+func (s *session) IsActiveClosed() bool {
+	return s.checkStatus(statusActiveClosed)
+}
+
+// IsPassiveClosed returns whether the connection has been closed, and is passively closed.
+func (s *session) IsPassiveClosed() bool {
+	return s.checkStatus(statusPassiveClosed)
+}
+
+// Health checks if the session is usable.
+func (s *session) Health() bool {
+	status := s.getStatus()
+	if status == statusOk {
+		return true
+	}
+	if s.redialForClientLocked == nil {
+		return false
+	}
+	if status == statusPassiveClosed {
+		return true
+	}
+	return false
+}
+
+func (s *session) graceCtxWait() {
+	s.graceCtxMutex.Lock()
+	s.graceCtxWaitGroup.Wait()
+	s.graceCtxMutex.Unlock()
 }
 
 // Peer returns the peer.
@@ -336,28 +433,36 @@ func (s *session) SetContextAge(duration time.Duration) {
 	s.contextAgeLock.Unlock()
 }
 
-// Send sends message to peer, before the formal connection.
+// PreSend temporarily sends message when the session is just builded,
+// do not execute other plugins.
 // NOTE:
-// the external setting seq is invalid, the internal will be forced to set;
-// does not support automatic redial after disconnection.
-func (s *session) Send(mtype byte, serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (replyErr *Status) {
+//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
+//  Does not support automatic redial after disconnection;
+//  Recommend to reuse unused Message: PutMessage(input).
+func (s *session) PreSend(mtype byte, serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status) {
+	if !s.checkStatus(statusPreparing) {
+		return statUnpreparedError
+	}
 	var output Message
 	defer func() {
 		if output != nil {
 			socket.PutMessage(output)
 		}
 		if p := recover(); p != nil {
-			replyErr = statBadMessage.Copy(p, 3)
+			opStat = statBadMessage.Copy(p, 3)
 		}
 	}()
-	output, replyErr = s.send(mtype, serviceMethod, body, stat, setting)
-	return replyErr
+	output, opStat = s.send(mtype, 0, serviceMethod, body, stat, setting)
+	return opStat
 }
 
-func (s *session) send(mtype byte, serviceMethod string, body interface{}, stat *Status, setting []MessageSetting) (Message, *Status) {
+func (s *session) send(mtype byte, seq int32, serviceMethod string, body interface{}, stat *Status, setting []MessageSetting) (Message, *Status) {
 	output := socket.GetMessage(setting...)
 	output.SetMtype(mtype)
-	output.SetSeq(atomic.AddInt32(&s.seq, 1))
+	if seq == 0 {
+		seq = atomic.AddInt32(&s.seq, 1)
+	}
+	output.SetSeq(seq)
 	if output.BodyCodec() == codec.NilCodecID {
 		output.SetBodyCodec(s.peer.defaultBodyCodec)
 	}
@@ -401,17 +506,25 @@ func (s *session) doSend(output Message) *Status {
 	}
 }
 
-// Receive receives a message from peer, before the formal connection.
+var statUnpreparedError = statInvalidOpError.Copy("Cannot be called during the Non-PostDial and Non-PostAccept phase")
+
+// PreReceive temporarily receives message when the session is just builded,
+// do not execute other plugins.
 // NOTE:
+//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
 //  Does not support automatic redial after disconnection;
 //  Recommend to reuse unused Message: PutMessage(input).
-func (s *session) Receive(bodyFactory NewBodyFunc, ctx ...context.Context) (input Message) {
+func (s *session) PreReceive(newArgs NewBodyFunc, ctx ...context.Context) (input Message) {
 	if len(ctx) > 0 {
 		input = socket.GetMessage(WithContext(ctx[0]))
 	} else {
 		input = socket.GetMessage()
 	}
-	input.SetNewBody(bodyFactory)
+	if !s.checkStatus(statusPreparing) {
+		input.SetStatus(statUnpreparedError)
+		return input
+	}
+	input.SetNewBody(newArgs)
 	defer func() {
 		if p := recover(); p != nil {
 			input.SetStatus(statBadMessage.Copy(p, 3))
@@ -431,43 +544,71 @@ func (s *session) Receive(bodyFactory NewBodyFunc, ctx ...context.Context) (inpu
 	return input
 }
 
-// RawPush sends a message without executing other plugins.
+// PreCall temporarily sends TypeCall message and receives message,
+// when the session is just builded, do not execute other plugins.
 // NOTE:
-// the external setting seq is invalid, the internal will be forced to set;
-// does not support automatic redial after disconnection.
-func (s *session) RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) *Status {
-	return s.Send(TypePush, serviceMethod, args, nil, setting...)
-}
-
-// RawCall sends a message without executing other plugins, and receives a message.
-// NOTE:
+//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
 //  The reply parameter is the body receiver;
 //  The external setting seq is invalid, the internal will be forced to set;
 //  Does not support automatic redial after disconnection.
-func (s *session) RawCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (stat *Status) {
+func (s *session) PreCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (opStat *Status) {
+	if !s.checkStatus(statusPreparing) {
+		return statUnpreparedError
+	}
 	defer func() {
 		if p := recover(); p != nil {
-			stat = statBadMessage.Copy(p, 3)
+			opStat = statBadMessage.Copy(p, 3)
 		}
 	}()
-	output, stat := s.send(TypeCall, serviceMethod, args, nil, callSetting)
-	if !stat.OK() {
+	output, opStat := s.send(TypeCall, 0, serviceMethod, args, nil, callSetting)
+	if !opStat.OK() {
 		socket.PutMessage(output)
-		return stat
+		return opStat
 	}
 	ctx := output.Context()
 	socket.PutMessage(output)
-	return s.Receive(func(Header) interface{} { return reply }, ctx).Status()
+	return s.PreReceive(func(Header) interface{} { return reply }, ctx).Status()
 }
 
-// RawHandle receives a message, or sends a message, without executing other plugins.
-func (s *session) RawHandle(newInputBody NewBodyFunc, handle func(Message) (result Message, toReply bool), ctx ...context.Context) *Status {
-	input := s.Receive(newInputBody, ctx...)
-	output, toReply := handle(input)
-	if toReply {
-		return s.doSend(output)
+// PreReply temporarily sends TypeReply message when the session is just builded,
+// do not execute other plugins.
+// NOTE:
+//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
+//  The external setting seq is invalid, the internal will be forced to set;
+//  Does not support automatic redial after disconnection.
+func (s *session) PreReply(src Message, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status) {
+	if !s.checkStatus(statusPreparing) {
+		return statUnpreparedError
 	}
-	return output.Status()
+	var output Message
+	defer func() {
+		if output != nil {
+			socket.PutMessage(output)
+		}
+		if p := recover(); p != nil {
+			opStat = statBadMessage.Copy(p, 3)
+		}
+	}()
+	output, opStat = s.send(TypeReply, src.Seq(), src.ServiceMethod(), body, stat, setting)
+	return opStat
+}
+
+// RawPush sends a TypePush message without executing other plugins.
+// NOTE:
+//  The external setting seq is invalid, the internal will be forced to set;
+//  Does not support automatic redial after disconnection.
+func (s *session) RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) (opStat *Status) {
+	var output Message
+	defer func() {
+		if output != nil {
+			socket.PutMessage(output)
+		}
+		if p := recover(); p != nil {
+			opStat = statBadMessage.Copy(p, 3)
+		}
+	}()
+	output, opStat = s.send(TypePush, 0, serviceMethod, args, nil, setting)
+	return opStat
 }
 
 // Push sends a message of TypePush type, but do not receives reply.
@@ -632,124 +773,36 @@ func (s *session) Swap() goutil.Map {
 	return s.socket.Swap()
 }
 
-const (
-	statusOk            int32 = 0
-	statusActiveClosing int32 = 1
-	statusActiveClosed  int32 = 2
-	statusPassiveClosed int32 = 3
-)
-
-// Health checks if the session is usable.
-func (s *session) Health() bool {
-	status := s.getStatus()
-	if status == statusOk {
-		return true
-	}
-	if s.redialForClientLocked == nil {
-		return false
-	}
-	if status == statusPassiveClosed {
-		return true
-	}
-	return false
-}
-
-// isOk checks if the session is normal.
-func (s *session) isOk() bool {
-	return atomic.LoadInt32(&s.status) == statusOk
-}
-
-func (s *session) goonRead() bool {
-	status := atomic.LoadInt32(&s.status)
-	return status == statusOk || status == statusActiveClosing
-}
-
-// IsActiveClosed returns whether the connection has been closed, and is actively closed.
-func (s *session) IsActiveClosed() bool {
-	return atomic.LoadInt32(&s.status) == statusActiveClosed
-}
-
-func (s *session) activelyClosed() {
-	atomic.StoreInt32(&s.status, statusActiveClosed)
-}
-
-func (s *session) activelyClosing() {
-	atomic.StoreInt32(&s.status, statusActiveClosing)
-}
-
-// IsPassiveClosed returns whether the connection has been closed, and is passively closed.
-func (s *session) IsPassiveClosed() bool {
-	return atomic.LoadInt32(&s.status) == statusPassiveClosed
-}
-
-func (s *session) passivelyClosed() {
-	atomic.StoreInt32(&s.status, statusPassiveClosed)
-}
-
-func (s *session) getStatus() int32 {
-	return atomic.LoadInt32(&s.status)
-}
-
-// CloseNotify returns a channel that closes when the connection has gone away.
-func (s *session) CloseNotify() <-chan struct{} {
-	return s.closeNotifyCh
-}
-
-func (s *session) notifyClosed() {
-	if atomic.CompareAndSwapInt32(&s.didCloseNotify, 0, 1) {
-		close(s.closeNotifyCh)
-	}
-}
-
-func (s *session) graceCtxWait() {
-	s.graceCtxMutex.Lock()
-	s.graceCtxWaitGroup.Wait()
-	s.graceCtxMutex.Unlock()
-}
-
 // Close closes the session.
 func (s *session) Close() error {
 	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.closeLocked()
+}
 
-	s.statusLock.Lock()
-	status := s.getStatus()
-	if status != statusOk {
-		s.statusLock.Unlock()
-		s.lock.Unlock()
+func (s *session) closeLocked() error {
+	if !s.tryChangeStatus(statusActiveClosing, statusOk, statusPreparing) {
 		return nil
-	}
-	s.activelyClosing()
-	s.statusLock.Unlock()
-
+	} // readDisconnected is being called
 	s.peer.sessHub.Delete(s.ID())
 	s.notifyClosed()
 	s.graceCtxWait()
 	s.graceCallCmdWaitGroup.Wait()
-
-	s.statusLock.Lock()
-	// Notice actively closed
-	if !s.IsPassiveClosed() {
-		s.activelyClosed()
-	}
-	s.statusLock.Unlock()
-
+	s.changeStatus(statusActiveClosed)
 	err := s.socket.Close()
-	s.lock.Unlock()
-
 	s.peer.pluginContainer.postDisconnect(s)
 	return err
 }
 
 func (s *session) readDisconnected(oldConn net.Conn, err error) {
-	s.statusLock.Lock()
 	status := s.getStatus()
-	if status == statusActiveClosed {
-		s.statusLock.Unlock()
+	switch status {
+	case statusPassiveClosed, statusActiveClosed, statusPassiveClosing:
 		return
+	case statusActiveClosing:
+	default:
+		s.changeStatus(statusPassiveClosing)
 	}
-	// Notice passively closed
-	s.passivelyClosed()
-	s.statusLock.Unlock()
 
 	s.peer.sessHub.Delete(s.ID())
 
@@ -778,8 +831,8 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 	}
 
 	s.socket.Close()
-
 	if !s.redialForClient(oldConn) {
+		s.changeStatus(statusPassiveClosed)
 		s.notifyClosed()
 		s.peer.pluginContainer.postDisconnect(s)
 	}
@@ -791,11 +844,14 @@ func (s *session) redialForClient(oldConn net.Conn) bool {
 	}
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	status := s.getStatus()
-	if status == statusActiveClosed || status == statusActiveClosing {
-		return false
+	// Avoid repeated calls from write and readDisconnected methods
+	if oldConn != s.getConn() {
+		return true
 	}
-	return s.redialForClientLocked(oldConn)
+	if s.tryChangeStatus(statusRedialing, statusOk, statusPassiveClosing, statusPassiveClosed) {
+		return s.redialForClientLocked()
+	}
+	return false
 }
 
 func (s *session) startReadAndHandle() {
@@ -819,7 +875,6 @@ func (s *session) startReadAndHandle() {
 		}
 		s.readDisconnected(usedConn, err)
 	}()
-
 	// read call, call reply or push
 	for s.goonRead() {
 		var ctx = s.peer.getContext(s, false)
@@ -849,8 +904,7 @@ func (s *session) startReadAndHandle() {
 func (s *session) write(message Message) (net.Conn, *Status) {
 	usedConn := s.getConn()
 	status := s.getStatus()
-	if status != statusOk &&
-		!(status == statusActiveClosing && message.Mtype() == TypeReply) {
+	if !(status == statusOk || (status == statusActiveClosing && message.Mtype() == TypeReply)) {
 		return usedConn, statConnClosed
 	}
 

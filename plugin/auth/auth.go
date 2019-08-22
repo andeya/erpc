@@ -110,11 +110,11 @@ func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiSendErr
 		}
-		stat := sess.Send(tp.TypeAuthCall, "", info, nil, a.msgSetting...)
+		stat := sess.PreSend(tp.TypeAuthCall, "", info, nil, a.msgSetting...)
 		if !stat.OK() {
 			return stat
 		}
-		retMsg := sess.Receive(func(header tp.Header) interface{} {
+		retMsg := sess.PreReceive(func(header tp.Header) interface{} {
 			if header.Mtype() != tp.TypeAuthReply {
 				return nil
 			}
@@ -144,7 +144,7 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiRecvErr
 		}
-		infoMsg := sess.Receive(func(header tp.Header) interface{} {
+		infoMsg := sess.PreReceive(func(header tp.Header) interface{} {
 			if header.Mtype() != tp.TypeAuthCall {
 				return nil
 			}
@@ -164,10 +164,10 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Status {
 		return nil
 	})
 	if stat == MultiRecvErr {
-		sess.Send(tp.TypeAuthReply, "", nil, stat, a.msgSetting...)
+		sess.PreSend(tp.TypeAuthReply, "", nil, stat, a.msgSetting...)
 		return stat
 	}
-	stat2 := sess.Send(tp.TypeAuthReply, "", ret, stat, a.msgSetting...)
+	stat2 := sess.PreSend(tp.TypeAuthReply, "", ret, stat, a.msgSetting...)
 	if !stat2.OK() {
 		return stat2
 	}

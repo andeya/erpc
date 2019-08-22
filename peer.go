@@ -20,7 +20,6 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/henrylee2cn/teleport/quic"
@@ -272,16 +271,13 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 
 	// create redial func
 	if p.redialTimes != 0 {
-		sess.redialForClientLocked = func(oldConn net.Conn) bool {
-			if oldConn != sess.getConn() {
-				return true
-			}
+		sess.redialForClientLocked = func() bool {
 			var stat *Status
 			redialTimes := p.newRedialTimes()
 			for redialTimes.next() {
 				time.Sleep(p.redialInterval)
 				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
-				stat = p.renewSessionForClient(sess, dialFunc, addr, protoFuncs)
+				stat = p.renewSessionForClientLocked(sess, dialFunc, addr, protoFuncs)
 				if stat.OK() {
 					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 					return true
@@ -299,13 +295,14 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 		sess.Close()
 		return nil, stat
 	}
+	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
+	sess.changeStatus(statusOk)
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
-	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 	return sess, nil
 }
 
-func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) *Status {
+func (p *peer) renewSessionForClientLocked(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) *Status {
 	var conn, dialErr = dialFunc()
 	if dialErr != nil {
 		return statDialFailed.Copy(dialErr)
@@ -325,11 +322,12 @@ func (p *peer) renewSessionForClient(sess *session, dialFunc func() (net.Conn, e
 	} else {
 		sess.socket.SetID(oldID)
 	}
+	sess.changeStatus(statusPreparing)
 	if stat := p.pluginContainer.postDial(sess); !stat.OK() {
-		sess.Close()
+		sess.closeLocked()
 		return stat
 	}
-	atomic.StoreInt32(&sess.status, statusOk)
+	sess.changeStatus(statusOk)
 	AnywayGo(sess.startReadAndHandle)
 	p.sessHub.Set(sess)
 	return nil
@@ -353,8 +351,9 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Statu
 		return nil, stat
 	}
 	Infof("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.ID())
-	p.sessHub.Set(sess)
+	sess.changeStatus(statusOk)
 	AnywayGo(sess.startReadAndHandle)
+	p.sessHub.Set(sess)
 	return sess, nil
 }
 
@@ -426,6 +425,7 @@ func (p *peer) serveListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 			}
 			Infof("accept ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.ID())
 			p.sessHub.Set(sess)
+			sess.changeStatus(statusOk)
 			sess.startReadAndHandle()
 		})
 	}
