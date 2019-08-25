@@ -137,11 +137,18 @@ func (gp *GoPool) TryGo(fn func()) {
 
 // MustGo always try to use goroutine callbacks
 // until execution is complete or the context is canceled.
-func (gp *GoPool) MustGo(ctx context.Context, fn func()) error {
+func (gp *GoPool) MustGo(fn func(), ctx ...context.Context) error {
+	if len(ctx) == 0 {
+		for gp.Go(fn) != nil {
+			runtime.Gosched()
+		}
+		return nil
+	}
+	c := ctx[0]
 	for {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-c.Done():
+			return c.Err()
 		default:
 			if gp.Go(fn) == nil {
 				return nil
