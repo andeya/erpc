@@ -8,7 +8,7 @@ github.com/gogo/protobuf/proto
 github.com/golang/protobuf/proto
 # github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21
 github.com/henrylee2cn/cfgo
-# github.com/henrylee2cn/goutil v0.0.0-20190825033852-493ba6f901f5
+# github.com/henrylee2cn/goutil v0.0.0-20190825044752-802bc5b8d468
 github.com/henrylee2cn/goutil
 github.com/henrylee2cn/goutil/coarsetime
 github.com/henrylee2cn/goutil/errors
