@@ -1,14 +1,14 @@
-# Teleport [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/teleport?style=flat-square)](http://goreportcard.com/report/henrylee2cn/teleport) [![github issues](https://img.shields.io/github/issues/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/teleport) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/tree/v5/examples)
+# Teleport [![GitHub release](https://img.shields.io/github/release/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/teleport?style=flat-square)](http://goreportcard.com/report/henrylee2cn/teleport) [![github issues](https://img.shields.io/github/issues/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/teleport.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/teleport) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/teleport/tree/master/examples)
 <!-- [![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg?style=flat-square)](http://jq.qq.com/?_wv=1027&k=fzi4p1) -->
 
 Teleport is a versatile, high-performance and flexible socket framework.
 
 It can be used for peer-peer, rpc, gateway, micro services, push services, game services and so on.
 
-[简体中文](https://github.com/henrylee2cn/teleport/tree/v5/README_ZH.md)
+[简体中文](https://github.com/henrylee2cn/teleport/tree/master/README_ZH.md)
 
 
-![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/v5/doc/teleport_module_diagram.png)
+![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_module_diagram.png)
 
 
 ## Benchmark
@@ -60,15 +60,15 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 - Profile torch of teleport/socket
 
-![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_profile_torch.png)
+![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_profile_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
 
 - Heap torch of teleport/socket
 
-![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_heap_torch.png)
+![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_heap_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
 
 ## Version
 
@@ -233,7 +233,7 @@ func (p *Push) Status(arg *string) *tp.Status {
 }
 ```
 
-[More Examples](https://github.com/henrylee2cn/teleport/tree/v5/examples)
+[More Examples](https://github.com/henrylee2cn/teleport/tree/master/examples)
 
 ## Design
 
@@ -259,7 +259,7 @@ func (p *Push) Status(arg *string) *tp.Status {
 
 Abstracts the data message(Message Object) of the application layer and is compatible with HTTP message:
 
-![tp_data_message](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_data_message.png)
+![tp_data_message](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_data_message.png)
 
 
 ### Protocol
@@ -679,47 +679,47 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                  |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------- |
-| [json](https://github.com/henrylee2cn/teleport/blob/v5/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
-| [protobuf](https://github.com/henrylee2cn/teleport/blob/v5/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
-| [thrift](https://github.com/henrylee2cn/teleport/blob/v5/codec/thrift_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
-| [xml](https://github.com/henrylee2cn/teleport/blob/v5/codec/xml_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
-| [plain](https://github.com/henrylee2cn/teleport/blob/v5/codec/plain_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Plain text codec(teleport own)   |
-| [form](https://github.com/henrylee2cn/teleport/blob/v5/codec/form_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
+| [json](https://github.com/henrylee2cn/teleport/blob/master/codec/json_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | JSON codec(teleport own)     |
+| [protobuf](https://github.com/henrylee2cn/teleport/blob/master/codec/protobuf_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Protobuf codec(teleport own) |
+| [thrift](https://github.com/henrylee2cn/teleport/blob/master/codec/thrift_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
+| [xml](https://github.com/henrylee2cn/teleport/blob/master/codec/xml_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
+| [plain](https://github.com/henrylee2cn/teleport/blob/master/codec/plain_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Plain text codec(teleport own)   |
+| [form](https://github.com/henrylee2cn/teleport/blob/master/codec/form_codec.go) | `import "github.com/henrylee2cn/teleport/codec"` | Form(url encode) codec(teleport own)   |
 
 ### Plugin
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [auth](https://github.com/henrylee2cn/teleport/tree/v5/plugin/auth) | `import "github.com/henrylee2cn/teleport/plugin/auth"` | An auth plugin for verifying peer at the first time |
-| [binder](https://github.com/henrylee2cn/teleport/tree/v5/plugin/binder) | `import binder "github.com/henrylee2cn/teleport/plugin/binder"` | Parameter Binding Verification for Struct Handler |
-| [heartbeat](https://github.com/henrylee2cn/teleport/tree/v5/plugin/heartbeat) | `import heartbeat "github.com/henrylee2cn/teleport/plugin/heartbeat"` | A generic timing heartbeat plugin        |
-| [proxy](https://github.com/henrylee2cn/teleport/tree/v5/plugin/proxy) | `import "github.com/henrylee2cn/teleport/plugin/proxy"` | A proxy plugin for handling unknown calling or pushing |
-[secure](https://github.com/henrylee2cn/teleport/tree/v5/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the message body
+| [auth](https://github.com/henrylee2cn/teleport/tree/master/plugin/auth) | `import "github.com/henrylee2cn/teleport/plugin/auth"` | An auth plugin for verifying peer at the first time |
+| [binder](https://github.com/henrylee2cn/teleport/tree/master/plugin/binder) | `import binder "github.com/henrylee2cn/teleport/plugin/binder"` | Parameter Binding Verification for Struct Handler |
+| [heartbeat](https://github.com/henrylee2cn/teleport/tree/master/plugin/heartbeat) | `import heartbeat "github.com/henrylee2cn/teleport/plugin/heartbeat"` | A generic timing heartbeat plugin        |
+| [proxy](https://github.com/henrylee2cn/teleport/tree/master/plugin/proxy) | `import "github.com/henrylee2cn/teleport/plugin/proxy"` | A proxy plugin for handling unknown calling or pushing |
+[secure](https://github.com/henrylee2cn/teleport/tree/master/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the message body
 
 ### Protocol
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [rawproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/rawproto) | `import "github.com/henrylee2cn/teleport/proto/rawproto` | A fast socket communication protocol(teleport default protocol) |
-| [jsonproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/jsonproto) | `import "github.com/henrylee2cn/teleport/proto/jsonproto"` | A JSON socket communication protocol     |
-| [pbproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/pbproto) | `import "github.com/henrylee2cn/teleport/proto/pbproto"` | A Protobuf socket communication protocol     |
-| [thriftproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/thriftproto) | `import "github.com/henrylee2cn/teleport/proto/thriftproto"` | A Thrift communication protocol     |
-| [httproto](https://github.com/henrylee2cn/teleport/tree/v5/proto/httproto) | `import "github.com/henrylee2cn/teleport/proto/httproto"` | A HTTP style socket communication protocol     |
+| [rawproto](https://github.com/henrylee2cn/teleport/tree/master/proto/rawproto) | `import "github.com/henrylee2cn/teleport/proto/rawproto` | A fast socket communication protocol(teleport default protocol) |
+| [jsonproto](https://github.com/henrylee2cn/teleport/tree/master/proto/jsonproto) | `import "github.com/henrylee2cn/teleport/proto/jsonproto"` | A JSON socket communication protocol     |
+| [pbproto](https://github.com/henrylee2cn/teleport/tree/master/proto/pbproto) | `import "github.com/henrylee2cn/teleport/proto/pbproto"` | A Protobuf socket communication protocol     |
+| [thriftproto](https://github.com/henrylee2cn/teleport/tree/master/proto/thriftproto) | `import "github.com/henrylee2cn/teleport/proto/thriftproto"` | A Thrift communication protocol     |
+| [httproto](https://github.com/henrylee2cn/teleport/tree/master/proto/httproto) | `import "github.com/henrylee2cn/teleport/proto/httproto"` | A HTTP style socket communication protocol     |
 
 ### Transfer-Filter
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [gzip](https://github.com/henrylee2cn/teleport/tree/v5/xfer/gzip) | `import "github.com/henrylee2cn/teleport/xfer/gzip"` | Gzip(teleport own)                       |
-| [md5](https://github.com/henrylee2cn/teleport/tree/v5/xfer/md5) | `import "github.com/henrylee2cn/teleport/xfer/md5"` | Provides a integrity check transfer filter |
+| [gzip](https://github.com/henrylee2cn/teleport/tree/master/xfer/gzip) | `import "github.com/henrylee2cn/teleport/xfer/gzip"` | Gzip(teleport own)                       |
+| [md5](https://github.com/henrylee2cn/teleport/tree/master/xfer/md5) | `import "github.com/henrylee2cn/teleport/xfer/md5"` | Provides a integrity check transfer filter |
 
 ### Mixer
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [multiclient](https://github.com/henrylee2cn/teleport/tree/v5/mixer/multiclient) | `import "github.com/henrylee2cn/teleport/mixer/multiclient"` | Higher throughput client connection pool when transferring large messages (such as downloading files) |
-| [websocket](https://github.com/henrylee2cn/teleport/tree/v5/mixer/websocket) | `import "github.com/henrylee2cn/teleport/mixer/websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
-| [evio](https://github.com/henrylee2cn/teleport/tree/v5/mixer/evio) | `import "github.com/henrylee2cn/teleport/mixer/evio"` | A fast event-loop networking framework that uses the teleport API layer |
+| [multiclient](https://github.com/henrylee2cn/teleport/tree/master/mixer/multiclient) | `import "github.com/henrylee2cn/teleport/mixer/multiclient"` | Higher throughput client connection pool when transferring large messages (such as downloading files) |
+| [websocket](https://github.com/henrylee2cn/teleport/tree/master/mixer/websocket) | `import "github.com/henrylee2cn/teleport/mixer/websocket"` | Makes the Teleport framework compatible with websocket protocol as specified in RFC 6455 |
+| [evio](https://github.com/henrylee2cn/teleport/tree/master/mixer/evio) | `import "github.com/henrylee2cn/teleport/mixer/evio"` | A fast event-loop networking framework that uses the teleport API layer |
 | [html](https://github.com/xiaoenai/tp-micro/tree/master/helper/mod-html) | `html "github.com/xiaoenai/tp-micro/helper/mod-html"` | HTML render for http client |
 
 ## Projects based on Teleport
@@ -742,4 +742,4 @@ type PeerConfig struct {
 
 ## License
 
-Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/v5/LICENSE) file for the full license text
+Teleport is under Apache v2 License. See the [LICENSE](https://github.com/henrylee2cn/teleport/raw/master/LICENSE) file for the full license text

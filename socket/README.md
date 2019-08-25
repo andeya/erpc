@@ -42,19 +42,19 @@ A concise, powerful and high-performance connection socket.
 | 2000               | 8        | 6          | 64      | 0       | 183351          |
 | 5000               | 21       | 18         | 651     | 0       | 133886          |
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/v5/teleport)**
+**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
 
 - Profile torch of teleport/socket
 
-![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_profile_torch.png)
+![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_profile_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
 
 - Heap torch of teleport/socket
 
-![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_heap_torch.png)
+![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/v5/doc/tp_socket_heap_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
 
 ## Example
 
@@ -178,7 +178,7 @@ func main() {
 }
 ```
 
-[More Examples](https://github.com/henrylee2cn/teleport/tree/v5/socket/example)
+[More Examples](https://github.com/henrylee2cn/teleport/tree/master/socket/example)
 
 ## Keyworks
 
