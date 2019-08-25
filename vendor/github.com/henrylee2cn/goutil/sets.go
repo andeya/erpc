@@ -2,12 +2,17 @@ package goutil
 
 import "strconv"
 
+func isEmptyAsZero(emptyAsZero []bool) bool {
+	return len(emptyAsZero) > 0 && emptyAsZero[0]
+}
+
 // StringsToBools converts string slice to bool slice.
-func StringsToBools(a []string) ([]bool, error) {
+func StringsToBools(a []string, emptyAsZero ...bool) ([]bool, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]bool, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseBool(v)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = i
@@ -16,11 +21,12 @@ func StringsToBools(a []string) ([]bool, error) {
 }
 
 // StringsToFloat32s converts string slice to float32 slice.
-func StringsToFloat32s(a []string) ([]float32, error) {
+func StringsToFloat32s(a []string, emptyAsZero ...bool) ([]float32, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]float32, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseFloat(v, 32)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = float32(i)
@@ -29,11 +35,12 @@ func StringsToFloat32s(a []string) ([]float32, error) {
 }
 
 // StringsToFloat64s converts string slice to float64 slice.
-func StringsToFloat64s(a []string) ([]float64, error) {
+func StringsToFloat64s(a []string, emptyAsZero ...bool) ([]float64, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]float64, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseFloat(v, 64)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = i
@@ -42,11 +49,12 @@ func StringsToFloat64s(a []string) ([]float64, error) {
 }
 
 // StringsToInts converts string slice to int slice.
-func StringsToInts(a []string) ([]int, error) {
+func StringsToInts(a []string, emptyAsZero ...bool) ([]int, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]int, len(a))
 	for k, v := range a {
 		i, err := strconv.Atoi(v)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = i
@@ -55,11 +63,12 @@ func StringsToInts(a []string) ([]int, error) {
 }
 
 // StringsToInt64s converts string slice to int64 slice.
-func StringsToInt64s(a []string) ([]int64, error) {
+func StringsToInt64s(a []string, emptyAsZero ...bool) ([]int64, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]int64, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = i
@@ -68,11 +77,12 @@ func StringsToInt64s(a []string) ([]int64, error) {
 }
 
 // StringsToInt32s converts string slice to int32 slice.
-func StringsToInt32s(a []string) ([]int32, error) {
+func StringsToInt32s(a []string, emptyAsZero ...bool) ([]int32, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]int32, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseInt(v, 10, 32)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = int32(i)
@@ -81,11 +91,12 @@ func StringsToInt32s(a []string) ([]int32, error) {
 }
 
 // StringsToInt16s converts string slice to int16 slice.
-func StringsToInt16s(a []string) ([]int16, error) {
+func StringsToInt16s(a []string, emptyAsZero ...bool) ([]int16, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]int16, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseInt(v, 10, 16)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = int16(i)
@@ -94,11 +105,12 @@ func StringsToInt16s(a []string) ([]int16, error) {
 }
 
 // StringsToInt8s converts string slice to int8 slice.
-func StringsToInt8s(a []string) ([]int8, error) {
+func StringsToInt8s(a []string, emptyAsZero ...bool) ([]int8, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]int8, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseInt(v, 10, 8)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = int8(i)
@@ -107,11 +119,12 @@ func StringsToInt8s(a []string) ([]int8, error) {
 }
 
 // StringsToUint8s converts string slice to uint8 slice.
-func StringsToUint8s(a []string) ([]uint8, error) {
+func StringsToUint8s(a []string, emptyAsZero ...bool) ([]uint8, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]uint8, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseUint(v, 10, 8)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = uint8(i)
@@ -120,11 +133,12 @@ func StringsToUint8s(a []string) ([]uint8, error) {
 }
 
 // StringsToUint16s converts string slice to uint16 slice.
-func StringsToUint16s(a []string) ([]uint16, error) {
+func StringsToUint16s(a []string, emptyAsZero ...bool) ([]uint16, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]uint16, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseUint(v, 10, 16)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = uint16(i)
@@ -133,11 +147,12 @@ func StringsToUint16s(a []string) ([]uint16, error) {
 }
 
 // StringsToUint32s converts string slice to uint32 slice.
-func StringsToUint32s(a []string) ([]uint32, error) {
+func StringsToUint32s(a []string, emptyAsZero ...bool) ([]uint32, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]uint32, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseUint(v, 10, 32)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = uint32(i)
@@ -146,11 +161,12 @@ func StringsToUint32s(a []string) ([]uint32, error) {
 }
 
 // StringsToUint64s converts string slice to uint64 slice.
-func StringsToUint64s(a []string) ([]uint64, error) {
+func StringsToUint64s(a []string, emptyAsZero ...bool) ([]uint64, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]uint64, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = uint64(i)
@@ -159,11 +175,12 @@ func StringsToUint64s(a []string) ([]uint64, error) {
 }
 
 // StringsToUints converts string slice to uint slice.
-func StringsToUints(a []string) ([]uint, error) {
+func StringsToUints(a []string, emptyAsZero ...bool) ([]uint, error) {
+	strict := !isEmptyAsZero(emptyAsZero)
 	r := make([]uint, len(a))
 	for k, v := range a {
 		i, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
+		if err != nil && strict {
 			return nil, err
 		}
 		r[k] = uint(i)

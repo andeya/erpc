@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"context"
 	"errors"
 	"runtime"
 	"sync"
@@ -57,6 +58,16 @@ func NewGoPool(maxGoroutinesAmount int, maxGoroutineIdleDuration time.Duration) 
 	}
 	gp.start()
 	return gp
+}
+
+// MaxGoroutinesAmount returns the max amount of goroutines.
+func (gp *GoPool) MaxGoroutinesAmount() int {
+	return gp.maxGoroutinesAmount
+}
+
+// MaxGoroutineIdle returns the max idle duration of the goroutine.
+func (gp *GoPool) MaxGoroutineIdle() time.Duration {
+	return gp.maxGoroutineIdleDuration
 }
 
 // start starts GoPool.
@@ -121,6 +132,22 @@ func (gp *GoPool) Go(fn func()) error {
 func (gp *GoPool) TryGo(fn func()) {
 	if gp.Go(fn) != nil {
 		fn()
+	}
+}
+
+// MustGo always try to use goroutine callbacks
+// until execution is complete or the context is canceled.
+func (gp *GoPool) MustGo(ctx context.Context, fn func()) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if gp.Go(fn) == nil {
+				return nil
+			}
+			runtime.Gosched()
+		}
 	}
 }
 

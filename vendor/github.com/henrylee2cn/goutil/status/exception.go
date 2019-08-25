@@ -1,9 +1,12 @@
 package status
 
 // Check if err!=nil, create a status with stack, and panic.
-func Check(err error, code int32, msg string) {
+func Check(err error, code int32, msg string, whenError ...func()) {
 	if err == nil {
 		return
+	}
+	if len(whenError) > 0 && whenError[0] != nil {
+		whenError[0]()
 	}
 	panic(New(code, msg, err).TagStack(1))
 }
