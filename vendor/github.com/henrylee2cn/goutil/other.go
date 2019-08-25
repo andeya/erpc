@@ -39,6 +39,56 @@ func DereferenceValue(v reflect.Value) reflect.Value {
 	return v
 }
 
+// DereferencePtrValue returns the underlying non-pointer type value.
+func DereferencePtrValue(v reflect.Value) reflect.Value {
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	return v
+}
+
+// DereferenceIfaceValue returns the value of the underlying type that implements the interface v.
+func DereferenceIfaceValue(v reflect.Value) reflect.Value {
+	for v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+	return v
+}
+
+// DereferenceImplementType returns the underlying type of the value that implements the interface v.
+func DereferenceImplementType(v reflect.Value) reflect.Type {
+	return DereferenceType(DereferenceIfaceValue(v).Type())
+}
+
+// ReferenceSlice convert []T to []*T, the ptrDepth is the count of '*'.
+func ReferenceSlice(v reflect.Value, ptrDepth int) reflect.Value {
+	if ptrDepth <= 0 {
+		return v
+	}
+	m := v.Len() - 1
+	if m < 0 {
+		return v
+	}
+	s := make([]reflect.Value, m+1)
+	for ; m >= 0; m-- {
+		s[m] = ReferenceValue(v.Index(m), ptrDepth)
+	}
+	v = reflect.New(reflect.SliceOf(s[0].Type())).Elem()
+	v.SetCap(m + 1)
+	v = reflect.Append(v, s...)
+	return v
+}
+
+// ReferenceValue convert T to *T, the ptrDepth is the count of '*'.
+func ReferenceValue(v reflect.Value, ptrDepth int) reflect.Value {
+	for ; ptrDepth > 0; ptrDepth-- {
+		vv := reflect.New(v.Type())
+		vv.Elem().Set(v)
+		v = vv
+	}
+	return v
+}
+
 // IsLittleEndian determine whether the current system is little endian.
 func IsLittleEndian() bool {
 	var i int32 = 0x01020304

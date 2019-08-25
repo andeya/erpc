@@ -268,11 +268,13 @@ func Go(fn func()) bool {
 
 // AnywayGo similar to go func, but concurrent resources are limited.
 func AnywayGo(fn func()) {
-TRYGO:
-	if !Go(fn) {
-		time.Sleep(time.Second)
-		goto TRYGO
-	}
+	_gopool.MustGo(context.Background(), fn)
+}
+
+// MustGo always try to use goroutine callbacks
+// until execution is complete or the context is canceled.
+func MustGo(ctx context.Context, fn func()) error {
+	return _gopool.MustGo(ctx, fn)
 }
 
 // TryGo tries to execute the function via goroutine.
