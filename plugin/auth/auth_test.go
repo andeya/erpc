@@ -11,7 +11,7 @@ import (
 func Test(t *testing.T) {
 	// Server
 	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090},
+		tp.PeerConfig{ListenPort: 9090, CountTime: true},
 		authChecker,
 	)
 	srv.RouteCall(new(Home))
@@ -20,7 +20,7 @@ func Test(t *testing.T) {
 
 	// Client
 	cli := tp.NewPeer(
-		tp.PeerConfig{},
+		tp.PeerConfig{CountTime: true},
 		authBearer,
 	)
 	sess, stat := cli.Dial(":9090")

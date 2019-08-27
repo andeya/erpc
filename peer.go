@@ -100,8 +100,7 @@ type peer struct {
 	defaultContextAge time.Duration // Default CALL or PUSH context max age, if less than or equal to 0, no time limit
 	tlsConfig         *tls.Config
 	slowCometDuration time.Duration
-	timeNow           func() time.Time
-	timeSince         func(time.Time) time.Duration
+	timeNow           func() int64
 	mu                sync.Mutex
 	network           string
 	defaultBodyCodec  byte
@@ -154,12 +153,9 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		p.defaultBodyCodec = c.ID()
 	}
 	if p.countTime {
-		p.timeNow = time.Now
-		p.timeSince = time.Since
+		p.timeNow = func() int64 { return time.Now().UnixNano() }
 	} else {
-		t0 := time.Time{}
-		p.timeNow = func() time.Time { return t0 }
-		p.timeSince = func(time.Time) time.Duration { return 0 }
+		p.timeNow = func() int64 { return 0 }
 	}
 	addPeer(p)
 	p.pluginContainer.postNewPeer(p)

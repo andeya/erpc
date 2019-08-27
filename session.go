@@ -181,8 +181,7 @@ var (
 type session struct {
 	peer                           *peer
 	getCallHandler, getPushHandler func(serviceMethodPath string) (*Handler, bool)
-	timeSince                      func(time.Time) time.Duration
-	timeNow                        func() time.Time
+	timeNow                        func() int64
 	callCmdMap                     goutil.Map
 	protoFuncs                     []ProtoFunc
 	socket                         socket.Socket
@@ -207,7 +206,6 @@ func newSession(peer *peer, conn net.Conn, protoFuncs []ProtoFunc) *session {
 		peer:           peer,
 		getCallHandler: peer.router.subRouter.getCall,
 		getPushHandler: peer.router.subRouter.getPush,
-		timeSince:      peer.timeSince,
 		timeNow:        peer.timeNow,
 		protoFuncs:     protoFuncs,
 		status:         statusPreparing,
@@ -624,7 +622,7 @@ func (s *session) Push(serviceMethod string, args interface{}, setting ...Messag
 		}
 	}()
 
-	ctx.start = s.peer.timeNow()
+	ctx.start = s.timeNow()
 	output := ctx.output
 	output.SetMtype(TypePush)
 	output.SetServiceMethod(serviceMethod)
@@ -659,7 +657,7 @@ W:
 		return stat
 	}
 	if enablePrintRunLog() {
-		s.printRunLog("", s.peer.timeSince(ctx.start), nil, output, typePushLaunch)
+		s.printRunLog("", time.Duration(s.timeNow()-ctx.start), nil, output, typePushLaunch)
 	}
 	s.peer.pluginContainer.postWritePush(ctx)
 	return nil
@@ -714,7 +712,7 @@ func (s *session) AsyncCall(
 		result:      result,
 		callCmdChan: callCmdChan,
 		doneChan:    make(chan struct{}),
-		start:       s.peer.timeNow(),
+		start:       s.timeNow(),
 		swap:        goutil.RwMap(),
 	}
 
