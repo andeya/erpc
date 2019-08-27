@@ -172,7 +172,6 @@ type handlerCtx struct {
 	pluginContainer *PluginContainer
 	stat            *Status
 	context         context.Context
-	next            *handlerCtx
 }
 
 var (
