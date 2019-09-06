@@ -300,7 +300,7 @@ func (p *pluginSingleContainer) remove(pluginName string) error {
 }
 
 // PreNewPeer executes the defined plugins before creating peer.
-func (p *PluginContainer) preNewPeer(peerConfig *PeerConfig) {
+func (p *pluginSingleContainer) preNewPeer(peerConfig *PeerConfig) {
 	var err error
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreNewPeerPlugin); ok {
