@@ -28,7 +28,6 @@ func main() {
 	group.RouteCall(new(Home))
 	peer.SetUnknownCall(UnknownCallHandle)
 	peer.ListenAndServe()
-	select {}
 }
 
 // Home controller

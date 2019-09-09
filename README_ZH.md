@@ -129,6 +129,7 @@ import (
 )
 
 func main() {
+	defer tp.FlushLogger()
 	// graceful
 	go tp.GraceSignal()
 
@@ -138,6 +139,7 @@ func main() {
 		ListenPort:  9090,
 		PrintDetail: true,
 	})
+	// srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
 
 	// router
 	srv.RouteCall(new(Math))
@@ -167,8 +169,8 @@ type Math struct {
 
 // Add handles addition request
 func (m *Math) Add(arg *[]int) (int, *tp.Status) {
-	// test query parameter
-	tp.Infof("author: %s", m.Query().Get("author"))
+	// test meta
+	tp.Infof("author: %s", m.PeekMeta("author"))
 	// add
 	var r int
 	for _, a := range *arg {
@@ -191,11 +193,11 @@ import (
 )
 
 func main() {
-	// log level
-	tp.SetLoggerLevel("ERROR")
+	defer tp.SetLoggerLevel("ERROR")()
 
 	cli := tp.NewPeer(tp.PeerConfig{})
 	defer cli.Close()
+	// cli.SetTLSConfig(&tls.Config{InsecureSkipVerify: true})
 
 	cli.RoutePush(new(Push))
 
@@ -205,9 +207,10 @@ func main() {
 	}
 
 	var result int
-	stat = sess.Call("/math/add?author=henrylee2cn",
+	stat = sess.Call("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&result,
+		tp.WithAddMeta("author", "henrylee2cn"),
 	).Status()
 	if !stat.OK() {
 		tp.Fatalf("%v", stat)

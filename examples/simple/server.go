@@ -41,7 +41,6 @@ func main() {
 
 	// listen and serve
 	srv.ListenAndServe()
-	select {}
 }
 
 // Math handler
@@ -51,7 +50,7 @@ type Math struct {
 
 // Add handles addition request
 func (m *Math) Add(arg *[]int) (int, *tp.Status) {
-	// test query parameter
+	// test meta
 	tp.Infof("author: %s", m.PeekMeta("author"))
 	// add
 	var r int
