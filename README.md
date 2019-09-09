@@ -219,8 +219,7 @@ func main() {
 		tp.Fatalf("%v", stat)
 	}
 	tp.Printf("result: %d", result)
-
-	tp.Printf("wait for 10s...")
+	tp.Printf("Wait 10 seconds to receive the push...")
 	time.Sleep(time.Second * 10)
 }
 
