@@ -31,8 +31,8 @@ import (
 
 type (
 	// Socket is a generic stream-oriented network connection.
-	//
-	// Multiple goroutines may invoke methods on a Socket simultaneously.
+	// NOTE:
+	//  Multiple goroutines may invoke methods on a Socket simultaneously.
 	Socket interface {
 		// ControlFD invokes f on the underlying connection's file
 		// descriptor or handle.

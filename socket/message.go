@@ -497,6 +497,13 @@ func WithSetMeta(key, value string) MessageSetting {
 	}
 }
 
+// WithDelMeta deletes metadata argument.
+func WithDelMeta(key string) MessageSetting {
+	return func(m Message) {
+		m.Meta().Del(key)
+	}
+}
+
 // WithBodyCodec sets the body codec.
 func WithBodyCodec(bodyCodec byte) MessageSetting {
 	return func(m Message) {

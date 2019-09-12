@@ -15,6 +15,7 @@
 package tp
 
 import (
+	"path"
 	"reflect"
 	"runtime"
 	"strings"
@@ -24,6 +25,79 @@ import (
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/errors"
 )
+
+// ServiceMethodMapper mapper service method from prefix, recvName and funcName.
+// NOTE:
+//  @prefix is optional;
+//  @name is required.
+type ServiceMethodMapper func(prefix, name string) (serviceMethod string)
+
+// SetServiceMethodMapper customizes your own service method mapper.
+func SetServiceMethodMapper(mapper ServiceMethodMapper) {
+	globalServiceMethodMapper = mapper
+}
+
+// HTTPServiceMethodMapper like most RPC services service method mapper.
+// Such as: user/get
+// It is the default mapper.
+// The mapping rule of struct(func) name to service methods:
+//  `AaBb` -> `/aa_bb`
+//  `ABcXYz` -> `/abc_xyz`
+//  `Aa__Bb` -> `/aa_bb`
+//  `aa__bb` -> `/aa_bb`
+//  `ABC__XYZ` -> `/abc_xyz`
+//  `Aa_Bb` -> `/aa/bb`
+//  `aa_bb` -> `/aa/bb`
+//  `ABC_XYZ` -> `/abc/xyz`
+//
+func HTTPServiceMethodMapper(prefix, name string) string {
+	return path.Join("/", prefix, toServiceMethods(name, '/', true))
+}
+
+// RPCServiceMethodMapper like most RPC services service method mapper.
+// Such as: User.Get
+// The mapping rule of struct(func) name to service methods:
+//  `AaBb` -> `AaBb`
+//  `ABcXYz` -> `ABcXYz`
+//  `Aa__Bb` -> `Aa_Bb`
+//  `aa__bb` -> `aa_bb`
+//  `ABC__XYZ` -> `ABC_XYZ`
+//  `Aa_Bb` -> `Aa.Bb`
+//  `aa_bb` -> `aa.bb`
+//  `ABC_XYZ` -> `ABC.XYZ`
+//
+func RPCServiceMethodMapper(prefix, name string) string {
+	p := prefix + "." + toServiceMethods(name, '.', false)
+	return strings.Trim(p, ".")
+}
+
+// toServiceMethods maps struct(func) name to service methods.
+func toServiceMethods(name string, sep rune, toSnake bool) string {
+	var a = []rune{}
+	var last rune
+	for _, r := range name {
+		if last == '_' {
+			if r == '_' {
+				last = '\x00'
+				continue
+			} else {
+				a[len(a)-1] = sep
+			}
+		}
+		if last == '\x00' && r == '_' {
+			continue
+		}
+		a = append(a, r)
+		last = r
+	}
+	name = string(a)
+	if toSnake {
+		name = goutil.SnakeString(name)
+		name = strings.Replace(name, "__", "_", -1)
+		name = strings.Replace(name, string(sep)+"_", string(sep), -1)
+	}
+	return name
+}
 
 /**
  * Router the router of call or push handlers.

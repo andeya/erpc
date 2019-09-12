@@ -87,7 +87,7 @@ type (
 		//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
 		//  The external setting seq is invalid, the internal will be forced to set;
 		//  Does not support automatic redial after disconnection.
-		PreReply(src Message, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status)
+		PreReply(req Message, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status)
 		// RawPush sends a TypePush message without executing other plugins.
 		// NOTE:
 		//  The external setting seq is invalid, the internal will be forced to set;
@@ -574,7 +574,7 @@ func (s *session) PreCall(serviceMethod string, args, reply interface{}, callSet
 //  Cannot be called during the Non-PostDial and Non-PostAccept phase;
 //  The external setting seq is invalid, the internal will be forced to set;
 //  Does not support automatic redial after disconnection.
-func (s *session) PreReply(src Message, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status) {
+func (s *session) PreReply(req Message, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status) {
 	if !s.checkStatus(statusPreparing) {
 		return statUnpreparedError
 	}
@@ -587,7 +587,7 @@ func (s *session) PreReply(src Message, body interface{}, stat *Status, setting 
 			opStat = statBadMessage.Copy(p, 3)
 		}
 	}()
-	output, opStat = s.send(TypeReply, src.Seq(), src.ServiceMethod(), body, stat, setting)
+	output, opStat = s.send(TypeReply, req.Seq(), req.ServiceMethod(), body, stat, setting)
 	return opStat
 }
 
