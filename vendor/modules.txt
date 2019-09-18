@@ -8,15 +8,15 @@ github.com/gogo/protobuf/proto
 github.com/golang/protobuf/proto
 # github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21
 github.com/henrylee2cn/cfgo
-# github.com/henrylee2cn/goutil v0.0.0-20190825044752-802bc5b8d468
+# github.com/henrylee2cn/goutil v0.0.0-20190918075917-250d9105ebb6
 github.com/henrylee2cn/goutil
 github.com/henrylee2cn/goutil/coarsetime
 github.com/henrylee2cn/goutil/errors
 github.com/henrylee2cn/goutil/graceful
 github.com/henrylee2cn/goutil/graceful/inherit_net
+github.com/henrylee2cn/goutil/httpbody
 github.com/henrylee2cn/goutil/pool
 github.com/henrylee2cn/goutil/status
-github.com/henrylee2cn/goutil/httpbody
 # github.com/kavu/go_reuseport v1.4.0
 github.com/kavu/go_reuseport
 # github.com/lucas-clemente/quic-go v0.11.2
@@ -40,16 +40,16 @@ github.com/tidwall/match
 # github.com/tidwall/pretty v1.0.0
 github.com/tidwall/pretty
 # golang.org/x/crypto v0.0.0-20190228161510-8dd112bcdc25
-golang.org/x/crypto/hkdf
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/curve25519
+golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
-golang.org/x/crypto/cryptobyte/asn1
 # golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb
-golang.org/x/sys/unix
 golang.org/x/sys/cpu
+golang.org/x/sys/unix
 # gopkg.in/yaml.v2 v2.2.1
 gopkg.in/yaml.v2

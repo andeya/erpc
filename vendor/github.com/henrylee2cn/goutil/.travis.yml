@@ -1,0 +1,19 @@
+language: go
+os:
+  - linux
+  - osx
+go:
+  - "1.9"
+  - "1.10"
+  - "1.11"
+  - "1.12"
+  - "1.13"
+go_import_path: github.com/henrylee2cn/goutil
+env:
+  - GIMME_ARCH=amd64 GO111MODULE=on
+  - GIMME_ARCH=386 GO111MODULE=on
+script:
+  - go get -d -t ./...
+  - go test -v ./...
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
