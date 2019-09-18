@@ -222,12 +222,14 @@ func (r *rawProto) Unpack(m Message) error {
 func (r *rawProto) readMessage(bb *utils.ByteBuffer, m Message) error {
 	r.rMu.Lock()
 	defer r.rMu.Unlock()
+
 	// size
-	var lastSize uint32
-	err := binary.Read(r.r, binary.BigEndian, &lastSize)
+	bb.ChangeLen(4)
+	_, err := io.ReadFull(r.r, bb.B)
 	if err != nil {
 		return err
 	}
+	lastSize := binary.BigEndian.Uint32(bb.B)
 	if err = m.SetSize(lastSize); err != nil {
 		return err
 	}
