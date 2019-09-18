@@ -338,6 +338,11 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Statu
 			return nil, NewStatus(CodeWrongConn, "Not support UDP", "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
 		}
 		network = "quic"
+	} else if p.tlsConfig != nil {
+		// Make sure to use TLS
+		if _, ok := conn.(*tls.Conn); !ok {
+			conn = tls.Server(conn, p.tlsConfig)
+		}
 	}
 	var sess = newSession(p, conn, protoFunc)
 	if stat := p.pluginContainer.postAccept(sess); !stat.OK() {
