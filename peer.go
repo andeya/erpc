@@ -458,15 +458,13 @@ func (p *peer) Close() (err error) {
 	deletePeer(p)
 	var (
 		count int
-		errCh = make(chan error, 10)
+		errCh = make(chan error, 1024)
 	)
 	p.sessHub.Range(func(sess *session) bool {
 		count++
-		if !Go(func() {
+		MustGo(func() {
 			errCh <- sess.Close()
-		}) {
-			errCh <- sess.Close()
-		}
+		})
 		return true
 	})
 	for i := 0; i < count; i++ {
