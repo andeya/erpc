@@ -8,19 +8,6 @@ import (
 	"github.com/henrylee2cn/teleport/xfer/gzip"
 )
 
-type Home struct {
-	tp.CallCtx
-}
-
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
-	h.Session().Push("/push/test", map[string]string{
-		"your_id": string(h.PeekMeta("peer_id")),
-	})
-	return map[string]interface{}{
-		"arg": *arg,
-	}, nil
-}
-
 func TestRawProto(t *testing.T) {
 	gzip.Reg('g', "gizp-5", 5)
 
@@ -51,6 +38,19 @@ func TestRawProto(t *testing.T) {
 	}
 	t.Logf("result:%v", result)
 	time.Sleep(3e9)
+}
+
+type Home struct {
+	tp.CallCtx
+}
+
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
+	h.Session().Push("/push/test", map[string]string{
+		"your_id": string(h.PeekMeta("peer_id")),
+	})
+	return map[string]interface{}{
+		"arg": *arg,
+	}, nil
 }
 
 type Push struct {
