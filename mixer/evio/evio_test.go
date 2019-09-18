@@ -11,12 +11,16 @@ import (
 func Test(t *testing.T) {
 	// server
 	srv := evio.NewServer(1, tp.PeerConfig{ListenPort: 9090})
+	// use TLS
+	srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
 	// client
 	cli := evio.NewClient(tp.PeerConfig{})
+	// use TLS
+	cli.SetTLSConfig(tp.GenerateTLSConfigForClient())
 	cli.RoutePush(new(Push))
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
