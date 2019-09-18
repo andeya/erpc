@@ -29,6 +29,8 @@ github.com/henrylee2cn/goutil v0.0.0-20190825033852-493ba6f901f5 h1:n2TIXvjleQ0g
 github.com/henrylee2cn/goutil v0.0.0-20190825033852-493ba6f901f5/go.mod h1:I9qYeMYwdKC7UFXMECNzCEv0fYuolqLeBMqsmeG7IVo=
 github.com/henrylee2cn/goutil v0.0.0-20190825044752-802bc5b8d468 h1:PgnQgzMhuAAi3arsz/q04O12oLJqDUT450oZ5rDBBG0=
 github.com/henrylee2cn/goutil v0.0.0-20190825044752-802bc5b8d468/go.mod h1:I9qYeMYwdKC7UFXMECNzCEv0fYuolqLeBMqsmeG7IVo=
+github.com/henrylee2cn/goutil v0.0.0-20190918075917-250d9105ebb6 h1:K1JnVyvSxtUFTJi0ncMF0zCh0mdUR0EtyF+hwNxKJYA=
+github.com/henrylee2cn/goutil v0.0.0-20190918075917-250d9105ebb6/go.mod h1:LOjwSLY8Sl1qX83frwNZ69TJOH2L8V2OClKz+4BnHPw=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/kavu/go_reuseport v1.4.0 h1:YIp/96RZ3sJfn0LN+FFkkXIq3H3dfVOdRUtNejhDcxc=

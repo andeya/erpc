@@ -44,6 +44,13 @@ func Catch(statPtr **Status, realStat ...*bool) {
 		default:
 			trySetBool(realStat, false)
 		}
+		return
+	}
+
+	// Keep the original abnormal status
+	if !(*statPtr).OK() {
+		trySetBool(realStat, true)
+		return
 	}
 
 	switch v := r.(type) {
