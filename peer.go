@@ -186,7 +186,7 @@ func (p *peer) SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string, insecureSkip
 
 // GetSession gets the session by id.
 func (p *peer) GetSession(sessionID string) (Session, bool) {
-	return p.sessHub.Get(sessionID)
+	return p.sessHub.get(sessionID)
 }
 
 // RangeSession ranges all sessions.
@@ -292,7 +292,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
 	sess.changeStatus(statusOk)
 	AnywayGo(sess.startReadAndHandle)
-	p.sessHub.Set(sess)
+	p.sessHub.set(sess)
 	return sess, nil
 }
 
@@ -323,7 +323,7 @@ func (p *peer) renewSessionForClientLocked(sess *session, dialFunc func() (net.C
 	}
 	sess.changeStatus(statusOk)
 	AnywayGo(sess.startReadAndHandle)
-	p.sessHub.Set(sess)
+	p.sessHub.set(sess)
 	return nil
 }
 
@@ -352,7 +352,7 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Statu
 	Infof("serve ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.ID())
 	sess.changeStatus(statusOk)
 	AnywayGo(sess.startReadAndHandle)
-	p.sessHub.Set(sess)
+	p.sessHub.set(sess)
 	return sess, nil
 }
 
@@ -423,7 +423,7 @@ func (p *peer) serveListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 				return
 			}
 			Infof("accept ok (network:%s, addr:%s, id:%s)", network, sess.RemoteAddr().String(), sess.ID())
-			p.sessHub.Set(sess)
+			p.sessHub.set(sess)
 			sess.changeStatus(statusOk)
 			sess.startReadAndHandle()
 		})
@@ -460,7 +460,7 @@ func (p *peer) Close() (err error) {
 		count int
 		errCh = make(chan error, 1024)
 	)
-	p.sessHub.Range(func(sess *session) bool {
+	p.sessHub.rangeCallback(func(sess *session) bool {
 		count++
 		MustGo(func() {
 			errCh <- sess.Close()

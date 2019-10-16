@@ -321,8 +321,8 @@ func (s *session) SetID(newID string) {
 	}
 	s.socket.SetID(newID)
 	hub := s.peer.sessHub
-	hub.Set(s)
-	hub.Delete(oldID)
+	hub.set(s)
+	hub.delete(oldID)
 	Tracef("session changes id: %s -> %s", oldID, newID)
 }
 
@@ -782,7 +782,7 @@ func (s *session) closeLocked() error {
 	if !s.tryChangeStatus(statusActiveClosing, statusOk, statusPreparing) {
 		return nil
 	} // readDisconnected is being called
-	s.peer.sessHub.Delete(s.ID())
+	s.peer.sessHub.delete(s.ID())
 	s.notifyClosed()
 	s.graceCtxWait()
 	s.graceCallCmdWaitGroup.Wait()
@@ -802,7 +802,7 @@ func (s *session) readDisconnected(oldConn net.Conn, err error) {
 		s.changeStatus(statusPassiveClosing)
 	}
 
-	s.peer.sessHub.Delete(s.ID())
+	s.peer.sessHub.delete(s.ID())
 
 	var reason string
 	if err != nil && err != socket.ErrProactivelyCloseSocket {
@@ -959,8 +959,8 @@ func newSessionHub() *SessionHub {
 	return chub
 }
 
-// Set sets a *session.
-func (sh *SessionHub) Set(sess *session) {
+// set sets a *session.
+func (sh *SessionHub) set(sess *session) {
 	_sess, loaded := sh.sessions.LoadOrStore(sess.ID(), sess)
 	if !loaded {
 		return
@@ -971,9 +971,9 @@ func (sh *SessionHub) Set(sess *session) {
 	}
 }
 
-// Get gets *session by id.
+// get gets *session by id.
 // If second returned arg is false, mean the *session is not found.
-func (sh *SessionHub) Get(id string) (*session, bool) {
+func (sh *SessionHub) get(id string) (*session, bool) {
 	_sess, ok := sh.sessions.Load(id)
 	if !ok {
 		return nil, false
@@ -981,17 +981,17 @@ func (sh *SessionHub) Get(id string) (*session, bool) {
 	return _sess.(*session), true
 }
 
-// Range calls f sequentially for each id and *session present in the session hub.
+// rangeCallback calls f sequentially for each id and *session present in the session hub.
 // If fn returns false, stop traversing.
-func (sh *SessionHub) Range(fn func(*session) bool) {
+func (sh *SessionHub) rangeCallback(fn func(*session) bool) {
 	sh.sessions.Range(func(key, value interface{}) bool {
 		return fn(value.(*session))
 	})
 }
 
-// Random gets a *session randomly.
+// random gets a *session randomly.
 // If second returned arg is false, mean no *session is exist.
-func (sh *SessionHub) Random() (*session, bool) {
+func (sh *SessionHub) random() (*session, bool) {
 	_, sess, exist := sh.sessions.Random()
 	if !exist {
 		return nil, false
@@ -999,14 +999,14 @@ func (sh *SessionHub) Random() (*session, bool) {
 	return sess.(*session), true
 }
 
-// Len returns the length of the session hub.
+// len returns the length of the session hub.
 // NOTE: the count implemented using sync.Map may be inaccurate.
-func (sh *SessionHub) Len() int {
+func (sh *SessionHub) len() int {
 	return sh.sessions.Len()
 }
 
-// Delete deletes the *session for a id.
-func (sh *SessionHub) Delete(id string) {
+// delete deletes the *session for a id.
+func (sh *SessionHub) delete(id string) {
 	sh.sessions.Delete(id)
 }
 
