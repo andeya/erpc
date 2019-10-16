@@ -199,7 +199,7 @@ func (p *peer) RangeSession(fn func(sess Session) bool) {
 
 // CountSession returns the number of sessions.
 func (p *peer) CountSession() int {
-	return p.sessHub.sessions.Len()
+	return p.sessHub.len()
 }
 
 // Dial connects with the peer of the destination address.
