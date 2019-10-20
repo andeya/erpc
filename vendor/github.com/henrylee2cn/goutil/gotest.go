@@ -1,7 +1,6 @@
 package goutil
 
 import (
-	"flag"
 	"os"
 	"strings"
 )
@@ -18,14 +17,22 @@ func init() {
 }
 
 func checkGoTestEnv() bool {
-	maybe := flag.Lookup("test.v") != nil ||
-		flag.Lookup("test.run") != nil ||
-		flag.Lookup("test.bench") != nil
-	if !maybe {
-		return false
+	for _, arg := range os.Args[1:] {
+		for _, s := range []string{
+			"-test.timeout=",
+			"-test.timeout",
+			"-test.run=",
+			"-test.run",
+			"-test.bench=",
+			"-test.bench",
+			"-test.v=",
+			"-test.v",
+		} {
+			if strings.HasPrefix(arg, s) || arg == s {
+				return true
+			}
+		}
 	}
-	if len(os.Args) == 0 {
-		return false
-	}
-	return strings.HasSuffix(os.Args[0], ".test")
+	return false
+	// return strings.HasSuffix(os.Args[0], ".test")
 }

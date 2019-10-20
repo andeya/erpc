@@ -36,6 +36,14 @@ func GetGopaths() []string {
 		}
 		all = append(all, p)
 	}
+	for k, v := range all {
+		// GOPATH should end with / or \
+		if strings.HasSuffix(v, "/") || strings.HasSuffix(v, string(os.PathSeparator)) {
+			continue
+		}
+		v += string(os.PathSeparator)
+		all[k] = v
+	}
 	return all
 }
 

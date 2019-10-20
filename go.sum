@@ -17,6 +17,8 @@ github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21 h1:LM2kOY1tjXcSuI
 github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21/go.mod h1:lfF29QC4YBzvpcYuZIFsOb2SKywK47MV8F1VOPH0cUM=
 github.com/henrylee2cn/goutil v0.0.0-20190918075917-250d9105ebb6 h1:K1JnVyvSxtUFTJi0ncMF0zCh0mdUR0EtyF+hwNxKJYA=
 github.com/henrylee2cn/goutil v0.0.0-20190918075917-250d9105ebb6/go.mod h1:LOjwSLY8Sl1qX83frwNZ69TJOH2L8V2OClKz+4BnHPw=
+github.com/henrylee2cn/goutil v0.0.0-20191020121818-c6a890a2c537 h1:EWHQdX+QxV0u76Klm5Y7TD6MxIsNVF7JUSvjLGEICwg=
+github.com/henrylee2cn/goutil v0.0.0-20191020121818-c6a890a2c537/go.mod h1:81hpTd0/0IQ9/yK+HKFg489/HHZWEpslCQtbV8M0P3U=
 github.com/hpcloud/tail v1.0.0 h1:nfCOvKYfkgYP8hkirhJocXT2+zOD8yUNjXaWfTlyFKI=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/kavu/go_reuseport v1.4.0 h1:YIp/96RZ3sJfn0LN+FFkkXIq3H3dfVOdRUtNejhDcxc=
@@ -36,9 +38,12 @@ github.com/onsi/gomega v1.4.3 h1:RE1xgDvH7imwFD45h+u2SgIfERHlS2yNG4DObb5BSKU=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/stretchr/objx v0.1.0 h1:4G4v2dO3VZwixGIRoQ5Lfboy6nUhCyYzaqnIAPPhYs4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
+github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/tidwall/gjson v1.2.2 h1:DZhDNHhghPN1YawsV8qUna8ayu8+E95vbukEBThzoFU=
 github.com/tidwall/gjson v1.2.2/go.mod h1:P256ACg0Mn+j1RXIDXoss50DeIABTYK1PULOJHhxOls=
 github.com/tidwall/match v1.0.1 h1:PnKP62LPNxHKTwvHHZZzdOAOCtsJTjo6dZLCwpKm5xc=
@@ -66,3 +71,5 @@ gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkep
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/yaml.v2 v2.2.1 h1:mUhvW9EsL+naU5Q3cakzfE91YhliOondGd6ZrsDBHQE=
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
+gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=

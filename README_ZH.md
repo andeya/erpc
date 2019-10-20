@@ -685,11 +685,12 @@ type PeerConfig struct {
 
 | package                                  | import                                   | description                              |
 | ---------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| [auth](https://github.com/henrylee2cn/teleport/tree/master/plugin/auth) | `import "github.com/henrylee2cn/teleport/plugin/auth"` | A auth plugin for verifying peer at the first time |
-| [binder](https://github.com/henrylee2cn/teleport/tree/master/plugin/binder) | `import binder "github.com/henrylee2cn/teleport/plugin/binder"` | Parameter Binding Verification for Struct Handler |
-| [heartbeat](https://github.com/henrylee2cn/teleport/tree/master/plugin/heartbeat) | `import heartbeat "github.com/henrylee2cn/teleport/plugin/heartbeat"` | A generic timing heartbeat plugin        |
+| [auth](https://github.com/henrylee2cn/teleport/tree/master/plugin/auth) | `import "github.com/henrylee2cn/teleport/plugin/auth"` | An auth plugin for verifying peer at the first time |
+| [binder](https://github.com/henrylee2cn/teleport/tree/master/plugin/binder) | `import "github.com/henrylee2cn/teleport/plugin/binder"` | Parameter Binding Verification for Struct Handler |
+| [heartbeat](https://github.com/henrylee2cn/teleport/tree/master/plugin/heartbeat) | `import "github.com/henrylee2cn/teleport/plugin/heartbeat"` | A generic timing heartbeat plugin        |
 | [proxy](https://github.com/henrylee2cn/teleport/tree/master/plugin/proxy) | `import "github.com/henrylee2cn/teleport/plugin/proxy"` | A proxy plugin for handling unknown calling or pushing |
-[secure](https://github.com/henrylee2cn/teleport/tree/master/plugin/secure)|`import secure "github.com/henrylee2cn/teleport/plugin/secure"`|Encrypting/decrypting the message body
+[secure](https://github.com/henrylee2cn/teleport/tree/master/plugin/secure)|`import "github.com/henrylee2cn/teleport/plugin/secure"` | Encrypting/decrypting the message body
+[overloader](https://github.com/henrylee2cn/teleport/tree/master/plugin/overloader)|`import "github.com/henrylee2cn/teleport/plugin/overloader"` | A plugin to protect teleport from overload
 
 ### 协议
 

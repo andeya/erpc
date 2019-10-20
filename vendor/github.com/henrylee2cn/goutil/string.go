@@ -2,6 +2,8 @@ package goutil
 
 import (
 	"bytes"
+	"regexp"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 	"unsafe"
@@ -61,6 +63,48 @@ func CamelString(s string) string {
 		data = append(data, d)
 	}
 	return string(data[:])
+}
+
+var htmlEntityRegexp = regexp.MustCompile(`&#([0-9a-zA-Z]+);*`)
+
+// HTMLEntityToUTF8 converts HTML Unicode to UTF-8.
+// e.g.: HTMLEntityToUTF8(`{"info":[["color","&#5496;&#5561;&#8272;&#7c;&#7eff;&#8272;"]]｝`, 16)
+// => `{"info":[["color","咖啡色|绿色"]]｝`
+func HTMLEntityToUTF8(str string, base int) string {
+	a := htmlEntityRegexp.FindAllStringSubmatch(str, -1)
+	if len(a) == 0 {
+		return str
+	}
+	oldnew := make([]string, 0, len(a)*2)
+	for _, s := range a {
+		if i, err := strconv.ParseInt(s[1], base, 32); err == nil {
+			oldnew = append(oldnew, s[0], string(i))
+		}
+	}
+	r := strings.NewReplacer(oldnew...)
+	return r.Replace(str)
+}
+
+// CodePointToUTF8 converts Unicode Code Point to UTF-8.
+// e.g.: CodePointToUTF8(`{"info":[["color","\u5496\u5561\u8272\u7c\u7eff\u8272"]]｝`, 16)
+// => `{"info":[["color","咖啡色|绿色"]]｝`
+func CodePointToUTF8(str string, base int) string {
+	i := 0
+	if strings.Index(str, `\u`) > 0 {
+		i = 1
+	}
+	strSlice := strings.Split(str, `\u`)
+	last := len(strSlice) - 1
+	if len(strSlice[last]) > 4 {
+		strSlice = append(strSlice, string(strSlice[last][4:]))
+		strSlice[last] = string(strSlice[last][:4])
+	}
+	for ; i <= last; i++ {
+		if x, err := strconv.ParseInt(strSlice[i], base, 32); err == nil {
+			strSlice[i] = string(x)
+		}
+	}
+	return strings.Join(strSlice, "")
 }
 
 var spaceReplacer = strings.NewReplacer(
