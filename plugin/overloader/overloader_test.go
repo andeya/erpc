@@ -6,11 +6,96 @@ import (
 	"testing"
 	"time"
 
+	tp "github.com/henrylee2cn/teleport"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOverload_Conn(t *testing.T) {
-	ol := NewOverloader(LimitCond{
+type Home struct {
+	tp.CallCtx
+}
+
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
+	return map[string]interface{}{
+		"arg": *arg,
+	}, nil
+}
+
+func TestPlugin(t *testing.T) {
+	ol := New(LimitConfig{
+		MaxConn:     1,
+		QPSInterval: 100 * time.Millisecond,
+		MaxTotalQPS: 2,
+		MaxHandlerQPS: []HandlerLimit{
+			{ServiceMethod: "/home/test", MaxQPS: 1},
+		},
+	})
+	// Server
+	srv := tp.NewPeer(
+		tp.PeerConfig{ListenPort: 9090, CountTime: true},
+		ol,
+	)
+	srv.RouteCall(new(Home))
+	go srv.ListenAndServe()
+	time.Sleep(1e9)
+
+	// Client
+	cli := tp.NewPeer(
+		tp.PeerConfig{CountTime: true},
+	)
+	var testClient = func(connNum, totalQPS int) (olConnCount, olQPSCount int64) {
+		var connGW sync.WaitGroup
+		connGW.Add(connNum)
+		defer connGW.Wait()
+		for index := 0; index < connNum; index++ {
+			go func() {
+				defer connGW.Done()
+				defer cli.Close()
+				sess, stat := cli.Dial(":9090")
+				if !stat.OK() {
+					t.Fatal(stat)
+				}
+				time.Sleep(time.Millisecond)
+				if !sess.Health() {
+					atomic.AddInt64(&olConnCount, 1)
+					t.Logf("connNum:%d, totalQPS:%d, dial: Connection Closed", connNum, totalQPS)
+					return
+				}
+				var qpsGW sync.WaitGroup
+				qpsGW.Add(totalQPS)
+				defer qpsGW.Wait()
+				for i := 0; i < totalQPS; i++ {
+					go func() {
+						defer qpsGW.Done()
+						stat = sess.Call("/home/test", nil, nil).Status()
+						if !stat.OK() {
+							atomic.AddInt64(&olQPSCount, 1)
+							t.Logf("connNum:%d, totalQPS:%d, call:%s", connNum, totalQPS, stat)
+						}
+					}()
+				}
+			}()
+		}
+		return
+	}
+
+	{
+		olConnCount, olQPSCount := testClient(1, 1)
+		assert.Equal(t, int64(0), olConnCount)
+		assert.Equal(t, int64(0), olQPSCount)
+	}
+	{
+		time.Sleep(time.Second)
+		assert.Equal(t, 0, srv.CountSession())
+	}
+	{
+		olConnCount, olQPSCount := testClient(2, 1)
+		assert.Equal(t, int64(1), olConnCount)
+		assert.Equal(t, int64(0), olQPSCount)
+	}
+}
+
+func TestConn(t *testing.T) {
+	ol := New(LimitConfig{
 		MaxConn:     50,
 		MaxTotalQPS: 10000,
 		QPSInterval: 100 * time.Millisecond,
@@ -53,8 +138,8 @@ func TestOverload_Conn(t *testing.T) {
 	wg.Wait()
 }
 
-func TestOverloader_TotalQPS(t *testing.T) {
-	ol := NewOverloader(LimitCond{
+func TestTotalQPS(t *testing.T) {
+	ol := New(LimitConfig{
 		MaxConn:     100,
 		MaxTotalQPS: 100,
 		QPSInterval: 100 * time.Millisecond,
@@ -74,9 +159,9 @@ func TestOverloader_TotalQPS(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	limitCond := ol.LimitCond()
+	limitCond := ol.LimitConfig()
 	limitCond.MaxTotalQPS = 10000
-	ol.UpdateLimitCond(limitCond)
+	ol.Update(limitCond)
 	time.Sleep(time.Second)
 	var success int32
 	for i := 0; i <= 100000; i++ {

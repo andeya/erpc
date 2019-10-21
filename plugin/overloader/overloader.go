@@ -12,8 +12,8 @@ import (
 type (
 	// Overloader plug-in to protect teleport from overload
 	Overloader struct {
-		limitCond             *LimitCond
-		limitCondLock         sync.RWMutex
+		limitConfig           *LimitConfig
+		limitConfigLock       sync.RWMutex
 		connLimiter           *connLimiter
 		connLimiterLock       sync.RWMutex
 		totalQPSLimiter       *qpsLimiter
@@ -21,38 +21,46 @@ type (
 		handlerQPSLimiter     map[string]*qpsLimiter
 		handlerQPSLimiterLock sync.RWMutex
 	}
-	// LimitCond overload limitation condition
-	LimitCond struct {
+	// LimitConfig overload limitation condition
+	LimitConfig struct {
 		MaxConn       int32
 		QPSInterval   time.Duration
 		MaxTotalQPS   int32
-		MaxHandlerQPS []HandlerQPSLimit
+		MaxHandlerQPS []HandlerLimit
 	}
-	// HandlerQPSLimit handler QPS overload limitation condition
-	HandlerQPSLimit struct {
+	// HandlerLimit handler QPS overload limitation condition
+	HandlerLimit struct {
 		ServiceMethod string
 		MaxQPS        int32
 	}
 )
 
 var (
+	_ tp.PostDialPlugin           = (*Overloader)(nil)
 	_ tp.PostAcceptPlugin         = (*Overloader)(nil)
+	_ tp.PostDisconnectPlugin     = (*Overloader)(nil)
 	_ tp.PostReadCallHeaderPlugin = (*Overloader)(nil)
 	_ tp.PostReadPushHeaderPlugin = (*Overloader)(nil)
 )
 
-// NewOverloader creates a plug-in to protect teleport from overload.
-func NewOverloader(initLimitCond LimitCond) *Overloader {
+// New creates a plug-in to protect teleport from overload.
+func New(initLimitConfig LimitConfig) *Overloader {
 	o := &Overloader{
 		handlerQPSLimiter: make(map[string]*qpsLimiter),
 	}
-	o.UpdateLimitCond(initLimitCond)
+	o.Update(initLimitConfig)
 	return o
 }
 
 // Name returns the plugin name.
 func (o *Overloader) Name() string {
 	return "overloader"
+}
+
+// PostDial checks connection overload.
+// If overload, print error log and close the connection.
+func (o *Overloader) PostDial(sess tp.PreSession) *tp.Status {
+	return o.PostAccept(sess)
 }
 
 // PostAccept checks connection overload.
@@ -65,6 +73,12 @@ func (o *Overloader) PostAccept(sess tp.PreSession) *tp.Status {
 		o.connLimiter.getLimit(), o.connLimiter.getNow(),
 	)
 	return tp.NewStatus(tp.CodeInternalServerError, msg, nil)
+}
+
+// PostDisconnect releases connection count.
+func (o *Overloader) PostDisconnect(sess tp.BaseSession) *tp.Status {
+	o.releaseConn()
+	return nil
 }
 
 // PostReadCallHeader checks PULL QPS overload.
@@ -92,69 +106,69 @@ func (o *Overloader) PostReadPushHeader(ctx tp.ReadCtx) *tp.Status {
 	return o.PostReadCallHeader(ctx)
 }
 
-// LimitCond returns the overload limitation condition.
-func (o *Overloader) LimitCond() LimitCond {
-	return *o.limitCond
+// LimitConfig returns the overload limitation condition.
+func (o *Overloader) LimitConfig() LimitConfig {
+	return *o.limitConfig
 }
 
-// UpdateLimitCond updates the overload limitation condition.
-func (o *Overloader) UpdateLimitCond(newLimitCond LimitCond) {
-	limitCond := &newLimitCond
-	o.updateConnLimiter(limitCond)
-	o.updateTotalQPSLimiter(limitCond)
-	o.updateHandlerQPSLimiter(limitCond)
-	o.limitCondLock.Lock()
-	o.limitCond = limitCond
-	o.limitCondLock.Unlock()
+// Update updates the overload limitation condition.
+func (o *Overloader) Update(newLimitConfig LimitConfig) {
+	limitConfig := &newLimitConfig
+	o.updateConnLimiter(limitConfig)
+	o.updateTotalQPSLimiter(limitConfig)
+	o.updateHandlerLimiter(limitConfig)
+	o.limitConfigLock.Lock()
+	o.limitConfig = limitConfig
+	o.limitConfigLock.Unlock()
 }
 
-func (o *Overloader) updateConnLimiter(limitCond *LimitCond) {
-	o.limitCondLock.Lock()
-	if limitCond.MaxConn <= 0 {
+func (o *Overloader) updateConnLimiter(limitConfig *LimitConfig) {
+	o.limitConfigLock.Lock()
+	if limitConfig.MaxConn <= 0 {
 		o.connLimiter = nil
-		o.limitCondLock.Unlock()
+		o.limitConfigLock.Unlock()
 		return
 	}
 	if o.connLimiter == nil {
-		o.connLimiter = newConnLimiter(limitCond.MaxConn)
-	} else if o.limitCond.MaxConn != limitCond.MaxConn {
-		o.connLimiter.update(limitCond.MaxConn)
+		o.connLimiter = newConnLimiter(limitConfig.MaxConn)
+	} else if o.limitConfig.MaxConn != limitConfig.MaxConn {
+		o.connLimiter.update(limitConfig.MaxConn)
 	}
-	o.limitCondLock.Unlock()
+	o.limitConfigLock.Unlock()
 }
 
-func (o *Overloader) updateTotalQPSLimiter(limitCond *LimitCond) {
+func (o *Overloader) updateTotalQPSLimiter(limitConfig *LimitConfig) {
 	o.totalQPSLimiterLock.Lock()
-	if limitCond.MaxTotalQPS <= 0 {
+	if limitConfig.MaxTotalQPS <= 0 {
 		o.totalQPSLimiter = nil
 		o.totalQPSLimiterLock.Unlock()
 		return
 	}
 	if o.totalQPSLimiter == nil {
-		o.totalQPSLimiter = newQPSLimiter(limitCond.MaxTotalQPS, limitCond.QPSInterval)
-	} else if o.limitCond.MaxTotalQPS != limitCond.MaxTotalQPS || o.limitCond.QPSInterval != limitCond.QPSInterval {
-		o.totalQPSLimiter.update(limitCond.MaxTotalQPS, limitCond.QPSInterval)
+		o.totalQPSLimiter = newQPSLimiter(limitConfig.MaxTotalQPS, limitConfig.QPSInterval)
+	} else if o.limitConfig.MaxTotalQPS != limitConfig.MaxTotalQPS || o.limitConfig.QPSInterval != limitConfig.QPSInterval {
+		o.totalQPSLimiter.update(limitConfig.MaxTotalQPS, limitConfig.QPSInterval)
 	}
 	o.totalQPSLimiterLock.Unlock()
 }
 
-func (o *Overloader) updateHandlerQPSLimiter(limitCond *LimitCond) {
+func (o *Overloader) updateHandlerLimiter(limitConfig *LimitConfig) {
 	o.handlerQPSLimiterLock.Lock()
-	for _, v := range limitCond.MaxHandlerQPS {
+	for _, v := range limitConfig.MaxHandlerQPS {
 		if v.MaxQPS <= 0 {
 			delete(o.handlerQPSLimiter, v.ServiceMethod)
 		}
 		l, ok := o.handlerQPSLimiter[v.ServiceMethod]
 		if !ok {
-			l = newQPSLimiter(v.MaxQPS, limitCond.QPSInterval)
+			l = newQPSLimiter(v.MaxQPS, limitConfig.QPSInterval)
 			o.handlerQPSLimiter[v.ServiceMethod] = l
 		} else {
-			l.update(v.MaxQPS, limitCond.QPSInterval)
+			l.update(v.MaxQPS, limitConfig.QPSInterval)
 		}
 	}
 	for k := range o.handlerQPSLimiter {
 		var has bool
-		for _, v := range limitCond.MaxHandlerQPS {
+		for _, v := range limitConfig.MaxHandlerQPS {
 			if v.ServiceMethod == k {
 				has = true
 				break
