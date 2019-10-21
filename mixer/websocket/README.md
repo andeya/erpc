@@ -9,10 +9,8 @@ Websocket is an extension package that makes the Teleport framework compatible w
 #### Test
 
 ```go
-package websocket_test
 
 import (
-	"crypto/tls"
 	"net/http"
 	"testing"
 	"time"
@@ -60,15 +58,15 @@ func TestJSONWebsocket(t *testing.T) {
 }
 
 func TestPbWebsocketTLS(t *testing.T) {
-	srv := ws.NewServer("/ws", tp.PeerConfig{ListenPort: 9091})
+	srv := ws.NewServer("/abc", tp.PeerConfig{ListenPort: 9091})
 	srv.RouteCall(new(P))
 	srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
 	go srv.ListenAndServeProtobuf()
 
 	time.Sleep(time.Second * 1)
 
-	cli := ws.NewClient("/ws", tp.PeerConfig{})
-	cli.SetTLSConfig(&tls.Config{InsecureSkipVerify: true})
+	cli := ws.NewClient("/abc", tp.PeerConfig{})
+	cli.SetTLSConfig(tp.GenerateTLSConfigForClient())
 	sess, err := cli.DialProtobuf(":9091")
 	if err != nil {
 		t.Fatal(err)
@@ -182,6 +180,7 @@ test command:
 go test -v -run=TestJSONWebsocket
 go test -v -run=TestPbWebsocketTLS
 go test -v -run=TestCustomizedWebsocket
+go test -v -run=TestJSONWebsocketAuth
 ```
 
 Among them, TestJSONWebsocket's request body is:
