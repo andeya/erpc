@@ -53,7 +53,7 @@ type (
 		// PostNewPeer runs ping woker.
 		PostNewPeer(peer tp.EarlyPeer) error
 		// PostDial initializes heartbeat information.
-		PostDial(sess tp.PreSession) *tp.Status
+		PostDial(sess tp.PreSession, isRedial bool) *tp.Status
 		// PostAccept initializes heartbeat information.
 		PostAccept(sess tp.PreSession) *tp.Status
 		// PostWriteCall updates heartbeat information.
@@ -167,7 +167,7 @@ func (h *heartPing) PostNewPeer(peer tp.EarlyPeer) error {
 }
 
 // PostDial initializes heartbeat information.
-func (h *heartPing) PostDial(sess tp.PreSession) *tp.Status {
+func (h *heartPing) PostDial(sess tp.PreSession, _ bool) *tp.Status {
 	return h.PostAccept(sess)
 }
 

@@ -82,7 +82,7 @@ func (*clientPlugin) Name() string {
 	return "websocket"
 }
 
-func (c *clientPlugin) PostDial(sess tp.PreSession) *tp.Status {
+func (c *clientPlugin) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
 	var location, origin string
 	if sess.Peer().TLSConfig() == nil {
 		location = "ws://" + sess.RemoteAddr().String() + c.rootPath

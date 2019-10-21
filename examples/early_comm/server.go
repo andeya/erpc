@@ -26,13 +26,14 @@ func (e *earlyResult) Name() string {
 
 func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Status {
 	var rigthServiceMethod bool
-	input, stat := sess.Receive(func(header tp.Header) interface{} {
+	input := sess.PreReceive(func(header tp.Header) interface{} {
 		if header.ServiceMethod() == "/early/ping" {
 			rigthServiceMethod = true
 			return new(map[string]string)
 		}
 		return nil
 	})
+	stat := input.Status()
 	if !stat.OK() {
 		return stat
 	}
@@ -49,7 +50,8 @@ func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Status {
 			result = "OK"
 		}
 	}
-	return sess.Send(
+	return sess.PreSend(
+		tp.TypeReply,
 		"/early/pong",
 		result,
 		stat,

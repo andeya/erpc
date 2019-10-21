@@ -101,7 +101,7 @@ var MultiRecvErr = tp.NewStatus(
 	"multiple call RecvOnce function",
 )
 
-func (a *authBearerPlugin) PostDial(sess tp.PreSession) *tp.Status {
+func (a *authBearerPlugin) PostDial(sess tp.PreSession, _ bool) *tp.Status {
 	if a.bearerFunc == nil {
 		return nil
 	}

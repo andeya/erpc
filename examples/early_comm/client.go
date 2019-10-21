@@ -27,8 +27,9 @@ func (e *earlyCall) Name() string {
 	return "early_call"
 }
 
-func (e *earlyCall) PostDial(sess tp.PreSession) *tp.Status {
-	stat := sess.Send(
+func (e *earlyCall) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
+	stat := sess.PreSend(
+		tp.TypeCall,
 		"/early/ping",
 		map[string]string{
 			"author": "henrylee2cn",
@@ -39,13 +40,14 @@ func (e *earlyCall) PostDial(sess tp.PreSession) *tp.Status {
 		return stat
 	}
 
-	input, stat := sess.Receive(func(header tp.Header) interface{} {
+	input := sess.PreReceive(func(header tp.Header) interface{} {
 		if header.ServiceMethod() == "/early/pong" {
 			return new(string)
 		}
 		tp.Panicf("Received an unexpected response: %s", header.ServiceMethod())
 		return nil
 	})
+	stat = input.Status()
 	if !stat.OK() {
 		return stat
 	}

@@ -59,13 +59,16 @@ func (o *Overloader) Name() string {
 
 // PostDial checks connection overload.
 // If overload, print error log and close the connection.
-func (o *Overloader) PostDial(sess tp.PreSession) *tp.Status {
+func (o *Overloader) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
+	if isRedial {
+		return nil
+	}
 	return o.PostAccept(sess)
 }
 
 // PostAccept checks connection overload.
 // If overload, print error log and close the connection.
-func (o *Overloader) PostAccept(sess tp.PreSession) *tp.Status {
+func (o *Overloader) PostAccept(_ tp.PreSession) *tp.Status {
 	if o.takeConn() {
 		return nil
 	}
@@ -76,7 +79,7 @@ func (o *Overloader) PostAccept(sess tp.PreSession) *tp.Status {
 }
 
 // PostDisconnect releases connection count.
-func (o *Overloader) PostDisconnect(sess tp.BaseSession) *tp.Status {
+func (o *Overloader) PostDisconnect(_ tp.BaseSession) *tp.Status {
 	o.releaseConn()
 	return nil
 }
@@ -146,7 +149,8 @@ func (o *Overloader) updateTotalQPSLimiter(limitConfig *LimitConfig) {
 	}
 	if o.totalQPSLimiter == nil {
 		o.totalQPSLimiter = newQPSLimiter(limitConfig.MaxTotalQPS, limitConfig.QPSInterval)
-	} else if o.limitConfig.MaxTotalQPS != limitConfig.MaxTotalQPS || o.limitConfig.QPSInterval != limitConfig.QPSInterval {
+	} else if o.limitConfig.MaxTotalQPS != limitConfig.MaxTotalQPS ||
+		o.limitConfig.QPSInterval != limitConfig.QPSInterval {
 		o.totalQPSLimiter.update(limitConfig.MaxTotalQPS, limitConfig.QPSInterval)
 	}
 	o.totalQPSLimiterLock.Unlock()

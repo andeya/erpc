@@ -43,6 +43,9 @@ func (q *qpsLimiter) update(maxQPS int32, qpsInterval time.Duration) {
 	}
 	q.limit = maxQPS
 	once := maxQPS / int32(time.Second/qpsInterval)
+	if once == 0 {
+		once = 1
+	}
 	q.once = once
 	if qpsInterval != q.interval {
 		q.interval = qpsInterval

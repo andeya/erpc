@@ -49,11 +49,11 @@ func TestPlugin(t *testing.T) {
 		for index := 0; index < connNum; index++ {
 			go func() {
 				defer connGW.Done()
-				defer cli.Close()
 				sess, stat := cli.Dial(":9090")
 				if !stat.OK() {
 					t.Fatal(stat)
 				}
+				defer sess.Close()
 				time.Sleep(time.Millisecond)
 				if !sess.Health() {
 					atomic.AddInt64(&olConnCount, 1)
@@ -86,10 +86,27 @@ func TestPlugin(t *testing.T) {
 	{
 		time.Sleep(time.Second)
 		assert.Equal(t, 0, srv.CountSession())
-	}
-	{
 		olConnCount, olQPSCount := testClient(2, 1)
 		assert.Equal(t, int64(1), olConnCount)
+		assert.Equal(t, int64(0), olQPSCount)
+	}
+	{
+		time.Sleep(time.Second)
+		assert.Equal(t, 0, srv.CountSession())
+		olConnCount, olQPSCount := testClient(1, 2)
+		assert.Equal(t, int64(0), olConnCount)
+		assert.Equal(t, int64(1), olQPSCount)
+	}
+	{
+		ol.Update(LimitConfig{
+			MaxConn:     100,
+			QPSInterval: time.Second,
+			MaxTotalQPS: 2000,
+		})
+		time.Sleep(time.Second) // Wait for one cycle to take effect
+		assert.Equal(t, 0, srv.CountSession())
+		olConnCount, olQPSCount := testClient(10, 200)
+		assert.Equal(t, int64(0), olConnCount)
 		assert.Equal(t, int64(0), olQPSCount)
 	}
 }

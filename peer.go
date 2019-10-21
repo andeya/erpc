@@ -285,7 +285,7 @@ func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr strin
 	}
 
 	sess.socket.SetID(sess.LocalAddr().String())
-	if stat := p.pluginContainer.postDial(sess); !stat.OK() {
+	if stat := p.pluginContainer.postDial(sess, false); !stat.OK() {
 		sess.Close()
 		return nil, stat
 	}
@@ -317,7 +317,7 @@ func (p *peer) renewSessionForClientLocked(sess *session, dialFunc func() (net.C
 		sess.socket.SetID(oldID)
 	}
 	sess.changeStatus(statusPreparing)
-	if stat := p.pluginContainer.postDial(sess); !stat.OK() {
+	if stat := p.pluginContainer.postDial(sess, true); !stat.OK() {
 		sess.closeLocked()
 		return stat
 	}

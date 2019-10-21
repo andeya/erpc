@@ -51,7 +51,7 @@ type (
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
 		Plugin
-		PostDial(PreSession) *Status
+		PostDial(sess PreSession, isRedial bool) *Status
 	}
 	// PostAcceptPlugin is executed after accepting connection.
 	PostAcceptPlugin interface {
@@ -353,7 +353,7 @@ func (p *pluginSingleContainer) postListen(addr net.Addr) {
 }
 
 // PostDial executes the defined plugins after dialing.
-func (p *pluginSingleContainer) postDial(sess PreSession) (stat *Status) {
+func (p *pluginSingleContainer) postDial(sess PreSession, isRedial bool) (stat *Status) {
 	var pluginName string
 	defer func() {
 		if p := recover(); p != nil {
@@ -364,8 +364,10 @@ func (p *pluginSingleContainer) postDial(sess PreSession) (stat *Status) {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
 			pluginName = plugin.Name()
-			if stat = _plugin.PostDial(sess); !stat.OK() {
-				Debugf("[PostDialPlugin:%s] network:%s, addr:%s, error:%s", pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), stat.String())
+			if stat = _plugin.PostDial(sess, isRedial); !stat.OK() {
+				Debugf("[PostDialPlugin:%s] network:%s, addr:%s, is_redial:%v, error:%s",
+					pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), isRedial, stat.String(),
+				)
 				return stat
 			}
 		}
