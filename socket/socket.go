@@ -87,7 +87,9 @@ type (
 		// Any blocked Read or Write operations will be unblocked and return errors.
 		Close() error
 		// Swap returns custom data swap of the socket.
-		Swap() goutil.Map
+		// NOTE:
+		//  If newSwap is not empty, reset the swap and return it.
+		Swap(newSwap ...goutil.Map) goutil.Map
 		// SwapLen returns the amount of custom data of the socket.
 		SwapLen() int
 		// ID returns the socket id.
@@ -115,6 +117,7 @@ type (
 		id               string
 		idMutex          sync.RWMutex
 		swap             goutil.Map
+		swapMutex        sync.RWMutex
 		mu               sync.RWMutex
 		curState         int32
 		fromPool         bool
@@ -234,19 +237,30 @@ func (s *socket) ReadMessage(message Message) error {
 }
 
 // Swap returns custom data swap of the socket.
-func (s *socket) Swap() goutil.Map {
-	if s.swap == nil {
+// NOTE:
+//  If newSwap is not empty, reset the swap and return it.
+func (s *socket) Swap(newSwap ...goutil.Map) goutil.Map {
+	s.swapMutex.Lock()
+	if len(newSwap) > 0 {
+		s.swap = newSwap[0]
+	} else if s.swap == nil {
 		s.swap = goutil.RwMap()
 	}
-	return s.swap
+	swap := s.swap
+	s.swapMutex.Unlock()
+	return swap
 }
 
 // SwapLen returns the amount of custom data of the socket.
 func (s *socket) SwapLen() int {
-	if s.swap == nil {
+	s.swapMutex.RLock()
+	swap := s.swap
+	s.swapMutex.RUnlock()
+
+	if swap == nil {
 		return 0
 	}
-	return s.swap.Len()
+	return swap.Len()
 }
 
 // ID returns the socket id.
@@ -276,6 +290,11 @@ func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	s.readerWithBuffer.Reset(netConn)
 	s.protocol = getProto(protoFunc, s)
 	s.SetID("")
+	s.swapMutex.Lock()
+	if s.swap != nil {
+		s.swap = nil
+	}
+	s.swapMutex.Unlock()
 	atomic.StoreInt32(&s.curState, normal)
 	s.initOptimize()
 	s.mu.Unlock()
@@ -297,11 +316,11 @@ func (s *socket) Close() error {
 
 	var err error
 	if s.Conn != nil {
-		err = s.Conn.Close()
+		_ = s.Conn.Close()
 	}
 	if s.fromPool {
 		s.Conn = nil
-		s.swap = nil
+		s.swap.Clear()
 		s.protocol = nil
 		socketPool.Put(s)
 	}
