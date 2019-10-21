@@ -347,9 +347,8 @@ func (s *session) getConn() net.Conn {
 // If modifiedConn!=nil, reset the net.Conn of the socket;
 // If newProtoFunc!=nil, reset the ProtoFunc of the socket.
 func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, newProtoFunc ProtoFunc)) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	modifiedConn, newProtoFunc := fn(s.getConn())
+	conn := s.getConn()
+	modifiedConn, newProtoFunc := fn(conn)
 	isModifiedConn := modifiedConn != nil
 	isNewProtoFunc := newProtoFunc != nil
 	if isNewProtoFunc {
@@ -359,22 +358,10 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 	if !isModifiedConn && !isNewProtoFunc {
 		return
 	}
-	var (
-		pub   goutil.Map
-		count = s.socket.SwapLen()
-		id    = s.ID()
-	)
-	if count > 0 {
-		pub = s.socket.Swap()
-	}
-	s.socket = socket.NewSocket(modifiedConn, s.protoFuncs...)
-	if count > 0 {
-		newPub := s.socket.Swap()
-		pub.Range(func(key, value interface{}) bool {
-			newPub.Store(key, value)
-			return true
-		})
-	}
+	pub := s.socket.Swap(nil)
+	id := s.ID()
+	s.socket.Reset(modifiedConn, s.protoFuncs...)
+	s.socket.Swap(pub) // set the old swap
 	s.socket.SetID(id)
 }
 
