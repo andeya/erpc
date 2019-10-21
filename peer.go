@@ -80,6 +80,7 @@ type (
 		// ServeConn serves the connection and returns a session.
 		// NOTE:
 		//  Not support automatically redials after disconnection;
+		//  Not check TLS;
 		//  Execute the PostAcceptPlugin plugins.
 		ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status)
 	}
@@ -330,6 +331,7 @@ func (p *peer) renewSessionForClientLocked(sess *session, dialFunc func() (net.C
 // ServeConn serves the connection and returns a session.
 // NOTE:
 //  Not support automatically redials after disconnection;
+//  Not check TLS;
 //  Execute the PostAcceptPlugin plugins.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status) {
 	network := conn.LocalAddr().Network()
@@ -338,11 +340,6 @@ func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Statu
 			return nil, NewStatus(CodeWrongConn, "Not support UDP", "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
 		}
 		network = "quic"
-	} else if p.tlsConfig != nil {
-		// Make sure to use TLS
-		if _, ok := conn.(*tls.Conn); !ok {
-			conn = tls.Server(conn, p.tlsConfig)
-		}
 	}
 	var sess = newSession(p, conn, protoFunc)
 	if stat := p.pluginContainer.postAccept(sess); !stat.OK() {
