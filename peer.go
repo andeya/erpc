@@ -211,7 +211,7 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 				ctx, _ = context.WithTimeout(ctx, p.defaultDialTimeout)
 			}
 			if p.tlsConfig == nil {
-				return quic.DialAddrContext(ctx, addr, &tls.Config{InsecureSkipVerify: true}, nil)
+				return quic.DialAddrContext(ctx, addr, GenerateTLSConfigForClient(), nil)
 			}
 			return quic.DialAddrContext(ctx, addr, p.tlsConfig, nil)
 		}

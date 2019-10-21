@@ -20,7 +20,7 @@ func main() {
 		ListenPort:  9090,
 		PrintDetail: true,
 	})
-	// srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
+	srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
 
 	// router
 	srv.RouteCall(new(Math))

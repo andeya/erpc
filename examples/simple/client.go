@@ -13,7 +13,7 @@ func main() {
 
 	cli := tp.NewPeer(tp.PeerConfig{})
 	defer cli.Close()
-	// cli.SetTLSConfig(&tls.Config{InsecureSkipVerify: true})
+	cli.SetTLSConfig(tp.GenerateTLSConfigForClient())
 
 	cli.RoutePush(new(Push))
 

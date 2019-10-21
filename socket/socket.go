@@ -291,9 +291,7 @@ func (s *socket) Reset(netConn net.Conn, protoFunc ...ProtoFunc) {
 	s.protocol = getProto(protoFunc, s)
 	s.SetID("")
 	s.swapMutex.Lock()
-	if s.swap != nil {
-		s.swap = nil
-	}
+	s.swap = nil
 	s.swapMutex.Unlock()
 	atomic.StoreInt32(&s.curState, normal)
 	s.initOptimize()
@@ -320,7 +318,9 @@ func (s *socket) Close() error {
 	}
 	if s.fromPool {
 		s.Conn = nil
-		s.swap.Clear()
+		s.swapMutex.Lock()
+		s.swap = nil
+		s.swapMutex.Unlock()
 		s.protocol = nil
 		socketPool.Put(s)
 	}

@@ -358,7 +358,10 @@ func (s *session) ModifySocket(fn func(conn net.Conn) (modifiedConn net.Conn, ne
 	if !isModifiedConn && !isNewProtoFunc {
 		return
 	}
-	pub := s.socket.Swap(nil)
+	var pub goutil.Map
+	if s.socket.SwapLen() > 0 {
+		pub = s.socket.Swap()
+	}
 	id := s.ID()
 	s.socket.Reset(modifiedConn, s.protoFuncs...)
 	s.socket.Swap(pub) // set the old swap
