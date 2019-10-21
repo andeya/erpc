@@ -82,7 +82,7 @@ func (*clientPlugin) Name() string {
 	return "websocket"
 }
 
-func (c *clientPlugin) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
+func (c *clientPlugin) PostDial(sess tp.PreSession, isRedial bool) (stat *tp.Status) {
 	var location, origin string
 	if sess.Peer().TLSConfig() == nil {
 		location = "ws://" + sess.RemoteAddr().String() + c.rootPath
@@ -95,12 +95,14 @@ func (c *clientPlugin) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
 	if err != nil {
 		return tp.NewStatus(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
 	}
-	var stat *tp.Status
 	sess.ModifySocket(func(conn net.Conn) (net.Conn, tp.ProtoFunc) {
 		conn, err := ws.NewClient(cfg, conn)
 		if err != nil {
 			stat = tp.NewStatus(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
 			return nil, nil
+		}
+		if isRedial {
+			return conn, sess.GetProtoFunc()
 		}
 		return conn, NewWsProtoFunc(sess.GetProtoFunc())
 	})
