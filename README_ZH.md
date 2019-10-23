@@ -102,35 +102,35 @@ go get -u -f github.com/henrylee2cn/teleport
   - plugin
 - 支持平滑重启和关闭
 - 兼容 HTTP 的消息格式：
-  - 由 `Header` 和 `Body` 两部分组成
-  - `Header` 包含与 HTTP header 格式相同的 metadata
-  - `Body` 支持类似 Content Type 的自定义编解码器，已经实现的：
+  - 由 `Header` 和 `Body` 两部分组成
+  - `Header` 包含与 HTTP header 格式相同的 metadata
+  - `Body` 支持类似 Content Type 的自定义编解码器，已经实现的：
     - Protobuf
     - Thrift
     - JSON
     - XML
     - Form
     - Plain
-  - 支持 push、call-reply 和更多的消息类型
+  - 支持 push、call-reply 和更多的消息类型
 - 支持自定义消息协议，并提供了一些常见实现：
-  - `rawproto` - 默认的高性能二进制协议
-  - `jsonproto` - JSON 消息协议
-  - `pbproto` - Ptotobuf 消息协议
-  - `thriftproto` - Thrift 消息协议
-  - `httproto` - HTTP 消息协议
+  - `rawproto` - 默认的高性能二进制协议
+  - `jsonproto` - JSON 消息协议
+  - `pbproto` - Ptotobuf 消息协议
+  - `thriftproto` - Thrift 消息协议
+  - `httproto` - HTTP 消息协议
 - 支持底层通信优化
-  - 使用 I/O 多路复用技术
-  - 支持设置套接字 I/O 的缓冲区大小
-  - 支持设置读取消息的大小（如果超过则断开连接）
-  - 支持控制连接的文件描述符
+  - 使用 I/O 多路复用技术
+  - 支持设置套接字 I/O 的缓冲区大小
+  - 支持设置读取消息的大小（如果超过则断开连接）
+  - 支持控制连接的文件描述符
 - 支持多种网络类型：
-  - `tcp`
-  - `tcp4`
-  - `tcp6`
-  - `unix`
-  - `unixpacket`
-  - `quic`
-  - 其他
+  - `tcp`
+  - `tcp4`
+  - `tcp6`
+  - `unix`
+  - `unixpacket`
+  - `quic`
+  - 其他
     - websocket
     - evio
 - 提供丰富的插件埋点，并已实现：
@@ -142,9 +142,9 @@ go get -u -f github.com/henrylee2cn/teleport
   - proxy(for unknown service method)
   - secure
 - 强大灵活的日志系统：
-  - 详细的日志信息，支持打印输入和输出详细信息
-  - 支持设置慢操作警报阈值
-  - 支持自定义实现日志组件
+  - 详细的日志信息，支持打印输入和输出详细信息
+  - 支持设置慢操作警报阈值
+  - 支持自定义实现日志组件
 - 客户端会话支持在断开连接后自动重拨
 
 ## 代码示例
