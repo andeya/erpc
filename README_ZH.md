@@ -113,6 +113,9 @@ go get -u -f github.com/henrylee2cn/teleport
     - `unix`
     - `unixpacket`
     - `quic`
+    - 其他
+      - websocket
+      - evio
 
 ## 代码示例
 
