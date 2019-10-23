@@ -70,17 +70,6 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 
 **[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
 
-## Version
-
-| version | status  | branch                                   |
-| ------- | ------- | ---------------------------------------- |
-| v6      | release | [master](https://github.com/henrylee2cn/teleport/tree/master) |
-| v5      | release | [v5](https://github.com/henrylee2cn/teleport/tree/v5) |
-| v4      | release | [v4](https://github.com/henrylee2cn/teleport/tree/v4) |
-| v3      | release | [v3](https://github.com/henrylee2cn/teleport/tree/v3) |
-| v2      | release | [v2](https://github.com/henrylee2cn/teleport/tree/v2) |
-| v1      | release | [v1](https://github.com/henrylee2cn/teleport/tree/v1) |
-
 
 ## Install
 
