@@ -90,35 +90,63 @@ go get -u -f github.com/henrylee2cn/teleport
 
 ## Feature
 
-- Server and client are peer-to-peer, have the same API method
-- Support custom communication protocol
-- Support set the size of socket I/O buffer
-- Message contains both `Header` and `Body` two parts
-- Message `Header` contains metadata in the same format as HTTP header
-- Support for customizing `Body` coding types separately, e.g `JSON` `Protobuf` `string`
-- Support push, call, reply and other means of communication
-- Support plug-in mechanism, can customize authentication, heartbeat, micro service registration center, statistics, etc.
-- Whether server or client, the peer support reboot and shutdown gracefully
-- Support reverse proxy
-- Detailed log information, support print input and output details
-- Supports setting slow operation alarm threshold
-- Use I/O multiplexing technology
-- Support setting the size of the reading message (if exceed disconnect it)
-- Provide the context of the handler
+- Use peer to provide the same API package for the server and client
+- Provide multi-layout abstractions such as:
+  - peer
+  - session/socket
+  - router
+  - handle/context
+  - message
+  - protocol
+  - codec
+  - transfer filter
+  - plugin
+- Support reboot and shutdown gracefully
+- HTTP-compatible message format:
+  - Composed of two parts, the `Header` and the `Body`
+  - `Header` contains metadata in the same format as HTTP header
+  - `Body` supports for custom codec of Content Type-Like, already implemented:
+    - Protobuf
+    - Thrift
+    - JSON
+    - XML
+    - Form
+    - Plain
+  - Support push, call-reply and more message types
+- Support custom message protocol, and provide some common implementations:
+  - `rawproto` - Default high performance binary protocol
+  - `jsonproto` - JSON message protocol
+  - `pbproto` - Ptotobuf message protocol
+  - `thriftproto` - Thrift message protocol
+  - `httproto` - HTTP message protocol
+- Support for underlying communication optimization
+  - Use I/O multiplexing technology
+  - Support setting the size of socket I/O buffer
+  - Support setting the size of the reading message (if exceed disconnect it)
+  - Support controling the connection file descriptor
+- Support a variety of network types:
+  - `tcp`
+  - `tcp4`
+  - `tcp6`
+  - `unix`
+  - `unixpacket`
+  - `quic`
+  - other
+    - websocket
+    - evio
+- Provide a rich plug-in point, and already implemented:
+  - auth
+  - binder
+  - heartbeat
+  - ignorecase(service method)
+  - overloader
+  - proxy(for unknown service method)
+  - secure
+- Powerful and flexible logging system:
+  - Detailed log information, support print input and output details
+  - Support setting slow operation alarm threshold
+  - Support for custom implementation log component
 - Client session support automatically redials after disconnection
-- Provide an operating interface to control the connection file descriptor
-- Support special communication modes, such as websocket, QUIC, evio(event-loop) and so on
-- Support network list:
-    - `tcp`
-    - `tcp4`
-    - `tcp6`
-    - `unix`
-    - `unixpacket`
-    - `quic`
-    - other
-      - websocket
-      - evio
-
 
 ## Example
 
@@ -239,165 +267,6 @@ func (p *Push) Status(arg *string) *tp.Status {
 ```
 
 [More Examples](https://github.com/henrylee2cn/teleport/tree/master/examples)
-
-## Design
-
-### Keywords
-
-- **Peer:** A communication instance may be a server or a client
-- **Socket:** Base on the net.Conn package, add custom package protocol, transfer pipelines and other functions
-- *Message:** The corresponding structure of the data package content element
-- **Proto:** The protocol interface of message pack/unpack 
-- **Codec:** Serialization interface for `Body`
-- **XferPipe:** Message bytes encoding pipeline, such as compression, encryption, calibration and so on
-- **XferFilter:** A interface to handle message data before transfer
-- **Plugin:** Plugins that cover all aspects of communication
-- **Session:** A connection session, with push, call, reply, close and other methods of operation
-- **Context:** Handle the received or send messages
-- **Call-Launch:** Call data from the peer
-- **Call-Handle:** Handle and reply to the calling of peer
-- **Push-Launch:** Push data to the peer
-- **Push-Handle:** Handle the pushing of peer
-- **Router:** Router that route the response handler by request information(such as a URI)
-
-### Data Message
-
-Abstracts the data message(Message Object) of the application layer and is compatible with HTTP message:
-
-![tp_data_message](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_data_message.png)
-
-
-### Protocol
-
-You can customize your own communication protocol by implementing the interface:
-
-```go
-type (
-    // Proto pack/unpack protocol scheme of socket message.
-    Proto interface {
-        // Version returns the protocol's id and name.
-        Version() (byte, string)
-        // Pack writes the Message into the connection.
-        // NOTE: Make sure to write only once or there will be package contamination!
-        Pack(Message) error
-        // Unpack reads bytes from the connection to the Message.
-        // NOTE: Concurrent unsafe!
-        Unpack(Message) error
-    }
-    ProtoFunc func(io.ReadWriter) Proto
-)
-```
-
-Next, you can specify the communication protocol in the following ways:
-
-```go
-func SetDefaultProtoFunc(ProtoFunc)
-type Peer interface {
-    ...
-    ServeConn(conn net.Conn, protoFunc ...ProtoFunc) Session
-    DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Status)
-    Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status)
-    Listen(protoFunc ...ProtoFunc) error
-    ...
-}
-```
-
-Default protocol `RawProto`(Big Endian):
-
-```sh
-{4 bytes message length}
-{1 byte protocol version}
-{1 byte transfer pipe length}
-{transfer pipe IDs}
-# The following is handled data by transfer pipe
-{1 bytes sequence length}
-{sequence (HEX 36 string of int32)}
-{1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
-{1 bytes service method length}
-{service method}
-{2 bytes metadata length}
-{metadata(urlencoded)}
-{1 byte body codec id}
-{body}
-```
-
-
-### XferPipe
-
-Transfer filter pipe, handles byte stream of message when transfer.
-
-```go
-// XferFilter handles byte stream of message when transfer.
-type XferFilter interface {
-    // ID returns transfer filter id.
-    ID() byte
-    // Name returns transfer filter name.
-    Name() string
-    // OnPack performs filtering on packing.
-    OnPack([]byte) ([]byte, error)
-    // OnUnpack performs filtering on unpacking.
-    OnUnpack([]byte) ([]byte, error)
-}
-// Get returns transfer filter by id.
-func Get(id byte) (XferFilter, error)
-// GetByName returns transfer filter by name.
-func GetByName(name string) (XferFilter, error)
-
-// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-// NOTE: the length can not be bigger than 255!
-type XferPipe struct {
-    // Has unexported fields.
-}
-func NewXferPipe() *XferPipe
-func (x *XferPipe) Append(filterID ...byte) error
-func (x *XferPipe) AppendFrom(src *XferPipe)
-func (x *XferPipe) IDs() []byte
-func (x *XferPipe) Len() int
-func (x *XferPipe) Names() []string
-func (x *XferPipe) OnPack(data []byte) ([]byte, error)
-func (x *XferPipe) OnUnpack(data []byte) ([]byte, error)
-func (x *XferPipe) Range(callback func(idx int, filter XferFilter) bool)
-func (x *XferPipe) Reset()
-```
-
-
-### Codec
-
-The body's codec set.
-
-```go
-type Codec interface {
-    // ID returns codec id.
-    ID() byte
-    // Name returns codec name.
-    Name() string
-    // Marshal returns the encoding of v.
-    Marshal(v interface{}) ([]byte, error)
-    // Unmarshal parses the encoded data and stores the result
-    // in the value pointed to by v.
-    Unmarshal(data []byte, v interface{}) error
-}
-```
-
-
-### Plugin
-
-Plug-ins during runtime.
-
-```go
-type (
-    // Plugin plugin background
-    Plugin interface {
-        Name() string
-    }
-    // PreNewPeerPlugin is executed before creating peer.
-    PreNewPeerPlugin interface {
-        Plugin
-        PreNewPeer(*PeerConfig, *PluginContainer) error
-    }
-    ...
-)
-```
 
 
 ## Usage

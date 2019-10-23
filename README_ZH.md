@@ -2,9 +2,9 @@
 <!-- [![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg?style=flat-square)](http://jq.qq.com/?_wv=1027&k=fzi4p1) -->
 
 
-Teleport是一个通用、高效、灵活的Socket框架。
+Teleport 是一个通用、高效、灵活的Socket框架。
 
-可用于Peer-Peer对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
+可用于 Peer-Peer 对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
 
 
 ![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_module_diagram.png)
@@ -89,33 +89,63 @@ go get -u -f github.com/henrylee2cn/teleport
 
 ## 特性
 
-- 服务器和客户端之间对等通信，两者API方法基本一致
-- 支持定制通信协议
-- 可设置底层套接字读写缓冲区的大小
-- 底层通信数据包包含`Header`和`Body`两部分
-- 数据包`Header`包含与HTTP header相同格式的元信息
-- 支持单独定制`Body`编码类型，例如`JSON` `Protobuf` `string`
-- 支持推、拉、回复等通信方法
-- 支持插件机制，可以自定义认证、心跳、微服务注册中心、统计信息插件等
-- 无论服务器或客户端，均支持优雅重启、优雅关闭
-- 支持实现反向代理功能
-- 日志信息详尽，支持打印输入、输出报文的详细信息（状态码、头信息、正文）
-- 支持设置慢操作报警阈值
-- 端点间通信使用I/O多路复用技术
-- 支持设置读取包的大小限制（如果超出则断开连接）
-- 提供Handler的上下文
-- 客户端的Session支持断线后自动重连
-- 提供对连接文件描述符（fd）的操作接口
-- 支持的网络类型：
-    - `tcp`
-    - `tcp4`
-    - `tcp6`
-    - `unix`
-    - `unixpacket`
-    - `quic`
-    - 其他
-      - websocket
-      - evio
+- 使用 peer 为 server 和 client 提供相同的 API 封装
+- 提供多层抽象，如：
+  - peer
+  - session/socket
+  - router
+  - handle/context
+  - message
+  - protocol
+  - codec
+  - transfer filter
+  - plugin
+- 支持平滑重启和关闭
+- 兼容 HTTP 的消息格式：
+  - 由 `Header` 和 `Body` 两部分组成
+  - `Header` 包含与 HTTP header 格式相同的 metadata
+  - `Body` 支持类似 Content Type 的自定义编解码器，已经实现的：
+    - Protobuf
+    - Thrift
+    - JSON
+    - XML
+    - Form
+    - Plain
+  - 支持 push、call-reply 和更多的消息类型
+- 支持自定义消息协议，并提供了一些常见实现：
+  - `rawproto` - 默认的高性能二进制协议
+  - `jsonproto` - JSON 消息协议
+  - `pbproto` - Ptotobuf 消息协议
+  - `thriftproto` - Thrift 消息协议
+  - `httproto` - HTTP 消息协议
+- 支持底层通信优化
+  - 使用 I/O 多路复用技术
+  - 支持设置套接字 I/O 的缓冲区大小
+  - 支持设置读取消息的大小（如果超过则断开连接）
+  - 支持控制连接的文件描述符
+- 支持多种网络类型：
+  - `tcp`
+  - `tcp4`
+  - `tcp6`
+  - `unix`
+  - `unixpacket`
+  - `quic`
+  - 其他
+    - websocket
+    - evio
+- 提供丰富的插件埋点，并已实现：
+  - auth
+  - binder
+  - heartbeat
+  - ignorecase(service method)
+  - overloader
+  - proxy(for unknown service method)
+  - secure
+- 强大灵活的日志系统：
+  - 详细的日志信息，支持打印输入和输出详细信息
+  - 支持设置慢操作警报阈值
+  - 支持自定义实现日志组件
+- 客户端会话支持在断开连接后自动重拨
 
 ## 代码示例
 
@@ -236,167 +266,6 @@ func (p *Push) Status(arg *string) *tp.Status {
 ```
 
 [更多示例](https://github.com/henrylee2cn/teleport/blob/master/examples)
-
-
-## 框架设计
-
-### 名称解释
-
-- **Peer：** 通信端点，可以是服务端或客户端
-- **Socket：** 对net.Conn的封装，增加自定义包协议、传输管道等功能
-- *Message：** 数据包内容元素对应的结构体
-- **Proto：** 数据包封包／解包的协议接口
-- **Codec：** 用于`Body`的序列化工具
-- **XferPipe：** 数据包字节流的编码处理管道，如压缩、加密、校验等
-- **XferFilter：** 一个在数据包传输前，对数据进行加工的接口
-- **Plugin：** 贯穿于通信各个环节的插件
-- **Session：** 基于Socket封装的连接会话，提供的推、拉、回复、关闭等会话操作
-- **Context：** 连接会话中一次通信（如PULL-REPLY, PUSH）的上下文对象
-- **Call-Launch：** 从对端Peer拉数据
-- **Call-Handle：** 处理和回复对端Peer的拉请求
-- **Push-Launch：** 将数据推送到对端Peer
-- **Push-Handle：** 处理同伴的推送
-- **Router：** 通过请求信息（如URI）索引响应函数（Handler）的路由器
-
-
-### 数据报文
-
-抽象应用层的数据报文（Message 对象）并与 HTTP 报文兼容：
-
-![tp_data_message](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_data_message.png)
-
-
-### 通信协议
-
-支持通过接口定制自己的通信协议：
-
-```go
-type (
-    // Proto pack/unpack protocol scheme of socket message.
-    Proto interface {
-        // Version returns the protocol's id and name.
-        Version() (byte, string)
-        // Pack writes the Message into the connection.
-        // NOTE: Make sure to write only once or there will be package contamination!
-        Pack(Message) error
-        // Unpack reads bytes from the connection to the Message.
-        // NOTE: Concurrent unsafe!
-        Unpack(Message) error
-    }
-    ProtoFunc func(io.ReadWriter) Proto
-)
-```
-
-
-接着，你可以使用以下任意方式指定自己的通信协议：
-
-```go
-func SetDefaultProtoFunc(ProtoFunc)
-type Peer interface {
-    ...
-    ServeConn(conn net.Conn, protoFunc ...ProtoFunc) Session
-    DialContext(ctx context.Context, addr string, protoFunc ...ProtoFunc) (Session, *Status)
-    Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status)
-    Listen(protoFunc ...ProtoFunc) error
-    ...
-}
-```
-
-默认的协议`RawProto`(Big Endian)：
-
-```sh
-{4 bytes message length}
-{1 byte protocol version}
-{1 byte transfer pipe length}
-{transfer pipe IDs}
-# The following is handled data by transfer pipe
-{1 bytes sequence length}
-{sequence (HEX 36 string of int32)}
-{1 byte message type} # e.g. CALL:1; REPLY:2; PUSH:3
-{1 bytes service method length}
-{service method}
-{2 bytes metadata length}
-{metadata(urlencoded)}
-{1 byte body codec id}
-{body}
-```
-
-
-### 过滤管道
-
-传输数据的过滤管道。
-```go
-// XferFilter handles byte stream of message when transfer.
-type XferFilter interface {
-    // ID returns transfer filter id.
-    ID() byte
-    // Name returns transfer filter name.
-    Name() string
-    // OnPack performs filtering on packing.
-    OnPack([]byte) ([]byte, error)
-    // OnUnpack performs filtering on unpacking.
-    OnUnpack([]byte) ([]byte, error)
-}
-// Get returns transfer filter by id.
-func Get(id byte) (XferFilter, error)
-// GetByName returns transfer filter by name.
-func GetByName(name string) (XferFilter, error)
-
-// XferPipe transfer filter pipe, handlers from outer-most to inner-most.
-// NOTE: the length can not be bigger than 255!
-type XferPipe struct {
-    // Has unexported fields.
-}
-func NewXferPipe() *XferPipe
-func (x *XferPipe) Append(filterID ...byte) error
-func (x *XferPipe) AppendFrom(src *XferPipe)
-func (x *XferPipe) IDs() []byte
-func (x *XferPipe) Len() int
-func (x *XferPipe) Names() []string
-func (x *XferPipe) OnPack(data []byte) ([]byte, error)
-func (x *XferPipe) OnUnpack(data []byte) ([]byte, error)
-func (x *XferPipe) Range(callback func(idx int, filter XferFilter) bool)
-func (x *XferPipe) Reset()
-```
-
-
-### 编解码器
-
-数据包中Body内容的编解码器。
-
-```go
-type Codec interface {
-    // ID returns codec id.
-    ID() byte
-    // Name returns codec name.
-    Name() string
-    // Marshal returns the encoding of v.
-    Marshal(v interface{}) ([]byte, error)
-    // Unmarshal parses the encoded data and stores the result
-    // in the value pointed to by v.
-    Unmarshal(data []byte, v interface{}) error
-}
-```
-
-
-### 插件
-
-运行过程中以挂载方式执行的插件。
-
-```go
-type (
-    // Plugin plugin background
-    Plugin interface {
-        Name() string
-    }
-    // PreNewPeerPlugin is executed before creating peer.
-    PreNewPeerPlugin interface {
-        Plugin
-        PreNewPeer(*PeerConfig, *PluginContainer) error
-    }
-    ...
-)
-```
 
 
 ## 用法

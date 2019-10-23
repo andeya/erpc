@@ -1,3 +1,5 @@
+// Package proxy is a plugin for handling unknown calling or pushing.
+//
 // Copyright 2017 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +26,6 @@ import (
 	"github.com/henrylee2cn/goutil"
 	tp "github.com/henrylee2cn/teleport"
 )
-
-// A proxy plugin for handling unknown calling or pushing.
 
 // NewPlugin creates a proxy plugin for handling unknown calling and pushing.
 func NewPlugin(fn func(*Label) Forwarder) tp.Plugin {
