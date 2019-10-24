@@ -205,26 +205,57 @@ func (p *peer) CountSession() int {
 
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
-	return p.newSessionForClient(func() (net.Conn, error) {
-		if p.network == "quic" {
-			ctx := context.Background()
-			if p.defaultDialTimeout > 0 {
-				ctx, _ = context.WithTimeout(ctx, p.defaultDialTimeout)
+	dialFunc := p.newDialFunc(addr)
+	conn, stat := dialFunc("")
+	if !stat.OK() {
+		return nil, stat
+	}
+	sess := newSession(p, conn, protoFunc)
+
+	// create redial func
+	if p.redialTimes != 0 {
+		sess.redialForClientLocked = func() bool {
+			oldID := sess.ID()
+			conn, stat := dialFunc(oldID)
+			if stat.OK() {
+				oldIP := sess.LocalAddr().String()
+				oldConn := sess.getConn()
+				if oldConn != nil {
+					oldConn.Close()
+				}
+				sess.socket.Reset(conn, protoFunc...)
+				if oldIP == oldID {
+					sess.socket.SetID(sess.LocalAddr().String())
+				} else {
+					sess.socket.SetID(oldID)
+				}
+				sess.changeStatus(statusPreparing)
+				stat = p.pluginContainer.postDial(sess, true)
+				if stat.OK() {
+					sess.changeStatus(statusOk)
+					AnywayGo(sess.startReadAndHandle)
+					p.sessHub.set(sess)
+					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.ID())
+					return true
+				}
+				sess.closeLocked()
 			}
-			if p.tlsConfig == nil {
-				return quic.DialAddrContext(ctx, addr, GenerateTLSConfigForClient(), nil)
-			}
-			return quic.DialAddrContext(ctx, addr, p.tlsConfig, nil)
+			sess.tryChangeStatus(statusRedialFailed, statusRedialing)
+			Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, addr, oldID, stat.String())
+			return false
 		}
-		d := &net.Dialer{
-			LocalAddr: p.localAddr,
-			Timeout:   p.defaultDialTimeout,
-		}
-		if p.tlsConfig != nil {
-			return tls.DialWithDialer(d, p.network, addr, p.tlsConfig)
-		}
-		return d.Dial(p.network, addr)
-	}, addr, protoFunc)
+	}
+
+	sess.socket.SetID(sess.LocalAddr().String())
+	if stat := p.pluginContainer.postDial(sess, false); !stat.OK() {
+		sess.Close()
+		return nil, stat
+	}
+	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.ID())
+	sess.changeStatus(statusOk)
+	AnywayGo(sess.startReadAndHandle)
+	p.sessHub.set(sess)
+	return sess, nil
 }
 
 type redialTimes int32
@@ -245,84 +276,48 @@ func (r *redialTimes) next() bool {
 	return true
 }
 
-func (p *peer) newSessionForClient(dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) (*session, *Status) {
-	conn, dialErr := dialFunc()
-	if dialErr != nil {
+func (p *peer) newDialFunc(addr string) func(string) (net.Conn, *Status) {
+	return func(sessID string) (net.Conn, *Status) {
+		conn, err := p.dialConn(addr)
+		if err == nil {
+			return conn, nil
+		}
 		redialTimes := p.newRedialTimes()
 		for redialTimes.next() {
 			time.Sleep(p.redialInterval)
-			Debugf("trying to redial... (network:%s, addr:%s)", p.network, addr)
-			conn, dialErr = dialFunc()
-			if dialErr == nil {
-				break
+			if sessID == "" {
+				Debugf("trying to redial... (network:%s, addr:%s)", p.network, addr)
+			} else {
+				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, addr, sessID)
+			}
+			conn, err = p.dialConn(addr)
+			if err == nil {
+				return conn, nil
 			}
 		}
+		return nil, statDialFailed.Copy(err)
 	}
-	if dialErr != nil {
-		return nil, statDialFailed.Copy(dialErr)
-	}
-	var sess = newSession(p, conn, protoFuncs)
-
-	// create redial func
-	if p.redialTimes != 0 {
-		sess.redialForClientLocked = func() bool {
-			var stat *Status
-			redialTimes := p.newRedialTimes()
-			for redialTimes.next() {
-				time.Sleep(p.redialInterval)
-				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
-				stat = p.renewSessionForClientLocked(sess, dialFunc, addr, protoFuncs)
-				if stat.OK() {
-					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
-					return true
-				}
-			}
-			sess.tryChangeStatus(statusRedialFailed, statusRedialing)
-			if !stat.OK() {
-				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, sess.RemoteAddr().String(), sess.ID(), stat.String())
-			}
-			return false
-		}
-	}
-
-	sess.socket.SetID(sess.LocalAddr().String())
-	if stat := p.pluginContainer.postDial(sess, false); !stat.OK() {
-		sess.Close()
-		return nil, stat
-	}
-	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, sess.RemoteAddr().String(), sess.ID())
-	sess.changeStatus(statusOk)
-	AnywayGo(sess.startReadAndHandle)
-	p.sessHub.set(sess)
-	return sess, nil
 }
 
-func (p *peer) renewSessionForClientLocked(sess *session, dialFunc func() (net.Conn, error), addr string, protoFuncs []ProtoFunc) *Status {
-	var conn, dialErr = dialFunc()
-	if dialErr != nil {
-		return statDialFailed.Copy(dialErr)
+func (p *peer) dialConn(addr string) (net.Conn, error) {
+	if p.network == "quic" {
+		ctx := context.Background()
+		if p.defaultDialTimeout > 0 {
+			ctx, _ = context.WithTimeout(ctx, p.defaultDialTimeout)
+		}
+		if p.tlsConfig == nil {
+			return quic.DialAddrContext(ctx, addr, GenerateTLSConfigForClient(), nil)
+		}
+		return quic.DialAddrContext(ctx, addr, p.tlsConfig, nil)
 	}
-	oldIP := sess.LocalAddr().String()
-	oldID := sess.ID()
-	oldConn := sess.getConn()
-	if oldConn != nil {
-		oldConn.Close()
+	d := &net.Dialer{
+		LocalAddr: p.localAddr,
+		Timeout:   p.defaultDialTimeout,
 	}
-	sess.socket.Reset(conn, protoFuncs...)
-	if oldIP == oldID {
-		sess.socket.SetID(sess.LocalAddr().String())
-	} else {
-		sess.socket.SetID(oldID)
+	if p.tlsConfig != nil {
+		return tls.DialWithDialer(d, p.network, addr, p.tlsConfig)
 	}
-	sess.changeStatus(statusPreparing)
-	if stat := p.pluginContainer.postDial(sess, true); !stat.OK() {
-		sess.closeLocked()
-		return stat
-	}
-	sess.changeStatus(statusOk)
-	AnywayGo(sess.startReadAndHandle)
-	p.sessHub.set(sess)
-	return nil
+	return d.Dial(p.network, addr)
 }
 
 // ServeConn serves the connection and returns a session.
