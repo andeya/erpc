@@ -302,9 +302,6 @@ func (p *peer) renewSessionForClientLocked(sess *session, dialFunc func() (net.C
 	if dialErr != nil {
 		return statDialFailed.Copy(dialErr)
 	}
-	if p.tlsConfig != nil {
-		conn = tls.Client(conn, p.tlsConfig)
-	}
 	oldIP := sess.LocalAddr().String()
 	oldID := sess.ID()
 	oldConn := sess.getConn()

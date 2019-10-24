@@ -11,7 +11,7 @@ import (
 func main() {
 	defer tp.SetLoggerLevel("ERROR")()
 
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := tp.NewPeer(tp.PeerConfig{RedialTimes: -1})
 	defer cli.Close()
 	cli.SetTLSConfig(tp.GenerateTLSConfigForClient())
 
