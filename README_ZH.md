@@ -10,66 +10,6 @@ Teleport 是一个通用、高效、灵活的Socket框架。
 ![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_module_diagram.png)
 
 
-## 性能测试
-
-**自测**
-
-- 一个服务端与一个客户端进程，在同一台机器上运行
-- CPU:    Intel Xeon E312xx (Sandy Bridge) 16 cores 2.53GHz
-- Memory: 16G
-- OS:     Linux 2.6.32-696.16.1.el6.centos.plus.x86_64, CentOS 6.4
-- Go:     1.9.2
-- 信息大小: 581 bytes
-- 信息编码：protobuf
-- 发送 1000000 条信息
-
-- teleport
-
-| 并发client | 平均值(ms) | 中位数(ms) | 最大值(ms) | 最小值(ms) | 吞吐率(TPS) |
-| -------- | ------- | ------- | ------- | ------- | -------- |
-| 100      | 1       | 0       | 16      | 0       | 75505    |
-| 500      | 9       | 11      | 97      | 0       | 52192    |
-| 1000     | 19      | 24      | 187     | 0       | 50040    |
-| 2000     | 39      | 54      | 409     | 0       | 42551    |
-| 5000     | 96      | 128     | 1148    | 0       | 46367    |
-
-- teleport/socket
-
-| 并发client | 平均值(ms) | 中位数(ms) | 最大值(ms) | 最小值(ms) | 吞吐率(TPS) |
-| -------- | ------- | ------- | ------- | ------- | -------- |
-| 100      | 0       | 0       | 14      | 0       | 225682   |
-| 500      | 2       | 1       | 24      | 0       | 212630   |
-| 1000     | 4       | 3       | 51      | 0       | 180733   |
-| 2000     | 8       | 6       | 64      | 0       | 183351   |
-| 5000     | 21      | 18      | 651     | 0       | 133886   |
-
-**对比测试**
-
-<table>
-<tr><th>Environment</th><th>Throughputs</th><th>Mean Latency</th><th>P99 Latency</th></tr>
-<tr>
-<td width="10%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/env.png"></td>
-<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/throughput.png"></td>
-<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/mean_latency.png"></td>
-<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/p99_latency.png"></td>
-</tr>
-</table>
-
-**[More Detail](https://github.com/henrylee2cn/rpc-benchmark)**
-
-- CPU耗时火焰图 teleport/socket
-
-![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
-
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
-
-- 堆栈信息火焰图 teleport/socket
-
-![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
-
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
-
-
 ## 安装
 
 ```sh
@@ -135,6 +75,67 @@ go get -u -f github.com/henrylee2cn/teleport
   - 支持设置慢操作警报阈值
   - 支持自定义实现日志组件
 - 客户端会话支持在断开连接后自动重拨
+
+
+## 性能测试
+
+**自测**
+
+- 一个服务端与一个客户端进程，在同一台机器上运行
+- CPU:    Intel Xeon E312xx (Sandy Bridge) 16 cores 2.53GHz
+- Memory: 16G
+- OS:     Linux 2.6.32-696.16.1.el6.centos.plus.x86_64, CentOS 6.4
+- Go:     1.9.2
+- 信息大小: 581 bytes
+- 信息编码：protobuf
+- 发送 1000000 条信息
+
+- teleport
+
+| 并发client | 平均值(ms) | 中位数(ms) | 最大值(ms) | 最小值(ms) | 吞吐率(TPS) |
+| -------- | ------- | ------- | ------- | ------- | -------- |
+| 100      | 1       | 0       | 16      | 0       | 75505    |
+| 500      | 9       | 11      | 97      | 0       | 52192    |
+| 1000     | 19      | 24      | 187     | 0       | 50040    |
+| 2000     | 39      | 54      | 409     | 0       | 42551    |
+| 5000     | 96      | 128     | 1148    | 0       | 46367    |
+
+- teleport/socket
+
+| 并发client | 平均值(ms) | 中位数(ms) | 最大值(ms) | 最小值(ms) | 吞吐率(TPS) |
+| -------- | ------- | ------- | ------- | ------- | -------- |
+| 100      | 0       | 0       | 14      | 0       | 225682   |
+| 500      | 2       | 1       | 24      | 0       | 212630   |
+| 1000     | 4       | 3       | 51      | 0       | 180733   |
+| 2000     | 8       | 6       | 64      | 0       | 183351   |
+| 5000     | 21      | 18      | 651     | 0       | 133886   |
+
+**对比测试**
+
+<table>
+<tr><th>Environment</th><th>Throughputs</th><th>Mean Latency</th><th>P99 Latency</th></tr>
+<tr>
+<td width="10%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/env.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/throughput.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/mean_latency.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/p99_latency.png"></td>
+</tr>
+</table>
+
+**[More Detail](https://github.com/henrylee2cn/rpc-benchmark)**
+
+- CPU耗时火焰图 teleport/socket
+
+![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
+
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
+
+- 堆栈信息火焰图 teleport/socket
+
+![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
+
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
+
 
 ## 代码示例
 

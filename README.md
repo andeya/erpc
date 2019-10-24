@@ -11,66 +11,6 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 ![Teleport-Framework](https://github.com/henrylee2cn/teleport/raw/master/doc/teleport_module_diagram.png)
 
 
-## Benchmark
-
-**Self Test**
-
-- A server and a client process, running on the same machine
-- CPU:    Intel Xeon E312xx (Sandy Bridge) 16 cores 2.53GHz
-- Memory: 16G
-- OS:     Linux 2.6.32-696.16.1.el6.centos.plus.x86_64, CentOS 6.4
-- Go:     1.9.2
-- Message size: 581 bytes
-- Message codec: protobuf
-- Sent total 1000000 messages
-
-- teleport
-
-| client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
-| ------------------ | -------- | ---------- | ------- | ------- | --------------- |
-| 100                | 1        | 0          | 16      | 0       | 75505           |
-| 500                | 9        | 11         | 97      | 0       | 52192           |
-| 1000               | 19       | 24         | 187     | 0       | 50040           |
-| 2000               | 39       | 54         | 409     | 0       | 42551           |
-| 5000               | 96       | 128        | 1148    | 0       | 46367           |
-
-- teleport/socket
-
-| client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
-| ------------------ | -------- | ---------- | ------- | ------- | --------------- |
-| 100                | 0        | 0          | 14      | 0       | 225682          |
-| 500                | 2        | 1          | 24      | 0       | 212630          |
-| 1000               | 4        | 3          | 51      | 0       | 180733          |
-| 2000               | 8        | 6          | 64      | 0       | 183351          |
-| 5000               | 21       | 18         | 651     | 0       | 133886          |
-
-**Comparison Test**
-
-<table>
-<tr><th>Environment</th><th>Throughputs</th><th>Mean Latency</th><th>P99 Latency</th></tr>
-<tr>
-<td width="10%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/env.png"></td>
-<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/throughput.png"></td>
-<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/mean_latency.png"></td>
-<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/p99_latency.png"></td>
-</tr>
-</table>
-
-**[More Detail](https://github.com/henrylee2cn/rpc-benchmark)**
-
-- Profile torch of teleport/socket
-
-![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
-
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
-
-- Heap torch of teleport/socket
-
-![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
-
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
-
-
 ## Install
 
 ```sh
@@ -136,6 +76,67 @@ go get -u -f github.com/henrylee2cn/teleport
   - Support setting slow operation alarm threshold
   - Support for custom implementation log component
 - Client session support automatically redials after disconnection
+
+
+## Benchmark
+
+**Self Test**
+
+- A server and a client process, running on the same machine
+- CPU:    Intel Xeon E312xx (Sandy Bridge) 16 cores 2.53GHz
+- Memory: 16G
+- OS:     Linux 2.6.32-696.16.1.el6.centos.plus.x86_64, CentOS 6.4
+- Go:     1.9.2
+- Message size: 581 bytes
+- Message codec: protobuf
+- Sent total 1000000 messages
+
+- teleport
+
+| client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
+| ------------------ | -------- | ---------- | ------- | ------- | --------------- |
+| 100                | 1        | 0          | 16      | 0       | 75505           |
+| 500                | 9        | 11         | 97      | 0       | 52192           |
+| 1000               | 19       | 24         | 187     | 0       | 50040           |
+| 2000               | 39       | 54         | 409     | 0       | 42551           |
+| 5000               | 96       | 128        | 1148    | 0       | 46367           |
+
+- teleport/socket
+
+| client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
+| ------------------ | -------- | ---------- | ------- | ------- | --------------- |
+| 100                | 0        | 0          | 14      | 0       | 225682          |
+| 500                | 2        | 1          | 24      | 0       | 212630          |
+| 1000               | 4        | 3          | 51      | 0       | 180733          |
+| 2000               | 8        | 6          | 64      | 0       | 183351          |
+| 5000               | 21       | 18         | 651     | 0       | 133886          |
+
+**Comparison Test**
+
+<table>
+<tr><th>Environment</th><th>Throughputs</th><th>Mean Latency</th><th>P99 Latency</th></tr>
+<tr>
+<td width="10%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/env.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/throughput.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/mean_latency.png"></td>
+<td width="30%"><img src="https://github.com/henrylee2cn/rpc-benchmark/raw/master/result/p99_latency.png"></td>
+</tr>
+</table>
+
+**[More Detail](https://github.com/henrylee2cn/rpc-benchmark)**
+
+- Profile torch of teleport/socket
+
+![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
+
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
+
+- Heap torch of teleport/socket
+
+![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
+
+**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
+
 
 ## Example
 
