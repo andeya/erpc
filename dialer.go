@@ -25,29 +25,64 @@ import (
 
 // Dialer dial-up connection
 type Dialer struct {
-	Network        string
-	LocalAddr      net.Addr
-	TLSConfig      *tls.Config
-	DialTimeout    time.Duration
-	RedialInterval time.Duration
-	RedialTimes    int32
+	network        string
+	localAddr      net.Addr
+	tlsConfig      *tls.Config
+	dialTimeout    time.Duration
+	redialInterval time.Duration
+	redialTimes    int32
+	dialConn       func(string) (net.Conn, error)
 }
 
-// Dial dials the connection, and try again if it fails.
-func (d *Dialer) Dial(addr, sessID string) (net.Conn, *Status) {
-	conn, err := d.DialConn(addr)
+// Network returns the network.
+func (d *Dialer) Network() string {
+	return d.network
+}
+
+// LocalAddr returns the local address.
+func (d *Dialer) LocalAddr() net.Addr {
+	return d.localAddr
+}
+
+// TLSConfig returns the TLS config.
+func (d *Dialer) TLSConfig() *tls.Config {
+	return d.tlsConfig
+}
+
+// DialTimeout returns the dial timeout.
+func (d *Dialer) DialTimeout() time.Duration {
+	return d.dialTimeout
+}
+
+// RedialInterval returns the redial interval.
+func (d *Dialer) RedialInterval() time.Duration {
+	return d.redialInterval
+}
+
+// RedialTimes returns the redial times.
+func (d *Dialer) RedialTimes() int32 {
+	return d.redialTimes
+}
+
+// dial dials the connection, and try again if it fails.
+func (d *Dialer) dial(addr, sessID string) (net.Conn, *Status) {
+	dialConn := d.StdDialConn
+	if d.dialConn != nil {
+		dialConn = d.dialConn
+	}
+	conn, err := dialConn(addr)
 	if err == nil {
 		return conn, nil
 	}
 	redialTimes := d.newRedialTimes()
 	for redialTimes.next() {
-		time.Sleep(d.RedialInterval)
+		time.Sleep(d.redialInterval)
 		if sessID == "" {
-			Debugf("trying to redial... (network:%s, addr:%s)", d.Network, addr)
+			Debugf("trying to redial... (network:%s, addr:%s)", d.network, addr)
 		} else {
-			Debugf("trying to redial... (network:%s, addr:%s, id:%s)", d.Network, addr, sessID)
+			Debugf("trying to redial... (network:%s, addr:%s, id:%s)", d.network, addr, sessID)
 		}
-		conn, err = d.DialConn(addr)
+		conn, err = dialConn(addr)
 		if err == nil {
 			return conn, nil
 		}
@@ -55,30 +90,37 @@ func (d *Dialer) Dial(addr, sessID string) (net.Conn, *Status) {
 	return nil, statDialFailed.Copy(err)
 }
 
-// DialConn dials the connection once.
-func (d *Dialer) DialConn(addr string) (net.Conn, error) {
-	if d.Network == "quic" {
+// StdDialConn dials the connection once.
+func (d *Dialer) StdDialConn(addr string) (net.Conn, error) {
+	if d.network == "quic" {
 		ctx := context.Background()
-		if d.DialTimeout > 0 {
-			ctx, _ = context.WithTimeout(ctx, d.DialTimeout)
+		if d.dialTimeout > 0 {
+			ctx, _ = context.WithTimeout(ctx, d.dialTimeout)
 		}
-		if d.TLSConfig == nil {
+		if d.tlsConfig == nil {
 			return quic.DialAddrContext(ctx, addr, GenerateTLSConfigForClient(), nil)
 		}
-		return quic.DialAddrContext(ctx, addr, d.TLSConfig, nil)
+		return quic.DialAddrContext(ctx, addr, d.tlsConfig, nil)
 	}
 	dialer := &net.Dialer{
-		LocalAddr: d.LocalAddr,
-		Timeout:   d.DialTimeout,
+		LocalAddr: d.localAddr,
+		Timeout:   d.dialTimeout,
 	}
-	if d.TLSConfig != nil {
-		return tls.DialWithDialer(dialer, d.Network, addr, d.TLSConfig)
+	if d.tlsConfig != nil {
+		return tls.DialWithDialer(dialer, d.network, addr, d.tlsConfig)
 	}
-	return dialer.Dial(d.Network, addr)
+	return dialer.Dial(d.network, addr)
+}
+
+// setDialConn sets the dial connection function.
+func (d *Dialer) setDialConn(fn func(dialer *Dialer, addr string) (net.Conn, error)) {
+	d.dialConn = func(addr string) (net.Conn, error) {
+		return fn(d, addr)
+	}
 }
 
 func (d *Dialer) newRedialTimes() *redialTimes {
-	r := redialTimes(d.RedialTimes)
+	r := redialTimes(d.redialTimes)
 	return &r
 }
 

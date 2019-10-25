@@ -39,6 +39,8 @@ type (
 		GetSession(sessionID string) (Session, bool)
 		// RangeSession ranges all sessions. If fn returns false, stop traversing.
 		RangeSession(fn func(sess Session) bool)
+		// SetDialConn sets the dial connection function.
+		SetDialConn(func(dialer *Dialer, addr string) (net.Conn, error))
 		// SetTLSConfig sets the TLS config.
 		SetTLSConfig(tlsConfig *tls.Config)
 		// SetTLSConfigFromFile sets the TLS config from file.
@@ -138,11 +140,11 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		countTime:         cfg.CountTime,
 		listeners:         make(map[net.Listener]struct{}),
 		dialer: &Dialer{
-			Network:        cfg.Network,
-			DialTimeout:    cfg.DialTimeout,
-			LocalAddr:      cfg.localAddr,
-			RedialInterval: cfg.RedialInterval,
-			RedialTimes:    cfg.RedialTimes,
+			network:        cfg.Network,
+			dialTimeout:    cfg.DialTimeout,
+			localAddr:      cfg.localAddr,
+			redialInterval: cfg.RedialInterval,
+			redialTimes:    cfg.RedialTimes,
 		},
 	}
 
@@ -174,7 +176,7 @@ func (p *peer) TLSConfig() *tls.Config {
 // SetTLSConfig sets the TLS config.
 func (p *peer) SetTLSConfig(tlsConfig *tls.Config) {
 	p.tlsConfig = tlsConfig
-	p.dialer.TLSConfig = tlsConfig
+	p.dialer.tlsConfig = tlsConfig
 }
 
 // SetTLSConfigFromFile sets the TLS config from file.
@@ -204,19 +206,24 @@ func (p *peer) CountSession() int {
 	return p.sessHub.len()
 }
 
+// SetDialConn sets the dial connection function.
+func (p *peer) SetDialConn(fn func(dialer *Dialer, addr string) (net.Conn, error)) {
+	p.dialer.setDialConn(fn)
+}
+
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
-	conn, stat := p.dialer.Dial(addr, "")
+	conn, stat := p.dialer.dial(addr, "")
 	if !stat.OK() {
 		return nil, stat
 	}
 	sess := newSession(p, conn, protoFunc)
 
 	// create redial func
-	if p.dialer.RedialTimes != 0 {
+	if p.dialer.RedialTimes() != 0 {
 		sess.redialForClientLocked = func() bool {
 			oldID := sess.ID()
-			conn, stat := p.dialer.Dial(addr, oldID)
+			conn, stat := p.dialer.dial(addr, oldID)
 			if stat.OK() {
 				oldIP := sess.LocalAddr().String()
 				oldConn := sess.getConn()
