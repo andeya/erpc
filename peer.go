@@ -17,7 +17,6 @@ package tp
 import (
 	"crypto/tls"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -276,7 +275,7 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 //  Execute the PostAcceptPlugin plugins.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status) {
 	network := conn.LocalAddr().Network()
-	if network == "quic" || strings.HasPrefix(network, "udp") {
+	if asQUIC(network) {
 		if _, ok := conn.(*quic.Conn); !ok {
 			return nil, NewStatus(CodeWrongConn, "Not support "+network, "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
 		}

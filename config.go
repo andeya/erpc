@@ -126,6 +126,15 @@ func (p *PeerConfig) newAddr(port string) (net.Addr, error) {
 	}
 }
 
+func asQUIC(network string) bool {
+	switch network {
+	case "quic", "udp", "udp4", "udp6":
+		return true
+	default:
+		return false
+	}
+}
+
 var defaultBodyCodec codec.Codec = new(codec.JSONCodec)
 
 // DefaultBodyCodec gets the default body codec.

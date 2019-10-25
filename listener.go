@@ -44,7 +44,7 @@ func NewInheritedListener(addr net.Addr, tlsConfig *tls.Config) (lis net.Listene
 		laddr = popParentLaddr(network, host, laddr)
 	}
 
-	if network == "quic" {
+	if asQUIC(network) {
 		if tlsConfig == nil {
 			tlsConfig = testTLSConfig
 		}
