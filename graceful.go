@@ -15,9 +15,7 @@
 package tp
 
 import (
-	"crypto/tls"
 	"encoding/json"
-	"net"
 	"os"
 	"sync"
 	"time"
@@ -126,40 +124,6 @@ func Shutdown(timeout ...time.Duration) {
 // NOTE: Windows system are not supported!
 func Reboot(timeout ...time.Duration) {
 	graceful.Reboot(timeout...)
-}
-
-var testTLSConfig = GenerateTLSConfigForServer()
-
-// NewInheritedListener creates a new inherited listener.
-func NewInheritedListener(network, laddr string, tlsConfig *tls.Config) (lis net.Listener, err error) {
-	host, port, err := net.SplitHostPort(laddr)
-	if err != nil {
-		return nil, err
-	}
-	if port == "0" {
-		laddr = popParentLaddr(network, host, laddr)
-	}
-
-	if network == "quic" {
-		if tlsConfig == nil {
-			tlsConfig = testTLSConfig
-		}
-		lis, err = quic.InheritedListen(laddr, tlsConfig, nil)
-
-	} else {
-		lis, err = inherit_net.Listen(network, laddr)
-		if err == nil && tlsConfig != nil {
-			if len(tlsConfig.Certificates) == 0 && tlsConfig.GetCertificate == nil {
-				return nil, errors.New("tls: neither Certificates nor GetCertificate set in Config")
-			}
-			lis = tls.NewListener(lis, tlsConfig)
-		}
-	}
-
-	if err == nil {
-		pushParentLaddr(network, host, lis.Addr().String())
-	}
-	return
 }
 
 const parentLaddrsKey = "LISTEN_PARENT_ADDRS"

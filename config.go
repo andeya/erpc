@@ -23,7 +23,6 @@ import (
 
 	"github.com/henrylee2cn/cfgo"
 	"github.com/henrylee2cn/teleport/codec"
-	"github.com/henrylee2cn/teleport/quic"
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -46,17 +45,17 @@ type PeerConfig struct {
 	CountTime         bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
 
 	localAddr         net.Addr
-	listenAddrStr     string
+	listenAddr        net.Addr
 	slowCometDuration time.Duration
 	checked           bool
 }
 
 var _ cfgo.Config = new(PeerConfig)
 
-// ListenerAddr returns the listener address.
-func (p *PeerConfig) ListenerAddr() string {
+// ListenAddr returns the listener address.
+func (p *PeerConfig) ListenAddr() string {
 	p.check()
-	return p.listenAddrStr
+	return p.listenAddr.String()
 }
 
 // LocalAddr returns the local address.
@@ -75,34 +74,23 @@ func (p *PeerConfig) Reload(bind cfgo.BindFunc) error {
 	return p.check()
 }
 
-func (p *PeerConfig) check() error {
+func (p *PeerConfig) check() (err error) {
 	if p.checked {
 		return nil
 	}
 	p.checked = true
-	if len(p.LocalIP) == 0 {
+	if p.Network == "" {
+		p.Network = "tcp"
+	}
+	if p.LocalIP == "" {
 		p.LocalIP = "0.0.0.0"
 	}
-	var err error
-	switch p.Network {
-	default:
-		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
-	case "":
-		p.Network = "tcp"
-		fallthrough
-	case "tcp", "tcp4", "tcp6":
-		p.localAddr, err = net.ResolveTCPAddr(p.Network, net.JoinHostPort(p.LocalIP, "0"))
-	case "unix", "unixpacket":
-		p.localAddr, err = net.ResolveUnixAddr(p.Network, net.JoinHostPort(p.LocalIP, "0"))
-	case "quic", "udp", "udp4", "udp6":
-		var udpAddr *net.UDPAddr
-		udpAddr, err = net.ResolveUDPAddr("udp", net.JoinHostPort(p.LocalIP, "0"))
-		p.localAddr = &quic.FacadeAddr{udpAddr}
-	}
+	p.localAddr, err = p.newAddr("0")
 	if err != nil {
 		return err
 	}
-	p.listenAddrStr = net.JoinHostPort(p.LocalIP, strconv.FormatUint(uint64(p.ListenPort), 10))
+	listenPort := strconv.FormatUint(uint64(p.ListenPort), 10)
+	p.listenAddr = NewFakeAddr(p.Network, p.LocalIP, listenPort)
 	p.slowCometDuration = math.MaxInt64
 	if p.SlowCometDuration > 0 {
 		p.slowCometDuration = p.SlowCometDuration
@@ -114,6 +102,28 @@ func (p *PeerConfig) check() error {
 		p.RedialInterval = time.Millisecond * 100
 	}
 	return nil
+}
+
+func (p *PeerConfig) newAddr(port string) (net.Addr, error) {
+	switch p.Network {
+	default:
+		return nil, errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
+	case "tcp", "tcp4", "tcp6":
+		return net.ResolveTCPAddr(p.Network, net.JoinHostPort(p.LocalIP, port))
+	case "unix", "unixpacket":
+		return net.ResolveUnixAddr(p.Network, net.JoinHostPort(p.LocalIP, port))
+	case "quic", "udp", "udp4", "udp6":
+		udpAddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(p.LocalIP, port))
+		if err != nil {
+			return nil, err
+		}
+		return &FakeAddr{
+			network: "quic",
+			addr:    udpAddr.String(),
+			host:    p.LocalIP,
+			port:    strconv.Itoa(udpAddr.Port),
+		}, nil
+	}
 }
 
 var defaultBodyCodec codec.Codec = new(codec.JSONCodec)

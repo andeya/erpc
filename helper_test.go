@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	tp "github.com/henrylee2cn/teleport"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHTTPServiceMethodMapper(t *testing.T) {
@@ -44,4 +45,34 @@ func TestRPCServiceMethodMapper(t *testing.T) {
 			t.Fatalf("%s: got: %s, expect: %s", c.src, got, c.dst)
 		}
 	}
+}
+
+func TestFakeAddr(t *testing.T) {
+	addr := tp.NewFakeAddr("", "", "")
+	assert.Equal(t, "0.0.0.0:0", addr.String())
+	assert.Equal(t, "tcp", addr.Network())
+
+	addr = tp.NewFakeAddr("tcp", "", "1234")
+	assert.Equal(t, "0.0.0.0:1234", addr.String())
+
+	addr, err := tp.NewFakeAddr2("", "")
+	assert.NoError(t, err)
+	assert.Equal(t, "0.0.0.0:0", addr.String())
+	assert.Equal(t, "tcp", addr.Network())
+	assert.Equal(t, "0.0.0.0", addr.Host())
+	assert.Equal(t, "0", addr.Port())
+
+	addr, err = tp.NewFakeAddr2("tcp6", ":1234")
+	assert.NoError(t, err)
+	assert.Equal(t, "0.0.0.0:1234", addr.String())
+	assert.Equal(t, "tcp6", addr.Network())
+	assert.Equal(t, "0.0.0.0", addr.Host())
+	assert.Equal(t, "1234", addr.Port())
+
+	addr, err = tp.NewFakeAddr2("tcp6", "192.0.0.10:1234")
+	assert.NoError(t, err)
+	assert.Equal(t, "192.0.0.10:1234", addr.String())
+	assert.Equal(t, "tcp6", addr.Network())
+	assert.Equal(t, "192.0.0.10", addr.Host())
+	assert.Equal(t, "1234", addr.Port())
 }
