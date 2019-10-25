@@ -25,29 +25,74 @@ import (
 
 // Dialer dial-up connection
 type Dialer struct {
-	Network        string
-	LocalAddr      net.Addr
-	TLSConfig      *tls.Config
-	DialTimeout    time.Duration
-	RedialInterval time.Duration
-	RedialTimes    int32
+	network        string
+	localAddr      net.Addr
+	tlsConfig      *tls.Config
+	dialTimeout    time.Duration
+	redialInterval time.Duration
+	redialTimes    int32
+	dialFunc       func(addr, sessID string) (net.Conn, *Status)
 }
 
-// Dial dials the connection, and try again if it fails.
-func (d *Dialer) Dial(addr, sessID string) (net.Conn, *Status) {
-	conn, err := d.DialConn(addr)
+// Network returns the network.
+func (d *Dialer) Network() string {
+	return d.network
+}
+
+// LocalAddr returns the local address.
+func (d *Dialer) LocalAddr() net.Addr {
+	return d.localAddr
+}
+
+// TLSConfig returns the TLS config.
+func (d *Dialer) TLSConfig() *tls.Config {
+	return d.tlsConfig
+}
+
+// DialTimeout returns the dial timeout.
+func (d *Dialer) DialTimeout() time.Duration {
+	return d.dialTimeout
+}
+
+// RedialInterval returns the redial interval.
+func (d *Dialer) RedialInterval() time.Duration {
+	return d.redialInterval
+}
+
+// RedialTimes returns the redial times.
+func (d *Dialer) RedialTimes() int32 {
+	return d.redialTimes
+}
+
+// setDialFunc sets the dial connection function.
+// NOTE:
+//  sessID is not empty only when the disconnection is redialing
+func (d *Dialer) setDialFunc(fn func(dialer *Dialer, addr, sessID string) (net.Conn, *Status)) {
+	d.dialFunc = func(addr, sessID string) (net.Conn, *Status) {
+		return fn(d, addr, sessID)
+	}
+}
+
+// dial dials the connection, and try again if it fails.
+// NOTE:
+//  sessID is not empty only when the disconnection is redialing
+func (d *Dialer) dial(addr, sessID string) (net.Conn, *Status) {
+	if d.dialFunc != nil {
+		return d.dialFunc(addr, sessID)
+	}
+	conn, err := d.DialOne(addr)
 	if err == nil {
 		return conn, nil
 	}
-	redialTimes := d.newRedialTimes()
-	for redialTimes.next() {
-		time.Sleep(d.RedialInterval)
+	redialTimes := d.NewRedialCounter()
+	for redialTimes.Next() {
+		time.Sleep(d.redialInterval)
 		if sessID == "" {
-			Debugf("trying to redial... (network:%s, addr:%s)", d.Network, addr)
+			Debugf("trying to redial... (network:%s, addr:%s)", d.network, addr)
 		} else {
-			Debugf("trying to redial... (network:%s, addr:%s, id:%s)", d.Network, addr, sessID)
+			Debugf("trying to redial... (network:%s, addr:%s, id:%s)", d.network, addr, sessID)
 		}
-		conn, err = d.DialConn(addr)
+		conn, err = d.DialOne(addr)
 		if err == nil {
 			return conn, nil
 		}
@@ -55,36 +100,39 @@ func (d *Dialer) Dial(addr, sessID string) (net.Conn, *Status) {
 	return nil, statDialFailed.Copy(err)
 }
 
-// DialConn dials the connection once.
-func (d *Dialer) DialConn(addr string) (net.Conn, error) {
-	if d.Network == "quic" {
+// DialOne dials the connection once.
+func (d *Dialer) DialOne(addr string) (net.Conn, error) {
+	if d.network == "quic" {
 		ctx := context.Background()
-		if d.DialTimeout > 0 {
-			ctx, _ = context.WithTimeout(ctx, d.DialTimeout)
+		if d.dialTimeout > 0 {
+			ctx, _ = context.WithTimeout(ctx, d.dialTimeout)
 		}
-		if d.TLSConfig == nil {
+		if d.tlsConfig == nil {
 			return quic.DialAddrContext(ctx, addr, GenerateTLSConfigForClient(), nil)
 		}
-		return quic.DialAddrContext(ctx, addr, d.TLSConfig, nil)
+		return quic.DialAddrContext(ctx, addr, d.tlsConfig, nil)
 	}
 	dialer := &net.Dialer{
-		LocalAddr: d.LocalAddr,
-		Timeout:   d.DialTimeout,
+		LocalAddr: d.localAddr,
+		Timeout:   d.dialTimeout,
 	}
-	if d.TLSConfig != nil {
-		return tls.DialWithDialer(dialer, d.Network, addr, d.TLSConfig)
+	if d.tlsConfig != nil {
+		return tls.DialWithDialer(dialer, d.network, addr, d.tlsConfig)
 	}
-	return dialer.Dial(d.Network, addr)
+	return dialer.Dial(d.network, addr)
 }
 
-func (d *Dialer) newRedialTimes() *redialTimes {
-	r := redialTimes(d.RedialTimes)
+// NewRedialCounter creates a new redial counter.
+func (d *Dialer) NewRedialCounter() *RedialCounter {
+	r := RedialCounter(d.redialTimes)
 	return &r
 }
 
-type redialTimes int32
+// RedialCounter redial counter
+type RedialCounter int32
 
-func (r *redialTimes) next() bool {
+// Next returns whether there are still more redial times.
+func (r *RedialCounter) Next() bool {
 	t := *r
 	if t == 0 {
 		return false
