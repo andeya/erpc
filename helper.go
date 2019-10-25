@@ -272,3 +272,65 @@ func (la *ListenerAddress) PostListen(addr net.Addr) (err error) {
 	la.host, la.port, err = net.SplitHostPort(addr.String())
 	return
 }
+
+// FakeAddr is a fake address object that implements net.Add interface
+type FakeAddr struct {
+	network string
+	addr    string
+	host    string
+	port    string
+}
+
+var _ net.Addr = (*FakeAddr)(nil)
+
+// NewFakeAddr creates an object that implements net.Add interface.
+func NewFakeAddr(network, host, port string) *FakeAddr {
+	if network == "" {
+		network = "tcp"
+	}
+	if host == "" {
+		host = "0.0.0.0"
+	}
+	if port == "" {
+		port = "0"
+	}
+	addr := net.JoinHostPort(host, port)
+	return &FakeAddr{
+		network: network,
+		addr:    addr,
+		host:    host,
+		port:    port,
+	}
+}
+
+// NewFakeAddr2 creates an object that implements net.Add interface.
+func NewFakeAddr2(network, addr string) (*FakeAddr, error) {
+	if addr == "" {
+		return NewFakeAddr(network, "", ""), nil
+	}
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	return NewFakeAddr(network, host, port), nil
+}
+
+// Network returns the address's network name.
+func (f *FakeAddr) Network() string {
+	return f.network
+}
+
+// String returns the string form of address.
+func (f *FakeAddr) String() string {
+	return f.addr
+}
+
+// Host returns the address's host(ip).
+func (f *FakeAddr) Host() string {
+	return f.host
+}
+
+// Port returns the address's port.
+func (f *FakeAddr) Port() string {
+	return f.port
+}

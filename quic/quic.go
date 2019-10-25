@@ -200,13 +200,3 @@ func (c *Conn) SetReadDeadline(t time.Time) error {
 func (c *Conn) SetWriteDeadline(t time.Time) error {
 	return c.stream.SetWriteDeadline(t)
 }
-
-// FacadeAddr represents the address of a UDP-QUIC end point.
-type FacadeAddr struct {
-	*net.UDPAddr
-}
-
-// Network returns the address's facade network name, "quic".
-func (u *FacadeAddr) Network() string {
-	return "quic"
-}

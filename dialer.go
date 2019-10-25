@@ -34,6 +34,20 @@ type Dialer struct {
 	dialFunc       func(addr, sessID string) (net.Conn, *Status)
 }
 
+// NewDialer creates a dialer.
+func NewDialer(localAddr net.Addr, tlsConfig *tls.Config,
+	dialTimeout, redialInterval time.Duration, redialTimes int32,
+) *Dialer {
+	return &Dialer{
+		network:        localAddr.Network(),
+		localAddr:      localAddr,
+		tlsConfig:      tlsConfig,
+		dialTimeout:    dialTimeout,
+		redialInterval: redialInterval,
+		redialTimes:    redialTimes,
+	}
+}
+
 // Network returns the network.
 func (d *Dialer) Network() string {
 	return d.network
@@ -73,10 +87,15 @@ func (d *Dialer) setDialFunc(fn func(dialer *Dialer, addr, sessID string) (net.C
 	}
 }
 
-// dial dials the connection, and try again if it fails.
+// Dial dials the connection, and try again if it fails.
+func (d *Dialer) Dial(addr string) (net.Conn, *Status) {
+	return d.dialWithRetry(addr, "")
+}
+
+// dialWithRetry dials the connection, and try again if it fails.
 // NOTE:
 //  sessID is not empty only when the disconnection is redialing
-func (d *Dialer) dial(addr, sessID string) (net.Conn, *Status) {
+func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, *Status) {
 	if d.dialFunc != nil {
 		return d.dialFunc(addr, sessID)
 	}

@@ -111,7 +111,7 @@ type peer struct {
 	countTime         bool
 
 	// only for server role
-	listenAddr string
+	listenAddr net.Addr
 	listeners  map[net.Listener]struct{}
 
 	// only for client role
@@ -137,7 +137,7 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 		closeCh:           make(chan struct{}),
 		slowCometDuration: cfg.slowCometDuration,
 		network:           cfg.Network,
-		listenAddr:        cfg.listenAddrStr,
+		listenAddr:        cfg.listenAddr,
 		printDetail:       cfg.PrintDetail,
 		countTime:         cfg.CountTime,
 		listeners:         make(map[net.Listener]struct{}),
@@ -217,7 +217,7 @@ func (p *peer) SetDialFunc(fn func(dialer *Dialer, addr, sessID string) (net.Con
 
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
-	conn, stat := p.dialer.dial(addr, "")
+	conn, stat := p.dialer.dialWithRetry(addr, "")
 	if !stat.OK() {
 		return nil, stat
 	}
@@ -227,7 +227,7 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 	if p.dialer.RedialTimes() != 0 {
 		sess.redialForClientLocked = func() bool {
 			oldID := sess.ID()
-			conn, stat := p.dialer.dial(addr, oldID)
+			conn, stat := p.dialer.dialWithRetry(addr, oldID)
 			if stat.OK() {
 				oldIP := sess.LocalAddr().String()
 				oldConn := sess.getConn()
@@ -370,10 +370,7 @@ func (p *peer) serveListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 
 // ListenAndServe turns on the listening service.
 func (p *peer) ListenAndServe(protoFunc ...ProtoFunc) error {
-	if len(p.listenAddr) == 0 {
-		Fatalf("listen address can not be empty")
-	}
-	lis, err := NewInheritedListener(p.network, p.listenAddr, p.tlsConfig)
+	lis, err := NewInheritedListener(p.listenAddr, p.tlsConfig)
 	if err != nil {
 		Fatalf("%v", err)
 	}
