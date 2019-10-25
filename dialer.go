@@ -121,7 +121,7 @@ func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, *Status) {
 
 // DialOne dials the connection once.
 func (d *Dialer) DialOne(addr string) (net.Conn, error) {
-	if d.network == "quic" {
+	if asQUIC(d.network) {
 		ctx := context.Background()
 		if d.dialTimeout > 0 {
 			ctx, _ = context.WithTimeout(ctx, d.dialTimeout)
