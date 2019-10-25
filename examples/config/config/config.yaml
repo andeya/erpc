@@ -2,7 +2,7 @@ cfg_cli:
   network: tcp
   local_ip: 0.0.0.0
   listen_port: 0
-  default_dial_timeout: 0s
+  dial_timeout: 0s
   redial_times: 0
   redial_interval: 100ms
   default_body_codec: json
@@ -16,7 +16,7 @@ cfg_srv:
   count_time: true
   default_body_codec: json
   default_context_age: 0s
-  default_dial_timeout: 0s
+  dial_timeout: 0s
   default_session_age: 0s
   listen_port: 9090
   local_ip: 0.0.0.0

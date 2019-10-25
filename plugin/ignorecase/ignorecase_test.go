@@ -23,13 +23,13 @@ func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status)
 
 func TestIngoreCase(t *testing.T) {
 	// Server
-	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090}, ignorecase.NewIgnoreCase())
+	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090, Network: "quic"}, ignorecase.NewIgnoreCase())
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
 	// Client
-	cli := tp.NewPeer(tp.PeerConfig{}, ignorecase.NewIgnoreCase())
+	cli := tp.NewPeer(tp.PeerConfig{Network: "quic"}, ignorecase.NewIgnoreCase())
 	cli.RoutePush(new(Push))
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {

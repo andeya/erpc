@@ -15,19 +15,17 @@
 package tp
 
 import (
-	"context"
 	"crypto/tls"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/teleport/quic"
-
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
 	"github.com/henrylee2cn/teleport/codec"
+	"github.com/henrylee2cn/teleport/quic"
 )
 
 type (
@@ -113,10 +111,7 @@ type peer struct {
 	listeners  map[net.Listener]struct{}
 
 	// only for client role
-	defaultDialTimeout time.Duration
-	redialInterval     time.Duration
-	localAddr          net.Addr
-	redialTimes        int32
+	dialer *Dialer
 }
 
 // NewPeer creates a new peer.
@@ -130,22 +125,25 @@ func NewPeer(cfg PeerConfig, globalLeftPlugin ...Plugin) Peer {
 	}
 
 	var p = &peer{
-		router:             newRouter(pluginContainer),
-		pluginContainer:    pluginContainer,
-		sessHub:            newSessionHub(),
-		defaultSessionAge:  cfg.DefaultSessionAge,
-		defaultContextAge:  cfg.DefaultContextAge,
-		closeCh:            make(chan struct{}),
-		slowCometDuration:  cfg.slowCometDuration,
-		defaultDialTimeout: cfg.DefaultDialTimeout,
-		redialInterval:     cfg.RedialInterval,
-		network:            cfg.Network,
-		listenAddr:         cfg.listenAddrStr,
-		localAddr:          cfg.localAddr,
-		printDetail:        cfg.PrintDetail,
-		countTime:          cfg.CountTime,
-		redialTimes:        cfg.RedialTimes,
-		listeners:          make(map[net.Listener]struct{}),
+		router:            newRouter(pluginContainer),
+		pluginContainer:   pluginContainer,
+		sessHub:           newSessionHub(),
+		defaultSessionAge: cfg.DefaultSessionAge,
+		defaultContextAge: cfg.DefaultContextAge,
+		closeCh:           make(chan struct{}),
+		slowCometDuration: cfg.slowCometDuration,
+		network:           cfg.Network,
+		listenAddr:        cfg.listenAddrStr,
+		printDetail:       cfg.PrintDetail,
+		countTime:         cfg.CountTime,
+		listeners:         make(map[net.Listener]struct{}),
+		dialer: &Dialer{
+			Network:        cfg.Network,
+			DialTimeout:    cfg.DialTimeout,
+			LocalAddr:      cfg.localAddr,
+			RedialInterval: cfg.RedialInterval,
+			RedialTimes:    cfg.RedialTimes,
+		},
 	}
 
 	if c, err := codec.GetByName(cfg.DefaultBodyCodec); err != nil {
@@ -176,12 +174,15 @@ func (p *peer) TLSConfig() *tls.Config {
 // SetTLSConfig sets the TLS config.
 func (p *peer) SetTLSConfig(tlsConfig *tls.Config) {
 	p.tlsConfig = tlsConfig
+	p.dialer.TLSConfig = tlsConfig
 }
 
 // SetTLSConfigFromFile sets the TLS config from file.
 func (p *peer) SetTLSConfigFromFile(tlsCertFile, tlsKeyFile string, insecureSkipVerifyForClient ...bool) error {
-	var err error
-	p.tlsConfig, err = NewTLSConfigFromFile(tlsCertFile, tlsKeyFile, insecureSkipVerifyForClient...)
+	tlsConfig, err := NewTLSConfigFromFile(tlsCertFile, tlsKeyFile, insecureSkipVerifyForClient...)
+	if err == nil {
+		p.SetTLSConfig(tlsConfig)
+	}
 	return err
 }
 
@@ -205,18 +206,17 @@ func (p *peer) CountSession() int {
 
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
-	dialFunc := p.newDialFunc(addr)
-	conn, stat := dialFunc("")
+	conn, stat := p.dialer.Dial(addr, "")
 	if !stat.OK() {
 		return nil, stat
 	}
 	sess := newSession(p, conn, protoFunc)
 
 	// create redial func
-	if p.redialTimes != 0 {
+	if p.dialer.RedialTimes != 0 {
 		sess.redialForClientLocked = func() bool {
 			oldID := sess.ID()
-			conn, stat := dialFunc(oldID)
+			conn, stat := p.dialer.Dial(addr, oldID)
 			if stat.OK() {
 				oldIP := sess.LocalAddr().String()
 				oldConn := sess.getConn()
@@ -258,68 +258,6 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 	return sess, nil
 }
 
-type redialTimes int32
-
-func (p *peer) newRedialTimes() *redialTimes {
-	r := redialTimes(p.redialTimes)
-	return &r
-}
-
-func (r *redialTimes) next() bool {
-	t := *r
-	if t == 0 {
-		return false
-	}
-	if t > 0 {
-		*r--
-	}
-	return true
-}
-
-func (p *peer) newDialFunc(addr string) func(string) (net.Conn, *Status) {
-	return func(sessID string) (net.Conn, *Status) {
-		conn, err := p.dialConn(addr)
-		if err == nil {
-			return conn, nil
-		}
-		redialTimes := p.newRedialTimes()
-		for redialTimes.next() {
-			time.Sleep(p.redialInterval)
-			if sessID == "" {
-				Debugf("trying to redial... (network:%s, addr:%s)", p.network, addr)
-			} else {
-				Debugf("trying to redial... (network:%s, addr:%s, id:%s)", p.network, addr, sessID)
-			}
-			conn, err = p.dialConn(addr)
-			if err == nil {
-				return conn, nil
-			}
-		}
-		return nil, statDialFailed.Copy(err)
-	}
-}
-
-func (p *peer) dialConn(addr string) (net.Conn, error) {
-	if p.network == "quic" {
-		ctx := context.Background()
-		if p.defaultDialTimeout > 0 {
-			ctx, _ = context.WithTimeout(ctx, p.defaultDialTimeout)
-		}
-		if p.tlsConfig == nil {
-			return quic.DialAddrContext(ctx, addr, GenerateTLSConfigForClient(), nil)
-		}
-		return quic.DialAddrContext(ctx, addr, p.tlsConfig, nil)
-	}
-	d := &net.Dialer{
-		LocalAddr: p.localAddr,
-		Timeout:   p.defaultDialTimeout,
-	}
-	if p.tlsConfig != nil {
-		return tls.DialWithDialer(d, p.network, addr, p.tlsConfig)
-	}
-	return d.Dial(p.network, addr)
-}
-
 // ServeConn serves the connection and returns a session.
 // NOTE:
 //  Not support automatically redials after disconnection;
@@ -327,9 +265,9 @@ func (p *peer) dialConn(addr string) (net.Conn, error) {
 //  Execute the PostAcceptPlugin plugins.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status) {
 	network := conn.LocalAddr().Network()
-	if strings.Contains(network, "udp") {
+	if network == "quic" || strings.HasPrefix(network, "udp") {
 		if _, ok := conn.(*quic.Conn); !ok {
-			return nil, NewStatus(CodeWrongConn, "Not support UDP", "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
+			return nil, NewStatus(CodeWrongConn, "Not support "+network, "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
 		}
 		network = "quic"
 	}

@@ -23,6 +23,7 @@ import (
 
 	"github.com/henrylee2cn/cfgo"
 	"github.com/henrylee2cn/teleport/codec"
+	"github.com/henrylee2cn/teleport/quic"
 	"github.com/henrylee2cn/teleport/socket"
 )
 
@@ -31,18 +32,18 @@ import (
 //  yaml tag is used for github.com/henrylee2cn/cfgo
 //  ini tag is used for github.com/henrylee2cn/ini
 type PeerConfig struct {
-	Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket or quic"`
-	LocalIP            string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
-	ListenPort         uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
-	DefaultDialTimeout time.Duration `yaml:"default_dial_timeout" ini:"default_dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
-	RedialTimes        int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; Unlimited when <0; for client role"`
-	RedialInterval     time.Duration `yaml:"redial_interval"      ini:"redial_interval"      comment:"Interval of redialing each time, default 100ms; for client role; ns,µs,ms,s,m,h"`
-	DefaultBodyCodec   string        `yaml:"default_body_codec"   ini:"default_body_codec"   comment:"Default body codec type id"`
-	DefaultSessionAge  time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
-	DefaultContextAge  time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default CALL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
-	SlowCometDuration  time.Duration `yaml:"slow_comet_duration"  ini:"slow_comet_duration"  comment:"Slow operation alarm threshold; ns,µs,ms,s ..."`
-	PrintDetail        bool          `yaml:"print_detail"         ini:"print_detail"         comment:"Is print body and metadata or not"`
-	CountTime          bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
+	Network           string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket or quic"`
+	LocalIP           string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
+	ListenPort        uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
+	DialTimeout       time.Duration `yaml:"dial_timeout"         ini:"dial_timeout"         comment:"Maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
+	RedialTimes       int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; Unlimited when <0; for client role"`
+	RedialInterval    time.Duration `yaml:"redial_interval"      ini:"redial_interval"      comment:"Interval of redialing each time, default 100ms; for client role; ns,µs,ms,s,m,h"`
+	DefaultBodyCodec  string        `yaml:"default_body_codec"   ini:"default_body_codec"   comment:"Default body codec type id"`
+	DefaultSessionAge time.Duration `yaml:"default_session_age"  ini:"default_session_age"  comment:"Default session max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
+	DefaultContextAge time.Duration `yaml:"default_context_age"  ini:"default_context_age"  comment:"Default CALL or PUSH context max age, if less than or equal to 0, no time limit; ns,µs,ms,s,m,h"`
+	SlowCometDuration time.Duration `yaml:"slow_comet_duration"  ini:"slow_comet_duration"  comment:"Slow operation alarm threshold; ns,µs,ms,s ..."`
+	PrintDetail       bool          `yaml:"print_detail"         ini:"print_detail"         comment:"Is print body and metadata or not"`
+	CountTime         bool          `yaml:"count_time"           ini:"count_time"           comment:"Is count cost time or not"`
 
 	localAddr         net.Addr
 	listenAddrStr     string
@@ -56,6 +57,12 @@ var _ cfgo.Config = new(PeerConfig)
 func (p *PeerConfig) ListenerAddr() string {
 	p.check()
 	return p.listenAddrStr
+}
+
+// LocalAddr returns the local address.
+func (p *PeerConfig) LocalAddr() string {
+	p.check()
+	return p.localAddr.String()
 }
 
 // Reload Bi-directionally synchronizes config between YAML file and memory.
@@ -87,8 +94,10 @@ func (p *PeerConfig) check() error {
 		p.localAddr, err = net.ResolveTCPAddr(p.Network, net.JoinHostPort(p.LocalIP, "0"))
 	case "unix", "unixpacket":
 		p.localAddr, err = net.ResolveUnixAddr(p.Network, net.JoinHostPort(p.LocalIP, "0"))
-	case "quic":
-		p.localAddr, err = net.ResolveUDPAddr("udp", net.JoinHostPort(p.LocalIP, "0"))
+	case "quic", "udp", "udp4", "udp6":
+		var udpAddr *net.UDPAddr
+		udpAddr, err = net.ResolveUDPAddr("udp", net.JoinHostPort(p.LocalIP, "0"))
+		p.localAddr = &quic.FacadeAddr{udpAddr}
 	}
 	if err != nil {
 		return err

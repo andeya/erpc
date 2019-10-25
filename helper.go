@@ -263,7 +263,7 @@ func (la *ListenerAddress) String() string {
 
 // Name returns plugin name.
 func (la *ListenerAddress) Name() string {
-	return "ListenerAddressPlugin"
+	return "ListenerAddress"
 }
 
 // PostListen gets the listener address.
