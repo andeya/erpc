@@ -38,10 +38,6 @@ type (
 		GetSession(sessionID string) (Session, bool)
 		// RangeSession ranges all sessions. If fn returns false, stop traversing.
 		RangeSession(fn func(sess Session) bool)
-		// SetDialFunc sets the dial connection function.
-		// NOTE:
-		//  sessID is not empty only when the disconnection is redialing
-		SetDialFunc(fn func(dialer *Dialer, addr, sessID string) (net.Conn, *Status))
 		// SetTLSConfig sets the TLS config.
 		SetTLSConfig(tlsConfig *tls.Config)
 		// SetTLSConfigFromFile sets the TLS config from file.
@@ -207,18 +203,11 @@ func (p *peer) CountSession() int {
 	return p.sessHub.len()
 }
 
-// SetDialFunc sets the dial connection function.
-// NOTE:
-//  sessID is not empty only when the disconnection is redialing
-func (p *peer) SetDialFunc(fn func(dialer *Dialer, addr, sessID string) (net.Conn, *Status)) {
-	p.dialer.setDialFunc(fn)
-}
-
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
-	conn, stat := p.dialer.dialWithRetry(addr, "")
-	if !stat.OK() {
-		return nil, stat
+	conn, err := p.dialer.dialWithRetry(addr, "")
+	if err != nil {
+		return nil, statDialFailed.Copy(err)
 	}
 	sess := newSession(p, conn, protoFunc)
 
@@ -226,8 +215,11 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 	if p.dialer.RedialTimes() != 0 {
 		sess.redialForClientLocked = func() bool {
 			oldID := sess.ID()
-			conn, stat := p.dialer.dialWithRetry(addr, oldID)
-			if stat.OK() {
+			conn, err := p.dialer.dialWithRetry(addr, oldID)
+			var stat *Status
+			if err != nil {
+				stat = statDialFailed.Copy(err)
+			} else {
 				oldIP := sess.LocalAddr().String()
 				oldConn := sess.getConn()
 				if oldConn != nil {
