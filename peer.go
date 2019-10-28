@@ -38,10 +38,6 @@ type (
 		GetSession(sessionID string) (Session, bool)
 		// RangeSession ranges all sessions. If fn returns false, stop traversing.
 		RangeSession(fn func(sess Session) bool)
-		// SetDialFunc sets the dial connection function.
-		// NOTE:
-		//  sessID is not empty only when the disconnection is redialing
-		SetDialFunc(fn func(dialer *Dialer, addr, sessID string) (net.Conn, *Status))
 		// SetTLSConfig sets the TLS config.
 		SetTLSConfig(tlsConfig *tls.Config)
 		// SetTLSConfigFromFile sets the TLS config from file.
@@ -205,13 +201,6 @@ func (p *peer) RangeSession(fn func(sess Session) bool) {
 // CountSession returns the number of sessions.
 func (p *peer) CountSession() int {
 	return p.sessHub.len()
-}
-
-// SetDialFunc sets the dial connection function.
-// NOTE:
-//  sessID is not empty only when the disconnection is redialing
-func (p *peer) SetDialFunc(fn func(dialer *Dialer, addr, sessID string) (net.Conn, *Status)) {
-	p.dialer.setDialFunc(fn)
 }
 
 // Dial connects with the peer of the destination address.
