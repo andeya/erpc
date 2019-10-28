@@ -205,9 +205,9 @@ func (p *peer) CountSession() int {
 
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
-	conn, stat := p.dialer.dialWithRetry(addr, "")
-	if !stat.OK() {
-		return nil, stat
+	conn, err := p.dialer.dialWithRetry(addr, "")
+	if err != nil {
+		return nil, statDialFailed.Copy(err)
 	}
 	sess := newSession(p, conn, protoFunc)
 
@@ -215,8 +215,11 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 	if p.dialer.RedialTimes() != 0 {
 		sess.redialForClientLocked = func() bool {
 			oldID := sess.ID()
-			conn, stat := p.dialer.dialWithRetry(addr, oldID)
-			if stat.OK() {
+			conn, err := p.dialer.dialWithRetry(addr, oldID)
+			var stat *Status
+			if err != nil {
+				stat = statDialFailed.Copy(err)
+			} else {
 				oldIP := sess.LocalAddr().String()
 				oldConn := sess.getConn()
 				if oldConn != nil {
