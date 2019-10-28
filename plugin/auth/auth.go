@@ -57,6 +57,8 @@ type (
 		Peer() tp.Peer
 		// SetID sets the session id.
 		SetID(newID string)
+		// LocalAddr returns the local network address.
+		LocalAddr() net.Addr
 		// RemoteAddr returns the remote network address.
 		RemoteAddr() net.Addr
 		// Swap returns custom data swap of the session(socket).
