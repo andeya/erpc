@@ -86,11 +86,11 @@ func (d *Dialer) Dial(addr string) (net.Conn, error) {
 // NOTE:
 //  sessID is not empty only when the disconnection is redialing
 func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
-	conn, err := d.DialOne(addr)
+	conn, err := d.dialOne(addr)
 	if err == nil {
 		return conn, nil
 	}
-	redialTimes := d.NewRedialCounter()
+	redialTimes := d.newRedialCounter()
 	for redialTimes.Next() {
 		time.Sleep(d.redialInterval)
 		if sessID == "" {
@@ -98,7 +98,7 @@ func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
 		} else {
 			Debugf("trying to redial... (network:%s, addr:%s, id:%s)", d.network, addr, sessID)
 		}
-		conn, err = d.DialOne(addr)
+		conn, err = d.dialOne(addr)
 		if err == nil {
 			return conn, nil
 		}
@@ -106,8 +106,8 @@ func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
 	return nil, err
 }
 
-// DialOne dials the connection once.
-func (d *Dialer) DialOne(addr string) (net.Conn, error) {
+// dialOne dials the connection once.
+func (d *Dialer) dialOne(addr string) (net.Conn, error) {
 	if asQUIC(d.network) {
 		ctx := context.Background()
 		if d.dialTimeout > 0 {
@@ -128,17 +128,17 @@ func (d *Dialer) DialOne(addr string) (net.Conn, error) {
 	return dialer.Dial(d.network, addr)
 }
 
-// NewRedialCounter creates a new redial counter.
-func (d *Dialer) NewRedialCounter() *RedialCounter {
-	r := RedialCounter(d.redialTimes)
+// newRedialCounter creates a new redial counter.
+func (d *Dialer) newRedialCounter() *redialCounter {
+	r := redialCounter(d.redialTimes)
 	return &r
 }
 
-// RedialCounter redial counter
-type RedialCounter int32
+// redialCounter redial counter
+type redialCounter int32
 
 // Next returns whether there are still more redial times.
-func (r *RedialCounter) Next() bool {
+func (r *redialCounter) Next() bool {
 	t := *r
 	if t == 0 {
 		return false
