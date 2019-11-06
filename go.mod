@@ -1,7 +1,7 @@
 module github.com/henrylee2cn/teleport
 
 require (
-	git.apache.org/thrift.git v0.0.0-20190629060710-d9019fc5a4a2
+	git.apache.org/thrift.git v0.13.0
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21
