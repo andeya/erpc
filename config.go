@@ -53,15 +53,15 @@ type PeerConfig struct {
 var _ cfgo.Config = new(PeerConfig)
 
 // ListenAddr returns the listener address.
-func (p *PeerConfig) ListenAddr() string {
+func (p *PeerConfig) ListenAddr() net.Addr {
 	p.check()
-	return p.listenAddr.String()
+	return p.listenAddr
 }
 
 // LocalAddr returns the local address.
-func (p *PeerConfig) LocalAddr() string {
+func (p *PeerConfig) LocalAddr() net.Addr {
 	p.check()
-	return p.localAddr.String()
+	return p.localAddr
 }
 
 // Reload Bi-directionally synchronizes config between YAML file and memory.

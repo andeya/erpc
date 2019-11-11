@@ -2,6 +2,7 @@ package evio
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -36,7 +37,7 @@ func NewServer(loops int, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Ser
 	srv := &Server{
 		Peer: p,
 		cfg:  cfg,
-		addr: fmt.Sprintf("%s://%s?reuseport=true", cfg.Network, cfg.ListenerAddr()),
+		addr: fmt.Sprintf("%s://%s?reuseport=true", cfg.Network, cfg.ListenAddr()),
 	}
 
 	srv.events.NumLoops = loops
@@ -129,7 +130,11 @@ func (srv *Server) serveConn(evioConn evio.Conn) (stat *tp.Status) {
 		in:          make(chan *utils.ByteBuffer, srv.readBufferSize/128),
 		out:         make(chan []byte, srv.writeBufferSize/128),
 	}
-	c.sess, stat = srv.Peer.ServeConn(c)
+	if srv.TLSConfig() != nil {
+		c.sess, stat = srv.Peer.ServeConn(tls.Server(c, srv.TLSConfig()))
+	} else {
+		c.sess, stat = srv.Peer.ServeConn(c)
+	}
 	// c.sess.Swap().Store(wakeWriteKey, c)
 	evioConn.SetContext(c)
 	return stat

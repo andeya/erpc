@@ -35,6 +35,7 @@ type Server struct {
 	server    *http.Server
 	rootPath  string
 	lis       net.Listener
+	lisAddr   net.Addr
 	handshake func(*ws.Config, *http.Request) error
 }
 
@@ -42,12 +43,23 @@ type Server struct {
 func NewServer(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Server {
 	p := tp.NewPeer(cfg, globalLeftPlugin...)
 	serveMux := http.NewServeMux()
+	lisAddr := cfg.ListenAddr()
+	host, port, _ := net.SplitHostPort(lisAddr.String())
+	if port == "0" {
+		if p.TLSConfig() != nil {
+			port = "https"
+		} else {
+			port = "http"
+		}
+		lisAddr = tp.NewFakeAddr(lisAddr.Network(), host, port)
+	}
 	return &Server{
 		Peer:     p,
 		cfg:      cfg,
 		serveMux: serveMux,
 		rootPath: fixRootPath(rootPath),
-		server:   &http.Server{Addr: cfg.ListenerAddr(), Handler: serveMux},
+		lisAddr:  lisAddr,
+		server:   &http.Server{Addr: lisAddr.String(), Handler: serveMux},
 	}
 }
 
@@ -78,20 +90,12 @@ func (srv *Server) ListenAndServe(protoFunc ...tp.ProtoFunc) (err error) {
 	case "tcp", "tcp4", "tcp6":
 	}
 	srv.Handle(srv.rootPath, NewServeHandler(srv.Peer, srv.handshake, protoFunc...))
-	addr := srv.cfg.ListenerAddr()
-	if addr == "" {
-		if srv.Peer.TLSConfig() != nil {
-			addr = ":https"
-		} else {
-			addr = ":http"
-		}
-	}
-	srv.lis, err = tp.NewInheritedListener(network, addr, srv.Peer.TLSConfig())
+	srv.lis, err = tp.NewInheritedListener(srv.lisAddr, srv.Peer.TLSConfig())
 	if err != nil {
 		return
 	}
-	addr = srv.lis.Addr().String()
-	tp.Printf("listen and serve (network:%s, addr:%s)", network, addr)
+	srv.lisAddr = srv.lis.Addr()
+	tp.Printf("listen and serve (network:%s, addr:%s)", network, srv.lisAddr)
 	for _, v := range srv.Peer.PluginContainer().GetAll() {
 		if p, ok := v.(tp.PostListenPlugin); ok {
 			p.PostListen(srv.lis.Addr())
