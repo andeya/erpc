@@ -332,27 +332,7 @@ func (s *socket) isActiveClosed() bool {
 }
 
 func (s *socket) initOptimize() {
-	if c, ok := s.Conn.(ifaceSetKeepAlive); ok {
-		if changeKeepAlive {
-			c.SetKeepAlive(keepAlive)
-		}
-		if keepAlivePeriod >= 0 && keepAlive {
-			c.SetKeepAlivePeriod(keepAlivePeriod)
-		}
-	}
-	if c, ok := s.Conn.(ifaceSetBuffer); ok {
-		if readBuffer >= 0 {
-			c.SetReadBuffer(readBuffer)
-		}
-		if writeBuffer >= 0 {
-			c.SetWriteBuffer(writeBuffer)
-		}
-	}
-	if c, ok := s.Conn.(ifaceSetNoDelay); ok {
-		if !noDelay {
-			c.SetNoDelay(noDelay)
-		}
-	}
+	TryOptimize(s.Conn)
 }
 
 type (
@@ -379,6 +359,31 @@ type (
 		SetNoDelay(noDelay bool) error
 	}
 )
+
+// TryOptimize attempts to set KeepAlive, KeepAlivePeriod, ReadBuffer, WriteBuffer or NoDelay.
+func TryOptimize(conn net.Conn) {
+	if c, ok := conn.(ifaceSetKeepAlive); ok {
+		if changeKeepAlive {
+			c.SetKeepAlive(keepAlive)
+		}
+		if keepAlivePeriod >= 0 && keepAlive {
+			c.SetKeepAlivePeriod(keepAlivePeriod)
+		}
+	}
+	if c, ok := conn.(ifaceSetBuffer); ok {
+		if readBuffer >= 0 {
+			c.SetReadBuffer(readBuffer)
+		}
+		if writeBuffer >= 0 {
+			c.SetWriteBuffer(writeBuffer)
+		}
+	}
+	if c, ok := conn.(ifaceSetNoDelay); ok {
+		if !noDelay {
+			c.SetNoDelay(noDelay)
+		}
+	}
+}
 
 // Connection related system configuration
 var (
