@@ -36,3 +36,4 @@ examples/ab/frame_client_ab
 
 _*
 .DS_Store
+go.sum

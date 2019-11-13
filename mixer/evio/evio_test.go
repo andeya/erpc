@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/mixer/evio"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/mixer/evio"
 )
 
 func Test(t *testing.T) {

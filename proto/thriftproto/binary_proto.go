@@ -6,9 +6,9 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/henrylee2cn/goutil"
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/codec"
-	"github.com/henrylee2cn/teleport/utils"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/codec"
+	"github.com/henrylee2cn/tp/v6/utils"
 )
 
 const (

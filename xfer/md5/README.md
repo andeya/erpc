@@ -4,7 +4,7 @@ Provides a integrity check transfer filter
 
 ### Usage
 
-`import "github.com/henrylee2cn/teleport/xfer/md5"`
+`import "github.com/henrylee2cn/tp/v6/xfer/md5"`
 
 #### Test
 
@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/xfer"
-	"github.com/henrylee2cn/teleport/xfer/md5"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/xfer"
+	"github.com/henrylee2cn/tp/v6/xfer/md5"
 )
 
 func TestSeparate(t *testing.T) {

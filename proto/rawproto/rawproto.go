@@ -1,8 +1,8 @@
 package rawproto
 
 import (
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/socket"
 )
 
 /*

@@ -8,8 +8,8 @@ import (
 
 	"github.com/henrylee2cn/goutil/httpbody"
 
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/proto/httproto"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/proto/httproto"
 )
 
 type Home struct {

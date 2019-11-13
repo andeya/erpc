@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/proto/thriftproto"
-	"github.com/henrylee2cn/teleport/xfer/gzip"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/proto/thriftproto"
+	"github.com/henrylee2cn/tp/v6/xfer/gzip"
 )
 
 type Home struct {

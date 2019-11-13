@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/teleport/utils"
+	"github.com/henrylee2cn/tp/v6/utils"
 )
 
 type (

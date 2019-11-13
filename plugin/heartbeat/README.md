@@ -7,7 +7,7 @@ When the connection is idle more than 3 times the heartbeat time, take the initi
 
 ### Usage
 
-`import "github.com/henrylee2cn/teleport/plugin/heartbeat"`
+`import "github.com/henrylee2cn/tp/v6/plugin/heartbeat"`
 
 #### Test
 
@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/plugin/heartbeat"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/plugin/heartbeat"
 )
 
 func TestHeartbeatCall1(t *testing.T) {

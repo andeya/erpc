@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/goutil/coarsetime"
-	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/tp/v6"
 )
 
 const (

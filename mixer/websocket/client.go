@@ -22,10 +22,10 @@ import (
 	"path"
 	"strings"
 
-	tp "github.com/henrylee2cn/teleport"
-	"github.com/henrylee2cn/teleport/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/teleport/mixer/websocket/pbSubProto"
-	ws "github.com/henrylee2cn/teleport/mixer/websocket/websocket"
+	"github.com/henrylee2cn/tp/v6"
+	"github.com/henrylee2cn/tp/v6/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/tp/v6/mixer/websocket/pbSubProto"
+	ws "github.com/henrylee2cn/tp/v6/mixer/websocket/websocket"
 )
 
 // Client a websocket client

@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/cfgo"
-	"github.com/henrylee2cn/teleport/codec"
-	"github.com/henrylee2cn/teleport/socket"
+	"github.com/henrylee2cn/tp/v6/codec"
+	"github.com/henrylee2cn/tp/v6/socket"
 )
 
 // PeerConfig peer config

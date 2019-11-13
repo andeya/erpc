@@ -20,7 +20,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/henrylee2cn/teleport/quic"
+	"github.com/henrylee2cn/tp/v6/quic"
 )
 
 // Dialer dial-up connection

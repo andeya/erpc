@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport"
+	"github.com/henrylee2cn/tp/v6"
 )
 
 //go:generate go build $GOFILE
