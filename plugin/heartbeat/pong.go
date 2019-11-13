@@ -21,7 +21,7 @@ import (
 	"github.com/henrylee2cn/goutil"
 
 	"github.com/henrylee2cn/goutil/coarsetime"
-	"github.com/henrylee2cn/tp/v6"
+	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 // NewPong returns a heartbeat receiver plugin.

@@ -21,10 +21,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/tp/v6/mixer/websocket/pbSubProto"
-	ws "github.com/henrylee2cn/tp/v6/mixer/websocket/websocket"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/teleport/v6/mixer/websocket/pbSubProto"
+	ws "github.com/henrylee2cn/teleport/v6/mixer/websocket/websocket"
 )
 
 // Server a websocket server

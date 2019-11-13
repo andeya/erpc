@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/tp/v6"
+	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 type (

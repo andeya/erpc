@@ -1,4 +1,4 @@
-module github.com/henrylee2cn/tp/v6
+module github.com/henrylee2cn/teleport/v6
 
 require (
 	git.apache.org/thrift.git v0.13.0

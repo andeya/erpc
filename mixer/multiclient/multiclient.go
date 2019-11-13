@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/goutil/pool"
-	"github.com/henrylee2cn/tp/v6"
+	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 // MultiClient client session which is has connection pool

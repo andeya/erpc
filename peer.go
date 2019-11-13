@@ -23,8 +23,8 @@ import (
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
 	"github.com/henrylee2cn/goutil/errors"
-	"github.com/henrylee2cn/tp/v6/codec"
-	"github.com/henrylee2cn/tp/v6/quic"
+	"github.com/henrylee2cn/teleport/v6/codec"
+	"github.com/henrylee2cn/teleport/v6/quic"
 )
 
 type (

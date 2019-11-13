@@ -21,8 +21,8 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/henrylee2cn/tp/v6/utils"
-	"github.com/henrylee2cn/tp/v6/xfer"
+	"github.com/henrylee2cn/teleport/v6/utils"
+	"github.com/henrylee2cn/teleport/v6/xfer"
 )
 
 var ids = map[byte]bool{}

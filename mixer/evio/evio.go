@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/mixer/evio/evio"
-	"github.com/henrylee2cn/tp/v6/utils"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/mixer/evio/evio"
+	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 // NewClient creates a evio client, equivalent to tp.NewPeer.

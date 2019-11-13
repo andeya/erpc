@@ -27,11 +27,11 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/codec"
-	"github.com/henrylee2cn/tp/v6/utils"
-	"github.com/henrylee2cn/tp/v6/xfer"
-	"github.com/henrylee2cn/tp/v6/xfer/gzip"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/codec"
+	"github.com/henrylee2cn/teleport/v6/utils"
+	"github.com/henrylee2cn/teleport/v6/xfer"
+	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
 )
 
 var (

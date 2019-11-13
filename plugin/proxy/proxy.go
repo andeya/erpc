@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/tp/v6"
+	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 // NewPlugin creates a proxy plugin for handling unknown calling and pushing.

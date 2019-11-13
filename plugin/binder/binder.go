@@ -25,8 +25,8 @@ import (
 	"strings"
 
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/utils"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 /**

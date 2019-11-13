@@ -4,7 +4,7 @@ Package secure encrypting/decrypting the message body.
 
 ### Usage
 
-`import "github.com/henrylee2cn/tp/v6/plugin/secure"`
+`import "github.com/henrylee2cn/teleport/v6/plugin/secure"`
 
 Ciphertext struct:
 
@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/plugin/secure"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/plugin/secure"
 )
 
 type Arg struct {

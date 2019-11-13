@@ -6,9 +6,9 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/codec"
-	"github.com/henrylee2cn/tp/v6/utils"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/codec"
+	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 // NewStructProtoFunc creates tp.ProtoFunc of Thrift protocol.

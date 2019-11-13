@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/henrylee2cn/tp/v6/xfer/gzip"
+	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
 
-	"github.com/henrylee2cn/tp/v6"
+	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 //go:generate go build $GOFILE

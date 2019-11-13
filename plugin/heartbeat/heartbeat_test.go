@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/plugin/heartbeat"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/plugin/heartbeat"
 )
 
 func TestHeartbeatCall1(t *testing.T) {

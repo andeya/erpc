@@ -26,8 +26,8 @@ import (
 	"github.com/henrylee2cn/goutil/graceful"
 
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/tp/v6/utils"
-	"github.com/henrylee2cn/tp/v6/utils/color"
+	"github.com/henrylee2cn/teleport/v6/utils"
+	"github.com/henrylee2cn/teleport/v6/utils/color"
 )
 
 type (
@@ -159,7 +159,7 @@ var loggerOutputter = func() LoggerOutputter {
 			buf.WriteString(" [" + loggerLevelTagMap[loggerLevel] + "] ")
 			buf.Write(msgBytes)
 			line := goutil.GetCallLine(calldepth + 1)
-			if !strings.Contains(line, "github.com/henrylee2cn/tp/v6") &&
+			if !strings.Contains(line, "github.com/henrylee2cn/teleport") &&
 				!strings.Contains(line, "github.com/henrylee2cn/goutil/graceful") {
 				buf.WriteString(" <" + line + ">\n")
 			} else {

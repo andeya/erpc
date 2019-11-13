@@ -10,8 +10,8 @@ package main
 import (
 	"time"
 
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/plugin/proxy"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/plugin/proxy"
 )
 
 func main() {

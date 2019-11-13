@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/henrylee2cn/tp/v6/codec"
-	"github.com/henrylee2cn/tp/v6/socket"
-	"github.com/henrylee2cn/tp/v6/socket/example/pb"
+	"github.com/henrylee2cn/teleport/v6/codec"
+	"github.com/henrylee2cn/teleport/v6/socket"
+	"github.com/henrylee2cn/teleport/v6/socket/example/pb"
 )
 
 //go:generate go build $GOFILE

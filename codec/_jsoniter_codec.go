@@ -20,7 +20,7 @@ import (
 
 	"github.com/json-iterator/go"
 
-	"github.com/henrylee2cn/tp/v6/utils"
+	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 // json codec name and id

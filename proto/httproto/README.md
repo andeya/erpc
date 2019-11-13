@@ -63,7 +63,7 @@ func RegBodyCodec(contentType string, codecID byte)
 
 ### Usage
 
-`import "github.com/henrylee2cn/tp/v6/proto/httproto"`
+`import "github.com/henrylee2cn/teleport/v6/proto/httproto"`
 
 #### Test
 
@@ -78,9 +78,9 @@ import (
 
 	"github.com/henrylee2cn/goutil/httpbody"
 
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/proto/httproto"
-	"github.com/henrylee2cn/tp/v6/xfer/gzip"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/proto/httproto"
+	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
 )
 
 type Home struct {

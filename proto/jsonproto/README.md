@@ -14,7 +14,7 @@ jsonproto is implemented JSON socket communication protocol.
 
 ### Usage
 
-`import "github.com/henrylee2cn/tp/v6/proto/jsonproto"`
+`import "github.com/henrylee2cn/teleport/v6/proto/jsonproto"`
 
 #### Test
 
@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/tp/v6"
-	"github.com/henrylee2cn/tp/v6/proto/jsonproto"
-	"github.com/henrylee2cn/tp/v6/xfer/gzip"
+	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/teleport/v6/proto/jsonproto"
+	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
 )
 
 type Home struct {

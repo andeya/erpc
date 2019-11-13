@@ -4,7 +4,7 @@ package ignorecase
 import (
 	"strings"
 
-	"github.com/henrylee2cn/tp/v6"
+	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 // NewIgnoreCase Returns a ignoreCase plugin.
