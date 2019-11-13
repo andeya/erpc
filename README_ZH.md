@@ -16,6 +16,10 @@ Teleport 是一个通用、高效、灵活的Socket框架。
 go get -u -f github.com/henrylee2cn/teleport
 ```
 
+```go
+import "github.com/henrylee2cn/tp/v6"
+```
+
 ## 特性
 
 - 使用 peer 为 server 和 client 提供相同的 API 封装

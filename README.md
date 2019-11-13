@@ -17,6 +17,10 @@ It can be used for peer-peer, rpc, gateway, micro services, push services, game 
 go get -u -f github.com/henrylee2cn/teleport
 ```
 
+```go
+import "github.com/henrylee2cn/tp/v6"
+```
+
 ## Feature
 
 - Use peer to provide the same API package for the server and client
