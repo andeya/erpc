@@ -130,15 +130,15 @@ import "github.com/henrylee2cn/erpc/v6"
 
 - CPU耗时火焰图 erpc/socket
 
-![tp_socket_profile_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_profile_torch.png)
+![erpc_socket_profile_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_profile_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_profile_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_profile_torch.svg)**
 
 - 堆栈信息火焰图 erpc/socket
 
-![tp_socket_heap_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_heap_torch.png)
+![erpc_socket_heap_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_heap_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_heap_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_heap_torch.svg)**
 
 
 ## 代码示例
