@@ -182,7 +182,7 @@ func main() {
 
 ## Keyworks
 
-- *Message:** The corresponding structure of the data package
+- **Message:** The corresponding structure of the data package
 - **Proto:** The protocol interface of message pack/unpack 
 - **Codec:** Serialization interface for `Body`
 - **XferPipe:** A series of pipelines to handle message data before transfer
