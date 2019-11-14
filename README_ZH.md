@@ -4,7 +4,7 @@
 
 eRPC 是一个高效、可扩展且简单易用的 RPC 框架。
 
-可用于 RPC、Peer-Peer 对等通信、微服务、推送服务，游戏服务等领域。
+适用于 RPC、微服务、点对点长连接、IM 和游戏等领域。
 
 
 ![eRPC-Framework](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_module_diagram.png)
@@ -51,8 +51,8 @@ import "github.com/henrylee2cn/erpc/v6"
   - `pbproto` - Ptotobuf 消息协议
   - `thriftproto` - Thrift 消息协议
   - `httproto` - HTTP 消息协议
-- 支持底层通信优化
-  - 使用 I/O 多路复用技术
+- 可优化的高性能传输层
+  - 使用 Non-block socket 和 I/O 多路复用技术
   - 支持设置套接字 I/O 的缓冲区大小
   - 支持设置读取消息的大小（如果超过则断开连接）
   - 支持控制连接的文件描述符

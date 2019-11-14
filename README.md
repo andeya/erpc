@@ -3,7 +3,7 @@
 
 eRPC is an efficient, extensible and easy-to-use RPC framework.
 
-It can be used for RPC, peer-peer, micro service, push service, game service and so on.
+Suitable for RPC, Microservice, Peer-to-Peer, IM, Game and other fields.
 
 [简体中文](https://github.com/henrylee2cn/erpc/tree/master/README_ZH.md)
 
@@ -52,8 +52,8 @@ import "github.com/henrylee2cn/erpc/v6"
   - `pbproto` - Ptotobuf message protocol
   - `thriftproto` - Thrift message protocol
   - `httproto` - HTTP message protocol
-- Support for underlying communication optimization
-  - Use I/O multiplexing technology
+- Optimized high performance transport layer
+  - Use Non-block socket and I/O multiplexing technology
   - Support setting the size of socket I/O buffer
   - Support setting the size of the reading message (if exceed disconnect it)
   - Support controling the connection file descriptor
