@@ -1,4 +1,4 @@
-// Package erpc is an efficient and easy to use RPC framework.
+// Package erpc is an efficient, extensible and easy-to-use RPC framework.
 //
 // Copyright 2015-2019 HenryLee. All Rights Reserved.
 //

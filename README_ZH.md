@@ -2,9 +2,9 @@
 <!-- [![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg?style=flat-square)](http://jq.qq.com/?_wv=1027&k=fzi4p1) -->
 
 
-eRPC 是一个高效且易用的 RPC 框架。
+eRPC 是一个高效、可扩展且简单易用的 RPC 框架。
 
-可用于 Peer-Peer 对等通信、RPC、长连接网关、微服务、推送服务，游戏服务等领域。
+可用于 RPC、Peer-Peer 对等通信、微服务、推送服务，游戏服务等领域。
 
 
 ![eRPC-Framework](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_module_diagram.png)

@@ -1,9 +1,9 @@
 # eRPC [![GitHub release](https://img.shields.io/github/release/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/erpc?style=flat-square)](http://goreportcard.com/report/henrylee2cn/erpc) [![github issues](https://img.shields.io/github/issues/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/erpc) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/tree/master/examples)
 <!-- [![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg?style=flat-square)](http://jq.qq.com/?_wv=1027&k=fzi4p1) -->
 
-eRPC is an efficient and easy to use RPC framework.
+eRPC is an efficient, extensible and easy-to-use RPC framework.
 
-It can be used for peer-peer, rpc, gateway, micro services, push services, game services and so on.
+It can be used for RPC, peer-peer, micro service, push service, game service and so on.
 
 [简体中文](https://github.com/henrylee2cn/erpc/tree/master/README_ZH.md)
 
