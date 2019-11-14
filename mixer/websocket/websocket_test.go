@@ -76,8 +76,8 @@ func TestPbWebsocketTLS(t *testing.T) {
 
 func TestCustomizedWebsocket(t *testing.T) {
 	srv := erpc.NewPeer(erpc.PeerConfig{})
-	hterpc.Handle("/ws", ws.NewJSONServeHandler(srv, nil))
-	go hterpc.ListenAndServe(":9092", nil)
+	http.Handle("/ws", ws.NewJSONServeHandler(srv, nil))
+	go http.ListenAndServe(":9092", nil)
 	srv.RouteCall(new(P))
 	time.Sleep(time.Second * 1)
 

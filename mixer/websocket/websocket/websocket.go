@@ -96,7 +96,7 @@ type Config struct {
 	TLSConfig *tls.Config
 
 	// Additional header fields to be sent in WebSocket opening handshake.
-	Header hterpc.Header
+	Header http.Header
 
 	// Dialer used when opening websocket connections.
 	Dialer *net.Dialer
@@ -108,14 +108,14 @@ type Config struct {
 type serverHandshaker interface {
 	// ReadHandshake reads handshake request message from client.
 	// Returns http response code and error if any.
-	ReadHandshake(buf *bufio.Reader, req *hterpc.Request) (code int, err error)
+	ReadHandshake(buf *bufio.Reader, req *http.Request) (code int, err error)
 
 	// AcceptHandshake accepts the client handshake request and sends
 	// handshake response back to client.
 	AcceptHandshake(buf *bufio.Writer) (err error)
 
 	// NewServerConn creates a new WebSocket connection.
-	NewServerConn(buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *hterpc.Request) (conn *Conn)
+	NewServerConn(buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *http.Request) (conn *Conn)
 }
 
 // frameReader is an interface to read a WebSocket frame.
@@ -163,7 +163,7 @@ type frameHandler interface {
 // Multiple goroutines may invoke methods on a Conn simultaneously.
 type Conn struct {
 	config  *Config
-	request *hterpc.Request
+	request *http.Request
 
 	buf *bufio.ReadWriter
 	rwc io.ReadWriteCloser
@@ -293,7 +293,7 @@ func (ws *Conn) Config() *Config { return ws.config }
 
 // Request returns the http request upgraded to the WebSocket.
 // It is nil for client side.
-func (ws *Conn) Request() *hterpc.Request { return ws.request }
+func (ws *Conn) Request() *http.Request { return ws.request }
 
 // Codec represents a symmetric pair of functions that implement a codec.
 type Codec struct {
@@ -400,19 +400,19 @@ Trivial usage:
 
 	// receive text frame
 	var message string
-	weberpc.Message.Receive(ws, &message)
+	websocket.Message.Receive(ws, &message)
 
 	// send text frame
 	message = "hello"
-	weberpc.Message.Send(ws, message)
+	websocket.Message.Send(ws, message)
 
 	// receive binary frame
 	var data []byte
-	weberpc.Message.Receive(ws, &data)
+	websocket.Message.Receive(ws, &data)
 
 	// send binary frame
 	data = []byte{0, 1, 2}
-	weberpc.Message.Send(ws, data)
+	websocket.Message.Send(ws, data)
 
 */
 var Message = Codec{marshal, unmarshal}

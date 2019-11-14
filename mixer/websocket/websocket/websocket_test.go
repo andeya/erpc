@@ -101,7 +101,7 @@ func ctrlAndDataServer(ws *Conn) {
 	}
 }
 
-func subProtocolHandshake(config *Config, req *hterpc.Request) error {
+func subProtocolHandshake(config *Config, req *http.Request) error {
 	for _, proto := range config.Protocol {
 		if proto == "chat" {
 			config.Protocol = []string{proto}
@@ -118,14 +118,14 @@ func subProtoServer(ws *Conn) {
 }
 
 func startServer() {
-	hterpc.Handle("/echo", Handler(echoServer))
-	hterpc.Handle("/count", Handler(countServer))
-	hterpc.Handle("/ctrldata", Handler(ctrlAndDataServer))
+	http.Handle("/echo", Handler(echoServer))
+	http.Handle("/count", Handler(countServer))
+	http.Handle("/ctrldata", Handler(ctrlAndDataServer))
 	subproto := Server{
 		Handshake: subProtocolHandshake,
 		Handler:   Handler(subProtoServer),
 	}
-	hterpc.Handle("/subproto", subproto)
+	http.Handle("/subproto", subproto)
 	server := httptest.NewServer(nil)
 	serverAddr = server.Listener.Addr().String()
 	log.Print("Test WebSocket server listening on ", serverAddr)
@@ -313,7 +313,7 @@ func TestHTTP(t *testing.T) {
 	// If the client did not send a handshake that matches the protocol
 	// specification, the server MUST return an HTTP response with an
 	// appropriate error code (such as 400 Bad Request)
-	resp, err := hterpc.Get(fmt.Sprintf("http://%s/echo", serverAddr))
+	resp, err := http.Get(fmt.Sprintf("http://%s/echo", serverAddr))
 	if err != nil {
 		t.Errorf("Get: error %#v", err)
 		return
@@ -322,8 +322,8 @@ func TestHTTP(t *testing.T) {
 		t.Error("Get: resp is null")
 		return
 	}
-	if resp.StatusCode != hterpc.StatusBadRequest {
-		t.Errorf("Get: expected %q got %q", hterpc.StatusBadRequest, resp.StatusCode)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Get: expected %q got %q", http.StatusBadRequest, resp.StatusCode)
 	}
 }
 
@@ -533,12 +533,12 @@ func TestClose(t *testing.T) {
 }
 
 var originTests = []struct {
-	req    *hterpc.Request
+	req    *http.Request
 	origin *url.URL
 }{
 	{
-		req: &hterpc.Request{
-			Header: hterpc.Header{
+		req: &http.Request{
+			Header: http.Header{
 				"Origin": []string{"http://www.example.com"},
 			},
 		},
@@ -548,7 +548,7 @@ var originTests = []struct {
 		},
 	},
 	{
-		req: &hterpc.Request{},
+		req: &http.Request{},
 	},
 }
 

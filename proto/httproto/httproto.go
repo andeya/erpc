@@ -121,7 +121,7 @@ func (h *httproto) Pack(m erpc.Message) (err error) {
 		return err
 	}
 
-	var header = make(hterpc.Header, m.Meta().Len())
+	var header = make(http.Header, m.Meta().Len())
 
 	// do transfer pipe
 	m.XferPipe().Range(func(idx int, filter xfer.XferFilter) bool {
@@ -175,7 +175,7 @@ var (
 	crlfBytes    = []byte("\r\n")
 )
 
-func (h *httproto) packRequest(m erpc.Message, header hterpc.Header, bb *utils.ByteBuffer, bodyBytes []byte) error {
+func (h *httproto) packRequest(m erpc.Message, header http.Header, bb *utils.ByteBuffer, bodyBytes []byte) error {
 	u, err := url.Parse(m.ServiceMethod())
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ var (
 	bizErrBytes = []byte("299 Business Error")
 )
 
-func (h *httproto) packResponse(m erpc.Message, header hterpc.Header, bb *utils.ByteBuffer, bodyBytes []byte) error {
+func (h *httproto) packResponse(m erpc.Message, header http.Header, bb *utils.ByteBuffer, bodyBytes []byte) error {
 	bb.Write(versionBytes)
 	bb.WriteByte(' ')
 	if stat := m.Status(); !stat.OK() {

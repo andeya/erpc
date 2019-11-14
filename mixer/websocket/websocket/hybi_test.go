@@ -71,7 +71,7 @@ Sec-WebSocket-Protocol: chat
 		if err := hybiClientHandshake(&config, br, bw); err != nil {
 			t.Fatal("handshake", err)
 		}
-		req, err := hterpc.ReadRequest(bufio.NewReader(&b))
+		req, err := http.ReadRequest(bufio.NewReader(&b))
 		if err != nil {
 			t.Fatal("read request", err)
 		}
@@ -126,7 +126,7 @@ Sec-WebSocket-Protocol: chat
 	config.Protocol = append(config.Protocol, "chat")
 	config.Protocol = append(config.Protocol, "superchat")
 	config.Version = ProtocolVersionHybi13
-	config.Header = hterpc.Header(make(map[string][]string))
+	config.Header = http.Header(make(map[string][]string))
 	config.Header.Add("User-Agent", "test")
 
 	config.handshakeData = map[string]string{
@@ -136,7 +136,7 @@ Sec-WebSocket-Protocol: chat
 	if err != nil {
 		t.Errorf("handshake failed: %v", err)
 	}
-	req, err := hterpc.ReadRequest(bufio.NewReader(b))
+	req, err := http.ReadRequest(bufio.NewReader(b))
 	if err != nil {
 		t.Fatalf("read request: %v", err)
 	}
@@ -181,7 +181,7 @@ Sec-WebSocket-Protocol: chat, superchat
 Sec-WebSocket-Version: 13
 
 `))
-	req, err := hterpc.ReadRequest(br)
+	req, err := http.ReadRequest(br)
 	if err != nil {
 		t.Fatal("request", err)
 	}
@@ -189,8 +189,8 @@ Sec-WebSocket-Version: 13
 	if err != nil {
 		t.Errorf("handshake failed: %v", err)
 	}
-	if code != hterpc.StatusSwitchingProtocols {
-		t.Errorf("status expected %q but got %q", hterpc.StatusSwitchingProtocols, code)
+	if code != http.StatusSwitchingProtocols {
+		t.Errorf("status expected %q but got %q", http.StatusSwitchingProtocols, code)
 	}
 	expectedProtocols := []string{"chat", "superchat"}
 	if fmt.Sprintf("%v", config.Protocol) != fmt.Sprintf("%v", expectedProtocols) {
@@ -230,7 +230,7 @@ Origin: http://example.com
 Sec-WebSocket-Version: 13
 
 `))
-	req, err := hterpc.ReadRequest(br)
+	req, err := http.ReadRequest(br)
 	if err != nil {
 		t.Fatal("request", err)
 	}
@@ -238,8 +238,8 @@ Sec-WebSocket-Version: 13
 	if err != nil {
 		t.Errorf("handshake failed: %v", err)
 	}
-	if code != hterpc.StatusSwitchingProtocols {
-		t.Errorf("status expected %q but got %q", hterpc.StatusSwitchingProtocols, code)
+	if code != http.StatusSwitchingProtocols {
+		t.Errorf("status expected %q but got %q", http.StatusSwitchingProtocols, code)
 	}
 	if len(config.Protocol) != 0 {
 		t.Errorf("len(config.Protocol) expected 0, but got %q", len(config.Protocol))
@@ -276,7 +276,7 @@ Sec-WebSocket-Protocol: chat, superchat
 Sec-WebSocket-Version: 9
 
 `))
-	req, err := hterpc.ReadRequest(br)
+	req, err := http.ReadRequest(br)
 	if err != nil {
 		t.Fatal("request", err)
 	}
@@ -284,8 +284,8 @@ Sec-WebSocket-Version: 9
 	if err != ErrBadWebSocketVersion {
 		t.Errorf("handshake expected err %q but got %q", ErrBadWebSocketVersion, err)
 	}
-	if code != hterpc.StatusBadRequest {
-		t.Errorf("status expected %q but got %q", hterpc.StatusBadRequest, code)
+	if code != http.StatusBadRequest {
+		t.Errorf("status expected %q but got %q", http.StatusBadRequest, code)
 	}
 }
 
@@ -493,7 +493,7 @@ func TestHybiServerRead(t *testing.T) {
 	}
 	br := bufio.NewReader(bytes.NewBuffer(wireData))
 	bw := bufio.NewWriter(bytes.NewBuffer([]byte{}))
-	conn := newHybiConn(newConfig(t, "/"), bufio.NewReadWriter(br, bw), nil, new(hterpc.Request))
+	conn := newHybiConn(newConfig(t, "/"), bufio.NewReadWriter(br, bw), nil, new(http.Request))
 
 	expected := [][]byte{[]byte("hello"), []byte("world")}
 
@@ -533,7 +533,7 @@ func TestHybiServerReadWithoutMasking(t *testing.T) {
 	wireData := []byte{0x81, 0x05, 'h', 'e', 'l', 'l', 'o'}
 	br := bufio.NewReader(bytes.NewBuffer(wireData))
 	bw := bufio.NewWriter(bytes.NewBuffer([]byte{}))
-	conn := newHybiConn(newConfig(t, "/"), bufio.NewReadWriter(br, bw), nil, new(hterpc.Request))
+	conn := newHybiConn(newConfig(t, "/"), bufio.NewReadWriter(br, bw), nil, new(http.Request))
 	// server MUST close the connection upon receiving a non-masked frame.
 	msg := make([]byte, 512)
 	_, err := conn.Read(msg)
@@ -574,7 +574,7 @@ Sec-WebSocket-Protocol: chat, superchat
 Sec-WebSocket-Version: 13
 
 `))
-	req, err := hterpc.ReadRequest(br)
+	req, err := http.ReadRequest(br)
 	if err != nil {
 		t.Fatal("request", err)
 	}
@@ -582,8 +582,8 @@ Sec-WebSocket-Version: 13
 	if err != nil {
 		t.Errorf("handshake failed: %v", err)
 	}
-	if code != hterpc.StatusSwitchingProtocols {
-		t.Errorf("status expected %q but got %q", hterpc.StatusSwitchingProtocols, code)
+	if code != http.StatusSwitchingProtocols {
+		t.Errorf("status expected %q but got %q", http.StatusSwitchingProtocols, code)
 	}
 	b := bytes.NewBuffer([]byte{})
 	bw := bufio.NewWriter(b)

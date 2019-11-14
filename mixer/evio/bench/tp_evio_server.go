@@ -45,7 +45,7 @@ func main() {
 	erpc.SetGopool(1024*1024*100, time.Minute*10)
 
 	go func() {
-		log.Println(hterpc.ListenAndServe(*debugAddr, nil))
+		log.Println(http.ListenAndServe(*debugAddr, nil))
 	}()
 
 	erpc.SetServiceMethodMapper(erpc.RPCServiceMethodMapper)

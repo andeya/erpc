@@ -127,7 +127,7 @@ func TestHTTProto(t *testing.T) {
 
 	// HTTP Client
 	contentType, body, _ := httpbody.NewJSONBody(arg)
-	resp, err := hterpc.Post(url, contentType, body)
+	resp, err := http.Post(url, contentType, body)
 	if err != nil {
 		t.Fatal(err)
 	}

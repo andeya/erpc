@@ -31,18 +31,18 @@ import (
 type Server struct {
 	erpc.Peer
 	cfg       erpc.PeerConfig
-	serveMux  *hterpc.ServeMux
-	server    *hterpc.Server
+	serveMux  *http.ServeMux
+	server    *http.Server
 	rootPath  string
 	lis       net.Listener
 	lisAddr   net.Addr
-	handshake func(*ws.Config, *hterpc.Request) error
+	handshake func(*ws.Config, *http.Request) error
 }
 
 // NewServer creates a websocket server.
 func NewServer(rootPath string, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) *Server {
 	p := erpc.NewPeer(cfg, globalLeftPlugin...)
-	serveMux := hterpc.NewServeMux()
+	serveMux := http.NewServeMux()
 	lisAddr := cfg.ListenAddr()
 	host, port, _ := net.SplitHostPort(lisAddr.String())
 	if port == "0" {
@@ -59,7 +59,7 @@ func NewServer(rootPath string, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Pl
 		serveMux: serveMux,
 		rootPath: fixRootPath(rootPath),
 		lisAddr:  lisAddr,
-		server:   &hterpc.Server{Addr: lisAddr.String(), Handler: serveMux},
+		server:   &http.Server{Addr: lisAddr.String(), Handler: serveMux},
 	}
 }
 
@@ -115,33 +115,33 @@ func (srv *Server) Close() error {
 }
 
 // SetHandshake sets customized handshake function.
-func (srv *Server) SetHandshake(handshake func(*ws.Config, *hterpc.Request) error) {
+func (srv *Server) SetHandshake(handshake func(*ws.Config, *http.Request) error) {
 	srv.handshake = handshake
 }
 
 // Handle registers the handler for the given rootPath.
 // If a handler already exists for rootPath, Handle panics.
-func (srv *Server) Handle(rootPath string, handler hterpc.Handler) {
+func (srv *Server) Handle(rootPath string, handler http.Handler) {
 	srv.serveMux.Handle(rootPath, handler)
 }
 
 // HandleFunc registers the handler function for the given rootPath.
-func (srv *Server) HandleFunc(rootPath string, handler func(hterpc.ResponseWriter, *hterpc.Request)) {
+func (srv *Server) HandleFunc(rootPath string, handler func(http.ResponseWriter, *http.Request)) {
 	srv.serveMux.HandleFunc(rootPath, handler)
 }
 
 // NewJSONServeHandler creates a websocket json handler.
-func NewJSONServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request) error) hterpc.Handler {
+func NewJSONServeHandler(peer erpc.Peer, handshake func(*ws.Config, *http.Request) error) http.Handler {
 	return NewServeHandler(peer, handshake, jsonSubProto.NewJSONSubProtoFunc())
 }
 
 // NewPbServeHandler creates a websocket protobuf handler.
-func NewPbServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request) error) hterpc.Handler {
+func NewPbServeHandler(peer erpc.Peer, handshake func(*ws.Config, *http.Request) error) http.Handler {
 	return NewServeHandler(peer, handshake, pbSubProto.NewPbSubProtoFunc())
 }
 
 // NewServeHandler creates a websocket handler.
-func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request) error, protoFunc ...erpc.ProtoFunc) hterpc.Handler {
+func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *http.Request) error, protoFunc ...erpc.ProtoFunc) http.Handler {
 	w := &serverHandler{
 		peer:      peer,
 		Server:    new(ws.Server),
@@ -154,7 +154,7 @@ func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request)
 		scheme = "wss"
 	}
 	if handshake != nil {
-		w.Server.Handshake = func(cfg *ws.Config, r *hterpc.Request) error {
+		w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
 			cfg.Origin = &url.URL{
 				Host:   r.RemoteAddr,
 				Scheme: scheme,
@@ -162,7 +162,7 @@ func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request)
 			return handshake(cfg, r)
 		}
 	} else {
-		w.Server.Handshake = func(cfg *ws.Config, r *hterpc.Request) error {
+		w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
 			cfg.Origin = &url.URL{
 				Host:   r.RemoteAddr,
 				Scheme: scheme,

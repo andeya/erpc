@@ -332,7 +332,7 @@ func (handler *hybiFrameHandler) WritePong(msg []byte) (n int, err error) {
 }
 
 // newHybiConn creates a new WebSocket connection speaking hybi draft protocol.
-func newHybiConn(config *Config, buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *hterpc.Request) *Conn {
+func newHybiConn(config *Config, buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *http.Request) *Conn {
 	if buf == nil {
 		br := bufio.NewReader(rwc)
 		bw := bufio.NewWriter(rwc)
@@ -437,7 +437,7 @@ func hybiClientHandshake(config *Config, br *bufio.Reader, bw *bufio.Writer) (er
 		return err
 	}
 
-	resp, err := hterpc.ReadResponse(br, &hterpc.Request{Method: "GET"})
+	resp, err := http.ReadResponse(br, &http.Request{Method: "GET"})
 	if err != nil {
 		return err
 	}
@@ -487,28 +487,28 @@ type hybiServerHandshaker struct {
 	accept []byte
 }
 
-func (c *hybiServerHandshaker) ReadHandshake(buf *bufio.Reader, req *hterpc.Request) (code int, err error) {
+func (c *hybiServerHandshaker) ReadHandshake(buf *bufio.Reader, req *http.Request) (code int, err error) {
 	c.Version = ProtocolVersionHybi13
 	if req.Method != "GET" {
-		return hterpc.StatusMethodNotAllowed, ErrBadRequestMethod
+		return http.StatusMethodNotAllowed, ErrBadRequestMethod
 	}
 	// HTTP version can be safely ignored.
 
 	if strings.ToLower(req.Header.Get("Upgrade")) != "websocket" ||
 		!strings.Contains(strings.ToLower(req.Header.Get("Connection")), "upgrade") {
-		return hterpc.StatusBadRequest, ErrNotWebSocket
+		return http.StatusBadRequest, ErrNotWebSocket
 	}
 
 	key := req.Header.Get("Sec-Websocket-Key")
 	if key == "" {
-		return hterpc.StatusBadRequest, ErrChallengeResponse
+		return http.StatusBadRequest, ErrChallengeResponse
 	}
 	version := req.Header.Get("Sec-Websocket-Version")
 	switch version {
 	case "13":
 		c.Version = ProtocolVersionHybi13
 	default:
-		return hterpc.StatusBadRequest, ErrBadWebSocketVersion
+		return http.StatusBadRequest, ErrBadWebSocketVersion
 	}
 	var scheme string
 	if req.TLS != nil {
@@ -518,7 +518,7 @@ func (c *hybiServerHandshaker) ReadHandshake(buf *bufio.Reader, req *hterpc.Requ
 	}
 	c.Location, err = url.ParseRequestURI(scheme + "://" + req.Host + req.URL.RequestURI())
 	if err != nil {
-		return hterpc.StatusBadRequest, err
+		return http.StatusBadRequest, err
 	}
 	protocol := strings.TrimSpace(req.Header.Get("Sec-Websocket-Protocol"))
 	if protocol != "" {
@@ -529,14 +529,14 @@ func (c *hybiServerHandshaker) ReadHandshake(buf *bufio.Reader, req *hterpc.Requ
 	}
 	c.accept, err = getNonceAccept([]byte(key))
 	if err != nil {
-		return hterpc.StatusInternalServerError, err
+		return http.StatusInternalServerError, err
 	}
-	return hterpc.StatusSwitchingProtocols, nil
+	return http.StatusSwitchingProtocols, nil
 }
 
 // Origin parses the Origin header in req.
 // If the Origin header is not set, it returns nil and nil.
-func Origin(config *Config, req *hterpc.Request) (*url.URL, error) {
+func Origin(config *Config, req *http.Request) (*url.URL, error) {
 	var origin string
 	switch config.Version {
 	case ProtocolVersionHybi13:
@@ -573,11 +573,11 @@ func (c *hybiServerHandshaker) AcceptHandshake(buf *bufio.Writer) (err error) {
 	return buf.Flush()
 }
 
-func (c *hybiServerHandshaker) NewServerConn(buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *hterpc.Request) *Conn {
+func (c *hybiServerHandshaker) NewServerConn(buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *http.Request) *Conn {
 	return newHybiServerConn(c.Config, buf, rwc, request)
 }
 
 // newHybiServerConn returns a new WebSocket connection speaking hybi draft protocol.
-func newHybiServerConn(config *Config, buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *hterpc.Request) *Conn {
+func newHybiServerConn(config *Config, buf *bufio.ReadWriter, rwc io.ReadWriteCloser, request *http.Request) *Conn {
 	return newHybiConn(config, buf, rwc, request)
 }

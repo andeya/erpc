@@ -58,7 +58,7 @@ func TestHTTProto(t *testing.T) {
 
 		// HTTP Client
 		contentType, body, _ := httpbody.NewJSONBody(arg)
-		resp, err := hterpc.Post(testURL, contentType, body)
+		resp, err := http.Post(testURL, contentType, body)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +81,7 @@ func TestHTTProto(t *testing.T) {
 		t.Logf("erpc client response: %v, %v", stat, result)
 
 		contentType, body, _ := httpbody.NewJSONBody(arg)
-		resp, err := hterpc.Post(testErrURL, contentType, body)
+		resp, err := http.Post(testErrURL, contentType, body)
 		if err != nil {
 			t.Fatal(err)
 		}

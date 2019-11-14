@@ -29,7 +29,7 @@ var (
 )
 
 func NewHTTPServer(resp string) *httptest.Server {
-	return httptest.NewUnstartedServer(hterpc.HandlerFunc(func(w hterpc.ResponseWriter, r *hterpc.Request) {
+	return httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, resp)
 	}))
 }
@@ -129,7 +129,7 @@ func TestNewReusablePortServers(t *testing.T) {
 	httpServerTwo.Start()
 
 	// Server One — First Response
-	resp1, err := hterpc.Get(httpServerOne.URL)
+	resp1, err := http.Get(httpServerOne.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -143,7 +143,7 @@ func TestNewReusablePortServers(t *testing.T) {
 	}
 
 	// Server Two — First Response
-	resp2, err := hterpc.Get(httpServerTwo.URL)
+	resp2, err := http.Get(httpServerTwo.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -159,7 +159,7 @@ func TestNewReusablePortServers(t *testing.T) {
 	httpServerTwo.Close()
 
 	// Server One — Second Response
-	resp3, err := hterpc.Get(httpServerOne.URL)
+	resp3, err := http.Get(httpServerOne.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -173,7 +173,7 @@ func TestNewReusablePortServers(t *testing.T) {
 	}
 
 	// Server One — Third Response
-	resp5, err := hterpc.Get(httpServerOne.URL)
+	resp5, err := http.Get(httpServerOne.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -208,8 +208,8 @@ func ExampleNewReusablePortListener() {
 	}
 	defer listener.Close()
 
-	server := &hterpc.Server{}
-	hterpc.HandleFunc("/", func(w hterpc.ResponseWriter, r *hterpc.Request) {
+	server := &http.Server{}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(os.Getgid())
 		fmt.Fprintf(w, "Hello, %q\n", html.EscapeString(r.URL.Path))
 	})
