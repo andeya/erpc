@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	srv := tp.NewPeer(tp.PeerConfig{
+	defer erpc.FlushLogger()
+	srv := erpc.NewPeer(erpc.PeerConfig{
 		PrintDetail:       true,
 		CountTime:         true,
 		ListenPort:        9090,
@@ -23,21 +23,21 @@ func main() {
 }
 
 type test struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (t *test) Ok(arg *string) (string, *tp.Status) {
+func (t *test) Ok(arg *string) (string, *erpc.Status) {
 	return *arg + " -> OK", nil
 }
 
-func (t *test) Timeout(arg *string) (string, *tp.Status) {
+func (t *test) Timeout(arg *string) (string, *erpc.Status) {
 	tCtx, _ := context.WithTimeout(t.Context(), time.Second)
 	time.Sleep(time.Second)
 	select {
 	case <-tCtx.Done():
-		return "", tp.NewStatus(
-			tp.CodeHandleTimeout,
-			tp.CodeText(tp.CodeHandleTimeout),
+		return "", erpc.NewStatus(
+			erpc.CodeHandleTimeout,
+			erpc.CodeText(erpc.CodeHandleTimeout),
 			tCtx.Err().Error(),
 		)
 	default:
@@ -45,12 +45,12 @@ func (t *test) Timeout(arg *string) (string, *tp.Status) {
 	}
 }
 
-func (t *test) Break(*struct{}) (*struct{}, *tp.Status) {
+func (t *test) Break(*struct{}) (*struct{}, *erpc.Status) {
 	time.Sleep(time.Second * 3)
 	select {
 	case <-t.Session().CloseNotify():
-		tp.Infof("the connection has gone away!")
-		return nil, tp.NewStatus(tp.CodeConnClosed, "", "")
+		erpc.Infof("the connection has gone away!")
+		return nil, erpc.NewStatus(erpc.CodeConnClosed, "", "")
 	default:
 		return nil, nil
 	}

@@ -32,7 +32,7 @@ A concise, powerful and high-performance connection socket.
 
 **Test Results**
 
-- teleport/socket
+- erpc/socket
 
 | client concurrency | mean(ms) | median(ms) | max(ms) | min(ms) | throughput(TPS) |
 | ------------------ | -------- | ---------- | ------- | ------- | --------------- |
@@ -42,19 +42,19 @@ A concise, powerful and high-performance connection socket.
 | 2000               | 8        | 6          | 64      | 0       | 183351          |
 | 5000               | 21       | 18         | 651     | 0       | 133886          |
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/teleport)**
+**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/erpc)**
 
-- Profile torch of teleport/socket
+- Profile torch of erpc/socket
 
-![tp_socket_profile_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.png)
+![tp_socket_profile_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_profile_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_profile_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_profile_torch.svg)**
 
-- Heap torch of teleport/socket
+- Heap torch of erpc/socket
 
-![tp_socket_heap_torch](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.png)
+![tp_socket_heap_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_heap_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/teleport/raw/master/doc/tp_socket_heap_torch.svg)**
+**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/tp_socket_heap_torch.svg)**
 
 ## Example
 
@@ -67,8 +67,8 @@ import (
     "log"
     "net"
 
-    "github.com/henrylee2cn/teleport/v6/socket"
-    "github.com/henrylee2cn/teleport/v6/socket/example/pb"
+    "github.com/henrylee2cn/erpc/v6/socket"
+    "github.com/henrylee2cn/erpc/v6/socket/example/pb"
 )
 
 //go:generate go build $GOFILE
@@ -131,9 +131,9 @@ import (
     "log"
     "net"
 
-    "github.com/henrylee2cn/teleport/v6/codec"
-    "github.com/henrylee2cn/teleport/v6/socket"
-    "github.com/henrylee2cn/teleport/v6/socket/example/pb"
+    "github.com/henrylee2cn/erpc/v6/codec"
+    "github.com/henrylee2cn/erpc/v6/socket"
+    "github.com/henrylee2cn/erpc/v6/socket/example/pb"
 )
 
 //go:generate go build $GOFILE
@@ -178,7 +178,7 @@ func main() {
 }
 ```
 
-[More Examples](https://github.com/henrylee2cn/teleport/tree/master/socket/example)
+[More Examples](https://github.com/henrylee2cn/erpc/tree/master/socket/example)
 
 ## Keyworks
 
@@ -194,7 +194,7 @@ func main() {
 The contents of every one message:
 
 ```go
-// in .../teleport/socket package
+// in .../erpc/socket package
 type (
     // Message a socket message interface.
     Message interface {
@@ -281,7 +281,7 @@ type (
     NewBodyFunc func(Header) interface{}
 )
 
-// in .../teleport/xfer package
+// in .../erpc/xfer package
 type (
     // XferPipe transfer filter pipe, handlers from outer-most to inner-most.
     // NOTE: the length can not be bigger than 255!

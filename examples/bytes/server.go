@@ -3,16 +3,16 @@ package main
 import (
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	go tp.GraceSignal()
-	tp.SetShutdown(time.Second*20, nil, nil)
-	var peer = tp.NewPeer(tp.PeerConfig{
+	defer erpc.FlushLogger()
+	go erpc.GraceSignal()
+	erpc.SetShutdown(time.Second*20, nil, nil)
+	var peer = erpc.NewPeer(erpc.PeerConfig{
 		SlowCometDuration: time.Millisecond * 500,
 		PrintDetail:       true,
 		ListenPort:        9090,
@@ -25,24 +25,24 @@ func main() {
 
 // Home controller
 type Home struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
 // Test handler
-func (h *Home) Test(arg *[]byte) ([]byte, *tp.Status) {
+func (h *Home) Test(arg *[]byte) ([]byte, *erpc.Status) {
 	h.Session().Push("/push/test", []byte("test push text"))
-	tp.Debugf("HomeCallHandle: codec: %d, arg: %s", h.GetBodyCodec(), *arg)
+	erpc.Debugf("HomeCallHandle: codec: %d, arg: %s", h.GetBodyCodec(), *arg)
 	return []byte("test call result text"), nil
 }
 
 // UnknownCallHandle handles unknown call message
-func UnknownCallHandle(ctx tp.UnknownCallCtx) (interface{}, *tp.Status) {
+func UnknownCallHandle(ctx erpc.UnknownCallCtx) (interface{}, *erpc.Status) {
 	ctx.Session().Push("/push/test", []byte("test unknown push text"))
 	var arg []byte
 	codecID, err := ctx.Bind(&arg)
 	if err != nil {
-		return nil, tp.NewStatus(1001, "bind error", err.Error())
+		return nil, erpc.NewStatus(1001, "bind error", err.Error())
 	}
-	tp.Debugf("UnknownCallHandle: codec: %d, arg: %s", codecID, arg)
+	erpc.Debugf("UnknownCallHandle: codec: %d, arg: %s", codecID, arg)
 	return []byte("test unknown call result text"), nil
 }

@@ -20,8 +20,8 @@ import (
 
 	"github.com/henrylee2cn/goutil"
 
+	"github.com/henrylee2cn/erpc/v6"
 	"github.com/henrylee2cn/goutil/coarsetime"
-	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 // NewPong returns a heartbeat receiver plugin.
@@ -35,32 +35,32 @@ type (
 		// Name returns name.
 		Name() string
 		// PostNewPeer runs ping woker.
-		PostNewPeer(peer tp.EarlyPeer) error
+		PostNewPeer(peer erpc.EarlyPeer) error
 		// PostWriteCall updates heartbeat information.
-		PostWriteCall(ctx tp.WriteCtx) *tp.Status
+		PostWriteCall(ctx erpc.WriteCtx) *erpc.Status
 		// PostWritePush updates heartbeat information.
-		PostWritePush(ctx tp.WriteCtx) *tp.Status
+		PostWritePush(ctx erpc.WriteCtx) *erpc.Status
 		// PostReadCallHeader updates heartbeat information.
-		PostReadCallHeader(ctx tp.ReadCtx) *tp.Status
+		PostReadCallHeader(ctx erpc.ReadCtx) *erpc.Status
 		// PostReadPushHeader updates heartbeat information.
-		PostReadPushHeader(ctx tp.ReadCtx) *tp.Status
+		PostReadPushHeader(ctx erpc.ReadCtx) *erpc.Status
 	}
 	heartPong struct{}
 )
 
 var (
-	_ tp.PostNewPeerPlugin        = Pong(nil)
-	_ tp.PostWriteCallPlugin      = Pong(nil)
-	_ tp.PostWritePushPlugin      = Pong(nil)
-	_ tp.PostReadCallHeaderPlugin = Pong(nil)
-	_ tp.PostReadPushHeaderPlugin = Pong(nil)
+	_ erpc.PostNewPeerPlugin        = Pong(nil)
+	_ erpc.PostWriteCallPlugin      = Pong(nil)
+	_ erpc.PostWritePushPlugin      = Pong(nil)
+	_ erpc.PostReadCallHeaderPlugin = Pong(nil)
+	_ erpc.PostReadPushHeaderPlugin = Pong(nil)
 )
 
 func (h *heartPong) Name() string {
 	return "heart-pong"
 }
 
-func (h *heartPong) PostNewPeer(peer tp.EarlyPeer) error {
+func (h *heartPong) PostNewPeer(peer erpc.EarlyPeer) error {
 	peer.RouteCallFunc((*pongCall).heartbeat)
 	peer.RoutePushFunc((*pongPush).heartbeat)
 	rangeSession := peer.RangeSession
@@ -69,7 +69,7 @@ func (h *heartPong) PostNewPeer(peer tp.EarlyPeer) error {
 	go func() {
 		for {
 			time.Sleep(interval)
-			rangeSession(func(sess tp.Session) bool {
+			rangeSession(func(sess erpc.Session) bool {
 				info, ok := getHeartbeatInfo(sess.Swap())
 				if !ok {
 					return true
@@ -88,21 +88,21 @@ func (h *heartPong) PostNewPeer(peer tp.EarlyPeer) error {
 	return nil
 }
 
-func (h *heartPong) PostReadCallHeader(ctx tp.ReadCtx) *tp.Status {
+func (h *heartPong) PostReadCallHeader(ctx erpc.ReadCtx) *erpc.Status {
 	h.update(ctx)
 	return nil
 }
 
-func (h *heartPong) PostReadPushHeader(ctx tp.ReadCtx) *tp.Status {
+func (h *heartPong) PostReadPushHeader(ctx erpc.ReadCtx) *erpc.Status {
 	h.update(ctx)
 	return nil
 }
 
-func (h *heartPong) PostWriteCall(ctx tp.WriteCtx) *tp.Status {
+func (h *heartPong) PostWriteCall(ctx erpc.WriteCtx) *erpc.Status {
 	return h.PostWritePush(ctx)
 }
 
-func (h *heartPong) PostWritePush(ctx tp.WriteCtx) *tp.Status {
+func (h *heartPong) PostWritePush(ctx erpc.WriteCtx) *erpc.Status {
 	sess := ctx.Session()
 	if !sess.Health() {
 		return nil
@@ -111,7 +111,7 @@ func (h *heartPong) PostWritePush(ctx tp.WriteCtx) *tp.Status {
 	return nil
 }
 
-func (h *heartPong) update(ctx tp.ReadCtx) {
+func (h *heartPong) update(ctx erpc.ReadCtx) {
 	if ctx.ServiceMethod() == HeartbeatServiceMethod {
 		return
 	}
@@ -123,32 +123,32 @@ func (h *heartPong) update(ctx tp.ReadCtx) {
 }
 
 type pongCall struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (ctx *pongCall) heartbeat(_ *struct{}) (*struct{}, *tp.Status) {
+func (ctx *pongCall) heartbeat(_ *struct{}) (*struct{}, *erpc.Status) {
 	return nil, handelHeartbeat(ctx.Session(), ctx.PeekMeta)
 }
 
 type pongPush struct {
-	tp.PushCtx
+	erpc.PushCtx
 }
 
-func (ctx *pongPush) heartbeat(_ *struct{}) *tp.Status {
+func (ctx *pongPush) heartbeat(_ *struct{}) *erpc.Status {
 	return handelHeartbeat(ctx.Session(), ctx.PeekMeta)
 }
 
-func handelHeartbeat(sess tp.CtxSession, peekMeta func(string) []byte) *tp.Status {
+func handelHeartbeat(sess erpc.CtxSession, peekMeta func(string) []byte) *erpc.Status {
 	rateStr := goutil.BytesToString(peekMeta(heartbeatMetaKey))
 	rateSecond := parseHeartbeatRateSecond(rateStr)
 	isFirst := updateHeartbeatInfo(sess.Swap(), time.Second*time.Duration(rateSecond))
 	if isFirst && rateSecond == -1 {
-		return tp.NewStatus(tp.CodeBadMessage, "Invalid Heartbeat Rate", rateStr)
+		return erpc.NewStatus(erpc.CodeBadMessage, "Invalid Heartbeat Rate", rateStr)
 	}
 	if rateSecond == 0 {
-		tp.Tracef("heart-pong: %s", sess.ID())
+		erpc.Tracef("heart-pong: %s", sess.ID())
 	} else {
-		tp.Tracef("heart-pong: %s, set rate: %ds", sess.ID(), rateSecond)
+		erpc.Tracef("heart-pong: %s, set rate: %ds", sess.ID(), rateSecond)
 	}
 	return nil
 }

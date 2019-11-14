@@ -8,33 +8,33 @@ import (
 
 	"github.com/henrylee2cn/goutil/httpbody"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/proto/httproto"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/proto/httproto"
 )
 
 type Home struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
-	tp.Infof("peer_id: %s", h.PeekMeta("peer_id"))
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Status) {
+	erpc.Infof("peer_id: %s", h.PeekMeta("peer_id"))
 	return map[string]interface{}{
 		"arg": *arg,
 	}, nil
 }
 
-func (h *Home) TestError(arg *map[string]string) (map[string]interface{}, *tp.Status) {
-	return nil, tp.NewStatus(1, "test error", "this is test:"+string(h.PeekMeta("peer_id")))
+func (h *Home) TestError(arg *map[string]string) (map[string]interface{}, *erpc.Status) {
+	return nil, erpc.NewStatus(1, "test error", "this is test:"+string(h.PeekMeta("peer_id")))
 }
 
 func TestHTTProto(t *testing.T) {
 	// Server
-	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
+	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe(httproto.NewHTTProtoFunc(true))
 	time.Sleep(1e9)
 
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := erpc.NewPeer(erpc.PeerConfig{})
 	sess, stat := cli.Dial(":9090", httproto.NewHTTProtoFunc())
 	if !stat.OK() {
 		t.Fatal(stat)
@@ -54,11 +54,11 @@ func TestHTTProto(t *testing.T) {
 		if !stat.OK() {
 			t.Fatal(stat)
 		}
-		t.Logf("teleport client response: %v", result)
+		t.Logf("erpc client response: %v", result)
 
 		// HTTP Client
 		contentType, body, _ := httpbody.NewJSONBody(arg)
-		resp, err := http.Post(testURL, contentType, body)
+		resp, err := hterpc.Post(testURL, contentType, body)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -78,10 +78,10 @@ func TestHTTProto(t *testing.T) {
 		if stat.OK() {
 			t.Fatal("test_error expect error")
 		}
-		t.Logf("teleport client response: %v, %v", stat, result)
+		t.Logf("erpc client response: %v, %v", stat, result)
 
 		contentType, body, _ := httpbody.NewJSONBody(arg)
-		resp, err := http.Post(testErrURL, contentType, body)
+		resp, err := hterpc.Post(testErrURL, contentType, body)
 		if err != nil {
 			t.Fatal(err)
 		}

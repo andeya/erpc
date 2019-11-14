@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/codec"
+	"github.com/henrylee2cn/erpc/v6/utils"
 	"github.com/henrylee2cn/goutil"
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/codec"
-	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 const (
@@ -23,17 +23,17 @@ const (
 )
 
 func init() {
-	tp.Printf("Setting thrift service method mapper and default thrift body codec...")
-	tp.SetServiceMethodMapper(tp.RPCServiceMethodMapper)
-	tp.SetDefaultBodyCodec(codec.ID_THRIFT)
+	erpc.Printf("Setting thrift service method mapper and default thrift body codec...")
+	erpc.SetServiceMethodMapper(erpc.RPCServiceMethodMapper)
+	erpc.SetDefaultBodyCodec(codec.ID_THRIFT)
 }
 
-// NewBinaryProtoFunc creates tp.ProtoFunc of Thrift protocol.
+// NewBinaryProtoFunc creates erpc.ProtoFunc of Thrift protocol.
 // NOTE:
 //  Marshal the body into binary;
 //  Support the Meta, BodyCodec and XferPipe.
-func NewBinaryProtoFunc() tp.ProtoFunc {
-	return func(rw tp.IOWithReadBuffer) tp.Proto {
+func NewBinaryProtoFunc() erpc.ProtoFunc {
+	return func(rw erpc.IOWithReadBuffer) erpc.Proto {
 		p := &tBinaryProto{
 			id:        'b',
 			name:      "thrift-binary",
@@ -62,7 +62,7 @@ func (t *tBinaryProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (t *tBinaryProto) Pack(m tp.Message) error {
+func (t *tBinaryProto) Pack(m erpc.Message) error {
 	err := t.binaryPack(m)
 	if err != nil {
 		t.tProtocol.Transport().Close()
@@ -70,7 +70,7 @@ func (t *tBinaryProto) Pack(m tp.Message) error {
 	return err
 }
 
-func (t *tBinaryProto) Unpack(m tp.Message) error {
+func (t *tBinaryProto) Unpack(m erpc.Message) error {
 	err := t.binaryUnpack(m)
 	if err != nil {
 		t.tProtocol.Transport().Close()
@@ -78,7 +78,7 @@ func (t *tBinaryProto) Unpack(m tp.Message) error {
 	return err
 }
 
-func (t *tBinaryProto) binaryPack(m tp.Message) error {
+func (t *tBinaryProto) binaryPack(m erpc.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -118,7 +118,7 @@ func (t *tBinaryProto) binaryPack(m tp.Message) error {
 	return m.SetSize(uint32(t.rwCounter.Writed()))
 }
 
-func (t *tBinaryProto) binaryUnpack(m tp.Message) error {
+func (t *tBinaryProto) binaryUnpack(m erpc.Message) error {
 	t.unpackLock.Lock()
 	defer t.unpackLock.Unlock()
 	t.rwCounter.WriteCounter.Zero()
@@ -160,21 +160,21 @@ func (t *tBinaryProto) binaryUnpack(m tp.Message) error {
 }
 
 // writeMessageBegin write a message header to the wire.
-func writeMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
+func writeMessageBegin(tProtocol thrift.TProtocol, m erpc.Message) error {
 	var typeID thrift.TMessageType
 	switch m.Mtype() {
-	case tp.TypeCall:
+	case erpc.TypeCall:
 		typeID = thrift.CALL
-	case tp.TypeReply:
+	case erpc.TypeReply:
 		typeID = thrift.REPLY
-	case tp.TypePush:
+	case erpc.TypePush:
 		typeID = thrift.ONEWAY
 	}
 	return tProtocol.WriteMessageBegin(m.ServiceMethod(), typeID, m.Seq())
 }
 
 // readMessageBegin read a message header.
-func readMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
+func readMessageBegin(tProtocol thrift.TProtocol, m erpc.Message) error {
 	rMethod, rTypeID, rSeqID, err := tProtocol.ReadMessageBegin()
 	if err != nil {
 		return err
@@ -183,11 +183,11 @@ func readMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 	m.SetSeq(rSeqID)
 	switch rTypeID {
 	case thrift.CALL:
-		m.SetMtype(tp.TypeCall)
+		m.SetMtype(erpc.TypeCall)
 	case thrift.REPLY:
-		m.SetMtype(tp.TypeReply)
+		m.SetMtype(erpc.TypeReply)
 	case thrift.ONEWAY:
-		m.SetMtype(tp.TypePush)
+		m.SetMtype(erpc.TypePush)
 	case thrift.EXCEPTION:
 		error0 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
 		err = error0.Read(tProtocol)
@@ -196,7 +196,7 @@ func readMessageBegin(tProtocol thrift.TProtocol, m tp.Message) error {
 		}
 		return error0
 	default:
-		m.SetMtype(tp.TypePush)
+		m.SetMtype(erpc.TypePush)
 	}
 	return nil
 }

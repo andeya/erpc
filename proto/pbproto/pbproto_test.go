@@ -4,16 +4,16 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/proto/pbproto"
-	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/proto/pbproto"
+	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
 )
 
 type Home struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Status) {
 	h.Session().Push("/push/test", map[string]string{
 		"your_id": string(h.PeekMeta("peer_id")),
 	})
@@ -26,13 +26,13 @@ func TestPbProto(t *testing.T) {
 	gzip.Reg('g', "gizp-5", 5)
 
 	// server
-	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
+	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe(pbproto.NewPbProtoFunc())
 	time.Sleep(1e9)
 
 	// client
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := erpc.NewPeer(erpc.PeerConfig{})
 	cli.RoutePush(new(Push))
 	sess, stat := cli.Dial(":9090", pbproto.NewPbProtoFunc())
 	if !stat.OK() {
@@ -44,8 +44,8 @@ func TestPbProto(t *testing.T) {
 			"author": "henrylee2cn",
 		},
 		&result,
-		tp.WithAddMeta("peer_id", "110"),
-		tp.WithXferPipe('g'),
+		erpc.WithAddMeta("peer_id", "110"),
+		erpc.WithXferPipe('g'),
 	).Status()
 	if !stat.OK() {
 		t.Error(stat)
@@ -55,10 +55,10 @@ func TestPbProto(t *testing.T) {
 }
 
 type Push struct {
-	tp.PushCtx
+	erpc.PushCtx
 }
 
-func (p *Push) Test(arg *map[string]string) *tp.Status {
-	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
+func (p *Push) Test(arg *map[string]string) *erpc.Status {
+	erpc.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }

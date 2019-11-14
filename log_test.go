@@ -1,4 +1,4 @@
-package tp
+package erpc
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-// Copyright 2015-2018 HenryLee. All Rights Reserved.
+// Copyright 2015-2019 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tp
+package erpc
 
 import (
 	"errors"
@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/cfgo"
-	"github.com/henrylee2cn/teleport/v6/codec"
-	"github.com/henrylee2cn/teleport/v6/socket"
+	"github.com/henrylee2cn/erpc/v6/codec"
+	"github.com/henrylee2cn/erpc/v6/socket"
 )
 
 // PeerConfig peer config
@@ -153,11 +153,11 @@ func SetDefaultBodyCodec(codecID byte) error {
 }
 
 // DefaultProtoFunc gets the default builder of socket communication protocol
-//  func DefaultProtoFunc() tp.ProtoFunc
+//  func DefaultProtoFunc() erpc.ProtoFunc
 var DefaultProtoFunc = socket.DefaultProtoFunc
 
 // SetDefaultProtoFunc sets the default builder of socket communication protocol
-//  func SetDefaultProtoFunc(protoFunc tp.ProtoFunc)
+//  func SetDefaultProtoFunc(protoFunc erpc.ProtoFunc)
 var SetDefaultProtoFunc = socket.SetDefaultProtoFunc
 
 // GetReadLimit gets the message size upper limit of reading.

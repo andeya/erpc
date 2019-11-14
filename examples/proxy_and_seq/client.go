@@ -3,23 +3,23 @@ package main
 import (
 	"fmt"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/socket"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/socket"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.SetLoggerLevel("ERROR")()
+	defer erpc.SetLoggerLevel("ERROR")()
 
-	cli := tp.NewPeer(
-		tp.PeerConfig{},
+	cli := erpc.NewPeer(
+		erpc.PeerConfig{},
 	)
 	defer cli.Close()
 
 	sess, stat := cli.Dial(":8080")
 	if !stat.OK() {
-		tp.Fatalf("%v", stat)
+		erpc.Fatalf("%v", stat)
 	}
 
 	var result int
@@ -29,9 +29,9 @@ func main() {
 	).Status()
 
 	if !stat.OK() {
-		tp.Fatalf("%v", stat)
+		erpc.Fatalf("%v", stat)
 	}
-	tp.Printf("result: %d", result)
+	erpc.Printf("result: %d", result)
 
 	stat = sess.Push(
 		"/chat/say",
@@ -39,6 +39,6 @@ func main() {
 		socket.WithSetMeta("X-ID", "client-001"),
 	)
 	if !stat.OK() {
-		tp.Fatalf("%v", stat)
+		erpc.Fatalf("%v", stat)
 	}
 }

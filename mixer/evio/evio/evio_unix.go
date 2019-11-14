@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/henrylee2cn/teleport/v6/mixer/evio/evio/internal"
+	"github.com/henrylee2cn/erpc/v6/mixer/evio/evio/internal"
 	reuseport "github.com/kavu/go_reuseport"
 )
 

@@ -4,7 +4,7 @@ Package secure encrypting/decrypting the message body.
 
 ### Usage
 
-`import "github.com/henrylee2cn/teleport/v6/plugin/secure"`
+`import "github.com/henrylee2cn/erpc/v6/plugin/secure"`
 
 Ciphertext struct:
 
@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/plugin/secure"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/plugin/secure"
 )
 
 type Arg struct {
@@ -29,17 +29,17 @@ type Result struct {
 	C int
 }
 
-type math struct{ tp.CallCtx }
+type math struct{ erpc.CallCtx }
 
-func (m *math) Add(arg *Arg) (*Result, *tp.Status) {
+func (m *math) Add(arg *Arg) (*Result, *erpc.Status) {
 	// enforces the body of the encrypted reply message.
 	// secure.EnforceSecure(m.Output())
 	return &Result{C: arg.A + arg.B}, nil
 }
 
-func newSession(t *testing.T, port uint16) tp.Session {
+func newSession(t *testing.T, port uint16) erpc.Session {
 	p := secure.NewPlugin(100001, "cipherkey1234567")
-	srv := tp.NewPeer(tp.PeerConfig{
+	srv := erpc.NewPeer(erpc.PeerConfig{
 		ListenPort:  port,
 		PrintDetail: true,
 	})
@@ -47,7 +47,7 @@ func newSession(t *testing.T, port uint16) tp.Session {
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
-	cli := tp.NewPeer(tp.PeerConfig{
+	cli := erpc.NewPeer(erpc.PeerConfig{
 		PrintDetail: true,
 	}, p)
 	sess, stat := cli.Dial(":" + strconv.Itoa(int(port)))

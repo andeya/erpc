@@ -4,8 +4,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/henrylee2cn/teleport/v6/socket"
-	"github.com/henrylee2cn/teleport/v6/socket/example/pb"
+	"github.com/henrylee2cn/erpc/v6/socket"
+	"github.com/henrylee2cn/erpc/v6/socket/example/pb"
 )
 
 //go:generate go build $GOFILE

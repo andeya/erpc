@@ -1,22 +1,22 @@
-package tp_test
+package erpc_test
 
 import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
-func panic_call(tp.CallCtx, *interface{}) (interface{}, *tp.Status) {
+func panic_call(erpc.CallCtx, *interface{}) (interface{}, *erpc.Status) {
 	panic("panic_call")
 }
 
-func panic_push(tp.PushCtx, *interface{}) *tp.Status {
+func panic_push(erpc.PushCtx, *interface{}) *erpc.Status {
 	panic("panic_push")
 }
 
 func TestPanic(t *testing.T) {
-	srv := tp.NewPeer(tp.PeerConfig{
+	srv := erpc.NewPeer(erpc.PeerConfig{
 		CountTime:  true,
 		ListenPort: 9090,
 	})
@@ -26,7 +26,7 @@ func TestPanic(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := erpc.NewPeer(erpc.PeerConfig{})
 	defer cli.Close()
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {

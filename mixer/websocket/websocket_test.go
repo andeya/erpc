@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	ws "github.com/henrylee2cn/teleport/v6/mixer/websocket"
-	"github.com/henrylee2cn/teleport/v6/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/teleport/v6/plugin/auth"
+	"github.com/henrylee2cn/erpc/v6"
+	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/erpc/v6/plugin/auth"
 )
 
 type Arg struct {
@@ -16,20 +16,20 @@ type Arg struct {
 	B int `param:"<range:1:>"`
 }
 
-type P struct{ tp.CallCtx }
+type P struct{ erpc.CallCtx }
 
-func (p *P) Divide(arg *Arg) (int, *tp.Status) {
+func (p *P) Divide(arg *Arg) (int, *erpc.Status) {
 	return arg.A / arg.B, nil
 }
 
 func TestJSONWebsocket(t *testing.T) {
-	srv := ws.NewServer("/", tp.PeerConfig{ListenPort: 9090})
+	srv := ws.NewServer("/", erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(P))
 	go srv.ListenAndServe()
 
 	time.Sleep(time.Second * 1)
 
-	cli := ws.NewClient("/", tp.PeerConfig{})
+	cli := ws.NewClient("/", erpc.PeerConfig{})
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
 		t.Fatal(stat)
@@ -48,15 +48,15 @@ func TestJSONWebsocket(t *testing.T) {
 }
 
 func TestPbWebsocketTLS(t *testing.T) {
-	srv := ws.NewServer("/abc", tp.PeerConfig{ListenPort: 9091})
+	srv := ws.NewServer("/abc", erpc.PeerConfig{ListenPort: 9091})
 	srv.RouteCall(new(P))
-	srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
+	srv.SetTLSConfig(erpc.GenerateTLSConfigForServer())
 	go srv.ListenAndServeProtobuf()
 
 	time.Sleep(time.Second * 1)
 
-	cli := ws.NewClient("/abc", tp.PeerConfig{})
-	cli.SetTLSConfig(tp.GenerateTLSConfigForClient())
+	cli := ws.NewClient("/abc", erpc.PeerConfig{})
+	cli.SetTLSConfig(erpc.GenerateTLSConfigForClient())
 	sess, err := cli.DialProtobuf(":9091")
 	if err != nil {
 		t.Fatal(err)
@@ -75,13 +75,13 @@ func TestPbWebsocketTLS(t *testing.T) {
 }
 
 func TestCustomizedWebsocket(t *testing.T) {
-	srv := tp.NewPeer(tp.PeerConfig{})
-	http.Handle("/ws", ws.NewJSONServeHandler(srv, nil))
-	go http.ListenAndServe(":9092", nil)
+	srv := erpc.NewPeer(erpc.PeerConfig{})
+	hterpc.Handle("/ws", ws.NewJSONServeHandler(srv, nil))
+	go hterpc.ListenAndServe(":9092", nil)
 	srv.RouteCall(new(P))
 	time.Sleep(time.Second * 1)
 
-	cli := tp.NewPeer(tp.PeerConfig{}, ws.NewDialPlugin("/ws"))
+	cli := erpc.NewPeer(erpc.PeerConfig{}, ws.NewDialPlugin("/ws"))
 	sess, stat := cli.Dial(":9092", jsonSubProto.NewJSONSubProtoFunc())
 	if !stat.OK() {
 		t.Fatal(stat)
@@ -102,7 +102,7 @@ func TestCustomizedWebsocket(t *testing.T) {
 func TestJSONWebsocketAuth(t *testing.T) {
 	srv := ws.NewServer(
 		"/",
-		tp.PeerConfig{ListenPort: 9090},
+		erpc.PeerConfig{ListenPort: 9090},
 		authChecker,
 	)
 	srv.RouteCall(new(P))
@@ -112,7 +112,7 @@ func TestJSONWebsocketAuth(t *testing.T) {
 
 	cli := ws.NewClient(
 		"/",
-		tp.PeerConfig{},
+		erpc.PeerConfig{},
 		authBearer,
 	)
 	sess, stat := cli.Dial(":9090")
@@ -135,30 +135,30 @@ func TestJSONWebsocketAuth(t *testing.T) {
 const clientAuthInfo = "client-auth-info-12345"
 
 var authBearer = auth.NewBearerPlugin(
-	func(sess auth.Session, fn auth.SendOnce) (stat *tp.Status) {
+	func(sess auth.Session, fn auth.SendOnce) (stat *erpc.Status) {
 		var ret string
 		stat = fn(clientAuthInfo, &ret)
 		if !stat.OK() {
 			return
 		}
-		tp.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
+		erpc.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
 		return
 	},
-	tp.WithBodyCodec('s'),
+	erpc.WithBodyCodec('s'),
 )
 
 var authChecker = auth.NewCheckerPlugin(
-	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, stat *tp.Status) {
+	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, stat *erpc.Status) {
 		var authInfo string
 		stat = fn(&authInfo)
 		if !stat.OK() {
 			return
 		}
-		tp.Infof("auth info: %v", authInfo)
+		erpc.Infof("auth info: %v", authInfo)
 		if clientAuthInfo != authInfo {
-			return nil, tp.NewStatus(403, "auth fail", "auth fail detail")
+			return nil, erpc.NewStatus(403, "auth fail", "auth fail detail")
 		}
 		return "pass", nil
 	},
-	tp.WithBodyCodec('s'),
+	erpc.WithBodyCodec('s'),
 )

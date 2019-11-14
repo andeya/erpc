@@ -1,7 +1,6 @@
-// Package tp (teleport) is a versatile, high-performance and flexible TCP socket framework.
-// It can be used for peer-peer, rpc, gateway, micro services, push services, game services and so on.
+// Package erpc is an efficient and easy to use RPC framework.
 //
-// Copyright 2015-2018 HenryLee. All Rights Reserved.
+// Copyright 2015-2019 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

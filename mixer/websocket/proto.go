@@ -17,18 +17,18 @@ package websocket
 import (
 	"bytes"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/mixer/websocket/jsonSubProto"
-	ws "github.com/henrylee2cn/teleport/v6/mixer/websocket/websocket"
-	"github.com/henrylee2cn/teleport/v6/socket"
-	"github.com/henrylee2cn/teleport/v6/utils"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
+	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket/websocket"
+	"github.com/henrylee2cn/erpc/v6/socket"
+	"github.com/henrylee2cn/erpc/v6/utils"
 )
 
 var defaultProto = jsonSubProto.NewJSONSubProtoFunc()
 
 // NewWsProtoFunc wraps a protocol to a new websocket protocol.
-func NewWsProtoFunc(subProto ...tp.ProtoFunc) tp.ProtoFunc {
-	return func(rw tp.IOWithReadBuffer) socket.Proto {
+func NewWsProtoFunc(subProto ...erpc.ProtoFunc) erpc.ProtoFunc {
+	return func(rw erpc.IOWithReadBuffer) socket.Proto {
 		// When called, the lock of the external socket.Socket is already locked,
 		// so it is concurrent security.
 		connIface := rw.(socket.UnsafeSocket).RawLocked()
@@ -70,7 +70,7 @@ func (w *wsProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (w *wsProto) Pack(m tp.Message) error {
+func (w *wsProto) Pack(m erpc.Message) error {
 	w.subConn.w.Reset()
 	err := w.subProto.Pack(m)
 	if err != nil {
@@ -81,7 +81,7 @@ func (w *wsProto) Pack(m tp.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (w *wsProto) Unpack(m tp.Message) error {
+func (w *wsProto) Unpack(m erpc.Message) error {
 	err := ws.Message.Receive(w.conn, w.subConn.rBytes)
 	if err != nil {
 		return err

@@ -25,16 +25,16 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/utils"
 	"github.com/henrylee2cn/goutil"
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 // NewJSONProtoFunc is creation function of JSON socket protocol.
 //  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
 //  Message data demo: `830{"seq":%q,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
-func NewJSONProtoFunc() tp.ProtoFunc {
-	return func(rw tp.IOWithReadBuffer) tp.Proto {
+func NewJSONProtoFunc() erpc.ProtoFunc {
+	return func(rw erpc.IOWithReadBuffer) erpc.Proto {
 		return &jsonproto{
 			id:   'j',
 			name: "json",
@@ -44,7 +44,7 @@ func NewJSONProtoFunc() tp.ProtoFunc {
 }
 
 type jsonproto struct {
-	rw   tp.IOWithReadBuffer
+	rw   erpc.IOWithReadBuffer
 	rMu  sync.Mutex
 	name string
 	id   byte
@@ -70,7 +70,7 @@ var (
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (j *jsonproto) Pack(m tp.Message) error {
+func (j *jsonproto) Pack(m erpc.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -117,7 +117,7 @@ func (j *jsonproto) Pack(m tp.Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-func (j *jsonproto) Unpack(m tp.Message) error {
+func (j *jsonproto) Unpack(m erpc.Message) error {
 	j.rMu.Lock()
 	defer j.rMu.Unlock()
 	var size uint32

@@ -3,16 +3,16 @@ package main
 import (
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/plugin/proxy"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/plugin/proxy"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	srv := tp.NewPeer(
-		tp.PeerConfig{
+	defer erpc.FlushLogger()
+	srv := erpc.NewPeer(
+		erpc.PeerConfig{
 			ListenPort: 8080,
 		},
 		newProxyPlugin(),
@@ -20,14 +20,14 @@ func main() {
 	srv.ListenAndServe()
 }
 
-func newProxyPlugin() tp.Plugin {
-	cli := tp.NewPeer(tp.PeerConfig{RedialTimes: 3})
-	var sess tp.Session
-	var stat *tp.Status
+func newProxyPlugin() erpc.Plugin {
+	cli := erpc.NewPeer(erpc.PeerConfig{RedialTimes: 3})
+	var sess erpc.Session
+	var stat *erpc.Status
 DIAL:
 	sess, stat = cli.Dial(":9090")
 	if !stat.OK() {
-		tp.Warnf("%v", stat)
+		erpc.Warnf("%v", stat)
 		time.Sleep(time.Second * 3)
 		goto DIAL
 	}

@@ -1,4 +1,4 @@
-// Copyright 2015-2018 HenryLee. All Rights Reserved.
+// Copyright 2015-2019 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tp
+package erpc
 
 import (
 	"path"
@@ -105,9 +105,9 @@ func toServiceMethods(name string, sep rune, toSnake bool) string {
  * 1. Call-Controller-Struct API template
  *
  *  type Aaa struct {
- *      tp.CallCtx
+ *      erpc.CallCtx
  *  }
- *  func (x *Aaa) XxZz(arg *<T>) (<T>, *tp.Status) {
+ *  func (x *Aaa) XxZz(arg *<T>) (<T>, *erpc.Status) {
  *      ...
  *      return r, nil
  *  }
@@ -122,7 +122,7 @@ func toServiceMethods(name string, sep rune, toSnake bool) string {
  *
  * 2. Call-Handler-Function API template
  *
- *  func XxZz(ctx tp.CallCtx, arg *<T>) (<T>, *tp.Status) {
+ *  func XxZz(ctx erpc.CallCtx, arg *<T>) (<T>, *erpc.Status) {
  *      ...
  *      return r, nil
  *  }
@@ -135,9 +135,9 @@ func toServiceMethods(name string, sep rune, toSnake bool) string {
  * 3. Push-Controller-Struct API template
  *
  *  type Bbb struct {
- *      tp.PushCtx
+ *      erpc.PushCtx
  *  }
- *  func (b *Bbb) YyZz(arg *<T>) *tp.Status {
+ *  func (b *Bbb) YyZz(arg *<T>) *erpc.Status {
  *      ...
  *      return nil
  *  }
@@ -153,7 +153,7 @@ func toServiceMethods(name string, sep rune, toSnake bool) string {
  * 4. Push-Handler-Function API template
  *
  *  // YyZz register the route: /yy_zz
- *  func YyZz(ctx tp.PushCtx, arg *<T>) *tp.Status {
+ *  func YyZz(ctx erpc.PushCtx, arg *<T>) *erpc.Status {
  *      ...
  *      return nil
  *  }
@@ -165,7 +165,7 @@ func toServiceMethods(name string, sep rune, toSnake bool) string {
  *
  * 5. Unknown-Call-Handler-Function API template
  *
- *  func XxxUnknownCall (ctx tp.UnknownCallCtx) (interface{}, *tp.Status) {
+ *  func XxxUnknownCall (ctx erpc.UnknownCallCtx) (interface{}, *erpc.Status) {
  *      ...
  *      return r, nil
  *  }
@@ -177,7 +177,7 @@ func toServiceMethods(name string, sep rune, toSnake bool) string {
  *
  * 6. Unknown-Push-Handler-Function API template
  *
- *  func XxxUnknownPush(ctx tp.UnknownPushCtx) *tp.Status {
+ *  func XxxUnknownPush(ctx erpc.UnknownPushCtx) *erpc.Status {
  *      ...
  *      return nil
  *  }
@@ -467,7 +467,7 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 
 	iType, ok := ctypeElem.FieldByName("CallCtx")
 	if !ok || !iType.Anonymous {
-		return nil, errors.Errorf("call-handler: the struct do not have anonymous field tp.CallCtx: %s", ctype.String())
+		return nil, errors.Errorf("call-handler: the struct do not have anonymous field erpc.CallCtx: %s", ctype.String())
 	}
 
 	var callCtxOffset = iType.Offset
@@ -550,7 +550,7 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("call-handler: %s.%s second out argument %s is not *tp.Status", ctype.String(), mname, returnType)
+			return nil, errors.Errorf("call-handler: %s.%s second out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
 		}
 
 		var methodFunc = method.Func
@@ -606,7 +606,7 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 
 	// The return type of the method must be *Status.
 	if returnType := ctype.Out(1); !isStatusType(returnType.String()) {
-		return nil, errors.Errorf("call-handler: %s second out argument %s is not *tp.Status", typeString, returnType)
+		return nil, errors.Errorf("call-handler: %s second out argument %s is not *erpc.Status", typeString, returnType)
 	}
 
 	// needs two ins: CallCtx, *<T>.
@@ -630,13 +630,13 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 
 	switch ctxType.Kind() {
 	default:
-		return nil, errors.Errorf("call-handler: %s's first arg must be tp.CallCtx type or struct pointer: %s", typeString, ctxType)
+		return nil, errors.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
 
 	case reflect.Interface:
 		iface := reflect.TypeOf((*CallCtx)(nil)).Elem()
 		if !ctxType.Implements(iface) ||
 			!iface.Implements(reflect.New(ctxType).Type().Elem()) {
-			return nil, errors.Errorf("call-handler: %s's first arg must be tp.CallCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, errors.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
@@ -653,12 +653,12 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 	case reflect.Ptr:
 		var ctxTypeElem = ctxType.Elem()
 		if ctxTypeElem.Kind() != reflect.Struct {
-			return nil, errors.Errorf("call-handler: %s's first arg must be tp.CallCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, errors.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
 		iType, ok := ctxTypeElem.FieldByName("CallCtx")
 		if !ok || !iType.Anonymous {
-			return nil, errors.Errorf("call-handler: %s's first arg do not have anonymous field tp.CallCtx: %s", typeString, ctxType)
+			return nil, errors.Errorf("call-handler: %s's first arg do not have anonymous field erpc.CallCtx: %s", typeString, ctxType)
 		}
 
 		type CallCtrlValue struct {
@@ -723,7 +723,7 @@ func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, plugi
 
 	iType, ok := ctypeElem.FieldByName("PushCtx")
 	if !ok || !iType.Anonymous {
-		return nil, errors.Errorf("push-handler: the struct do not have anonymous field tp.PushCtx: %s", ctype.String())
+		return nil, errors.Errorf("push-handler: the struct do not have anonymous field erpc.PushCtx: %s", ctype.String())
 	}
 
 	var pushCtxOffset = iType.Offset
@@ -798,7 +798,7 @@ func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, plugi
 			if isBelongToCallCtx(mname) {
 				continue
 			}
-			return nil, errors.Errorf("push-handler: %s.%s out argument %s is not *tp.Status", ctype.String(), mname, returnType)
+			return nil, errors.Errorf("push-handler: %s.%s out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
 		}
 
 		var methodFunc = method.Func
@@ -840,7 +840,7 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 
 	// The return type of the method must be *Status.
 	if returnType := ctype.Out(0); !isStatusType(returnType.String()) {
-		return nil, errors.Errorf("push-handler: %s out argument %s is not *tp.Status", typeString, returnType)
+		return nil, errors.Errorf("push-handler: %s out argument %s is not *erpc.Status", typeString, returnType)
 	}
 
 	// needs two ins: PushCtx, *<T>.
@@ -864,13 +864,13 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 
 	switch ctxType.Kind() {
 	default:
-		return nil, errors.Errorf("push-handler: %s's first arg must be tp.PushCtx type or struct pointer: %s", typeString, ctxType)
+		return nil, errors.Errorf("push-handler: %s's first arg must be erpc.PushCtx type or struct pointer: %s", typeString, ctxType)
 
 	case reflect.Interface:
 		iface := reflect.TypeOf((*PushCtx)(nil)).Elem()
 		if !ctxType.Implements(iface) ||
 			!iface.Implements(reflect.New(ctxType).Type().Elem()) {
-			return nil, errors.Errorf("push-handler: %s's first arg need implement tp.PushCtx: %s", typeString, ctxType)
+			return nil, errors.Errorf("push-handler: %s's first arg need implement erpc.PushCtx: %s", typeString, ctxType)
 		}
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
@@ -881,12 +881,12 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 	case reflect.Ptr:
 		var ctxTypeElem = ctxType.Elem()
 		if ctxTypeElem.Kind() != reflect.Struct {
-			return nil, errors.Errorf("push-handler: %s's first arg must be tp.PushCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, errors.Errorf("push-handler: %s's first arg must be erpc.PushCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
 		iType, ok := ctxTypeElem.FieldByName("PushCtx")
 		if !ok || !iType.Anonymous {
-			return nil, errors.Errorf("push-handler: %s's first arg do not have anonymous field tp.PushCtx: %s", typeString, ctxType)
+			return nil, errors.Errorf("push-handler: %s's first arg do not have anonymous field erpc.PushCtx: %s", typeString, ctxType)
 		}
 
 		type PushCtrlValue struct {

@@ -18,19 +18,19 @@ package multiclient
 import (
 	"time"
 
+	"github.com/henrylee2cn/erpc/v6"
 	"github.com/henrylee2cn/goutil/pool"
-	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 // MultiClient client session which is has connection pool
 type MultiClient struct {
 	addr string
-	peer tp.Peer
+	peer erpc.Peer
 	pool *pool.Workshop
 }
 
 // New creates a client session which is has connection pool.
-func New(peer tp.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.Duration, protoFunc ...tp.ProtoFunc) *MultiClient {
+func New(peer erpc.Peer, addr string, sessMaxQuota int, sessMaxIdleDuration time.Duration, protoFunc ...erpc.ProtoFunc) *MultiClient {
 	newWorkerFunc := func() (pool.Worker, error) {
 		sess, stat := peer.Dial(addr, protoFunc...)
 		return sess, stat.Cause()
@@ -48,7 +48,7 @@ func (c *MultiClient) Addr() string {
 }
 
 // Peer returns the peer.
-func (c *MultiClient) Peer() tp.Peer {
+func (c *MultiClient) Peer() erpc.Peer {
 	return c.peer
 }
 
@@ -68,19 +68,19 @@ func (c *MultiClient) AsyncCall(
 	uri string,
 	arg interface{},
 	result interface{},
-	callCmdChan chan<- tp.CallCmd,
-	setting ...tp.MessageSetting,
-) tp.CallCmd {
+	callCmdChan chan<- erpc.CallCmd,
+	setting ...erpc.MessageSetting,
+) erpc.CallCmd {
 	_sess, err := c.pool.Hire()
 	if err != nil {
-		callCmd := tp.NewFakeCallCmd(uri, arg, result, tp.NewStatusByCodeText(tp.CodeWrongConn, err, false))
+		callCmd := erpc.NewFakeCallCmd(uri, arg, result, erpc.NewStatusByCodeText(erpc.CodeWrongConn, err, false))
 		if callCmdChan != nil && cap(callCmdChan) == 0 {
-			tp.Panicf("*MultiClient.AsyncCall(): callCmdChan channel is unbuffered")
+			erpc.Panicf("*MultiClient.AsyncCall(): callCmdChan channel is unbuffered")
 		}
 		callCmdChan <- callCmd
 		return callCmd
 	}
-	sess := _sess.(tp.Session)
+	sess := _sess.(erpc.Session)
 	defer c.pool.Fire(sess)
 	return sess.AsyncCall(uri, arg, result, callCmdChan, setting...)
 }
@@ -89,8 +89,8 @@ func (c *MultiClient) AsyncCall(
 // NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...tp.MessageSetting) tp.CallCmd {
-	callCmd := c.AsyncCall(uri, arg, result, make(chan tp.CallCmd, 1), setting...)
+func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, setting ...erpc.MessageSetting) erpc.CallCmd {
+	callCmd := c.AsyncCall(uri, arg, result, make(chan erpc.CallCmd, 1), setting...)
 	<-callCmd.Done()
 	return callCmd
 }
@@ -99,12 +99,12 @@ func (c *MultiClient) Call(uri string, arg interface{}, result interface{}, sett
 // NOTE:
 // If the arg is []byte or *[]byte type, it can automatically fill in the body codec name;
 // If the session is a client role and PeerConfig.RedialTimes>0, it is automatically re-called once after a failure.
-func (c *MultiClient) Push(uri string, arg interface{}, setting ...tp.MessageSetting) *tp.Status {
+func (c *MultiClient) Push(uri string, arg interface{}, setting ...erpc.MessageSetting) *erpc.Status {
 	_sess, err := c.pool.Hire()
 	if err != nil {
-		return tp.NewStatusByCodeText(tp.CodeWrongConn, err, false)
+		return erpc.NewStatusByCodeText(erpc.CodeWrongConn, err, false)
 	}
-	sess := _sess.(tp.Session)
+	sess := _sess.(erpc.Session)
 	defer c.pool.Fire(sess)
 	return sess.Push(uri, arg, setting...)
 }

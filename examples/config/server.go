@@ -2,15 +2,15 @@ package main
 
 import (
 	"github.com/henrylee2cn/cfgo"
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	go tp.GraceSignal()
-	cfg := tp.PeerConfig{
+	defer erpc.FlushLogger()
+	go erpc.GraceSignal()
+	cfg := erpc.PeerConfig{
 		CountTime:  true,
 		ListenPort: 9090,
 	}
@@ -18,16 +18,16 @@ func main() {
 	// auto create and sync config/config.yaml
 	cfgo.MustGet("config/config.yaml", true).MustReg("cfg_srv", &cfg)
 
-	srv := tp.NewPeer(cfg)
+	srv := erpc.NewPeer(cfg)
 	srv.RouteCall(new(math))
 	srv.ListenAndServe()
 }
 
 type math struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (m *math) Add(arg *[]int) (int, *tp.Status) {
+func (m *math) Add(arg *[]int) (int, *erpc.Status) {
 	var r int
 	for _, a := range *arg {
 		r += a

@@ -4,23 +4,23 @@ import (
 	"fmt"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
+	defer erpc.FlushLogger()
 	// graceful
-	go tp.GraceSignal()
+	go erpc.GraceSignal()
 
 	// server peer
-	srv := tp.NewPeer(tp.PeerConfig{
+	srv := erpc.NewPeer(erpc.PeerConfig{
 		CountTime:   true,
 		ListenPort:  9090,
 		PrintDetail: true,
 	})
-	srv.SetTLSConfig(tp.GenerateTLSConfigForServer())
+	srv.SetTLSConfig(erpc.GenerateTLSConfigForServer())
 
 	// router
 	srv.RouteCall(new(Math))
@@ -29,7 +29,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(time.Second * 5)
-			srv.RangeSession(func(sess tp.Session) bool {
+			srv.RangeSession(func(sess erpc.Session) bool {
 				sess.Push(
 					"/push/status",
 					fmt.Sprintf("this is a broadcast, server time: %v", time.Now()),
@@ -45,13 +45,13 @@ func main() {
 
 // Math handler
 type Math struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
 // Add handles addition request
-func (m *Math) Add(arg *[]int) (int, *tp.Status) {
+func (m *Math) Add(arg *[]int) (int, *erpc.Status) {
 	// test meta
-	tp.Infof("author: %s", m.PeekMeta("author"))
+	erpc.Infof("author: %s", m.PeekMeta("author"))
 	// add
 	var r int
 	for _, a := range *arg {

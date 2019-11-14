@@ -1,4 +1,4 @@
-// Copyright 2015-2018 HenryLee. All Rights Reserved.
+// Copyright 2015-2019 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tp
+package erpc
 
 import (
 	"fmt"
@@ -25,9 +25,9 @@ import (
 
 	"github.com/henrylee2cn/goutil/graceful"
 
+	"github.com/henrylee2cn/erpc/v6/utils"
+	"github.com/henrylee2cn/erpc/v6/utils/color"
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/teleport/v6/utils"
-	"github.com/henrylee2cn/teleport/v6/utils/color"
 )
 
 type (
@@ -159,7 +159,7 @@ var loggerOutputter = func() LoggerOutputter {
 			buf.WriteString(" [" + loggerLevelTagMap[loggerLevel] + "] ")
 			buf.Write(msgBytes)
 			line := goutil.GetCallLine(calldepth + 1)
-			if !strings.Contains(line, "github.com/henrylee2cn/teleport") &&
+			if !strings.Contains(line, "github.com/henrylee2cn/erpc") &&
 				!strings.Contains(line, "github.com/henrylee2cn/goutil/graceful") {
 				buf.WriteString(" <" + line + ">\n")
 			} else {

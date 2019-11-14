@@ -34,7 +34,7 @@ func NewConfig(server, origin string) (config *Config, err error) {
 	if err != nil {
 		return
 	}
-	config.Header = http.Header(make(map[string][]string))
+	config.Header = hterpc.Header(make(map[string][]string))
 	return
 }
 

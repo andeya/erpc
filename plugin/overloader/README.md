@@ -1,6 +1,6 @@
 ## overloader
 
-A plugin to protect teleport from overload.
+A plugin to protect erpc from overload.
 
 
 #### Test
@@ -14,15 +14,15 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 	"github.com/stretchr/testify/assert"
 )
 
 type Home struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Status) {
 	return map[string]interface{}{
 		"arg": *arg,
 	}, nil
@@ -38,8 +38,8 @@ func TestPlugin(t *testing.T) {
 		},
 	})
 	// Server
-	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090, CountTime: true},
+	srv := erpc.NewPeer(
+		erpc.PeerConfig{ListenPort: 9090, CountTime: true},
 		ol,
 	)
 	srv.RouteCall(new(Home))
@@ -47,8 +47,8 @@ func TestPlugin(t *testing.T) {
 	time.Sleep(1e9)
 
 	// Client
-	cli := tp.NewPeer(
-		tp.PeerConfig{CountTime: true},
+	cli := erpc.NewPeer(
+		erpc.PeerConfig{CountTime: true},
 	)
 	var testClient = func(connNum, totalQPS int) (olConnCount, olQPSCount int64) {
 		var connGW sync.WaitGroup

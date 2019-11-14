@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/plugin/auth"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/plugin/auth"
 )
 
 func Test(t *testing.T) {
 	// Server
-	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090, CountTime: true},
+	srv := erpc.NewPeer(
+		erpc.PeerConfig{ListenPort: 9090, CountTime: true},
 		authChecker,
 	)
 	srv.RouteCall(new(Home))
@@ -19,8 +19,8 @@ func Test(t *testing.T) {
 	time.Sleep(1e9)
 
 	// Client
-	cli := tp.NewPeer(
-		tp.PeerConfig{CountTime: true},
+	cli := erpc.NewPeer(
+		erpc.PeerConfig{CountTime: true},
 		authBearer,
 	)
 	sess, stat := cli.Dial(":9090")
@@ -33,7 +33,7 @@ func Test(t *testing.T) {
 			"author": "henrylee2cn",
 		},
 		&result,
-		tp.WithAddMeta("peer_id", "110"),
+		erpc.WithAddMeta("peer_id", "110"),
 	).Status()
 	if !stat.OK() {
 		t.Error(stat)
@@ -45,39 +45,39 @@ func Test(t *testing.T) {
 const clientAuthInfo = "client-auth-info-12345"
 
 var authBearer = auth.NewBearerPlugin(
-	func(sess auth.Session, fn auth.SendOnce) (stat *tp.Status) {
+	func(sess auth.Session, fn auth.SendOnce) (stat *erpc.Status) {
 		var ret string
 		stat = fn(clientAuthInfo, &ret)
 		if !stat.OK() {
 			return
 		}
-		tp.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
+		erpc.Infof("auth info: %s, result: %s", clientAuthInfo, ret)
 		return
 	},
-	tp.WithBodyCodec('s'),
+	erpc.WithBodyCodec('s'),
 )
 
 var authChecker = auth.NewCheckerPlugin(
-	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, stat *tp.Status) {
+	func(sess auth.Session, fn auth.RecvOnce) (ret interface{}, stat *erpc.Status) {
 		var authInfo string
 		stat = fn(&authInfo)
 		if !stat.OK() {
 			return
 		}
-		tp.Infof("auth info: %v", authInfo)
+		erpc.Infof("auth info: %v", authInfo)
 		if clientAuthInfo != authInfo {
-			return nil, tp.NewStatus(403, "auth fail", "auth fail detail")
+			return nil, erpc.NewStatus(403, "auth fail", "auth fail detail")
 		}
 		return "pass", nil
 	},
-	tp.WithBodyCodec('s'),
+	erpc.WithBodyCodec('s'),
 )
 
 type Home struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Status) {
 	return map[string]interface{}{
 		"arg": *arg,
 	}, nil

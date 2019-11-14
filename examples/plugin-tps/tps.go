@@ -1,5 +1,5 @@
 // Package tps statistics requests per second
-package tps
+package erpcs
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
@@ -29,9 +29,9 @@ type TPS struct {
 }
 
 var (
-	_ tp.PostRegPlugin          = (*TPS)(nil)
-	_ tp.PostWriteReplyPlugin   = (*TPS)(nil)
-	_ tp.PostReadPushBodyPlugin = (*TPS)(nil)
+	_ erpc.PostRegPlugin          = (*TPS)(nil)
+	_ erpc.PostWriteReplyPlugin   = (*TPS)(nil)
+	_ erpc.PostReadPushBodyPlugin = (*TPS)(nil)
 )
 
 func (t *TPS) start() {
@@ -51,18 +51,18 @@ func (t *TPS) Name() string {
 	return "TPS"
 }
 
-func (t *TPS) PostReg(h *tp.Handler) error {
+func (t *TPS) PostReg(h *erpc.Handler) error {
 	t.stat[h.Name()] = new(uint32)
 	return nil
 }
 
-func (t *TPS) PostWriteReply(ctx tp.WriteCtx) *tp.Status {
+func (t *TPS) PostWriteReply(ctx erpc.WriteCtx) *erpc.Status {
 	t.once.Do(t.start)
 	atomic.AddUint32(t.stat[ctx.Output().ServiceMethod()], 1)
 	return nil
 }
 
-func (t *TPS) PostReadPushBody(ctx tp.ReadCtx) *tp.Status {
+func (t *TPS) PostReadPushBody(ctx erpc.ReadCtx) *erpc.Status {
 	t.once.Do(t.start)
 	atomic.AddUint32(t.stat[ctx.ServiceMethod()], 1)
 	return nil

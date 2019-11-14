@@ -4,19 +4,19 @@ import (
 	"encoding/json"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
+	defer erpc.FlushLogger()
 	gzip.Reg('g', "gizp", 5)
 
-	go tp.GraceSignal()
-	tp.SetShutdown(time.Second*20, nil, nil)
-	var peer = tp.NewPeer(tp.PeerConfig{
+	go erpc.GraceSignal()
+	erpc.SetShutdown(time.Second*20, nil, nil)
+	var peer = erpc.NewPeer(erpc.PeerConfig{
 		SlowCometDuration: time.Millisecond * 500,
 		// DefaultBodyCodec:    "json",
 		// DefaultContextAge: time.Second * 5,
@@ -30,7 +30,7 @@ func main() {
 
 	var sess, stat = peer.Dial("127.0.0.1:9090")
 	if !stat.OK() {
-		tp.Fatalf("%v", stat)
+		erpc.Fatalf("%v", stat)
 	}
 	sess.SetID("testId")
 
@@ -42,20 +42,20 @@ func main() {
 				"bytes": []byte("test bytes"),
 			},
 			&result,
-			tp.WithBodyCodec('j'),
-			tp.WithAcceptBodyCodec('j'),
-			tp.WithXferPipe('g'),
-			tp.WithSetMeta("peer_id", "call-1"),
-			tp.WithAddMeta("add", "1"),
-			tp.WithAddMeta("add", "2"),
+			erpc.WithBodyCodec('j'),
+			erpc.WithAcceptBodyCodec('j'),
+			erpc.WithXferPipe('g'),
+			erpc.WithSetMeta("peer_id", "call-1"),
+			erpc.WithAddMeta("add", "1"),
+			erpc.WithAddMeta("add", "2"),
 		).Status(); !stat.OK() {
-			tp.Errorf("call error: %v", stat)
+			erpc.Errorf("call error: %v", stat)
 			time.Sleep(time.Second * 2)
 		} else {
 			break
 		}
 	}
-	tp.Infof("test: %#v", result)
+	erpc.Infof("test: %#v", result)
 
 	// sess.Close()
 
@@ -69,24 +69,24 @@ func main() {
 			[]byte("test bytes"),
 		},
 		&result,
-		tp.WithXferPipe('g'),
+		erpc.WithXferPipe('g'),
 	).Status()
-	if tp.IsConnError(stat) {
-		tp.Fatalf("has conn error: %v", stat)
+	if erpc.IsConnError(stat) {
+		erpc.Fatalf("has conn error: %v", stat)
 	}
 	if !stat.OK() {
-		tp.Fatalf("call error: %v", stat)
+		erpc.Fatalf("call error: %v", stat)
 	}
-	tp.Infof("test_unknown: %#v", result)
+	erpc.Infof("test_unknown: %#v", result)
 }
 
 // Push controller
 type Push struct {
-	tp.PushCtx
+	erpc.PushCtx
 }
 
 // Test handler
-func (p *Push) Test(arg *map[string]interface{}) *tp.Status {
-	tp.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
+func (p *Push) Test(arg *map[string]interface{}) *erpc.Status {
+	erpc.Infof("receive push(%s):\narg: %#v\n", p.IP(), arg)
 	return nil
 }

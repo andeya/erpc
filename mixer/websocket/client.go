@@ -1,4 +1,4 @@
-// Package websocket is an extension package that makes the Teleport framework compatible
+// Package websocket is an extension package that makes the eRPC framework compatible
 // with websocket protocol as specified in RFC 6455.
 //
 // Copyright 2018 HenryLee. All Rights Reserved.
@@ -22,38 +22,38 @@ import (
 	"path"
 	"strings"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/teleport/v6/mixer/websocket/pbSubProto"
-	ws "github.com/henrylee2cn/teleport/v6/mixer/websocket/websocket"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto"
+	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket/websocket"
 )
 
 // Client a websocket client
 type Client struct {
-	tp.Peer
+	erpc.Peer
 }
 
 // NewClient creates a websocket client.
-func NewClient(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Client {
-	globalLeftPlugin = append([]tp.Plugin{NewDialPlugin(rootPath)}, globalLeftPlugin...)
-	peer := tp.NewPeer(cfg, globalLeftPlugin...)
+func NewClient(rootPath string, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) *Client {
+	globalLeftPlugin = append([]erpc.Plugin{NewDialPlugin(rootPath)}, globalLeftPlugin...)
+	peer := erpc.NewPeer(cfg, globalLeftPlugin...)
 	return &Client{
 		Peer: peer,
 	}
 }
 
 // DialJSON connects with the JSON protocol.
-func (c *Client) DialJSON(addr string) (tp.Session, *tp.Status) {
+func (c *Client) DialJSON(addr string) (erpc.Session, *erpc.Status) {
 	return c.Dial(addr, jsonSubProto.NewJSONSubProtoFunc())
 }
 
 // DialProtobuf connects with the Protobuf protocol.
-func (c *Client) DialProtobuf(addr string) (tp.Session, *tp.Status) {
+func (c *Client) DialProtobuf(addr string) (erpc.Session, *erpc.Status) {
 	return c.Dial(addr, pbSubProto.NewPbSubProtoFunc())
 }
 
 // Dial connects with the peer of the destination address.
-func (c *Client) Dial(addr string, protoFunc ...tp.ProtoFunc) (tp.Session, *tp.Status) {
+func (c *Client) Dial(addr string, protoFunc ...erpc.ProtoFunc) (erpc.Session, *erpc.Status) {
 	if len(protoFunc) == 0 {
 		return c.Peer.Dial(addr, defaultProto)
 	}
@@ -61,7 +61,7 @@ func (c *Client) Dial(addr string, protoFunc ...tp.ProtoFunc) (tp.Session, *tp.S
 }
 
 // NewDialPlugin creates a websocket plugin for client.
-func NewDialPlugin(rootPath string) tp.Plugin {
+func NewDialPlugin(rootPath string) erpc.Plugin {
 	return &clientPlugin{fixRootPath(rootPath)}
 }
 
@@ -75,14 +75,14 @@ type clientPlugin struct {
 }
 
 var (
-	_ tp.PostDialPlugin = new(clientPlugin)
+	_ erpc.PostDialPlugin = new(clientPlugin)
 )
 
 func (*clientPlugin) Name() string {
 	return "websocket"
 }
 
-func (c *clientPlugin) PostDial(sess tp.PreSession, isRedial bool) (stat *tp.Status) {
+func (c *clientPlugin) PostDial(sess erpc.PreSession, isRedial bool) (stat *erpc.Status) {
 	var location, origin string
 	if sess.Peer().TLSConfig() == nil {
 		location = "ws://" + sess.RemoteAddr().String() + c.rootPath
@@ -93,12 +93,12 @@ func (c *clientPlugin) PostDial(sess tp.PreSession, isRedial bool) (stat *tp.Sta
 	}
 	cfg, err := ws.NewConfig(location, origin)
 	if err != nil {
-		return tp.NewStatus(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
+		return erpc.NewStatus(erpc.CodeDialFailed, "upgrade to websocket failed", err.Error())
 	}
-	sess.ModifySocket(func(conn net.Conn) (net.Conn, tp.ProtoFunc) {
+	sess.ModifySocket(func(conn net.Conn) (net.Conn, erpc.ProtoFunc) {
 		conn, err := ws.NewClient(cfg, conn)
 		if err != nil {
-			stat = tp.NewStatus(tp.CodeDialFailed, "upgrade to websocket failed", err.Error())
+			stat = erpc.NewStatus(erpc.CodeDialFailed, "upgrade to websocket failed", err.Error())
 			return nil, nil
 		}
 		if isRedial {

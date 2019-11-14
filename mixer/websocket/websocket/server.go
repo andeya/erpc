@@ -11,11 +11,11 @@ import (
 	"net/http"
 )
 
-func newServerConn(rwc io.ReadWriteCloser, buf *bufio.ReadWriter, req *http.Request, config *Config, handshake func(*Config, *http.Request) error) (conn *Conn, err error) {
+func newServerConn(rwc io.ReadWriteCloser, buf *bufio.ReadWriter, req *hterpc.Request, config *Config, handshake func(*Config, *hterpc.Request) error) (conn *Conn, err error) {
 	var hs serverHandshaker = &hybiServerHandshaker{Config: config}
 	code, err := hs.ReadHandshake(buf.Reader, req)
 	if err == ErrBadWebSocketVersion {
-		fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
+		fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, hterpc.StatusText(code))
 		fmt.Fprintf(buf, "Sec-WebSocket-Version: %s\r\n", SupportedProtocolVersion)
 		buf.WriteString("\r\n")
 		buf.WriteString(err.Error())
@@ -23,7 +23,7 @@ func newServerConn(rwc io.ReadWriteCloser, buf *bufio.ReadWriter, req *http.Requ
 		return
 	}
 	if err != nil {
-		fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
+		fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, hterpc.StatusText(code))
 		buf.WriteString("\r\n")
 		buf.WriteString(err.Error())
 		buf.Flush()
@@ -32,8 +32,8 @@ func newServerConn(rwc io.ReadWriteCloser, buf *bufio.ReadWriter, req *http.Requ
 	if handshake != nil {
 		err = handshake(config, req)
 		if err != nil {
-			code = http.StatusForbidden
-			fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
+			code = hterpc.StatusForbidden
+			fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, hterpc.StatusText(code))
 			buf.WriteString("\r\n")
 			buf.Flush()
 			return
@@ -41,8 +41,8 @@ func newServerConn(rwc io.ReadWriteCloser, buf *bufio.ReadWriter, req *http.Requ
 	}
 	err = hs.AcceptHandshake(buf.Writer)
 	if err != nil {
-		code = http.StatusBadRequest
-		fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
+		code = hterpc.StatusBadRequest
+		fmt.Fprintf(buf, "HTTP/1.1 %03d %s\r\n", code, hterpc.StatusText(code))
 		buf.WriteString("\r\n")
 		buf.Flush()
 		return
@@ -59,19 +59,19 @@ type Server struct {
 	// Handshake is an optional function in WebSocket handshake.
 	// For example, you can check, or don't check Origin header.
 	// Another example, you can select config.Protocol.
-	Handshake func(*Config, *http.Request) error
+	Handshake func(*Config, *hterpc.Request) error
 
 	// Handler handles a WebSocket connection.
 	Handler
 }
 
-// ServeHTTP implements the http.Handler interface for a WebSocket
-func (s Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+// ServeHTTP implements the hterpc.Handler interface for a WebSocket
+func (s Server) ServeHTTP(w hterpc.ResponseWriter, req *hterpc.Request) {
 	s.serveWebSocket(w, req)
 }
 
-func (s Server) serveWebSocket(w http.ResponseWriter, req *http.Request) {
-	rwc, buf, err := w.(http.Hijacker).Hijack()
+func (s Server) serveWebSocket(w hterpc.ResponseWriter, req *hterpc.Request) {
+	rwc, buf, err := w.(hterpc.Hijacker).Hijack()
 	if err != nil {
 		panic("Hijack failed: " + err.Error())
 	}
@@ -98,7 +98,7 @@ func (s Server) serveWebSocket(w http.ResponseWriter, req *http.Request) {
 // Server.Handshake that does not check the origin.
 type Handler func(*Conn)
 
-func checkOrigin(config *Config, req *http.Request) (err error) {
+func checkOrigin(config *Config, req *hterpc.Request) (err error) {
 	config.Origin, err = Origin(config, req)
 	if err == nil && config.Origin == nil {
 		return fmt.Errorf("null origin")
@@ -106,8 +106,8 @@ func checkOrigin(config *Config, req *http.Request) (err error) {
 	return err
 }
 
-// ServeHTTP implements the http.Handler interface for a WebSocket
-func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+// ServeHTTP implements the hterpc.Handler interface for a WebSocket
+func (h Handler) ServeHTTP(w hterpc.ResponseWriter, req *hterpc.Request) {
 	s := Server{Handler: h, Handshake: checkOrigin}
 	s.serveWebSocket(w, req)
 }

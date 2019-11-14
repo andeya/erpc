@@ -3,7 +3,7 @@ package socket
 import (
 	"testing"
 
-	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
+	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
 )
 
 func TestMessageString(t *testing.T) {

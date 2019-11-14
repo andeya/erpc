@@ -10,20 +10,20 @@ import (
 	"sync"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/mixer/evio/evio"
-	"github.com/henrylee2cn/teleport/v6/utils"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/mixer/evio/evio"
+	"github.com/henrylee2cn/erpc/v6/utils"
 )
 
-// NewClient creates a evio client, equivalent to tp.NewPeer.
-func NewClient(cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) tp.Peer {
-	return tp.NewPeer(cfg, globalLeftPlugin...)
+// NewClient creates a evio client, equivalent to erpc.NewPeer.
+func NewClient(cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) erpc.Peer {
+	return erpc.NewPeer(cfg, globalLeftPlugin...)
 }
 
 // Server a evio server
 type Server struct {
-	tp.Peer
-	cfg             tp.PeerConfig
+	erpc.Peer
+	cfg             erpc.PeerConfig
 	events          evio.Events
 	addr            string
 	readBufferSize  int
@@ -31,9 +31,9 @@ type Server struct {
 }
 
 // NewServer creates a evio server.
-func NewServer(loops int, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Server {
+func NewServer(loops int, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) *Server {
 	// globalLeftPlugin = append(globalLeftPlugin, new(wakeWritePlugin))
-	p := tp.NewPeer(cfg, globalLeftPlugin...)
+	p := erpc.NewPeer(cfg, globalLeftPlugin...)
 	srv := &Server{
 		Peer: p,
 		cfg:  cfg,
@@ -47,14 +47,14 @@ func NewServer(loops int, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Ser
 	// }
 
 	srv.events.Serving = func(s evio.Server) (action evio.Action) {
-		tp.Printf("listen and serve (%s)", srv.addr)
+		erpc.Printf("listen and serve (%s)", srv.addr)
 		return
 	}
 
 	srv.events.Opened = func(c evio.Conn) (out []byte, opts evio.Options, action evio.Action) {
 		stat := srv.serveConn(c)
 		if !stat.OK() {
-			tp.Debugf("serve connection fail: %s", stat.String())
+			erpc.Debugf("serve connection fail: %s", stat.String())
 			action = evio.Close
 		}
 		opts.ReuseInputBuffer = true
@@ -64,7 +64,7 @@ func NewServer(loops int, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Ser
 
 	srv.events.Closed = func(c evio.Conn, err error) (action evio.Action) {
 		if err != nil {
-			tp.Debugf("closed: %s: %s, error: %s", c.LocalAddr().String(), c.RemoteAddr().String(), err.Error())
+			erpc.Debugf("closed: %s: %s, error: %s", c.LocalAddr().String(), c.RemoteAddr().String(), err.Error())
 		}
 		con := c.Context().(*conn)
 		con.sess.Close()
@@ -75,7 +75,7 @@ func NewServer(loops int, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Ser
 	srv.events.Data = func(c evio.Conn, in []byte) (out []byte, action evio.Action) {
 		// defer func() {
 		// 	if p := recover(); p != nil {
-		// 		tp.Errorf("[evio] Events.Data: %v", p)
+		// 		erpc.Errorf("[evio] Events.Data: %v", p)
 		// 	}
 		// }()
 		con := c.Context().(*conn)
@@ -103,25 +103,25 @@ func NewServer(loops int, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Ser
 }
 
 // ListenAndServe turns on the listening service.
-func (srv *Server) ListenAndServe(protoFunc ...tp.ProtoFunc) error {
+func (srv *Server) ListenAndServe(protoFunc ...erpc.ProtoFunc) error {
 	switch srv.cfg.Network {
 	default:
 		return errors.New("Unsupport evio network, refer to the following: tcp, tcp4, tcp6, unix")
 	case "tcp", "tcp4", "tcp6", "unix":
 	}
 	var isDefault bool
-	srv.readBufferSize, isDefault = tp.SocketReadBuffer()
+	srv.readBufferSize, isDefault = erpc.SocketReadBuffer()
 	if isDefault {
 		srv.readBufferSize = 4096
 	}
-	srv.writeBufferSize, isDefault = tp.SocketWriteBuffer()
+	srv.writeBufferSize, isDefault = erpc.SocketWriteBuffer()
 	if isDefault {
 		srv.writeBufferSize = 4096
 	}
 	return evio.Serve(srv.events, srv.addr)
 }
 
-func (srv *Server) serveConn(evioConn evio.Conn) (stat *tp.Status) {
+func (srv *Server) serveConn(evioConn evio.Conn) (stat *erpc.Status) {
 	c := &conn{
 		conn:        evioConn,
 		events:      srv.events,
@@ -146,7 +146,7 @@ func (srv *Server) serveConn(evioConn evio.Conn) (stat *tp.Status) {
 type conn struct {
 	conn        evio.Conn
 	events      evio.Events
-	sess        tp.Session
+	sess        erpc.Session
 	inBuf       *bytes.Buffer
 	in          chan *utils.ByteBuffer
 	inLock      sync.Mutex

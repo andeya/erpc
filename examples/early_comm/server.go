@@ -1,15 +1,15 @@
 package main
 
 import (
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	srv := tp.NewPeer(
-		tp.PeerConfig{
+	defer erpc.FlushLogger()
+	srv := erpc.NewPeer(
+		erpc.PeerConfig{
 			PrintDetail: false,
 			ListenPort:  9090,
 		},
@@ -24,9 +24,9 @@ func (e *earlyResult) Name() string {
 	return "early_result"
 }
 
-func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Status {
+func (e *earlyResult) PostAccept(sess erpc.PreSession) *erpc.Status {
 	var rigthServiceMethod bool
-	input := sess.PreReceive(func(header tp.Header) interface{} {
+	input := sess.PreReceive(func(header erpc.Header) interface{} {
 		if header.ServiceMethod() == "/early/ping" {
 			rigthServiceMethod = true
 			return new(map[string]string)
@@ -40,18 +40,18 @@ func (e *earlyResult) PostAccept(sess tp.PreSession) *tp.Status {
 
 	var result string
 	if !rigthServiceMethod {
-		stat = tp.NewStatus(10005, "unexpected request", "")
+		stat = erpc.NewStatus(10005, "unexpected request", "")
 	} else {
 		body := *input.Body().(*map[string]string)
 		if body["author"] != "henrylee2cn" {
-			stat = tp.NewStatus(10005, "incorrect author", body["author"])
+			stat = erpc.NewStatus(10005, "incorrect author", body["author"])
 		} else {
 			stat = nil
 			result = "OK"
 		}
 	}
 	return sess.PreSend(
-		tp.TypeReply,
+		erpc.TypeReply,
 		"/early/pong",
 		result,
 		stat,

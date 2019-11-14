@@ -3,14 +3,14 @@ package main
 import (
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	srv := tp.NewPeer(tp.PeerConfig{
+	defer erpc.FlushLogger()
+	srv := erpc.NewPeer(erpc.PeerConfig{
 		CountTime:  true,
 		ListenPort: 9090,
 	})
@@ -19,10 +19,10 @@ func main() {
 }
 
 type test struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (t *test) Wait3s(arg *string) (string, *tp.Status) {
+func (t *test) Wait3s(arg *string) (string, *erpc.Status) {
 	time.Sleep(3 * time.Second)
 	return *arg + " -> OK", nil
 }

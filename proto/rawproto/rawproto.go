@@ -1,8 +1,8 @@
 package rawproto
 
 import (
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/socket"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/socket"
 )
 
 /*
@@ -30,6 +30,6 @@ import (
 // NOTE:
 //  it is the default protocol.
 //  id:6, name:"raw"
-func NewRawProtoFunc() tp.ProtoFunc {
+func NewRawProtoFunc() erpc.ProtoFunc {
 	return socket.RawProtoFunc
 }

@@ -1,14 +1,14 @@
 package main
 
 import (
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	srv := tp.NewPeer(tp.PeerConfig{
+	defer erpc.FlushLogger()
+	srv := erpc.NewPeer(erpc.PeerConfig{
 		CountTime:  true,
 		ListenPort: 9090,
 	})
@@ -18,10 +18,10 @@ func main() {
 }
 
 type math struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (m *math) Add(arg *[]int) (int, *tp.Status) {
+func (m *math) Add(arg *[]int) (int, *erpc.Status) {
 	var r int
 	for _, a := range *arg {
 		r += a
@@ -30,10 +30,10 @@ func (m *math) Add(arg *[]int) (int, *tp.Status) {
 }
 
 type chat struct {
-	tp.PushCtx
+	erpc.PushCtx
 }
 
-func (c *chat) Say(arg *string) *tp.Status {
-	tp.Printf("%s say: %q", c.PeekMeta("X-ID"), *arg)
+func (c *chat) Say(arg *string) *erpc.Status {
+	erpc.Printf("%s say: %q", c.PeekMeta("X-ID"), *arg)
 	return nil
 }

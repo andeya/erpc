@@ -21,28 +21,28 @@ import (
 	"net/http"
 	"net/url"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/teleport/v6/mixer/websocket/pbSubProto"
-	ws "github.com/henrylee2cn/teleport/v6/mixer/websocket/websocket"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto"
+	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket/websocket"
 )
 
 // Server a websocket server
 type Server struct {
-	tp.Peer
-	cfg       tp.PeerConfig
-	serveMux  *http.ServeMux
-	server    *http.Server
+	erpc.Peer
+	cfg       erpc.PeerConfig
+	serveMux  *hterpc.ServeMux
+	server    *hterpc.Server
 	rootPath  string
 	lis       net.Listener
 	lisAddr   net.Addr
-	handshake func(*ws.Config, *http.Request) error
+	handshake func(*ws.Config, *hterpc.Request) error
 }
 
 // NewServer creates a websocket server.
-func NewServer(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin) *Server {
-	p := tp.NewPeer(cfg, globalLeftPlugin...)
-	serveMux := http.NewServeMux()
+func NewServer(rootPath string, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) *Server {
+	p := erpc.NewPeer(cfg, globalLeftPlugin...)
+	serveMux := hterpc.NewServeMux()
 	lisAddr := cfg.ListenAddr()
 	host, port, _ := net.SplitHostPort(lisAddr.String())
 	if port == "0" {
@@ -51,7 +51,7 @@ func NewServer(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin
 		} else {
 			port = "http"
 		}
-		lisAddr = tp.NewFakeAddr(lisAddr.Network(), host, port)
+		lisAddr = erpc.NewFakeAddr(lisAddr.Network(), host, port)
 	}
 	return &Server{
 		Peer:     p,
@@ -59,7 +59,7 @@ func NewServer(rootPath string, cfg tp.PeerConfig, globalLeftPlugin ...tp.Plugin
 		serveMux: serveMux,
 		rootPath: fixRootPath(rootPath),
 		lisAddr:  lisAddr,
-		server:   &http.Server{Addr: lisAddr.String(), Handler: serveMux},
+		server:   &hterpc.Server{Addr: lisAddr.String(), Handler: serveMux},
 	}
 }
 
@@ -82,7 +82,7 @@ func (srv *Server) ListenAndServeProtobuf() error {
 // ListenAndServe always returns a non-nil error.
 //
 // If protoFunc is empty, JSON is used by default.
-func (srv *Server) ListenAndServe(protoFunc ...tp.ProtoFunc) (err error) {
+func (srv *Server) ListenAndServe(protoFunc ...erpc.ProtoFunc) (err error) {
 	network := srv.cfg.Network
 	switch network {
 	default:
@@ -90,14 +90,14 @@ func (srv *Server) ListenAndServe(protoFunc ...tp.ProtoFunc) (err error) {
 	case "tcp", "tcp4", "tcp6":
 	}
 	srv.Handle(srv.rootPath, NewServeHandler(srv.Peer, srv.handshake, protoFunc...))
-	srv.lis, err = tp.NewInheritedListener(srv.lisAddr, srv.Peer.TLSConfig())
+	srv.lis, err = erpc.NewInheritedListener(srv.lisAddr, srv.Peer.TLSConfig())
 	if err != nil {
 		return
 	}
 	srv.lisAddr = srv.lis.Addr()
-	tp.Printf("listen and serve (network:%s, addr:%s)", network, srv.lisAddr)
+	erpc.Printf("listen and serve (network:%s, addr:%s)", network, srv.lisAddr)
 	for _, v := range srv.Peer.PluginContainer().GetAll() {
-		if p, ok := v.(tp.PostListenPlugin); ok {
+		if p, ok := v.(erpc.PostListenPlugin); ok {
 			p.PostListen(srv.lis.Addr())
 		}
 	}
@@ -115,33 +115,33 @@ func (srv *Server) Close() error {
 }
 
 // SetHandshake sets customized handshake function.
-func (srv *Server) SetHandshake(handshake func(*ws.Config, *http.Request) error) {
+func (srv *Server) SetHandshake(handshake func(*ws.Config, *hterpc.Request) error) {
 	srv.handshake = handshake
 }
 
 // Handle registers the handler for the given rootPath.
 // If a handler already exists for rootPath, Handle panics.
-func (srv *Server) Handle(rootPath string, handler http.Handler) {
+func (srv *Server) Handle(rootPath string, handler hterpc.Handler) {
 	srv.serveMux.Handle(rootPath, handler)
 }
 
 // HandleFunc registers the handler function for the given rootPath.
-func (srv *Server) HandleFunc(rootPath string, handler func(http.ResponseWriter, *http.Request)) {
+func (srv *Server) HandleFunc(rootPath string, handler func(hterpc.ResponseWriter, *hterpc.Request)) {
 	srv.serveMux.HandleFunc(rootPath, handler)
 }
 
 // NewJSONServeHandler creates a websocket json handler.
-func NewJSONServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error) http.Handler {
+func NewJSONServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request) error) hterpc.Handler {
 	return NewServeHandler(peer, handshake, jsonSubProto.NewJSONSubProtoFunc())
 }
 
 // NewPbServeHandler creates a websocket protobuf handler.
-func NewPbServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error) http.Handler {
+func NewPbServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request) error) hterpc.Handler {
 	return NewServeHandler(peer, handshake, pbSubProto.NewPbSubProtoFunc())
 }
 
 // NewServeHandler creates a websocket handler.
-func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) error, protoFunc ...tp.ProtoFunc) http.Handler {
+func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *hterpc.Request) error, protoFunc ...erpc.ProtoFunc) hterpc.Handler {
 	w := &serverHandler{
 		peer:      peer,
 		Server:    new(ws.Server),
@@ -154,7 +154,7 @@ func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) err
 		scheme = "wss"
 	}
 	if handshake != nil {
-		w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
+		w.Server.Handshake = func(cfg *ws.Config, r *hterpc.Request) error {
 			cfg.Origin = &url.URL{
 				Host:   r.RemoteAddr,
 				Scheme: scheme,
@@ -162,7 +162,7 @@ func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) err
 			return handshake(cfg, r)
 		}
 	} else {
-		w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
+		w.Server.Handshake = func(cfg *ws.Config, r *hterpc.Request) error {
 			cfg.Origin = &url.URL{
 				Host:   r.RemoteAddr,
 				Scheme: scheme,
@@ -178,15 +178,15 @@ func NewServeHandler(peer tp.Peer, handshake func(*ws.Config, *http.Request) err
 }
 
 type serverHandler struct {
-	peer      tp.Peer
-	protoFunc tp.ProtoFunc
+	peer      erpc.Peer
+	protoFunc erpc.ProtoFunc
 	*ws.Server
 }
 
 func (w *serverHandler) handler(conn *ws.Conn) {
 	sess, err := w.peer.ServeConn(conn, w.protoFunc)
 	if err != nil {
-		tp.Errorf("serverHandler: %v", err)
+		erpc.Errorf("serverHandler: %v", err)
 		return
 	}
 	<-sess.CloseNotify()

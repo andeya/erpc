@@ -1,4 +1,4 @@
-// Package overloader is a plugin to protect teleport from overload.
+// Package overloader is a plugin to protect erpc from overload.
 package overloader
 
 import (
@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 type (
-	// Overloader plug-in to protect teleport from overload
+	// Overloader plug-in to protect erpc from overload
 	Overloader struct {
 		limitConfig           *LimitConfig
 		limitConfigLock       sync.RWMutex
@@ -36,14 +36,14 @@ type (
 )
 
 var (
-	_ tp.PostDialPlugin           = (*Overloader)(nil)
-	_ tp.PostAcceptPlugin         = (*Overloader)(nil)
-	_ tp.PostDisconnectPlugin     = (*Overloader)(nil)
-	_ tp.PostReadCallHeaderPlugin = (*Overloader)(nil)
-	_ tp.PostReadPushHeaderPlugin = (*Overloader)(nil)
+	_ erpc.PostDialPlugin           = (*Overloader)(nil)
+	_ erpc.PostAcceptPlugin         = (*Overloader)(nil)
+	_ erpc.PostDisconnectPlugin     = (*Overloader)(nil)
+	_ erpc.PostReadCallHeaderPlugin = (*Overloader)(nil)
+	_ erpc.PostReadPushHeaderPlugin = (*Overloader)(nil)
 )
 
-// New creates a plug-in to protect teleport from overload.
+// New creates a plug-in to protect erpc from overload.
 func New(initLimitConfig LimitConfig) *Overloader {
 	o := &Overloader{
 		handlerQPSLimiter: make(map[string]*qpsLimiter),
@@ -59,7 +59,7 @@ func (o *Overloader) Name() string {
 
 // PostDial checks connection overload.
 // If overload, print error log and close the connection.
-func (o *Overloader) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
+func (o *Overloader) PostDial(sess erpc.PreSession, isRedial bool) *erpc.Status {
 	if isRedial {
 		return nil
 	}
@@ -68,30 +68,30 @@ func (o *Overloader) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
 
 // PostAccept checks connection overload.
 // If overload, print error log and close the connection.
-func (o *Overloader) PostAccept(_ tp.PreSession) *tp.Status {
+func (o *Overloader) PostAccept(_ erpc.PreSession) *erpc.Status {
 	if o.takeConn() {
 		return nil
 	}
 	msg := fmt.Sprintf("connection overload, limit=%d, now=%d",
 		o.connLimiter.getLimit(), o.connLimiter.getNow(),
 	)
-	return tp.NewStatus(tp.CodeInternalServerError, msg, nil)
+	return erpc.NewStatus(erpc.CodeInternalServerError, msg, nil)
 }
 
 // PostDisconnect releases connection count.
-func (o *Overloader) PostDisconnect(_ tp.BaseSession) *tp.Status {
+func (o *Overloader) PostDisconnect(_ erpc.BaseSession) *erpc.Status {
 	o.releaseConn()
 	return nil
 }
 
 // PostReadCallHeader checks PULL QPS overload.
 // If overload, print error log and reply error.
-func (o *Overloader) PostReadCallHeader(ctx tp.ReadCtx) *tp.Status {
+func (o *Overloader) PostReadCallHeader(ctx erpc.ReadCtx) *erpc.Status {
 	if !o.takeTotalQPS() {
 		msg := fmt.Sprintf("qps overload, total_limit=%d",
 			o.totalQPSLimiter.getLimit(),
 		)
-		return tp.NewStatus(tp.CodeInternalServerError, msg, nil)
+		return erpc.NewStatus(erpc.CodeInternalServerError, msg, nil)
 	}
 	limit, ok := o.takeHandlerQPS(ctx.ServiceMethod())
 	if ok {
@@ -100,12 +100,12 @@ func (o *Overloader) PostReadCallHeader(ctx tp.ReadCtx) *tp.Status {
 	msg := fmt.Sprintf("qps overload, handler_limit=%d",
 		limit,
 	)
-	return tp.NewStatus(tp.CodeInternalServerError, msg, nil)
+	return erpc.NewStatus(erpc.CodeInternalServerError, msg, nil)
 }
 
 // PostReadPushHeader checks PUSH QPS overload.
 // If overload, print warning log.
-func (o *Overloader) PostReadPushHeader(ctx tp.ReadCtx) *tp.Status {
+func (o *Overloader) PostReadPushHeader(ctx erpc.ReadCtx) *erpc.Status {
 	return o.PostReadCallHeader(ctx)
 }
 

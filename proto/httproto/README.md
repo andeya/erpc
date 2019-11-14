@@ -16,7 +16,7 @@ Accept-Encoding: gzip
 Content-Length: 24
 Content-Type: application/json;charset=utf-8
 Host: localhost:9090
-User-Agent: teleport-httproto/1.1
+User-Agent: erpc-httproto/1.1
 X-Mtype: 1
 X-Seq: 1
 
@@ -63,7 +63,7 @@ func RegBodyCodec(contentType string, codecID byte)
 
 ### Usage
 
-`import "github.com/henrylee2cn/teleport/v6/proto/httproto"`
+`import "github.com/henrylee2cn/erpc/v6/proto/httproto"`
 
 #### Test
 
@@ -78,17 +78,17 @@ import (
 
 	"github.com/henrylee2cn/goutil/httpbody"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/proto/httproto"
-	"github.com/henrylee2cn/teleport/v6/xfer/gzip"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/proto/httproto"
+	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
 )
 
 type Home struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *tp.Status) {
-	tp.Infof("peer_id: %s", h.PeekMeta("peer_id"))
+func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Status) {
+	erpc.Infof("peer_id: %s", h.PeekMeta("peer_id"))
 	return map[string]interface{}{
 		"arg": *arg,
 	}, nil
@@ -98,14 +98,14 @@ func TestHTTProto(t *testing.T) {
 	gzip.Reg('g', "gizp-5", 5)
 
 	// Server
-	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
+	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe(httproto.NewHTTProtoFunc(true))
 	time.Sleep(1e9)
 
 	url := "http://localhost:9090/home/test?peer_id=110"
 	// TP Client
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := erpc.NewPeer(erpc.PeerConfig{})
 	sess, stat := cli.Dial(":9090", httproto.NewHTTProtoFunc())
 	if !stat.OK() {
 		t.Fatal(stat)
@@ -118,16 +118,16 @@ func TestHTTProto(t *testing.T) {
 		url,
 		arg,
 		&result,
-		// tp.WithXferPipe('g'),
+		// erpc.WithXferPipe('g'),
 	).Status()
 	if !stat.OK() {
 		t.Fatal(stat)
 	}
-	t.Logf("teleport client response: %v", result)
+	t.Logf("erpc client response: %v", result)
 
 	// HTTP Client
 	contentType, body, _ := httpbody.NewJSONBody(arg)
-	resp, err := http.Post(url, contentType, body)
+	resp, err := hterpc.Post(url, contentType, body)
 	if err != nil {
 		t.Fatal(err)
 	}

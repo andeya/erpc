@@ -30,8 +30,8 @@ func main() {
   }
   defer listener.Close()
 
-  server := &http.Server{}
-  http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+  server := &hterpc.Server{}
+  hterpc.HandleFunc("/", func(w hterpc.ResponseWriter, r *hterpc.Request) {
     fmt.Println(os.Getgid())
     fmt.Fprintf(w, "Hello, %q\n", html.EscapeString(r.URL.Path))
   })

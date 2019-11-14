@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/xfer"
-	"github.com/henrylee2cn/teleport/v6/xfer/md5"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/xfer"
+	"github.com/henrylee2cn/erpc/v6/xfer/md5"
 )
 
 func TestSeparate(t *testing.T) {
@@ -36,13 +36,13 @@ func TestCombined(t *testing.T) {
 	// Register filter(custom)
 	md5.Reg('m', "md5")
 	// Server
-	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090})
+	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
 	// Client
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := erpc.NewPeer(erpc.PeerConfig{})
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
 		t.Fatal(stat)
@@ -54,7 +54,7 @@ func TestCombined(t *testing.T) {
 		},
 		&result,
 		// Use custom filter
-		tp.WithXferPipe('m'),
+		erpc.WithXferPipe('m'),
 	).Status()
 	if !stat.OK() {
 		t.Error(stat)
@@ -63,10 +63,10 @@ func TestCombined(t *testing.T) {
 }
 
 type Home struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *tp.Status) {
+func (h *Home) Test(arg *map[string]interface{}) (map[string]interface{}, *erpc.Status) {
 	return map[string]interface{}{
 		"result": "your request is:" + (*arg)["bytes"].(string),
 	}, nil

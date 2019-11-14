@@ -5,14 +5,14 @@ import (
 	"io/ioutil"
 	"sync"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/codec"
-	"github.com/henrylee2cn/teleport/v6/mixer/websocket/pbSubProto/pb"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/codec"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto/pb"
 )
 
 // NewPbSubProtoFunc() is creation function of PROTOBUF socket protocol.
-func NewPbSubProtoFunc() tp.ProtoFunc {
-	return func(rw tp.IOWithReadBuffer) tp.Proto {
+func NewPbSubProtoFunc() erpc.ProtoFunc {
+	return func(rw erpc.IOWithReadBuffer) erpc.Proto {
 		return &pbSubProto{
 			id:   'p',
 			name: "protobuf",
@@ -24,7 +24,7 @@ func NewPbSubProtoFunc() tp.ProtoFunc {
 type pbSubProto struct {
 	id   byte
 	name string
-	rw   tp.IOWithReadBuffer
+	rw   erpc.IOWithReadBuffer
 	rMu  sync.Mutex
 }
 
@@ -35,7 +35,7 @@ func (psp *pbSubProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (psp *pbSubProto) Pack(m tp.Message) error {
+func (psp *pbSubProto) Pack(m erpc.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -68,7 +68,7 @@ func (psp *pbSubProto) Pack(m tp.Message) error {
 
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
-func (psp *pbSubProto) Unpack(m tp.Message) error {
+func (psp *pbSubProto) Unpack(m erpc.Message) error {
 	psp.rMu.Lock()
 	defer psp.rMu.Unlock()
 	b, err := ioutil.ReadAll(psp.rw)

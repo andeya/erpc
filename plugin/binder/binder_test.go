@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/plugin/binder"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/plugin/binder"
 )
 
 type (
@@ -22,10 +22,10 @@ type (
 	}
 )
 
-type P struct{ tp.CallCtx }
+type P struct{ erpc.CallCtx }
 
-func (p *P) Divide(arg *Arg) (int, *tp.Status) {
-	tp.Infof("meta arg _x: %s, xy_z: %s, swap_value: %v", arg.Query.X, arg.XyZ, arg.SwapValue)
+func (p *P) Divide(arg *Arg) (int, *erpc.Status) {
+	erpc.Infof("meta arg _x: %s, xy_z: %s, swap_value: %v", arg.Query.X, arg.XyZ, arg.SwapValue)
 	return arg.A / arg.B, nil
 }
 
@@ -34,22 +34,22 @@ type SwapPlugin struct{}
 func (s *SwapPlugin) Name() string {
 	return "swap_plugin"
 }
-func (s *SwapPlugin) PostReadCallBody(ctx tp.ReadCtx) *tp.Status {
+func (s *SwapPlugin) PostReadCallBody(ctx erpc.ReadCtx) *erpc.Status {
 	ctx.Swap().Store("swap_value", 123)
 	return nil
 }
 
 func TestBinder(t *testing.T) {
 	bplugin := binder.NewStructArgsBinder(nil)
-	srv := tp.NewPeer(
-		tp.PeerConfig{ListenPort: 9090},
+	srv := erpc.NewPeer(
+		erpc.PeerConfig{ListenPort: 9090},
 	)
 	srv.PluginContainer().AppendRight(bplugin)
 	srv.RouteCall(new(P), new(SwapPlugin))
 	go srv.ListenAndServe()
 	time.Sleep(time.Second)
 
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := erpc.NewPeer(erpc.PeerConfig{})
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
 		t.Fatal(stat)
@@ -61,8 +61,8 @@ func TestBinder(t *testing.T) {
 		C: "3",
 	},
 		&result,
-		tp.WithSetMeta("_x", "testmeta_x"),
-		tp.WithSetMeta("xy_z", "testmeta_xy_z"),
+		erpc.WithSetMeta("_x", "testmeta_x"),
+		erpc.WithSetMeta("xy_z", "testmeta_xy_z"),
 	).Status()
 	if !stat.OK() {
 		t.Fatal(stat)

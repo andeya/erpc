@@ -20,12 +20,12 @@ import (
 	"net"
 	"sync/atomic"
 
+	"github.com/henrylee2cn/erpc/v6"
 	"github.com/henrylee2cn/goutil"
-	tp "github.com/henrylee2cn/teleport/v6"
 )
 
 // NewBearerPlugin creates a auth bearer plugin for client.
-func NewBearerPlugin(fn Bearer, infoSetting ...tp.MessageSetting) tp.Plugin {
+func NewBearerPlugin(fn Bearer, infoSetting ...erpc.MessageSetting) erpc.Plugin {
 	return &authBearerPlugin{
 		bearerFunc: fn,
 		msgSetting: infoSetting,
@@ -33,7 +33,7 @@ func NewBearerPlugin(fn Bearer, infoSetting ...tp.MessageSetting) tp.Plugin {
 }
 
 // NewCheckerPlugin creates a auth checker plugin for server.
-func NewCheckerPlugin(fn Checker, retSetting ...tp.MessageSetting) tp.Plugin {
+func NewCheckerPlugin(fn Checker, retSetting ...erpc.MessageSetting) erpc.Plugin {
 	return &authCheckerPlugin{
 		checkerFunc: fn,
 		msgSetting:  retSetting,
@@ -42,19 +42,19 @@ func NewCheckerPlugin(fn Checker, retSetting ...tp.MessageSetting) tp.Plugin {
 
 type (
 	// Bearer initiates an authorization request and handles the response.
-	Bearer func(sess Session, fn SendOnce) *tp.Status
+	Bearer func(sess Session, fn SendOnce) *erpc.Status
 	// SendOnce sends authorization request once.
-	SendOnce func(info, retRecv interface{}) *tp.Status
+	SendOnce func(info, retRecv interface{}) *erpc.Status
 
 	// Checker checks the authorization request.
-	Checker func(sess Session, fn RecvOnce) (ret interface{}, stat *tp.Status)
+	Checker func(sess Session, fn RecvOnce) (ret interface{}, stat *erpc.Status)
 	// RecvOnce receives authorization request once.
-	RecvOnce func(infoRecv interface{}) *tp.Status
+	RecvOnce func(infoRecv interface{}) *erpc.Status
 
 	// Session auth session provides SetID, RemoteAddr and Swap methods in base session
 	Session interface {
 		// Peer returns the peer.
-		Peer() tp.Peer
+		Peer() erpc.Peer
 		// SetID sets the session id.
 		SetID(newID string)
 		// LocalAddr returns the local network address.
@@ -68,17 +68,17 @@ type (
 
 type authBearerPlugin struct {
 	bearerFunc Bearer
-	msgSetting []tp.MessageSetting
+	msgSetting []erpc.MessageSetting
 }
 
 type authCheckerPlugin struct {
 	checkerFunc Checker
-	msgSetting  []tp.MessageSetting
+	msgSetting  []erpc.MessageSetting
 }
 
 var (
-	_ tp.PostDialPlugin   = new(authBearerPlugin)
-	_ tp.PostAcceptPlugin = new(authCheckerPlugin)
+	_ erpc.PostDialPlugin   = new(authBearerPlugin)
+	_ erpc.PostAcceptPlugin = new(authCheckerPlugin)
 )
 
 func (a *authBearerPlugin) Name() string {
@@ -90,34 +90,34 @@ func (a *authCheckerPlugin) Name() string {
 }
 
 // MultiSendErr the error of multiple call SendOnce function
-var MultiSendErr = tp.NewStatus(
-	tp.CodeWriteFailed,
+var MultiSendErr = erpc.NewStatus(
+	erpc.CodeWriteFailed,
 	"auth-bearer plugin usage is incorrect",
 	"multiple call SendOnce function",
 )
 
 // MultiRecvErr the error of multiple call RecvOnce function
-var MultiRecvErr = tp.NewStatus(
-	tp.CodeInternalServerError,
+var MultiRecvErr = erpc.NewStatus(
+	erpc.CodeInternalServerError,
 	"auth-checker plugin usage is incorrect",
 	"multiple call RecvOnce function",
 )
 
-func (a *authBearerPlugin) PostDial(sess tp.PreSession, _ bool) *tp.Status {
+func (a *authBearerPlugin) PostDial(sess erpc.PreSession, _ bool) *erpc.Status {
 	if a.bearerFunc == nil {
 		return nil
 	}
 	var called int32
-	return a.bearerFunc(sess, func(info, retRecv interface{}) *tp.Status {
+	return a.bearerFunc(sess, func(info, retRecv interface{}) *erpc.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiSendErr
 		}
-		stat := sess.PreSend(tp.TypeAuthCall, "", info, nil, a.msgSetting...)
+		stat := sess.PreSend(erpc.TypeAuthCall, "", info, nil, a.msgSetting...)
 		if !stat.OK() {
 			return stat
 		}
-		retMsg := sess.PreReceive(func(header tp.Header) interface{} {
-			if header.Mtype() != tp.TypeAuthReply {
+		retMsg := sess.PreReceive(func(header erpc.Header) interface{} {
+			if header.Mtype() != erpc.TypeAuthReply {
 				return nil
 			}
 			return retRecv
@@ -125,29 +125,29 @@ func (a *authBearerPlugin) PostDial(sess tp.PreSession, _ bool) *tp.Status {
 		if !retMsg.StatusOK() {
 			return retMsg.Status()
 		}
-		if retMsg.Mtype() != tp.TypeAuthReply {
-			return tp.NewStatus(
-				tp.CodeUnauthorized,
-				tp.CodeText(tp.CodeUnauthorized),
+		if retMsg.Mtype() != erpc.TypeAuthReply {
+			return erpc.NewStatus(
+				erpc.CodeUnauthorized,
+				erpc.CodeText(erpc.CodeUnauthorized),
 				fmt.Sprintf("auth message(1st) expect: AUTH_REPLY, but received: %s",
-					tp.TypeText(retMsg.Mtype())),
+					erpc.TypeText(retMsg.Mtype())),
 			)
 		}
 		return nil
 	})
 }
 
-func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Status {
+func (a *authCheckerPlugin) PostAccept(sess erpc.PreSession) *erpc.Status {
 	if a.checkerFunc == nil {
 		return nil
 	}
 	var called int32
-	ret, stat := a.checkerFunc(sess, func(infoRecv interface{}) *tp.Status {
+	ret, stat := a.checkerFunc(sess, func(infoRecv interface{}) *erpc.Status {
 		if !atomic.CompareAndSwapInt32(&called, 0, 1) {
 			return MultiRecvErr
 		}
-		infoMsg := sess.PreReceive(func(header tp.Header) interface{} {
-			if header.Mtype() != tp.TypeAuthCall {
+		infoMsg := sess.PreReceive(func(header erpc.Header) interface{} {
+			if header.Mtype() != erpc.TypeAuthCall {
 				return nil
 			}
 			return infoRecv
@@ -155,21 +155,21 @@ func (a *authCheckerPlugin) PostAccept(sess tp.PreSession) *tp.Status {
 		if !infoMsg.StatusOK() {
 			return infoMsg.Status()
 		}
-		if infoMsg.Mtype() != tp.TypeAuthCall {
-			return tp.NewStatus(
-				tp.CodeUnauthorized,
-				tp.CodeText(tp.CodeUnauthorized),
+		if infoMsg.Mtype() != erpc.TypeAuthCall {
+			return erpc.NewStatus(
+				erpc.CodeUnauthorized,
+				erpc.CodeText(erpc.CodeUnauthorized),
 				fmt.Sprintf("auth message(1st) expect: AUTH_CALL, but received: %s",
-					tp.TypeText(infoMsg.Mtype())),
+					erpc.TypeText(infoMsg.Mtype())),
 			)
 		}
 		return nil
 	})
 	if stat == MultiRecvErr {
-		sess.PreSend(tp.TypeAuthReply, "", nil, stat, a.msgSetting...)
+		sess.PreSend(erpc.TypeAuthReply, "", nil, stat, a.msgSetting...)
 		return stat
 	}
-	stat2 := sess.PreSend(tp.TypeAuthReply, "", ret, stat, a.msgSetting...)
+	stat2 := sess.PreSend(erpc.TypeAuthReply, "", ret, stat, a.msgSetting...)
 	if !stat2.OK() {
 		return stat2
 	}

@@ -21,15 +21,15 @@ import (
 	"io"
 	"sync"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/codec"
-	"github.com/henrylee2cn/teleport/v6/proto/pbproto/pb"
-	"github.com/henrylee2cn/teleport/v6/utils"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/codec"
+	"github.com/henrylee2cn/erpc/v6/proto/pbproto/pb"
+	"github.com/henrylee2cn/erpc/v6/utils"
 )
 
 // NewPbProtoFunc is creation function of PROTOBUF socket protocol.
-func NewPbProtoFunc() tp.ProtoFunc {
-	return func(rw tp.IOWithReadBuffer) tp.Proto {
+func NewPbProtoFunc() erpc.ProtoFunc {
+	return func(rw erpc.IOWithReadBuffer) erpc.Proto {
 		return &pbproto{
 			id:   'p',
 			name: "protobuf",
@@ -39,7 +39,7 @@ func NewPbProtoFunc() tp.ProtoFunc {
 }
 
 type pbproto struct {
-	rw   tp.IOWithReadBuffer
+	rw   erpc.IOWithReadBuffer
 	rMu  sync.Mutex
 	name string
 	id   byte
@@ -52,7 +52,7 @@ func (pp *pbproto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
-func (pp *pbproto) Pack(m tp.Message) error {
+func (pp *pbproto) Pack(m erpc.Message) error {
 	// marshal body
 	bodyBytes, err := m.MarshalBody()
 	if err != nil {
@@ -93,7 +93,7 @@ func (pp *pbproto) Pack(m tp.Message) error {
 }
 
 // Unpack reads bytes from the connection to the Message.
-func (pp *pbproto) Unpack(m tp.Message) error {
+func (pp *pbproto) Unpack(m erpc.Message) error {
 	pp.rMu.Lock()
 	defer pp.rMu.Unlock()
 	var size uint32

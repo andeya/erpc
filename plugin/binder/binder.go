@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/utils"
 	"github.com/henrylee2cn/goutil"
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 /**
@@ -78,12 +78,12 @@ type (
 		errFunc ErrorFunc
 	}
 	// ErrorFunc creates an relational error.
-	ErrorFunc func(handlerName, paramName, reason string) *tp.Status
+	ErrorFunc func(handlerName, paramName, reason string) *erpc.Status
 )
 
 var (
-	_ tp.PostRegPlugin          = new(StructArgsBinder)
-	_ tp.PostReadCallBodyPlugin = new(StructArgsBinder)
+	_ erpc.PostRegPlugin          = new(StructArgsBinder)
+	_ erpc.PostReadCallBodyPlugin = new(StructArgsBinder)
 )
 
 // NewStructArgsBinder creates a plugin that binds and validates structure type parameters.
@@ -97,8 +97,8 @@ func NewStructArgsBinder(fn ErrorFunc) *StructArgsBinder {
 }
 
 var (
-	_ tp.PostRegPlugin          = new(StructArgsBinder)
-	_ tp.PostReadCallBodyPlugin = new(StructArgsBinder)
+	_ erpc.PostRegPlugin          = new(StructArgsBinder)
+	_ erpc.PostReadCallBodyPlugin = new(StructArgsBinder)
 )
 
 // SetErrorFunc sets the binding or balidating error function.
@@ -108,9 +108,9 @@ func (s *StructArgsBinder) SetErrorFunc(fn ErrorFunc) {
 		s.errFunc = fn
 		return
 	}
-	s.errFunc = func(handlerName, paramName, reason string) *tp.Status {
-		return tp.NewStatus(
-			tp.CodeBadMessage,
+	s.errFunc = func(handlerName, paramName, reason string) *erpc.Status {
+		return erpc.NewStatus(
+			erpc.CodeBadMessage,
 			"Invalid Parameter",
 			fmt.Sprintf(`{"handler": %q, "param": %q, "reason": %q}`, handlerName, paramName, reason),
 		)
@@ -123,21 +123,21 @@ func (*StructArgsBinder) Name() string {
 }
 
 // PostReg preprocessing struct handler.
-func (s *StructArgsBinder) PostReg(h *tp.Handler) error {
+func (s *StructArgsBinder) PostReg(h *erpc.Handler) error {
 	if h.ArgElemType().Kind() != reflect.Struct {
 		return nil
 	}
 	params := newParams(h.Name(), s)
 	err := params.addFields([]int{}, h.ArgElemType(), h.NewArgValue().Elem())
 	if err != nil {
-		tp.Fatalf("%v", err)
+		erpc.Fatalf("%v", err)
 	}
 	s.binders[h.Name()] = params
 	return nil
 }
 
 // PostReadCallBody binds and validates the registered struct handler.
-func (s *StructArgsBinder) PostReadCallBody(ctx tp.ReadCtx) *tp.Status {
+func (s *StructArgsBinder) PostReadCallBody(ctx erpc.ReadCtx) *erpc.Status {
 	params, ok := s.binders[ctx.ServiceMethod()]
 	if !ok {
 		return nil
@@ -303,7 +303,7 @@ func (p *Params) fieldsForBinding(structElem reflect.Value) []reflect.Value {
 	return fields
 }
 
-func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, swap goutil.Map) (stat *tp.Status) {
+func (p *Params) bindAndValidate(structValue reflect.Value, meta *utils.Args, swap goutil.Map) (stat *erpc.Status) {
 	defer func() {
 		if r := recover(); r != nil {
 			stat = p.binder.errFunc(p.handlerName, "", fmt.Sprint(r))
@@ -481,7 +481,7 @@ func (param *Param) Description() string {
 
 // validate tests if the param conforms to it's validation constraints specified
 // int the KEY_REGEXP struct tag
-func (param *Param) validate(value reflect.Value) (stat *tp.Status) {
+func (param *Param) validate(value reflect.Value) (stat *erpc.Status) {
 	defer func() {
 		if r := recover(); r != nil {
 			stat = param.fixStatus(param.binder.errFunc(param.handlerName, param.name, fmt.Sprint(r)))
@@ -667,7 +667,7 @@ func validateRegexp(isStrings bool, reg string) (func(value reflect.Value) error
 	}
 }
 
-func (param *Param) fixStatus(stat *tp.Status) *tp.Status {
+func (param *Param) fixStatus(stat *erpc.Status) *erpc.Status {
 	if param.statMsg != "" {
 		stat.SetMsg(param.statMsg)
 	}

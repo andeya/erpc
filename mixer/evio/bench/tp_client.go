@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
-	"github.com/henrylee2cn/teleport/v6/examples/bench/msg"
+	"github.com/henrylee2cn/erpc/v6"
+	"github.com/henrylee2cn/erpc/v6/examples/bench/msg"
 	"github.com/montanaflynn/stats"
 )
 
@@ -24,11 +24,11 @@ var debugAddr = flag.String("d", "127.0.0.1:9982", "server ip and port")
 func main() {
 	flag.Parse()
 
-	defer tp.SetLoggerLevel("ERROR")()
-	tp.SetGopool(1024*1024*100, time.Minute*10)
+	defer erpc.SetLoggerLevel("ERROR")()
+	erpc.SetGopool(1024*1024*100, time.Minute*10)
 
 	go func() {
-		log.Println(http.ListenAndServe(*debugAddr, nil))
+		log.Println(hterpc.ListenAndServe(*debugAddr, nil))
 	}()
 
 	conc, tn, err := msg.CheckArgs(*concurrency, *total)
@@ -42,7 +42,7 @@ func main() {
 	log.Printf("concurrency: %d\nrequests per client: %d\n\n", n, m)
 
 	serviceMethod := "Hello.Say"
-	client := tp.NewPeer(tp.PeerConfig{
+	client := erpc.NewPeer(erpc.PeerConfig{
 		DefaultBodyCodec: "protobuf",
 	})
 

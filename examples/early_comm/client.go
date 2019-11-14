@@ -1,15 +1,15 @@
 package main
 
 import (
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	cli := tp.NewPeer(
-		tp.PeerConfig{
+	defer erpc.FlushLogger()
+	cli := erpc.NewPeer(
+		erpc.PeerConfig{
 			PrintDetail: false,
 		},
 		new(earlyCall),
@@ -17,7 +17,7 @@ func main() {
 	defer cli.Close()
 	_, stat := cli.Dial(":9090")
 	if !stat.OK() {
-		tp.Fatalf("%v", stat)
+		erpc.Fatalf("%v", stat)
 	}
 }
 
@@ -27,9 +27,9 @@ func (e *earlyCall) Name() string {
 	return "early_call"
 }
 
-func (e *earlyCall) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
+func (e *earlyCall) PostDial(sess erpc.PreSession, isRedial bool) *erpc.Status {
 	stat := sess.PreSend(
-		tp.TypeCall,
+		erpc.TypeCall,
 		"/early/ping",
 		map[string]string{
 			"author": "henrylee2cn",
@@ -40,17 +40,17 @@ func (e *earlyCall) PostDial(sess tp.PreSession, isRedial bool) *tp.Status {
 		return stat
 	}
 
-	input := sess.PreReceive(func(header tp.Header) interface{} {
+	input := sess.PreReceive(func(header erpc.Header) interface{} {
 		if header.ServiceMethod() == "/early/pong" {
 			return new(string)
 		}
-		tp.Panicf("Received an unexpected response: %s", header.ServiceMethod())
+		erpc.Panicf("Received an unexpected response: %s", header.ServiceMethod())
 		return nil
 	})
 	stat = input.Status()
 	if !stat.OK() {
 		return stat
 	}
-	tp.Infof("result: %v", input.String())
+	erpc.Infof("result: %v", input.String())
 	return nil
 }

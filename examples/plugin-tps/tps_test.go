@@ -1,39 +1,39 @@
-package tps
+package erpcs
 
 import (
 	"testing"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 type Call struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (*Call) Test(*struct{}) (*struct{}, *tp.Status) {
+func (*Call) Test(*struct{}) (*struct{}, *erpc.Status) {
 	return nil, nil
 }
 
 type Push struct {
-	tp.PushCtx
+	erpc.PushCtx
 }
 
-func (*Push) Test(*struct{}) *tp.Status {
+func (*Push) Test(*struct{}) *erpc.Status {
 	return nil
 }
 
 func TestTPS(t *testing.T) {
-	tp.SetLoggerLevel("OFF")
+	erpc.SetLoggerLevel("OFF")
 	// Server
-	srv := tp.NewPeer(tp.PeerConfig{ListenPort: 9090}, NewTPS(5))
+	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090}, NewTPS(5))
 	srv.RouteCall(new(Call))
 	srv.RoutePush(new(Push))
 	go srv.ListenAndServe()
 	time.Sleep(1e9)
 
 	// Client
-	cli := tp.NewPeer(tp.PeerConfig{})
+	cli := erpc.NewPeer(erpc.PeerConfig{})
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
 		t.Fatal(stat)

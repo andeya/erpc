@@ -1,12 +1,12 @@
-package tp
+package erpc
 
 import (
 	"strconv"
 
+	"github.com/henrylee2cn/erpc/v6/codec"
+	"github.com/henrylee2cn/erpc/v6/socket"
+	"github.com/henrylee2cn/erpc/v6/utils"
 	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/teleport/v6/codec"
-	"github.com/henrylee2cn/teleport/v6/socket"
-	"github.com/henrylee2cn/teleport/v6/utils"
 )
 
 // Message types

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"time"
 
-	tp "github.com/henrylee2cn/teleport/v6"
+	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
 
 func main() {
-	defer tp.FlushLogger()
-	srv := tp.NewPeer(tp.PeerConfig{
+	defer erpc.FlushLogger()
+	srv := erpc.NewPeer(erpc.PeerConfig{
 		CountTime:  true,
 		ListenPort: 9090,
 	})
@@ -21,10 +21,10 @@ func main() {
 }
 
 type math_v2 struct {
-	tp.CallCtx
+	erpc.CallCtx
 }
 
-func (m *math_v2) Add__2(arg *[]int) (int, *tp.Status) {
+func (m *math_v2) Add__2(arg *[]int) (int, *erpc.Status) {
 	if string(m.PeekMeta("push_status")) == "yes" {
 		m.Session().Push(
 			"/cli/push/server_status",

@@ -1,4 +1,4 @@
-// Copyright 2015-2018 HenryLee. All Rights Reserved.
+// Copyright 2015-2019 HenryLee. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 
 	"github.com/json-iterator/go"
 
-	"github.com/henrylee2cn/teleport/v6/utils"
+	"github.com/henrylee2cn/erpc/v6/utils"
 )
 
 // json codec name and id
