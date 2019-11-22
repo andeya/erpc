@@ -13,9 +13,8 @@ Suitable for RPC, Microservice, Peer-to-Peer, IM, Game and other fields.
 
 ## Install
 
-```sh
-go get -u -f github.com/henrylee2cn/erpc
-```
+- environment GO111MODULE=on
+- go vesion ≥ 1.11
 
 ```go
 import "github.com/henrylee2cn/erpc/v6"

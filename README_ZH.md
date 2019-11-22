@@ -12,9 +12,8 @@ eRPC 是一个高效、可扩展且简单易用的 RPC 框架。
 
 ## 安装
 
-```sh
-go get -u -f github.com/henrylee2cn/erpc
-```
+- environment GO111MODULE=on
+- go vesion ≥ 1.11
 
 ```go
 import "github.com/henrylee2cn/erpc/v6"
