@@ -24,7 +24,7 @@ func DialAddrContext(ctx context.Context, addr string, tlsConf *tls.Config, conf
 	if err != nil {
 		return nil, err
 	}
-	stream, err := sess.OpenStreamSync()
+	stream, err := sess.OpenStreamSync(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -93,11 +93,11 @@ func (l *Listener) PacketConn() net.PacketConn {
 
 // Accept waits for and returns the next connection to the listener.
 func (l *Listener) Accept() (net.Conn, error) {
-	sess, err := l.lis.Accept()
+	sess, err := l.lis.Accept(context.TODO())
 	if err != nil {
 		return nil, err
 	}
-	stream, err := sess.AcceptStream()
+	stream, err := sess.AcceptStream(context.TODO())
 	if err != nil {
 		return nil, err
 	}
