@@ -24,8 +24,31 @@ var (
 
 	// NewStatusFromQuery parses the query bytes to a status object.
 	// TYPE:
-	// func NewStatusFromQuery(b []byte, tagStack bool) *Status
+	//  func NewStatusFromQuery(b []byte, tagStack bool) *Status
 	NewStatusFromQuery = status.FromQuery
+	// CheckStatus if err!=nil, create a status with stack, and panic.
+	// NOTE:
+	//  If err!=nil and msg=="", error text is set to msg
+	// TYPE:
+	//  func Check(err error, code int32, msg string, whenError ...func())
+	CheckStatus = status.Check
+	// ThrowStatus creates a status with stack, and panic.
+	// TYPE:
+	//  func Throw(code int32, msg string, cause interface{})
+	ThrowStatus = status.Throw
+	// PanicStatus panic with stack trace.
+	// TYPE:
+	//  func Panic(stat *Status)
+	PanicStatus = status.Panic
+	// CatchStatus recovers the panic and returns status.
+	// NOTE:
+	//  Set `realStat` to true if a `Status` type is recovered
+	// Example:
+	//  var stat *Status
+	//  defer Catch(&stat)
+	// TYPE:
+	//  func Catch(statPtr **Status, realStat ...*bool)
+	CatchStatus = status.Catch
 )
 
 // NewStatusByCodeText creates a message status with code, msg, cause or stack.
