@@ -285,7 +285,7 @@ func (r *Router) SubRoute(prefix string, plugin ...Plugin) *SubRouter {
 // SubRoute adds handler group.
 func (r *SubRouter) SubRoute(prefix string, plugin ...Plugin) *SubRouter {
 	pluginContainer := r.pluginContainer.cloneAndAppendMiddle(plugin...)
-	warnInvaildHandlerHooks(plugin)
+	warnInvalidHandlerHooks(plugin)
 	return &SubRouter{
 		root:            r.root,
 		callHandlers:    r.callHandlers,
@@ -344,7 +344,7 @@ func (r *SubRouter) reg(
 	plugins []Plugin,
 ) []string {
 	pluginContainer := r.pluginContainer.cloneAndAppendMiddle(plugins...)
-	warnInvaildHandlerHooks(plugins)
+	warnInvalidHandlerHooks(plugins)
 	handlers, err := handlerMaker(
 		r.prefix,
 		ctrlStruct,
@@ -377,7 +377,7 @@ func (r *SubRouter) reg(
 // which is called when no handler for CALL is found.
 func (r *Router) SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Status), plugin ...Plugin) {
 	pluginContainer := r.subRouter.pluginContainer.cloneAndAppendMiddle(plugin...)
-	warnInvaildHandlerHooks(plugin)
+	warnInvalidHandlerHooks(plugin)
 
 	var h = &Handler{
 		name:            pnUnknownCall,
@@ -407,7 +407,7 @@ func (r *Router) SetUnknownCall(fn func(UnknownCallCtx) (interface{}, *Status), 
 // which is called when no handler for PUSH is found.
 func (r *Router) SetUnknownPush(fn func(UnknownPushCtx) *Status, plugin ...Plugin) {
 	pluginContainer := r.subRouter.pluginContainer.cloneAndAppendMiddle(plugin...)
-	warnInvaildHandlerHooks(plugin)
+	warnInvalidHandlerHooks(plugin)
 
 	var h = &Handler{
 		name:            pnUnknownPush,
