@@ -26,6 +26,11 @@ import (
 	"github.com/henrylee2cn/goutil/errors"
 )
 
+var (
+	typeOfCallCtx = reflect.TypeOf((*CallCtx)(nil)).Elem()
+	typeOfPushCtx = reflect.TypeOf((*PushCtx)(nil)).Elem()
+)
+
 // ServiceMethodMapper mapper service method from prefix, recvName and funcName.
 // NOTE:
 //  @prefix is optional;
@@ -927,9 +932,8 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 }
 
 func isBelongToCallCtx(name string) bool {
-	ctype := reflect.TypeOf(CallCtx(new(handlerCtx)))
-	for m := 0; m < ctype.NumMethod(); m++ {
-		if name == ctype.Method(m).Name {
+	for m := 0; m < typeOfCallCtx.NumMethod(); m++ {
+		if name == typeOfCallCtx.Method(m).Name {
 			return true
 		}
 	}
@@ -937,9 +941,8 @@ func isBelongToCallCtx(name string) bool {
 }
 
 func isBelongToPushCtx(name string) bool {
-	ctype := reflect.TypeOf(PushCtx(new(handlerCtx)))
-	for m := 0; m < ctype.NumMethod(); m++ {
-		if name == ctype.Method(m).Name {
+	for m := 0; m < typeOfPushCtx.NumMethod(); m++ {
+		if name == typeOfPushCtx.Method(m).Name {
 			return true
 		}
 	}
