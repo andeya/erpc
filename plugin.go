@@ -632,7 +632,7 @@ func (p *pluginSingleContainer) postDisconnect(sess BaseSession) *Status {
 	return nil
 }
 
-func warnInvaildHandlerHooks(plugin []Plugin) {
+func warnInvalidHandlerHooks(plugin []Plugin) {
 	for _, p := range plugin {
 		switch p.(type) {
 		case PreNewPeerPlugin:
