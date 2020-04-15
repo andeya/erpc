@@ -213,7 +213,7 @@ func (s *socket) ControlFD(f func(fd uintptr)) error {
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // NOTE:
 //  For the byte stream type of body, write directly, do not do any processing;
-//  Must be safe for concurrent use by multiple goroutines.
+//  Concurrent calls are not safe.
 func (s *socket) WriteMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
@@ -228,7 +228,7 @@ func (s *socket) WriteMessage(message Message) error {
 // ReadMessage reads header and body from the connection.
 // NOTE:
 //  For the byte stream type of body, read directly, do not do any processing;
-//  Must be safe for concurrent use by multiple goroutines.
+//  Concurrent calls are not safe.
 func (s *socket) ReadMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
