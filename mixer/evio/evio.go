@@ -1,7 +1,6 @@
 package evio
 
 import (
-	"bytes"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -10,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tidwall/evio"
+
 	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/mixer/evio/evio"
-	"github.com/henrylee2cn/erpc/v6/utils"
 )
 
 // NewClient creates a evio client, equivalent to erpc.NewPeer.
@@ -28,6 +27,7 @@ type Server struct {
 	addr            string
 	readBufferSize  int
 	writeBufferSize int
+	protoFuncs      []erpc.ProtoFunc
 }
 
 // NewServer creates a evio server.
@@ -41,10 +41,6 @@ func NewServer(loops int, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) 
 	}
 
 	srv.events.NumLoops = loops
-	// const delayDuration = time.Millisecond * 50
-	// srv.events.Tick = func() (delay time.Duration, action evio.Action) {
-	// 	return delayDuration, action
-	// }
 
 	srv.events.Serving = func(s evio.Server) (action evio.Action) {
 		erpc.Printf("listen and serve (%s)", srv.addr)
@@ -73,16 +69,16 @@ func NewServer(loops int, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) 
 	}
 
 	srv.events.Data = func(c evio.Conn, in []byte) (out []byte, action evio.Action) {
-		// defer func() {
-		// 	if p := recover(); p != nil {
-		// 		erpc.Errorf("[evio] Events.Data: %v", p)
-		// 	}
-		// }()
 		con := c.Context().(*conn)
 		if in != nil {
-			buf := utils.AcquireByteBuffer()
-			buf.Write(in)
-			con.in <- buf
+			data := <-con.in
+			n := copy(data.b, in)
+			in = in[n:]
+			dst := make([]byte, len(in))
+			copy(dst, in)
+			con.remainingIn = dst
+			data.n <- n
+			close(data.n)
 		}
 		select {
 		case out = <-con.out:
@@ -94,7 +90,6 @@ func NewServer(loops int, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) 
 		select {
 		case <-con.closeSignal:
 			action = evio.Close
-			close(con.in)
 		default:
 		}
 		return
@@ -106,7 +101,7 @@ func NewServer(loops int, cfg erpc.PeerConfig, globalLeftPlugin ...erpc.Plugin) 
 func (srv *Server) ListenAndServe(protoFunc ...erpc.ProtoFunc) error {
 	switch srv.cfg.Network {
 	default:
-		return errors.New("Unsupport evio network, refer to the following: tcp, tcp4, tcp6, unix")
+		return errors.New("unsupport evio network, refer to the following: tcp, tcp4, tcp6, unix")
 	case "tcp", "tcp4", "tcp6", "unix":
 	}
 	var isDefault bool
@@ -118,6 +113,7 @@ func (srv *Server) ListenAndServe(protoFunc ...erpc.ProtoFunc) error {
 	if isDefault {
 		srv.writeBufferSize = 4096
 	}
+	srv.protoFuncs = protoFunc
 	return evio.Serve(srv.events, srv.addr)
 }
 
@@ -126,29 +122,29 @@ func (srv *Server) serveConn(evioConn evio.Conn) (stat *erpc.Status) {
 		conn:        evioConn,
 		events:      srv.events,
 		closeSignal: make(chan struct{}),
-		inBuf:       bytes.NewBuffer(make([]byte, 0, srv.readBufferSize)),
-		in:          make(chan *utils.ByteBuffer, srv.readBufferSize/128),
+		remainingIn: []byte{},
+		in:          make(chan readData, 1),
 		out:         make(chan []byte, srv.writeBufferSize/128),
 	}
 	if srv.TLSConfig() != nil {
-		c.sess, stat = srv.Peer.ServeConn(tls.Server(c, srv.TLSConfig()))
+		c.sess, stat = srv.Peer.ServeConn(tls.Server(c, srv.TLSConfig()), srv.protoFuncs...)
 	} else {
-		c.sess, stat = srv.Peer.ServeConn(c)
+		c.sess, stat = srv.Peer.ServeConn(c, srv.protoFuncs...)
 	}
 	// c.sess.Swap().Store(wakeWriteKey, c)
 	evioConn.SetContext(c)
 	return stat
 }
 
-// conn is a evio(evio) network connection.
+// conn is a evio network connection.
 //
 // Multiple goroutines may invoke methods on a Conn simultaneously.
 type conn struct {
 	conn        evio.Conn
 	events      evio.Events
 	sess        erpc.Session
-	inBuf       *bytes.Buffer
-	in          chan *utils.ByteBuffer
+	remainingIn []byte
+	in          chan readData
 	inLock      sync.Mutex
 	out         chan []byte
 	closeSignal chan struct{}
@@ -156,22 +152,30 @@ type conn struct {
 
 var _ net.Conn = new(conn)
 
+type readData struct {
+	b []byte
+	n chan int
+}
+
 // Read reads data from the connection.
 // Read can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetReadDeadline.
 func (c *conn) Read(b []byte) (n int, err error) {
-	n, err = c.inBuf.Read(b)
-	if err == nil {
+	select {
+	case <-c.closeSignal:
+		defer func() { recover() }()
+		close(c.in)
+		return n, io.EOF
+	default:
+	}
+	n = copy(b, c.remainingIn)
+	c.remainingIn = c.remainingIn[n:]
+	if n > 0 || len(b) == 0 {
 		return n, nil
 	}
-	buf, ok := <-c.in
-	if !ok {
-		return n, io.EOF
-	}
-	n2 := copy(b[n:], buf.B)
-	c.inBuf.Write(buf.B[n2:])
-	utils.ReleaseByteBuffer(buf)
-	n += n2
+	ch := make(chan int)
+	c.in <- readData{b, ch}
+	n = <-ch
 	return n, nil
 }
 

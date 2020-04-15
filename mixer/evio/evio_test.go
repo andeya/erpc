@@ -6,6 +6,7 @@ import (
 
 	"github.com/henrylee2cn/erpc/v6"
 	"github.com/henrylee2cn/erpc/v6/mixer/evio"
+	"github.com/henrylee2cn/erpc/v6/proto/jsonproto"
 )
 
 func Test(t *testing.T) {
@@ -14,7 +15,7 @@ func Test(t *testing.T) {
 	// use TLS
 	srv.SetTLSConfig(erpc.GenerateTLSConfigForServer())
 	srv.RouteCall(new(Home))
-	go srv.ListenAndServe()
+	go srv.ListenAndServe(jsonproto.NewJSONProtoFunc())
 	time.Sleep(1e9)
 
 	// client
@@ -22,7 +23,7 @@ func Test(t *testing.T) {
 	// use TLS
 	cli.SetTLSConfig(erpc.GenerateTLSConfigForClient())
 	cli.RoutePush(new(Push))
-	sess, stat := cli.Dial(":9090")
+	sess, stat := cli.Dial(":9090", jsonproto.NewJSONProtoFunc())
 	if !stat.OK() {
 		t.Fatal(stat)
 	}
