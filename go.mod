@@ -5,8 +5,8 @@ require (
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21
-	github.com/henrylee2cn/goutil v0.0.0-20191029125303-21920e347847
-	github.com/kavu/go_reuseport v1.4.0
+	github.com/henrylee2cn/goutil v0.0.0-20200416032639-974f5b4094a2
+	github.com/kavu/go_reuseport v1.4.0 // indirect
 	github.com/lucas-clemente/quic-go v0.13.1
 	github.com/montanaflynn/stats v0.5.0
 	github.com/stretchr/testify v1.4.0
