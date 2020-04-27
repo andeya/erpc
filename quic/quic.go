@@ -52,7 +52,7 @@ type Listener struct {
 
 var _ net.Listener = (*Listener)(nil)
 
-// ListenAddr announces on the local network address laddr.
+// ListenAddr announces on the local network address addr.
 // The tls.Config must not be nil and must contain a certificate configuration.
 // The quic.Config may be nil, in that case the default values will be used.
 func ListenAddr(network, addr string, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
@@ -63,7 +63,7 @@ func ListenAddr(network, addr string, tlsConf *tls.Config, config *quic.Config) 
 	return ListenUDPAddr(network, udpAddr, tlsConf, config)
 }
 
-// ListenUDPAddr announces on the local network address laddr.
+// ListenUDPAddr announces on the local network address udpAddr.
 // The tls.Config must not be nil and must contain a certificate configuration.
 // The quic.Config may be nil, in that case the default values will be used.
 func ListenUDPAddr(network string, udpAddr *net.UDPAddr, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
