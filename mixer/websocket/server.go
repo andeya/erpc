@@ -86,7 +86,7 @@ func (srv *Server) ListenAndServe(protoFunc ...erpc.ProtoFunc) (err error) {
 	network := srv.cfg.Network
 	switch network {
 	default:
-		return errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6")
+		return errors.New("invalid network config, refer to the following: tcp, tcp4, tcp6")
 	case "tcp", "tcp4", "tcp6":
 	}
 	srv.Handle(srv.rootPath, NewServeHandler(srv.Peer, srv.handshake, protoFunc...))
