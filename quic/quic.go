@@ -12,15 +12,23 @@ import (
 // DialAddrContext establishes a new QUIC connection to a server.
 // It uses a new UDP connection and closes this connection when the QUIC session is closed.
 // The hostname for SNI is taken from the given address.
-func DialAddrContext(ctx context.Context, addr string, tlsConf *tls.Config, config *quic.Config) (net.Conn, error) {
-	host, port, err := net.SplitHostPort(addr)
+func DialAddrContext(ctx context.Context, network string, laddr *net.UDPAddr, raddr string, tlsConf *tls.Config, config *quic.Config) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(raddr)
 	if err != nil {
 		return nil, err
 	}
 	if host == "" {
-		addr = "127.0.0.1:" + port
+		raddr = "127.0.0.1:" + port
 	}
-	sess, err := quic.DialAddrContext(ctx, addr, tlsConf, config)
+	udpAddr, err := net.ResolveUDPAddr(network, raddr)
+	if err != nil {
+		return nil, err
+	}
+	udpConn, err := net.ListenUDP(network, laddr)
+	if err != nil {
+		return nil, err
+	}
+	sess, err := quic.DialContext(ctx, udpConn, udpAddr, raddr, tlsConf, config)
 	if err != nil {
 		return nil, err
 	}
@@ -47,19 +55,19 @@ var _ net.Listener = (*Listener)(nil)
 // ListenAddr announces on the local network address laddr.
 // The tls.Config must not be nil and must contain a certificate configuration.
 // The quic.Config may be nil, in that case the default values will be used.
-func ListenAddr(addr string, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+func ListenAddr(network, addr string, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
+	udpAddr, err := net.ResolveUDPAddr(network, addr)
 	if err != nil {
 		return nil, err
 	}
-	return ListenUDPAddr(udpAddr, tlsConf, config)
+	return ListenUDPAddr(network, udpAddr, tlsConf, config)
 }
 
 // ListenUDPAddr announces on the local network address laddr.
 // The tls.Config must not be nil and must contain a certificate configuration.
 // The quic.Config may be nil, in that case the default values will be used.
-func ListenUDPAddr(udpAddr *net.UDPAddr, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
-	conn, err := net.ListenUDP("udp", udpAddr)
+func ListenUDPAddr(network string, udpAddr *net.UDPAddr, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
+	conn, err := net.ListenUDP(network, udpAddr)
 	if err != nil {
 		return nil, err
 	}

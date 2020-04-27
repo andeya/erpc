@@ -20,6 +20,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/henrylee2cn/erpc/v6/kcp"
 	"github.com/henrylee2cn/erpc/v6/quic"
 )
 
@@ -106,17 +107,27 @@ func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
 	return nil, err
 }
 
+const (
+	dataShards   = 10
+	parityShards = 3
+)
+
 // dialOne dials the connection once.
 func (d *Dialer) dialOne(addr string) (net.Conn, error) {
-	if asQUIC(d.network) {
+	if network := asQUIC(d.network); network != "" {
 		ctx := context.Background()
 		if d.dialTimeout > 0 {
 			ctx, _ = context.WithTimeout(ctx, d.dialTimeout)
 		}
-		if d.tlsConfig == nil {
-			return quic.DialAddrContext(ctx, addr, GenerateTLSConfigForClient(), nil)
+		var tlsConf = d.tlsConfig
+		if tlsConf == nil {
+			tlsConf = GenerateTLSConfigForClient()
 		}
-		return quic.DialAddrContext(ctx, addr, d.tlsConfig, nil)
+		return quic.DialAddrContext(ctx, network, d.localAddr.(*FakeAddr).udpAddr, addr, tlsConf, nil)
+	}
+
+	if network := asKCP(d.network); network != "" {
+		return kcp.DialAddrContext(network, d.localAddr.(*FakeAddr).udpAddr, addr, d.tlsConfig, dataShards, parityShards)
 	}
 	dialer := &net.Dialer{
 		LocalAddr: d.localAddr,

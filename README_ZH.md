@@ -61,6 +61,7 @@ import "github.com/henrylee2cn/erpc/v6"
   - `tcp6`
   - `unix`
   - `unixpacket`
+  - `kcp`
   - `quic`
   - 其他
     - websocket
@@ -478,7 +479,7 @@ peer.SetUnknownPush(XxxUnknownPush)
 
 ```go
 type PeerConfig struct {
-    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket or quic"`
+    Network            string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket, kcp or quic"`
     LocalIP            string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
     ListenPort         uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
     DialTimeout time.Duration `yaml:"dial_timeout" ini:"dial_timeout" comment:"Default maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`

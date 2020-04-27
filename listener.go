@@ -19,6 +19,7 @@ import (
 	"errors"
 	"net"
 
+	"github.com/henrylee2cn/erpc/v6/kcp"
 	"github.com/henrylee2cn/erpc/v6/quic"
 	"github.com/henrylee2cn/goutil/graceful/inherit_net"
 )
@@ -44,11 +45,14 @@ func NewInheritedListener(addr net.Addr, tlsConfig *tls.Config) (lis net.Listene
 		laddr = popParentLaddr(network, host, laddr)
 	}
 
-	if asQUIC(network) {
+	if _network := asQUIC(network); _network != "" {
 		if tlsConfig == nil {
 			tlsConfig = testTLSConfig
 		}
-		lis, err = quic.InheritedListen(laddr, tlsConfig, nil)
+		lis, err = quic.InheritedListen(_network, laddr, tlsConfig, nil)
+
+	} else if _network := asKCP(network); _network != "" {
+		lis, err = kcp.InheritedListen(_network, laddr, tlsConfig, dataShards, parityShards)
 
 	} else {
 		lis, err = inherit_net.Listen(network, laddr)

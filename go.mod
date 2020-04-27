@@ -12,7 +12,8 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/tidwall/evio v1.0.7
 	github.com/tidwall/gjson v1.2.2
-	golang.org/x/sys v0.0.0-20190904154756-749cb33beabd
+	github.com/xtaci/kcp-go/v5 v5.5.12
+	golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8
 )
 
 go 1.13

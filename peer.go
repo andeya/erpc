@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/henrylee2cn/erpc/v6/codec"
+	"github.com/henrylee2cn/erpc/v6/kcp"
 	"github.com/henrylee2cn/erpc/v6/quic"
 	"github.com/henrylee2cn/goutil"
 	"github.com/henrylee2cn/goutil/coarsetime"
@@ -267,11 +268,16 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 //  Execute the PostAcceptPlugin plugins.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status) {
 	network := conn.LocalAddr().Network()
-	if asQUIC(network) {
+	if asQUIC(network) != "" {
 		if _, ok := conn.(*quic.Conn); !ok {
-			return nil, NewStatus(CodeWrongConn, "Not support "+network, "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
+			return nil, NewStatus(CodeWrongConn, "not support "+network, "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket, kcp or quic")
 		}
 		network = "quic"
+	} else if asKCP(network) != "" {
+		if _, ok := conn.(*kcp.UDPSession); !ok {
+			return nil, NewStatus(CodeWrongConn, "not support "+network, "network must be one of the following: tcp, tcp4, tcp6, unix, unixpacket, kcp or quic")
+		}
+		network = "kcp"
 	}
 	var sess = newSession(p, conn, protoFunc)
 	if stat := p.pluginContainer.postAccept(sess); !stat.OK() {
@@ -295,9 +301,13 @@ func (p *peer) serveListener(lis net.Listener, protoFunc ...ProtoFunc) error {
 	p.listeners[lis] = struct{}{}
 
 	network := lis.Addr().Network()
-	if _, ok := lis.(*quic.Listener); ok {
+	switch lis.(type) {
+	case *quic.Listener:
 		network = "quic"
+	case *kcp.Listener:
+		network = "kcp"
 	}
+
 	addr := lis.Addr().String()
 	Printf("listen and serve (network:%s, addr:%s)", network, addr)
 

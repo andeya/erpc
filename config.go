@@ -31,7 +31,7 @@ import (
 //  yaml tag is used for github.com/henrylee2cn/cfgo
 //  ini tag is used for github.com/henrylee2cn/ini
 type PeerConfig struct {
-	Network           string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket or quic"`
+	Network           string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket, kcp or quic"`
 	LocalIP           string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
 	ListenPort        uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
 	DialTimeout       time.Duration `yaml:"dial_timeout"         ini:"dial_timeout"         comment:"Maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
@@ -107,31 +107,47 @@ func (p *PeerConfig) check() (err error) {
 func (p *PeerConfig) newAddr(port string) (net.Addr, error) {
 	switch p.Network {
 	default:
-		return nil, errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix, unixpacket or quic")
+		return nil, errors.New("Invalid network config, refer to the following: tcp, tcp4, tcp6, unix, unixpacket, kcp or quic")
 	case "tcp", "tcp4", "tcp6":
 		return net.ResolveTCPAddr(p.Network, net.JoinHostPort(p.LocalIP, port))
 	case "unix", "unixpacket":
 		return net.ResolveUnixAddr(p.Network, net.JoinHostPort(p.LocalIP, port))
-	case "quic", "udp", "udp4", "udp6":
+	case "kcp", "udp", "udp4", "udp6", "quic":
 		udpAddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(p.LocalIP, port))
 		if err != nil {
 			return nil, err
 		}
+		network := "kcp"
+		if p.Network == "quic" {
+			network = "quic"
+		}
 		return &FakeAddr{
-			network: "quic",
+			network: network,
 			addr:    udpAddr.String(),
 			host:    p.LocalIP,
 			port:    strconv.Itoa(udpAddr.Port),
+			udpAddr: udpAddr,
 		}, nil
 	}
 }
 
-func asQUIC(network string) bool {
+func asQUIC(network string) string {
 	switch network {
-	case "quic", "udp", "udp4", "udp6":
-		return true
+	case "quic":
+		return "udp"
 	default:
-		return false
+		return ""
+	}
+}
+
+func asKCP(network string) string {
+	switch network {
+	case "kcp":
+		return "udp"
+	case "udp", "udp4", "udp6":
+		return network
+	default:
+		return ""
 	}
 }
 

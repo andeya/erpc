@@ -1,4 +1,4 @@
-package quic
+package kcp
 
 import (
 	"crypto/tls"
@@ -10,18 +10,17 @@ import (
 	"sync"
 
 	"github.com/henrylee2cn/goutil/graceful"
-	quic "github.com/lucas-clemente/quic-go"
 )
 
-// InheritedListen announces on the local network address laddr. The network net is "quic".
+// InheritedListen announces on the local network address laddr. The network net is "KCP".
 // It returns an inherited net.Listener for the matching network and address, or
 // creates a new one using net.Listen.
-func InheritedListen(network, laddr string, tlsConf *tls.Config, config *quic.Config) (net.Listener, error) {
+func InheritedListen(network, laddr string, tlsConf *tls.Config, dataShards, parityShards int) (net.Listener, error) {
 	udpAddr, err := net.ResolveUDPAddr(network, laddr)
 	if err != nil {
 		return nil, err
 	}
-	return globalInheritQUIC.InheritedListen(network, udpAddr, tlsConf, config)
+	return globalInheritKCP.InheritedListen(network, udpAddr, tlsConf, dataShards, parityShards)
 }
 
 // SetInherited adds the files and envs to be inherited by the new process.
@@ -29,23 +28,23 @@ func InheritedListen(network, laddr string, tlsConf *tls.Config, config *quic.Co
 //  Only for reboot!
 //  Windows system are not supported!
 func SetInherited() error {
-	return globalInheritQUIC.SetInherited()
+	return globalInheritKCP.SetInherited()
 }
 
 const (
 	// Used to indicate a graceful restart in the new process.
-	envCountKey = "LISTEN_QUIC_FDS"
+	envCountKey = "LISTEN_KCP_FDS"
 	// envCountKeyPrefix = envCountKey + "="
 )
 
 // In order to keep the working directory the same as when we started we record
 // it at startup.
 var originalWD, _ = os.Getwd()
-var globalInheritQUIC = new(inheritQUIC)
+var globalInheritKCP = new(inheritKCP)
 
-// inheritQUIC provides the family of Listen functions and maintains the associated
-// state. Typically you will have only once instance of inheritQUIC per application.
-type inheritQUIC struct {
+// inheritKCP provides the family of Listen functions and maintains the associated
+// state. Typically you will have only once instance of inheritKCP per application.
+type inheritKCP struct {
 	inherited   []*net.UDPConn
 	active      []*Listener
 	mutex       sync.Mutex
@@ -55,7 +54,7 @@ type inheritQUIC struct {
 	fdStart int
 }
 
-func (n *inheritQUIC) inherit() error {
+func (n *inheritKCP) inherit() error {
 	var retErr error
 	n.inheritOnce.Do(func() {
 		n.mutex.Lock()
@@ -101,7 +100,7 @@ func (n *inheritQUIC) inherit() error {
 // InheritedListen announces on the local network address laddr.
 // It returns an inherited net.Listener for the matching address,
 // or creates a new one.
-func (n *inheritQUIC) InheritedListen(network string, udpAddr *net.UDPAddr, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
+func (n *inheritKCP) InheritedListen(network string, udpAddr *net.UDPAddr, tlsConf *tls.Config, dataShards, parityShards int) (*Listener, error) {
 	if err := n.inherit(); err != nil {
 		return nil, err
 	}
@@ -126,9 +125,9 @@ func (n *inheritQUIC) InheritedListen(network string, udpAddr *net.UDPAddr, tlsC
 	var l *Listener
 	var err error
 	if udpConn == nil {
-		l, err = ListenUDPAddr(network, udpAddr, tlsConf, config)
+		l, err = ListenUDPAddr(network, udpAddr, tlsConf, dataShards, parityShards)
 	} else {
-		l, err = Listen(udpConn, tlsConf, config)
+		l, err = Listen(udpConn, tlsConf, dataShards, parityShards)
 	}
 	if err != nil {
 		return nil, err
@@ -138,7 +137,7 @@ func (n *inheritQUIC) InheritedListen(network string, udpAddr *net.UDPAddr, tlsC
 }
 
 // activeListeners returns a snapshot copy of the active listeners.
-func (n *inheritQUIC) activeListeners() ([]*Listener, error) {
+func (n *inheritKCP) activeListeners() ([]*Listener, error) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 	ls := make([]*Listener, len(n.active))
@@ -171,7 +170,7 @@ func isSameAddr(a1, a2 net.Addr) bool {
 // Notes:
 //  Only for reboot!
 //  Windows system are not supported!
-func (n *inheritQUIC) SetInherited() error {
+func (n *inheritKCP) SetInherited() error {
 	listeners, err := n.activeListeners()
 	if err != nil {
 		return err

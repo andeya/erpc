@@ -279,6 +279,7 @@ type FakeAddr struct {
 	addr    string
 	host    string
 	port    string
+	udpAddr *net.UDPAddr
 }
 
 var _ net.Addr = (*FakeAddr)(nil)
