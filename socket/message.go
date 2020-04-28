@@ -518,7 +518,7 @@ func WithBody(body interface{}) MessageSetting {
 	}
 }
 
-// WithNewBody resets the function of geting body.
+// WithNewBody resets the function of getting body.
 //  NOTE: newBodyFunc is only for reading form connection.
 func WithNewBody(newBodyFunc NewBodyFunc) MessageSetting {
 	return func(m Message) {
@@ -540,7 +540,7 @@ func WithXferPipe(filterID ...byte) MessageSetting {
 var (
 	messageSizeLimit uint32 = math.MaxUint32
 	// ErrExceedMessageSizeLimit error
-	ErrExceedMessageSizeLimit = errors.New("Size of package exceeds limit")
+	ErrExceedMessageSizeLimit = errors.New("size of package exceeds limit")
 )
 
 // MessageSizeLimit gets the message size upper limit of reading.
