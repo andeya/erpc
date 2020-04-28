@@ -16,10 +16,13 @@ import (
 
 //go:generate go build $GOFILE
 
-var concurrency = flag.Int("c", 1, "concurrency")
-var total = flag.Int("n", 1, "total requests for all clients")
-var host = flag.String("s", "127.0.0.1:8972", "server ip and port")
-var debugAddr = flag.String("d", "127.0.0.1:9982", "server ip and port")
+var (
+	concurrency = flag.Int("c", 1, "concurrency")
+	total       = flag.Int("n", 1, "total requests for all clients")
+	host        = flag.String("s", "127.0.0.1:8972", "server ip and port")
+	debugAddr   = flag.String("d", "127.0.0.1:9982", "server ip and port")
+	network     = flag.String("network", "tcp", "network")
+)
 
 func main() {
 	flag.Parse()
@@ -43,6 +46,7 @@ func main() {
 
 	serviceMethod := "Hello.Say"
 	client := erpc.NewPeer(erpc.PeerConfig{
+		Network:          *network,
 		DefaultBodyCodec: "protobuf",
 	})
 
