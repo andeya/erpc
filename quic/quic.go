@@ -158,10 +158,10 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 func (c *Conn) Close() error {
 	err := c.stream.Close()
 	if err != nil {
-		c.sess.Close()
+		c.sess.CloseWithError(1, err.Error())
 		return err
 	}
-	return c.sess.Close()
+	return c.sess.CloseWithError(0, "")
 }
 
 // LocalAddr returns the local network address.
