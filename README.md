@@ -1,4 +1,5 @@
-# eRPC [![GitHub release](https://img.shields.io/github/release/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/erpc?style=flat-square)](http://goreportcard.com/report/henrylee2cn/erpc) [![github issues](https://img.shields.io/github/issues/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/go.dev-reference-blue.svg?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/henrylee2cn/erpc?tab=doc) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/tree/master/examples)
+# eRPC [![GitHub release](https://img.shields.io/github/release/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/erpc?style=flat-square)](http://goreportcard.com/report/henrylee2cn/erpc) [![github issues](https://img.shields.io/github/issues/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/henrylee2cn/erpc) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/tree/master/examples)
+<!-- # eRPC [![GitHub release](https://img.shields.io/github/release/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/releases) [![report card](https://goreportcard.com/badge/github.com/henrylee2cn/erpc?style=flat-square)](http://goreportcard.com/report/henrylee2cn/erpc) [![github issues](https://img.shields.io/github/issues/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/henrylee2cn/erpc.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/go.dev-reference-blue.svg?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/henrylee2cn/erpc?tab=doc) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/henrylee2cn/erpc/tree/master/examples) -->
 <!-- [![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg?style=flat-square)](http://jq.qq.com/?_wv=1027&k=fzi4p1) -->
 
 eRPC is an efficient, extensible and easy-to-use RPC framework.
@@ -13,9 +14,15 @@ Suitable for RPC, Microservice, Peer-to-Peer, IM, Game and other fields.
 
 ## Install
 
-- environment GO111MODULE=on
+
 - go vesion ≥ 1.11
 
+- install
+```sh
+GO111MODULE=on go get -u -v -insecure github.com/henrylee2cn/erpc/v6
+```
+
+- import
 ```go
 import "github.com/henrylee2cn/erpc/v6"
 ```
