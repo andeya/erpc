@@ -143,7 +143,7 @@ func handelHeartbeat(sess erpc.CtxSession, peekMeta func(string) []byte) *erpc.S
 	rateSecond := parseHeartbeatRateSecond(rateStr)
 	isFirst := updateHeartbeatInfo(sess.Swap(), time.Second*time.Duration(rateSecond))
 	if isFirst && rateSecond == -1 {
-		return erpc.NewStatus(erpc.CodeBadMessage, "Invalid Heartbeat Rate", rateStr)
+		return erpc.NewStatus(erpc.CodeBadMessage, "invalid heartbeat rate", rateStr)
 	}
 	if rateSecond == 0 {
 		erpc.Tracef("heart-pong: %s", sess.ID())

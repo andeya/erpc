@@ -134,7 +134,7 @@ func (h *heartPing) Name() string {
 	return "heart-ping"
 }
 
-// PostNewPeer runs ping woker.
+// PostNewPeer runs ping worker.
 func (h *heartPing) PostNewPeer(peer erpc.EarlyPeer) error {
 	rangeSession := peer.RangeSession
 	go func() {
