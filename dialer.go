@@ -80,16 +80,22 @@ func (d *Dialer) RedialTimes() int32 {
 
 // Dial dials the connection, and try again if it fails.
 func (d *Dialer) Dial(addr string) (net.Conn, error) {
-	return d.dialWithRetry(addr, "")
+	return d.dialWithRetry(addr, "", nil)
 }
 
 // dialWithRetry dials the connection, and try again if it fails.
 // NOTE:
 //  sessID is not empty only when the disconnection is redialing
-func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
+func (d *Dialer) dialWithRetry(addr, sessID string, fn func(conn net.Conn) error) (net.Conn, error) {
 	conn, err := d.dialOne(addr)
 	if err == nil {
-		return conn, nil
+		if fn == nil {
+			return conn, nil
+		}
+		err = fn(conn)
+		if err == nil {
+			return conn, nil
+		}
 	}
 	redialTimes := d.newRedialCounter()
 	for redialTimes.Next() {
@@ -101,7 +107,13 @@ func (d *Dialer) dialWithRetry(addr, sessID string) (net.Conn, error) {
 		}
 		conn, err = d.dialOne(addr)
 		if err == nil {
-			return conn, nil
+			if fn == nil {
+				return conn, nil
+			}
+			err = fn(conn)
+			if err == nil {
+				return conn, nil
+			}
 		}
 	}
 	return nil, err

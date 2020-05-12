@@ -9,9 +9,9 @@ import (
 //go:generate go build $GOFILE
 
 func main() {
-	defer erpc.SetLoggerLevel("ERROR")()
+	defer erpc.SetLoggerLevel("DEBUG")()
 
-	cli := erpc.NewPeer(erpc.PeerConfig{RedialTimes: -1})
+	cli := erpc.NewPeer(erpc.PeerConfig{RedialTimes: -1, RedialInterval: time.Second})
 	defer cli.Close()
 	cli.SetTLSConfig(erpc.GenerateTLSConfigForClient())
 

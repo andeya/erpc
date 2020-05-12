@@ -206,26 +206,28 @@ func (p *peer) CountSession() int {
 
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
-	conn, err := p.dialer.dialWithRetry(addr, "")
+	var sess = newSession(p, nil, protoFunc)
+	_, err := p.dialer.dialWithRetry(addr, "", func(conn net.Conn) error {
+		sess.socket.Reset(conn, protoFunc...)
+		sess.socket.SetID(sess.LocalAddr().String())
+		if stat := p.pluginContainer.postDial(sess, false); !stat.OK() {
+			conn.Close()
+			return stat.Cause()
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, statDialFailed.Copy(err)
 	}
-	sess := newSession(p, conn, protoFunc)
 
 	// create redial func
 	if p.dialer.RedialTimes() != 0 {
 		sess.redialForClientLocked = func() bool {
 			oldID := sess.ID()
-			conn, err := p.dialer.dialWithRetry(addr, oldID)
-			var stat *Status
-			if err != nil {
-				stat = statDialFailed.Copy(err)
-			} else {
-				oldIP := sess.LocalAddr().String()
-				oldConn := sess.getConn()
-				if oldConn != nil {
-					oldConn.Close()
-				}
+			oldIP := sess.LocalAddr().String()
+			oldConn := sess.getConn()
+
+			_, err := p.dialer.dialWithRetry(addr, oldID, func(conn net.Conn) error {
 				sess.socket.Reset(conn, protoFunc...)
 				if oldIP == oldID {
 					sess.socket.SetID(sess.LocalAddr().String())
@@ -233,27 +235,32 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 					sess.socket.SetID(oldID)
 				}
 				sess.changeStatus(statusPreparing)
-				stat = p.pluginContainer.postDial(sess, true)
-				if stat.OK() {
-					sess.changeStatus(statusOk)
-					AnywayGo(sess.startReadAndHandle)
-					p.sessHub.set(sess)
-					Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.ID())
-					return true
+				if stat := p.pluginContainer.postDial(sess, true); !stat.OK() {
+					conn.Close()
+					sess.changeStatus(statusRedialing)
+					return stat.Cause()
 				}
+				return nil
+			})
+
+			if err != nil {
 				sess.closeLocked()
+				sess.tryChangeStatus(statusRedialFailed, statusRedialing)
+				Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, addr, oldID, err.Error())
+				return false
 			}
-			sess.tryChangeStatus(statusRedialFailed, statusRedialing)
-			Errorf("redial fail (network:%s, addr:%s, id:%s): %s", p.network, addr, oldID, stat.String())
-			return false
+
+			if oldConn != nil {
+				oldConn.Close()
+			}
+			sess.changeStatus(statusOk)
+			AnywayGo(sess.startReadAndHandle)
+			p.sessHub.set(sess)
+			Infof("redial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.ID())
+			return true
 		}
 	}
 
-	sess.socket.SetID(sess.LocalAddr().String())
-	if stat := p.pluginContainer.postDial(sess, false); !stat.OK() {
-		sess.Close()
-		return nil, stat
-	}
 	Infof("dial ok (network:%s, addr:%s, id:%s)", p.network, addr, sess.ID())
 	sess.changeStatus(statusOk)
 	AnywayGo(sess.startReadAndHandle)
