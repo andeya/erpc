@@ -27,7 +27,7 @@ type Payload struct {
 	Meta                 []byte   `protobuf:"bytes,4,opt,name=meta,proto3" json:"meta,omitempty"`
 	BodyCodec            int32    `protobuf:"varint,5,opt,name=bodyCodec,proto3" json:"bodyCodec,omitempty"`
 	Body                 []byte   `protobuf:"bytes,6,opt,name=body,proto3" json:"body,omitempty"`
-	XferPipe             []byte   `protobuf:"bytes,7,opt,name=xfer_pipe,json=xferPipe,proto3" json:"xfer_pipe,omitempty"`
+	XferPipe             []byte   `protobuf:"bytes,7,opt,name=xferPipe,json=xferPipe,proto3" json:"xferPipe,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`

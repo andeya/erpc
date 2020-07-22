@@ -9,5 +9,5 @@ message payload {
     bytes  meta          = 4;
     int32  bodyCodec     = 5;
     bytes  body          = 6;
-    bytes  xfer_pipe     = 7;
+    bytes  xferPipe      = 7;
 }

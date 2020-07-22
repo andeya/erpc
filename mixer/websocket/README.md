@@ -189,11 +189,11 @@ Among them, TestJSONWebsocket's request body is:
 {
   "seq": 0,
   "mtype": 1,
-  "uri": "/p/divide",
+  "serviceMethod": "/p/divide",
   "meta": "",
-  "body_codec": 106,
+  "bodyCodec": 106,
   "body": "{\"A\":10,\"B\":2}",
-  "xfer_pipe": []
+  "xferPipe": []
 }
 ```
 
@@ -203,10 +203,10 @@ TestJSONWebsocket's response body is:
 {
   "seq": 0,
   "mtype": 2,
-  "uri": "/p/divide",
+  "serviceMethod": "/p/divide",
   "meta": "",
-  "body_codec": 106,
+  "bodyCodec": 106,
   "body": "5",
-  "xfer_pipe": []
+  "xferPipe": []
 }
 ```

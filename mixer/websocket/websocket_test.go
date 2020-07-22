@@ -7,7 +7,7 @@ import (
 
 	"github.com/henrylee2cn/erpc/v6"
 	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto"
 	"github.com/henrylee2cn/erpc/v6/plugin/auth"
 )
 
@@ -76,13 +76,13 @@ func TestPbWebsocketTLS(t *testing.T) {
 
 func TestCustomizedWebsocket(t *testing.T) {
 	srv := erpc.NewPeer(erpc.PeerConfig{})
-	http.Handle("/ws", ws.NewJSONServeHandler(srv, nil))
+	http.Handle("/ws", ws.NewPbServeHandler(srv, nil))
 	go http.ListenAndServe(":9092", nil)
 	srv.RouteCall(new(P))
 	time.Sleep(time.Second * 1)
 
 	cli := erpc.NewPeer(erpc.PeerConfig{}, ws.NewDialPlugin("/ws"))
-	sess, stat := cli.Dial(":9092", jsonSubProto.NewJSONSubProtoFunc())
+	sess, stat := cli.Dial(":9092", pbSubProto.NewPbSubProtoFunc())
 	if !stat.OK() {
 		t.Fatal(stat)
 	}
