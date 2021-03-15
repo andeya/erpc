@@ -26,12 +26,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/henrylee2cn/goutil"
+
 	"github.com/henrylee2cn/erpc/v6"
 	"github.com/henrylee2cn/erpc/v6/codec"
 	"github.com/henrylee2cn/erpc/v6/utils"
 	"github.com/henrylee2cn/erpc/v6/xfer"
 	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
-	"github.com/henrylee2cn/goutil"
 )
 
 var (
@@ -394,7 +395,7 @@ func (h *httproto) unpack(m erpc.Message, bb *utils.ByteBuffer) (size int, msg [
 		}
 		m.Meta().SetBytesKV(a[0], a[1])
 	}
-	if bodySize == 0 {
+	if bodySize <= 0 {
 		return size, msg, nil
 	}
 	bb.ChangeLen(bodySize)

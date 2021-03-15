@@ -113,7 +113,7 @@ func (b *ByteBuffer) Reset() {
 func (b *ByteBuffer) ChangeLen(newLen int) {
 	if cap(b.B) < newLen {
 		b.B = make([]byte, newLen)
-	} else {
+	} else if newLen >= 0 {
 		b.B = b.B[:newLen]
 	}
 }

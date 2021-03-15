@@ -22,8 +22,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/henrylee2cn/erpc/v6/utils"
 	"github.com/henrylee2cn/goutil"
+
+	"github.com/henrylee2cn/erpc/v6/utils"
 )
 
 type (
@@ -229,12 +230,16 @@ func (r *rawProto) readMessage(bb *utils.ByteBuffer, m Message) error {
 	if err != nil {
 		return err
 	}
-	lastSize := binary.BigEndian.Uint32(bb.B)
-	if err = m.SetSize(lastSize); err != nil {
+	_lastSize := binary.BigEndian.Uint32(bb.B)
+	if err = m.SetSize(_lastSize); err != nil {
 		return err
 	}
-	lastSize -= 4
-	bb.ChangeLen(int(lastSize))
+	lastSize := int(_lastSize)
+	lastSize, err = minus(lastSize, 4)
+	if err != nil {
+		return err
+	}
+	bb.ChangeLen(lastSize)
 
 	// transfer pipe
 	_, err = io.ReadFull(r.r, bb.B[:1])
@@ -252,12 +257,22 @@ func (r *rawProto) readMessage(bb *utils.ByteBuffer, m Message) error {
 			return err
 		}
 	}
-	lastSize -= (1 + uint32(xferLen))
-
+	lastSize, err = minus(lastSize, 1+int(xferLen))
+	if err != nil {
+		return err
+	}
 	// read last all
-	bb.ChangeLen(int(lastSize))
+	bb.ChangeLen(lastSize)
 	_, err = io.ReadFull(r.r, bb.B)
 	return err
+}
+
+func minus(a int, b int) (int, error) {
+	r := a - b
+	if r < 0 || b < 0 {
+		return a, errors.New("raw proto: bad package")
+	}
+	return r, nil
 }
 
 func (r *rawProto) readHeader(data []byte, m Message) ([]byte, error) {
