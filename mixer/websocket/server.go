@@ -17,6 +17,7 @@ package websocket
 import (
 	"context"
 	"errors"
+	"github.com/henrylee2cn/goutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -153,22 +154,18 @@ func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *http.Request) e
 	} else {
 		scheme = "wss"
 	}
-	if handshake != nil {
-		w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
-			cfg.Origin = &url.URL{
-				Host:   r.RemoteAddr,
-				Scheme: scheme,
-			}
+	w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
+		cfg.Origin = &url.URL{
+			Host:   r.RemoteAddr,
+			Scheme: scheme,
+		}
+		if stat := w.preHandshake(r); !stat.OK() {
+			return stat.Cause()
+		}
+		if handshake != nil {
 			return handshake(cfg, r)
 		}
-	} else {
-		w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
-			cfg.Origin = &url.URL{
-				Host:   r.RemoteAddr,
-				Scheme: scheme,
-			}
-			return nil
-		}
+		return nil
 	}
 	w.Server.Handler = w.handler
 	w.Server.Config = ws.Config{
@@ -189,5 +186,68 @@ func (w *serverHandler) handler(conn *ws.Conn) {
 		erpc.Errorf("serverHandler: %v", err)
 		return
 	}
+	if stat := w.postAccept(sess, conn); !stat.OK() {
+		if err := sess.Close(); err != nil {
+			erpc.Errorf("sess.Close(): %v", err)
+		}
+		return
+	}
 	<-sess.CloseNotify()
+}
+
+var (
+	statInternalServerError = erpc.NewStatus(erpc.CodeInternalServerError, erpc.CodeText(erpc.CodeInternalServerError), "")
+)
+
+type (
+	PreWebsocketHandshakePlugin interface {
+		erpc.Plugin
+		PreHandshake(r *http.Request) *erpc.Status
+	}
+	PostWebsocketAcceptPlugin interface {
+		erpc.Plugin
+		PostAccept(sess erpc.Session, conn *ws.Conn) *erpc.Status
+	}
+)
+
+func (w *serverHandler) preHandshake(r *http.Request) (stat *erpc.Status) {
+	var pluginName string
+	p := w.peer.PluginContainer()
+	defer func() {
+		if p := recover(); p != nil {
+			erpc.Errorf("[PreWebsocketHandshakePlugin:%s] addr:%s, panic:%v\n%s", pluginName, r.RemoteAddr, p, goutil.PanicTrace(2))
+			stat = statInternalServerError.Copy(p)
+		}
+	}()
+	for _, plugin := range p.GetAll() {
+		if _plugin, ok := plugin.(PreWebsocketHandshakePlugin); ok {
+			pluginName = plugin.Name()
+			if stat = _plugin.PreHandshake(r); !stat.OK() {
+				erpc.Debugf("[PreWebsocketHandshakePlugin:%s] addr:%s, error:%s", pluginName, r.RemoteAddr, stat.String())
+				return stat
+			}
+		}
+	}
+	return nil
+}
+
+func (w *serverHandler) postAccept(sess erpc.Session, conn *ws.Conn) (stat *erpc.Status) {
+	var pluginName string
+	p := w.peer.PluginContainer()
+	defer func() {
+		if p := recover(); p != nil {
+			erpc.Errorf("[PostWebsocketAcceptPlugin:%s] network:%s, addr:%s, panic:%v\n%s", pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), p, goutil.PanicTrace(2))
+			stat = statInternalServerError.Copy(p)
+		}
+	}()
+	for _, plugin := range p.GetAll() {
+		if _plugin, ok := plugin.(PostWebsocketAcceptPlugin); ok {
+			pluginName = plugin.Name()
+			if stat = _plugin.PostAccept(sess, conn); !stat.OK() {
+				erpc.Debugf("[PostWebsocketAcceptPlugin:%s] network:%s, addr:%s, error:%s", pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), stat.String())
+				return stat
+			}
+		}
+	}
+	return nil
 }
