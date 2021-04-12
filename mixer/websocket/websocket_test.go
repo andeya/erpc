@@ -172,6 +172,7 @@ func TestHandshakeWebsocketAuth(t *testing.T) {
 	srv.RouteCall(new(P))
 	time.Sleep(time.Millisecond * 200)
 
+	// example in Browser: ws://localhost/token?access_token=clientAuthInfo
 	rawQuery := fmt.Sprintf("/token?%s=%s", clientAuthKey, clientAuthInfo)
 	cli := erpc.NewPeer(erpc.PeerConfig{}, ws.NewDialPlugin(rawQuery))
 	sess, stat := cli.Dial(":9094", jsonSubProto.NewJSONSubProtoFunc())
@@ -188,7 +189,16 @@ func TestHandshakeWebsocketAuth(t *testing.T) {
 		t.Fatal(stat)
 	}
 	t.Logf("10/2=%d", result)
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 200)
+
+	// error test
+	rawQuery = fmt.Sprintf("/token?%s=wrongToken", clientAuthKey)
+	cli = erpc.NewPeer(erpc.PeerConfig{}, ws.NewDialPlugin(rawQuery))
+	sess, stat = cli.Dial(":9094", jsonSubProto.NewJSONSubProtoFunc())
+	if stat.OK() {
+		t.Fatal("why dial correct by wrong token?")
+	}
+	time.Sleep(time.Millisecond * 200)
 }
 
 const clientAuthKey = "access_token"

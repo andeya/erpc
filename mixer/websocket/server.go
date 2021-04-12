@@ -154,6 +154,7 @@ func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *http.Request) e
 	} else {
 		scheme = "wss"
 	}
+	//Generate Handshake handle
 	w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
 		cfg.Origin = &url.URL{
 			Host:   r.RemoteAddr,
@@ -200,16 +201,20 @@ var (
 )
 
 type (
+	// PreHandshake executes the PreWebsocketHandshakePlugins before websocket handshake,
 	PreWebsocketHandshakePlugin interface {
 		erpc.Plugin
 		PreHandshake(r *http.Request) *erpc.Status
 	}
+	// PreHandshake executes the PostWebsocketAcceptPlugin after websocket accepting connection
 	PostWebsocketAcceptPlugin interface {
 		erpc.Plugin
 		PostAccept(sess erpc.Session, conn *ws.Conn) *erpc.Status
 	}
 )
 
+// PreHandshake executes the PreWebsocketHandshakePlugins before websocket handshake,
+// you can still deal with http.Request in this stage.
 func (w *serverHandler) preHandshake(r *http.Request) (stat *erpc.Status) {
 	var pluginName string
 	p := w.peer.PluginContainer()
@@ -231,6 +236,9 @@ func (w *serverHandler) preHandshake(r *http.Request) (stat *erpc.Status) {
 	return nil
 }
 
+// PreHandshake executes the PostWebsocketAcceptPlugin after websocket accepting connection
+// it is similar to erpc.plugin.PostAcceptPlugin, but a websocket.Conn argument that you can
+// get http.Request interface, may be you need.
 func (w *serverHandler) postAccept(sess erpc.Session, conn *ws.Conn) (stat *erpc.Status) {
 	var pluginName string
 	p := w.peer.PluginContainer()
