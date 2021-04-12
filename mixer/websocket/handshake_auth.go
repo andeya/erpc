@@ -45,7 +45,7 @@ var (
 	_ PreWebsocketHandshakePlugin = new(HandshakeAuthPlugin)
 )
 
-func (t *HandshakeAuthPlugin) Name() string {
+func (p *HandshakeAuthPlugin) Name() string {
 	return "handshake-auth-plugin"
 }
 
