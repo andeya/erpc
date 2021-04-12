@@ -27,7 +27,7 @@ func NewHandshakeAuthPlugin(ckFn Checker, apFn Acceptor) *HandshakeAuthPlugin {
 	}
 }
 
-// Checker provide authenticated erpc.Session
+// Acceptor provide authenticated erpc.Session
 // you can get the sessionID that your return by Checker()
 type Acceptor func(sess erpc.Session) *erpc.Status
 
