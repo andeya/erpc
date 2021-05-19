@@ -271,7 +271,7 @@ func (p *Push) Status(arg *string) *erpc.Status {
 
 ## Usage
 
-NOTE:
+**NOTE:**
 
 - It is best to set the packet size when reading: `SetReadLimit`
 - The default packet size limit when reading is 1 GB

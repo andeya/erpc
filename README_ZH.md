@@ -250,32 +250,36 @@ func main() {
 	}
 	erpc.Printf("result: %d", result)
 	erpc.Printf("Wait 10 seconds to receive the push...")
-	time.Sleep(time.Second * 10)
+  time.Sleep(time.Second * 10)
 }
 
 // Push push handler
 type Push struct {
-	erpc.PushCtx
+  erpc.PushCtx
 }
 
 // Push handles '/push/status' message
 func (p *Push) Status(arg *string) *erpc.Status {
-	erpc.Printf("%s", *arg)
-	return nil
+  erpc.Printf("%s", *arg)
+  return nil
 }
 ```
 
 [更多示例](https://github.com/henrylee2cn/erpc/blob/master/examples)
 
-
 ## 用法
+
+**NOTE:**
+
+- 最好设置读包时大小限制: `SetReadLimit`
+- 默认读包时大小限制为 1 GB
 
 ### Peer端点（服务端或客户端）示例
 
 ```go
 // Start a server
 var peer1 = erpc.NewPeer(erpc.PeerConfig{
-    ListenPort: 9090, // for server role
+ListenPort: 9090, // for server role
 })
 peer1.Listen()
 
