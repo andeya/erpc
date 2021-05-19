@@ -11,6 +11,7 @@ Websocket is an extension package that makes the eRPC framework compatible with 
 ```go
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/henrylee2cn/erpc/v6"
 	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket"
 	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
+	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto"
 	"github.com/henrylee2cn/erpc/v6/plugin/auth"
 )
 
@@ -86,13 +88,13 @@ func TestPbWebsocketTLS(t *testing.T) {
 
 func TestCustomizedWebsocket(t *testing.T) {
 	srv := erpc.NewPeer(erpc.PeerConfig{})
-	http.Handle("/ws", ws.NewJSONServeHandler(srv, nil))
+	http.Handle("/ws", ws.NewPbServeHandler(srv, nil))
 	go http.ListenAndServe(":9092", nil)
 	srv.RouteCall(new(P))
 	time.Sleep(time.Second * 1)
 
 	cli := erpc.NewPeer(erpc.PeerConfig{}, ws.NewDialPlugin("/ws"))
-	sess, stat := cli.Dial(":9092", jsonSubProto.NewJSONSubProtoFunc())
+	sess, stat := cli.Dial(":9092", pbSubProto.NewPbSubProtoFunc())
 	if !stat.OK() {
 		t.Fatal(stat)
 	}
@@ -111,8 +113,8 @@ func TestCustomizedWebsocket(t *testing.T) {
 
 func TestJSONWebsocketAuth(t *testing.T) {
 	srv := ws.NewServer(
-		"/",
-		erpc.PeerConfig{ListenPort: 9090},
+		"/auth",
+		erpc.PeerConfig{ListenPort: 9093},
 		authChecker,
 	)
 	srv.RouteCall(new(P))
@@ -121,11 +123,11 @@ func TestJSONWebsocketAuth(t *testing.T) {
 	time.Sleep(time.Second * 1)
 
 	cli := ws.NewClient(
-		"/",
+		"/auth",
 		erpc.PeerConfig{},
 		authBearer,
 	)
-	sess, stat := cli.Dial(":9090")
+	sess, stat := cli.Dial(":9093")
 	if !stat.OK() {
 		t.Fatal(stat)
 	}
@@ -171,6 +173,50 @@ var authChecker = auth.NewCheckerPlugin(
 		return "pass", nil
 	},
 	erpc.WithBodyCodec('s'),
+)
+
+func TestHandshakeWebsocketAuth(t *testing.T) {
+	srv := erpc.NewPeer(erpc.PeerConfig{}, handshakePlugin)
+	http.Handle("/token", ws.NewJSONServeHandler(srv, nil))
+	go http.ListenAndServe(":9094", nil)
+	srv.RouteCall(new(P))
+	time.Sleep(time.Millisecond * 200)
+
+	rawQuery := fmt.Sprintf("/token?%s=%s", clientAuthKey, clientAuthInfo)
+	cli := erpc.NewPeer(erpc.PeerConfig{}, ws.NewDialPlugin(rawQuery))
+	sess, stat := cli.Dial(":9094", jsonSubProto.NewJSONSubProtoFunc())
+	if !stat.OK() {
+		t.Fatal(stat)
+	}
+	var result int
+	stat = sess.Call("/p/divide", &Arg{
+		A: 10,
+		B: 2,
+	}, &result,
+	).Status()
+	if !stat.OK() {
+		t.Fatal(stat)
+	}
+	t.Logf("10/2=%d", result)
+	time.Sleep(time.Second)
+}
+
+const clientAuthKey = "access_token"
+const clientUserID = "user-1234"
+
+var handshakePlugin = ws.NewHandshakeAuthPlugin(
+	func(r *http.Request) (sessionId string, status *erpc.Status) {
+		token := ws.QueryToken(clientAuthKey, r)
+		erpc.Infof("auth token: %v", token)
+		if token != clientAuthInfo {
+			return "", erpc.NewStatus(erpc.CodeUnauthorized, erpc.CodeText(erpc.CodeUnauthorized))
+		}
+		return clientUserID, nil
+	},
+	func(sess erpc.Session) *erpc.Status {
+		erpc.Infof("login userID: %v", sess.ID())
+		return nil
+	},
 )
 ```
 
