@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"sync"
 
 	"github.com/henrylee2cn/erpc/v6/codec"
@@ -538,7 +537,8 @@ func WithXferPipe(filterID ...byte) MessageSetting {
 }
 
 var (
-	messageSizeLimit uint32 = math.MaxUint32
+	defaultMessageSizeLimit uint32 = (1 << 20) * 1024 // 1GB
+	messageSizeLimit        uint32 = defaultMessageSizeLimit
 	// ErrExceedMessageSizeLimit error
 	ErrExceedMessageSizeLimit = errors.New("size of package exceeds limit")
 )
@@ -549,10 +549,10 @@ func MessageSizeLimit() uint32 {
 }
 
 // SetMessageSizeLimit sets max message size.
-// If maxSize<=0, set it to max uint32.
+// If maxSize<=0, set it to 1GB.
 func SetMessageSizeLimit(maxMessageSize uint32) {
 	if maxMessageSize <= 0 {
-		messageSizeLimit = math.MaxUint32
+		messageSizeLimit = defaultMessageSizeLimit
 	} else {
 		messageSizeLimit = maxMessageSize
 	}

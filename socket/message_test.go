@@ -8,6 +8,10 @@ import (
 	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
 )
 
+func TestMessageSizeLimit(t *testing.T) {
+	t.Logf("MessageSizeLimit: %d", MessageSizeLimit())
+}
+
 func TestMessageString(t *testing.T) {
 	gzip.Reg('g', "gzip", 5)
 

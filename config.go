@@ -181,7 +181,7 @@ var SetDefaultProtoFunc = socket.SetDefaultProtoFunc
 var GetReadLimit = socket.MessageSizeLimit
 
 // SetReadLimit sets max message size.
-// If maxSize<=0, set it to max uint32.
+// If maxSize<=0, set it to 1GB.
 //  func SetReadLimit(maxMessageSize uint32)
 var SetReadLimit = socket.SetMessageSizeLimit
 

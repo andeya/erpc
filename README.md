@@ -222,62 +222,66 @@ func (m *Math) Add(arg *[]int) (int, *erpc.Status) {
 package main
 
 import (
-	"time"
+  "time"
 
-	"github.com/henrylee2cn/erpc/v6"
+  "github.com/henrylee2cn/erpc/v6"
 )
 
 func main() {
-	defer erpc.SetLoggerLevel("ERROR")()
+  defer erpc.SetLoggerLevel("ERROR")()
 
-	cli := erpc.NewPeer(erpc.PeerConfig{})
-	defer cli.Close()
-	// cli.SetTLSConfig(&tls.Config{InsecureSkipVerify: true})
+  cli := erpc.NewPeer(erpc.PeerConfig{})
+  defer cli.Close()
+  // cli.SetTLSConfig(&tls.Config{InsecureSkipVerify: true})
 
-	cli.RoutePush(new(Push))
+  cli.RoutePush(new(Push))
 
-	sess, stat := cli.Dial(":9090")
-	if !stat.OK() {
-		erpc.Fatalf("%v", stat)
-	}
+  sess, stat := cli.Dial(":9090")
+  if !stat.OK() {
+    erpc.Fatalf("%v", stat)
+  }
 
-	var result int
-	stat = sess.Call("/math/add",
-		[]int{1, 2, 3, 4, 5},
-		&result,
-		erpc.WithAddMeta("author", "henrylee2cn"),
-	).Status()
-	if !stat.OK() {
-		erpc.Fatalf("%v", stat)
-	}
-	erpc.Printf("result: %d", result)
-	erpc.Printf("Wait 10 seconds to receive the push...")
-	time.Sleep(time.Second * 10)
+  var result int
+  stat = sess.Call("/math/add",
+    []int{1, 2, 3, 4, 5},
+    &result,
+    erpc.WithAddMeta("author", "henrylee2cn"),
+  ).Status()
+  if !stat.OK() {
+    erpc.Fatalf("%v", stat)
+  }
+  erpc.Printf("result: %d", result)
+  erpc.Printf("Wait 10 seconds to receive the push...")
+  time.Sleep(time.Second * 10)
 }
 
 // Push push handler
 type Push struct {
-	erpc.PushCtx
+  erpc.PushCtx
 }
 
 // Push handles '/push/status' message
 func (p *Push) Status(arg *string) *erpc.Status {
-	erpc.Printf("%s", *arg)
-	return nil
+  erpc.Printf("%s", *arg)
+  return nil
 }
 ```
 
 [More Examples](https://github.com/henrylee2cn/erpc/tree/master/examples)
 
-
 ## Usage
+
+NOTE:
+
+- It is best to set the packet size when reading: `SetReadLimit`
+- The default packet size limit when reading is 1 GB
 
 ### Peer(server or client) Demo
 
 ```go
 // Start a server
 var peer1 = erpc.NewPeer(erpc.PeerConfig{
-    ListenPort: 9090, // for server role
+ListenPort: 9090, // for server role
 })
 peer1.Listen()
 
