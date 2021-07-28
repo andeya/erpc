@@ -488,11 +488,9 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 	var pool = &sync.Pool{
 		New: func() interface{} {
 			ctrl := reflect.New(ctypeElem)
-			callCtxPtr := ctrl.Pointer() + callCtxOffset
-			ctxPtr := (*CallCtx)(unsafe.Pointer(callCtxPtr))
 			return &CallCtrlValue{
 				ctrl:   ctrl,
-				ctxPtr: ctxPtr,
+				ctxPtr: (*CallCtx)(unsafe.Pointer(uintptr(unsafe.Pointer(ctrl.Pointer())) + callCtxOffset)),
 			}
 		},
 	}
@@ -674,11 +672,9 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 		var pool = &sync.Pool{
 			New: func() interface{} {
 				ctrl := reflect.New(ctxTypeElem)
-				callCtxPtr := ctrl.Pointer() + callCtxOffset
-				ctxPtr := (*CallCtx)(unsafe.Pointer(callCtxPtr))
 				return &CallCtrlValue{
 					ctrl:   ctrl,
-					ctxPtr: ctxPtr,
+					ctxPtr: (*CallCtx)(unsafe.Pointer(uintptr(unsafe.Pointer(ctrl.Pointer())) + callCtxOffset)),
 				}
 			},
 		}
@@ -743,11 +739,9 @@ func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, plugi
 	var pool = &sync.Pool{
 		New: func() interface{} {
 			ctrl := reflect.New(ctypeElem)
-			pushCtxPtr := ctrl.Pointer() + pushCtxOffset
-			ctxPtr := (*PushCtx)(unsafe.Pointer(pushCtxPtr))
 			return &PushCtrlValue{
 				ctrl:   ctrl,
-				ctxPtr: ctxPtr,
+				ctxPtr: (*PushCtx)(unsafe.Pointer(uintptr(unsafe.Pointer(ctrl.Pointer())) + pushCtxOffset)),
 			}
 		},
 	}
@@ -902,11 +896,9 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 		var pool = &sync.Pool{
 			New: func() interface{} {
 				ctrl := reflect.New(ctxTypeElem)
-				pushCtxPtr := ctrl.Pointer() + pushCtxOffset
-				ctxPtr := (*PushCtx)(unsafe.Pointer(pushCtxPtr))
 				return &PushCtrlValue{
 					ctrl:   ctrl,
-					ctxPtr: ctxPtr,
+					ctxPtr: (*PushCtx)(unsafe.Pointer(uintptr(unsafe.Pointer(ctrl.Pointer())) + pushCtxOffset)),
 				}
 			},
 		}
