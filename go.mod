@@ -1,6 +1,6 @@
 module github.com/henrylee2cn/erpc/v6
 
-go 1.14
+go 1.17
 
 require (
 	git.apache.org/thrift.git v0.13.0
@@ -13,7 +13,35 @@ require (
 	github.com/montanaflynn/stats v0.5.0
 	github.com/stretchr/testify v1.5.1
 	github.com/tidwall/evio v1.0.7
-	github.com/tidwall/gjson v1.2.2
+	github.com/tidwall/gjson v1.9.1
 	github.com/xtaci/kcp-go/v5 v5.5.12
 	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
+)
+
+require (
+	github.com/cheekybits/genny v1.0.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
+	github.com/henrylee2cn/ameda v1.3.6 // indirect
+	github.com/klauspost/cpuid v1.2.2 // indirect
+	github.com/klauspost/reedsolomon v1.9.3 // indirect
+	github.com/marten-seemann/qtls-go1-15 v0.1.5 // indirect
+	github.com/marten-seemann/qtls-go1-16 v0.1.4 // indirect
+	github.com/marten-seemann/qtls-go1-17 v0.1.0-rc.1 // indirect
+	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/onsi/ginkgo v1.16.4 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/templexxx/cpu v0.0.1 // indirect
+	github.com/templexxx/xorsimd v0.4.1 // indirect
+	github.com/tidwall/match v1.0.3 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tjfoc/gmsm v1.0.1 // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
+	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781 // indirect
+	golang.org/x/tools v0.1.1 // indirect
+	google.golang.org/protobuf v1.26.0 // indirect
+	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
