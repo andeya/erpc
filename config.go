@@ -33,6 +33,7 @@ import (
 type PeerConfig struct {
 	Network           string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket, kcp or quic"`
 	LocalIP           string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
+	LocalPort         uint16        `yaml:"local_port"           ini:"local_port"           comment:"Local port; for client role"`
 	ListenPort        uint16        `yaml:"listen_port"          ini:"listen_port"          comment:"Listen port; for server role"`
 	DialTimeout       time.Duration `yaml:"dial_timeout"         ini:"dial_timeout"         comment:"Maximum duration for dialing; for client role; ns,µs,ms,s,m,h"`
 	RedialTimes       int32         `yaml:"redial_times"         ini:"redial_times"         comment:"The maximum times of attempts to redial, after the connection has been unexpectedly broken; Unlimited when <0; for client role"`
@@ -85,7 +86,7 @@ func (p *PeerConfig) check() (err error) {
 	if p.LocalIP == "" {
 		p.LocalIP = "0.0.0.0"
 	}
-	p.localAddr, err = p.newAddr("0")
+	p.localAddr, err = p.newAddr(strconv.Itoa(int(p.LocalPort)))
 	if err != nil {
 		return err
 	}
