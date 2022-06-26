@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"sync"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/goutil"
 	"github.com/tidwall/gjson"
 )

@@ -1,5 +1,7 @@
 package main
 
+import "github.com/andeya/erpc/v7"
+
 //go:generate go build $GOFILE
 
 func main() {

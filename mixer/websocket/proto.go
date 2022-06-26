@@ -17,6 +17,7 @@ package websocket
 import (
 	"bytes"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
 	ws "github.com/andeya/erpc/v7/mixer/websocket/websocket"
 	"github.com/andeya/erpc/v7/socket"

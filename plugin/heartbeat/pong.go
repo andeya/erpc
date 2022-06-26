@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/goutil"
 
 	"github.com/andeya/goutil/coarsetime"

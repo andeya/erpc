@@ -21,6 +21,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/codec"
 	"github.com/andeya/erpc/v7/proto/pbproto/pb"
 	"github.com/andeya/erpc/v7/utils"

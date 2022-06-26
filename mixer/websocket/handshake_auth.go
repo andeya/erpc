@@ -16,6 +16,7 @@ package websocket
 import (
 	"net/http"
 
+	"github.com/andeya/erpc/v7"
 	ws "github.com/andeya/erpc/v7/mixer/websocket/websocket"
 )
 

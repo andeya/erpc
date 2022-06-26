@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/examples/bench/msg"
 )
 

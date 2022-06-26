@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"sync"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/codec"
 	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto/pb"
 )

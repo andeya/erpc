@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/goutil"
 
 	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"

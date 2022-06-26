@@ -26,6 +26,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/goutil"
 
 	"github.com/andeya/erpc/v7/codec"

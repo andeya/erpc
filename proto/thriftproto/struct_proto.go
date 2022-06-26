@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/codec"
 	"github.com/andeya/erpc/v7/utils"
 	"github.com/andeya/goutil"

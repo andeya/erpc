@@ -22,6 +22,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
 	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto"
 	ws "github.com/andeya/erpc/v7/mixer/websocket/websocket"

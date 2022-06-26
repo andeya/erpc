@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/andeya/cfgo"
+	"github.com/andeya/erpc/v7"
 )
 
 //go:generate go build $GOFILE

@@ -20,6 +20,7 @@ import (
 	"net"
 	"sync/atomic"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/goutil"
 )
 

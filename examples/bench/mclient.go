@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/examples/bench/msg"
 	proto "github.com/gogo/protobuf/proto"
 	"github.com/montanaflynn/stats"

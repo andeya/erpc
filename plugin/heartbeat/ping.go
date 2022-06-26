@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/goutil/coarsetime"
 )
 

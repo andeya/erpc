@@ -1,6 +1,7 @@
 package rawproto
 
 import (
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/socket"
 )
 

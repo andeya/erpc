@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/utils"
 	"github.com/andeya/goutil"
 )

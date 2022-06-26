@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/andeya/erpc/v7"
 )
 
 //go:generate go build $GOFILE
