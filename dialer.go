@@ -20,8 +20,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6/kcp"
-	"github.com/henrylee2cn/erpc/v6/quic"
+	"github.com/andeya/erpc/v7/kcp"
+	"github.com/andeya/erpc/v7/quic"
 )
 
 // Dialer dial-up connection

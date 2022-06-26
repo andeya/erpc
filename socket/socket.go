@@ -25,8 +25,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/goutil/errors"
+	"github.com/andeya/goutil"
+	"github.com/andeya/goutil/errors"
 )
 
 type (

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/henrylee2cn/goutil/graceful"
+	"github.com/andeya/goutil/graceful"
 	quic "github.com/lucas-clemente/quic-go"
 )
 

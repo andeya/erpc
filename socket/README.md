@@ -42,19 +42,19 @@ A concise, powerful and high-performance connection socket.
 | 2000               | 8        | 6          | 64      | 0       | 183351          |
 | 5000               | 21       | 18         | 651     | 0       | 133886          |
 
-**[test code](https://github.com/henrylee2cn/rpc-benchmark/tree/master/erpc)**
+**[test code](https://github.com/andeya/rpc-benchmark/tree/master/erpc)**
 
 - Profile torch of erpc/socket
 
-![erpc_socket_profile_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_profile_torch.png)
+![erpc_socket_profile_torch](https://github.com/andeya/erpc/raw/master/doc/erpc_socket_profile_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_profile_torch.svg)**
+**[svg file](https://github.com/andeya/erpc/raw/master/doc/erpc_socket_profile_torch.svg)**
 
 - Heap torch of erpc/socket
 
-![erpc_socket_heap_torch](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_heap_torch.png)
+![erpc_socket_heap_torch](https://github.com/andeya/erpc/raw/master/doc/erpc_socket_heap_torch.png)
 
-**[svg file](https://github.com/henrylee2cn/erpc/raw/master/doc/erpc_socket_heap_torch.svg)**
+**[svg file](https://github.com/andeya/erpc/raw/master/doc/erpc_socket_heap_torch.svg)**
 
 ## Example
 
@@ -67,8 +67,8 @@ import (
     "log"
     "net"
 
-    "github.com/henrylee2cn/erpc/v6/socket"
-    "github.com/henrylee2cn/erpc/v6/socket/example/pb"
+    "github.com/andeya/erpc/v7/socket"
+    "github.com/andeya/erpc/v7/socket/example/pb"
 )
 
 //go:generate go build $GOFILE
@@ -131,9 +131,9 @@ import (
     "log"
     "net"
 
-    "github.com/henrylee2cn/erpc/v6/codec"
-    "github.com/henrylee2cn/erpc/v6/socket"
-    "github.com/henrylee2cn/erpc/v6/socket/example/pb"
+    "github.com/andeya/erpc/v7/codec"
+    "github.com/andeya/erpc/v7/socket"
+    "github.com/andeya/erpc/v7/socket/example/pb"
 )
 
 //go:generate go build $GOFILE
@@ -178,7 +178,7 @@ func main() {
 }
 ```
 
-[More Examples](https://github.com/henrylee2cn/erpc/tree/master/socket/example)
+[More Examples](https://github.com/andeya/erpc/tree/master/socket/example)
 
 ## Keyworks
 

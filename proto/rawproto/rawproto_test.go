@@ -4,8 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
+	"github.com/andeya/erpc/v7/xfer/gzip"
 )
 
 func TestRawProto(t *testing.T) {
@@ -27,7 +26,7 @@ func TestRawProto(t *testing.T) {
 	var result interface{}
 	stat = sess.Call("/home/test",
 		map[string]string{
-			"author": "henrylee2cn",
+			"author": "andeya",
 		},
 		&result,
 		erpc.WithAddMeta("peer_id", "110"),

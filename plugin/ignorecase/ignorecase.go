@@ -3,8 +3,6 @@ package ignorecase
 
 import (
 	"strings"
-
-	"github.com/henrylee2cn/erpc/v6"
 )
 
 // NewIgnoreCase Returns a ignoreCase plugin.

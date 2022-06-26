@@ -23,11 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/goutil/graceful"
+	"github.com/andeya/goutil/graceful"
 
-	"github.com/henrylee2cn/erpc/v6/utils"
-	"github.com/henrylee2cn/erpc/v6/utils/color"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/erpc/v7/utils"
+	"github.com/andeya/erpc/v7/utils/color"
+	"github.com/andeya/goutil"
 )
 
 type (
@@ -159,8 +159,8 @@ var loggerOutputter = func() LoggerOutputter {
 			buf.WriteString(" [" + loggerLevelTagMap[loggerLevel] + "] ")
 			buf.Write(msgBytes)
 			line := goutil.GetCallLine(calldepth + 1)
-			if !strings.Contains(line, "github.com/henrylee2cn/erpc") &&
-				!strings.Contains(line, "github.com/henrylee2cn/goutil/graceful") {
+			if !strings.Contains(line, "github.com/andeya/erpc") &&
+				!strings.Contains(line, "github.com/andeya/goutil/graceful") {
 				buf.WriteString(" <" + line + ">\n")
 			} else {
 				buf.WriteByte('\n')

@@ -4,9 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/xfer"
-	"github.com/henrylee2cn/erpc/v6/xfer/md5"
+	"github.com/andeya/erpc/v7/xfer"
+	"github.com/andeya/erpc/v7/xfer/md5"
 )
 
 func TestSeparate(t *testing.T) {

@@ -4,8 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/plugin/binder"
+	"github.com/andeya/erpc/v7/plugin/binder"
 )
 
 type (

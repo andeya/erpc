@@ -13,7 +13,7 @@ Higher throughput client connection pool when transferring large messages (such 
 
 ### Usage
 	
-`import "github.com/henrylee2cn/erpc/v6/mixer/multiclient"`
+`import "github.com/andeya/erpc/v7/mixer/multiclient"`
 
 #### Test
 
@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/mixer/multiclient"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/mixer/multiclient"
 )
 
 type Arg struct {

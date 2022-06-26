@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/henrylee2cn/goutil/graceful"
+	"github.com/andeya/goutil/graceful"
 )
 
 // InheritedListen announces on the local network address laddr. The network net is "KCP".

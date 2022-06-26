@@ -1,8 +1,7 @@
 package rawproto
 
 import (
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/socket"
+	"github.com/andeya/erpc/v7/socket"
 )
 
 /*

@@ -20,8 +20,7 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/goutil"
 )
 
 // NewBearerPlugin creates a auth bearer plugin for client.

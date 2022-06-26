@@ -3,7 +3,6 @@ package erpc_test
 import (
 	"testing"
 
-	"github.com/henrylee2cn/erpc/v6"
 	"github.com/stretchr/testify/assert"
 )
 

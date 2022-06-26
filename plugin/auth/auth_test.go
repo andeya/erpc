@@ -4,8 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/plugin/auth"
+	"github.com/andeya/erpc/v7/plugin/auth"
 )
 
 func Test(t *testing.T) {
@@ -30,7 +29,7 @@ func Test(t *testing.T) {
 	var result interface{}
 	stat = sess.Call("/home/test",
 		map[string]string{
-			"author": "henrylee2cn",
+			"author": "andeya",
 		},
 		&result,
 		erpc.WithAddMeta("peer_id", "110"),

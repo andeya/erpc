@@ -18,10 +18,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/goutil"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/goutil/coarsetime"
+	"github.com/andeya/goutil/coarsetime"
 )
 
 // NewPong returns a heartbeat receiver plugin.

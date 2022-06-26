@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/proto/thriftproto"
-	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/proto/thriftproto"
+	"github.com/andeya/erpc/v7/xfer/gzip"
 )
 
 type Home struct {
@@ -47,7 +47,7 @@ func TestBinaryProto(t *testing.T) {
 	}
 	var result Test
 	stat = sess.Call("Home.Test",
-		&Test{Author: "henrylee2cn"},
+		&Test{Author: "andeya"},
 		&result,
 		erpc.WithAddMeta("peer_id", "110"),
 		erpc.WithXferPipe('g'),
@@ -55,7 +55,7 @@ func TestBinaryProto(t *testing.T) {
 	if !stat.OK() {
 		t.Error(stat)
 	}
-	if result.Author != "henrylee2cn->OK" {
+	if result.Author != "andeya->OK" {
 		t.FailNow()
 	}
 	t.Logf("result:%v", result)
@@ -77,14 +77,14 @@ func TestStructProto(t *testing.T) {
 	}
 	var result Test
 	stat = sess.Call("Home.Test",
-		&Test{Author: "henrylee2cn"},
+		&Test{Author: "andeya"},
 		&result,
 		erpc.WithAddMeta("peer_id", "110"),
 	).Status()
 	if !stat.OK() {
 		t.Error(stat)
 	}
-	if result.Author != "henrylee2cn->OK" {
+	if result.Author != "andeya->OK" {
 		t.FailNow()
 	}
 	t.Logf("result:%v", result)

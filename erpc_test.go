@@ -3,8 +3,6 @@ package erpc_test
 import (
 	"testing"
 	"time"
-
-	"github.com/henrylee2cn/erpc/v6"
 )
 
 func panic_call(erpc.CallCtx, *interface{}) (interface{}, *erpc.Status) {

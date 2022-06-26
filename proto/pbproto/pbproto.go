@@ -21,10 +21,9 @@ import (
 	"io"
 	"sync"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/proto/pbproto/pb"
-	"github.com/henrylee2cn/erpc/v6/utils"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/proto/pbproto/pb"
+	"github.com/andeya/erpc/v7/utils"
 )
 
 // NewPbProtoFunc is creation function of PROTOBUF socket protocol.

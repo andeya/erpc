@@ -5,9 +5,8 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto/pb"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto/pb"
 )
 
 // NewPbSubProtoFunc() is creation function of PROTOBUF socket protocol.

@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/henrylee2cn/cfgo"
-	"github.com/henrylee2cn/erpc/v6"
+	"github.com/andeya/cfgo"
 )
 
 //go:generate go build $GOFILE

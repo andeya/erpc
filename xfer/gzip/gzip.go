@@ -21,8 +21,8 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/henrylee2cn/erpc/v6/utils"
-	"github.com/henrylee2cn/erpc/v6/xfer"
+	"github.com/andeya/erpc/v7/utils"
+	"github.com/andeya/erpc/v7/xfer"
 )
 
 var ids = map[byte]bool{}

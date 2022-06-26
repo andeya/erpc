@@ -1,9 +1,5 @@
 package main
 
-import (
-	"github.com/henrylee2cn/erpc/v6"
-)
-
 //go:generate go build $GOFILE
 
 func main() {

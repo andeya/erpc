@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
+	"github.com/andeya/erpc/v7/xfer/gzip"
 )
 
 func TestMessageSizeLimit(t *testing.T) {

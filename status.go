@@ -1,7 +1,7 @@
 package erpc
 
 import (
-	"github.com/henrylee2cn/goutil/status"
+	"github.com/andeya/goutil/status"
 )
 
 // Status a handling status with code, msg, cause and stack.

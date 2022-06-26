@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/henrylee2cn/erpc/v6"
-)
+import "github.com/andeya/erpc/v7"
 
 //go:generate go build $GOFILE
 
@@ -43,7 +41,7 @@ func (e *earlyResult) PostAccept(sess erpc.PreSession) *erpc.Status {
 		stat = erpc.NewStatus(10005, "unexpected request", "")
 	} else {
 		body := *input.Body().(*map[string]string)
-		if body["author"] != "henrylee2cn" {
+		if body["author"] != "andeya" {
 			stat = erpc.NewStatus(10005, "incorrect author", body["author"])
 		} else {
 			stat = nil

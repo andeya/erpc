@@ -20,12 +20,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/kcp"
-	"github.com/henrylee2cn/erpc/v6/quic"
-	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/goutil/coarsetime"
-	"github.com/henrylee2cn/goutil/errors"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/kcp"
+	"github.com/andeya/erpc/v7/quic"
+	"github.com/andeya/goutil"
+	"github.com/andeya/goutil/coarsetime"
+	"github.com/andeya/goutil/errors"
 )
 
 type (

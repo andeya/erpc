@@ -18,8 +18,7 @@ package multiclient
 import (
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/goutil/pool"
+	"github.com/andeya/goutil/pool"
 )
 
 // MultiClient client session which is has connection pool

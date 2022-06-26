@@ -17,15 +17,15 @@ package websocket
 import (
 	"context"
 	"errors"
-	"github.com/henrylee2cn/goutil"
 	"net"
 	"net/http"
 	"net/url"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto"
-	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket/websocket"
+	"github.com/andeya/goutil"
+
+	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
+	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto"
+	ws "github.com/andeya/erpc/v7/mixer/websocket/websocket"
 )
 
 // Server a websocket server
@@ -154,7 +154,7 @@ func NewServeHandler(peer erpc.Peer, handshake func(*ws.Config, *http.Request) e
 	} else {
 		scheme = "wss"
 	}
-	//Generate Handshake handle
+	// Generate Handshake handle
 	w.Server.Handshake = func(cfg *ws.Config, r *http.Request) error {
 		cfg.Origin = &url.URL{
 			Host:   r.RemoteAddr,

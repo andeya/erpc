@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6/quic"
-	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/goutil/errors"
-	"github.com/henrylee2cn/goutil/graceful"
-	"github.com/henrylee2cn/goutil/graceful/inherit_net"
+	"github.com/andeya/erpc/v7/quic"
+	"github.com/andeya/goutil"
+	"github.com/andeya/goutil/errors"
+	"github.com/andeya/goutil/graceful"
+	"github.com/andeya/goutil/graceful/inherit_net"
 )
 
 var peers = struct {
@@ -84,10 +84,10 @@ func GraceSignal() {
 
 var (
 	// FirstSweep is first executed.
-	// Usage: share github.com/henrylee2cn/goutil/graceful with other project.
+	// Usage: share github.com/andeya/goutil/graceful with other project.
 	FirstSweep func() error
 	// BeforeExiting is executed before process exiting.
-	// Usage: share github.com/henrylee2cn/goutil/graceful with other project.
+	// Usage: share github.com/andeya/goutil/graceful with other project.
 	BeforeExiting func() error
 )
 

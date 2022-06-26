@@ -1,16 +1,16 @@
-module github.com/henrylee2cn/erpc/v6
+module github.com/andeya/erpc/v7
 
 go 1.18
 
 require (
 	git.apache.org/thrift.git v0.13.0
+	github.com/andeya/cfgo v0.0.0-20220626152948-7980c5d761c8
+	github.com/andeya/goutil v0.0.0-20220626152529-9b7868da7b6d
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.5.2
-	github.com/henrylee2cn/cfgo v0.0.0-20180417024816-e6c3cc325b21
-	github.com/henrylee2cn/goutil v0.0.0-20200416032639-974f5b4094a2
 	github.com/lucas-clemente/quic-go v0.26.0
 	github.com/montanaflynn/stats v0.5.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.7.5
 	github.com/tidwall/evio v1.0.7
 	github.com/tidwall/gjson v1.14.0
 	github.com/xtaci/kcp-go/v5 v5.5.12
@@ -22,7 +22,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
-	github.com/henrylee2cn/ameda v1.3.6 // indirect
+	github.com/henrylee2cn/ameda v1.4.11-0.20220626150338-af180105bd0f // indirect
 	github.com/kavu/go_reuseport v1.4.0 // indirect
 	github.com/klauspost/cpuid v1.2.2 // indirect
 	github.com/klauspost/reedsolomon v1.9.3 // indirect
@@ -46,4 +46,5 @@ require (
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

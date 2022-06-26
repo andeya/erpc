@@ -22,10 +22,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto"
-	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket/websocket"
+	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
+	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto"
+	ws "github.com/andeya/erpc/v7/mixer/websocket/websocket"
 )
 
 // Client a websocket client

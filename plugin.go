@@ -17,8 +17,8 @@ package erpc
 import (
 	"net"
 
-	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/goutil/errors"
+	"github.com/andeya/goutil"
+	"github.com/andeya/goutil/errors"
 )
 
 // Plug-ins during runtime
@@ -282,7 +282,7 @@ func (p *pluginSingleContainer) remove(pluginName string) error {
 		return errors.New("no plugins are registered yet")
 	}
 	if len(pluginName) == 0 {
-		//return error: cannot delete an unamed plugin
+		// return error: cannot delete an unamed plugin
 		return errors.New("plugin with an empty name cannot be removed")
 	}
 	indexToRemove := -1

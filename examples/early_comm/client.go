@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/henrylee2cn/erpc/v6"
-)
+import "github.com/andeya/erpc/v7"
 
 //go:generate go build $GOFILE
 
@@ -32,7 +30,7 @@ func (e *earlyCall) PostDial(sess erpc.PreSession, isRedial bool) *erpc.Status {
 		erpc.TypeCall,
 		"/early/ping",
 		map[string]string{
-			"author": "henrylee2cn",
+			"author": "andeya",
 		},
 		nil,
 	)

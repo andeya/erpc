@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/socket"
+	"github.com/andeya/erpc/v7/socket"
 )
 
 //go:generate go build $GOFILE

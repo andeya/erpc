@@ -23,8 +23,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/goutil"
 )
 
 // NewPlugin creates a proxy plugin for handling unknown calling and pushing.

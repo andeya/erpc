@@ -7,7 +7,7 @@ When the connection is idle more than 3 times the heartbeat time, take the initi
 
 ### Usage
 
-`import "github.com/henrylee2cn/erpc/v6/plugin/heartbeat"`
+`import "github.com/andeya/erpc/v7/plugin/heartbeat"`
 
 #### Test
 
@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/plugin/heartbeat"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/plugin/heartbeat"
 )
 
 func TestHeartbeatCall1(t *testing.T) {

@@ -14,7 +14,7 @@ jsonproto is implemented JSON socket communication protocol.
 
 ### Usage
 
-`import "github.com/henrylee2cn/erpc/v6/proto/jsonproto"`
+`import "github.com/andeya/erpc/v7/proto/jsonproto"`
 
 #### Test
 
@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/proto/jsonproto"
-	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/proto/jsonproto"
+	"github.com/andeya/erpc/v7/xfer/gzip"
 )
 
 type Home struct {
@@ -62,7 +62,7 @@ func TestJSONProto(t *testing.T) {
 	var result interface{}
 	stat = sess.Call("/home/test",
 		map[string]string{
-			"author": "henrylee2cn",
+			"author": "andeya",
 		},
 		&result,
 		erpc.WithAddMeta("peer_id", "110"),

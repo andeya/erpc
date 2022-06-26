@@ -9,8 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/examples/bench/msg"
+	"github.com/andeya/erpc/v7/examples/bench/msg"
 	"github.com/montanaflynn/stats"
 )
 
@@ -62,7 +61,7 @@ func main() {
 
 	d := make([][]int64, n, n)
 
-	//it contains warmup time but we can ignore it
+	// it contains warmup time but we can ignore it
 	totalT := time.Now().UnixNano()
 	for i := 0; i < n; i++ {
 		dt := make([]int64, 0, m)
@@ -83,7 +82,7 @@ func main() {
 
 			var reply msg.BenchmarkMessage
 
-			//warmup
+			// warmup
 			for j := 0; j < 5; j++ {
 				sess.Call(serviceMethod, args, &reply)
 			}

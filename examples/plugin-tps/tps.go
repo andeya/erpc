@@ -6,8 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE

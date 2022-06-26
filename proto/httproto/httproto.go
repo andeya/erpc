@@ -26,13 +26,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/goutil"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/utils"
-	"github.com/henrylee2cn/erpc/v6/xfer"
-	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/utils"
+	"github.com/andeya/erpc/v7/xfer"
+	"github.com/andeya/erpc/v7/xfer/gzip"
 )
 
 var (

@@ -8,8 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/examples/bench/msg"
+	"github.com/andeya/erpc/v7/examples/bench/msg"
 )
 
 //go:generate go build $GOFILE

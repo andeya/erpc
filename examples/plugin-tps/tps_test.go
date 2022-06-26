@@ -3,8 +3,6 @@ package erpcs
 import (
 	"testing"
 	"time"
-
-	"github.com/henrylee2cn/erpc/v6"
 )
 
 type Call struct {

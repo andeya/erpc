@@ -17,7 +17,7 @@ It makes direct [epoll](https://en.wikipedia.org/wiki/Epoll) and [kqueue](https:
 
 ### Usage
 	
-`import "github.com/henrylee2cn/erpc/v6/mixer/evio"`
+`import "github.com/andeya/erpc/v7/mixer/evio"`
 
 #### Test
 
@@ -28,8 +28,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/mixer/evio"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/mixer/evio"
 )
 
 func Test(t *testing.T) {
@@ -53,7 +53,7 @@ func Test(t *testing.T) {
 	var result interface{}
 	stat = sess.Call("/home/test",
 		map[string]string{
-			"author": "henrylee2cn",
+			"author": "andeya",
 		},
 		&result,
 		erpc.WithAddMeta("peer_id", "110"),

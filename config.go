@@ -21,15 +21,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/henrylee2cn/cfgo"
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/socket"
+	"github.com/andeya/cfgo"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/socket"
 )
 
 // PeerConfig peer config
 // NOTE:
-//  yaml tag is used for github.com/henrylee2cn/cfgo
-//  ini tag is used for github.com/henrylee2cn/ini
+//  yaml tag is used for github.com/andeya/cfgo
+//  ini tag is used for github.com/andeya/ini
 type PeerConfig struct {
 	Network           string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket, kcp or quic"`
 	LocalIP           string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`

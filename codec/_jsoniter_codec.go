@@ -18,9 +18,7 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/json-iterator/go"
-
-	"github.com/henrylee2cn/erpc/v6/utils"
+	"github.com/andeya/erpc/v7/utils"
 )
 
 // json codec name and id

@@ -4,7 +4,7 @@ Dynamically ignoring the case of path
 
 ### Usage
 
-`import "github.com/henrylee2cn/erpc/v6/plugin/ignorecase"`
+`import "github.com/andeya/erpc/v7/plugin/ignorecase"`
 
 #### Test
 
@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/plugin/ignorecase"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/plugin/ignorecase"
 )
 
 type Home struct {
@@ -49,7 +49,7 @@ func TestIngoreCase(t *testing.T) {
 	var result interface{}
 	stat = sess.Call("/home/TesT",
 		map[string]string{
-			"author": "henrylee2cn",
+			"author": "andeya",
 		},
 		&result,
 		erpc.WithAddMeta("peer_id", "110"),

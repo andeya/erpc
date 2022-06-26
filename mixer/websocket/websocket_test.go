@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/pbSubProto"
-	"github.com/henrylee2cn/erpc/v6/plugin/auth"
+	ws "github.com/andeya/erpc/v7/mixer/websocket"
+	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
+	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto"
+	"github.com/andeya/erpc/v7/plugin/auth"
 )
 
 type Arg struct {

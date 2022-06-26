@@ -2,8 +2,6 @@ package main
 
 import (
 	"time"
-
-	"github.com/henrylee2cn/erpc/v6"
 )
 
 //go:generate go build $GOFILE
@@ -26,7 +24,7 @@ func main() {
 	stat = sess.Call("/math/add",
 		[]int{1, 2, 3, 4, 5},
 		&result,
-		erpc.WithAddMeta("author", "henrylee2cn"),
+		erpc.WithAddMeta("author", "andeya"),
 	).Status()
 	if !stat.OK() {
 		erpc.Fatalf("%v", stat)

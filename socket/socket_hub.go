@@ -15,7 +15,7 @@
 package socket
 
 import (
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/goutil"
 )
 
 // SocketHub sockets hub

@@ -4,9 +4,9 @@ import (
 	"log"
 	"net"
 
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/socket"
-	"github.com/henrylee2cn/erpc/v6/socket/example/pb"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/socket"
+	"github.com/andeya/erpc/v7/socket/example/pb"
 )
 
 //go:generate go build $GOFILE

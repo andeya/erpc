@@ -20,7 +20,7 @@ User-Agent: erpc-httproto/1.1
 X-Mtype: 1
 X-Seq: 1
 
-{"author":"henrylee2cn"}
+{"author":"andeya"}
 ```
 
 - Response Message
@@ -32,7 +32,7 @@ Content-Type: application/json;charset=utf-8
 X-Mtype: 2
 X-Seq: 1
 
-{"arg":{"author":"henrylee2cn"}}
+{"arg":{"author":"andeya"}}
 ```
 
 or
@@ -63,7 +63,7 @@ func RegBodyCodec(contentType string, codecID byte)
 
 ### Usage
 
-`import "github.com/henrylee2cn/erpc/v6/proto/httproto"`
+`import "github.com/andeya/erpc/v7/proto/httproto"`
 
 #### Test
 
@@ -76,11 +76,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/goutil/httpbody"
+	"github.com/andeya/goutil/httpbody"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/proto/httproto"
-	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/proto/httproto"
+	"github.com/andeya/erpc/v7/xfer/gzip"
 )
 
 type Home struct {
@@ -112,7 +112,7 @@ func TestHTTProto(t *testing.T) {
 	}
 	var result interface{}
 	var arg = map[string]string{
-		"author": "henrylee2cn",
+		"author": "andeya",
 	}
 	stat = sess.Call(
 		url,

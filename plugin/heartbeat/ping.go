@@ -21,8 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/goutil/coarsetime"
+	"github.com/andeya/goutil/coarsetime"
 )
 
 const (

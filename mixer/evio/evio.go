@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/tidwall/evio"
-
-	"github.com/henrylee2cn/erpc/v6"
 )
 
 // NewClient creates a evio client, equivalent to erpc.NewPeer.

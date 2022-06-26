@@ -10,8 +10,8 @@ package main
 import (
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/plugin/proxy"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/plugin/proxy"
 )
 
 func main() {

@@ -25,9 +25,8 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/utils"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/erpc/v7/utils"
+	"github.com/andeya/goutil"
 )
 
 // NewJSONProtoFunc is creation function of JSON socket protocol.

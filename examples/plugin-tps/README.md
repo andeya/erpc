@@ -4,7 +4,7 @@ tps statistics requests per second.
 
 ### Usage
 
-`import tps "github.com/henrylee2cn/tp-ext/plugin-tps"`
+`import tps "github.com/andeya/tp-ext/plugin-tps"`
 
 #### Test
 
@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
+	"github.com/andeya/erpc/v7"
 )
 
 type Call struct {

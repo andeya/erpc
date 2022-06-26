@@ -25,11 +25,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/socket"
-	"github.com/henrylee2cn/erpc/v6/utils"
-	"github.com/henrylee2cn/goutil"
-	"github.com/henrylee2cn/goutil/coarsetime"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/socket"
+	"github.com/andeya/erpc/v7/utils"
+	"github.com/andeya/goutil"
+	"github.com/andeya/goutil/coarsetime"
 )
 
 type (

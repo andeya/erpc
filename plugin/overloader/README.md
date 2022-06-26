@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6"
+	"github.com/andeya/erpc/v7"
 	"github.com/stretchr/testify/assert"
 )
 

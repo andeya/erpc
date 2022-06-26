@@ -6,10 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrylee2cn/goutil/httpbody"
+	"github.com/andeya/goutil/httpbody"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/proto/httproto"
+	"github.com/andeya/erpc/v7/proto/httproto"
 )
 
 type Home struct {
@@ -41,7 +40,7 @@ func TestHTTProto(t *testing.T) {
 	}
 	var result interface{}
 	var arg = map[string]string{
-		"author": "henrylee2cn",
+		"author": "andeya",
 	}
 
 	{

@@ -17,11 +17,10 @@ package websocket
 import (
 	"bytes"
 
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/mixer/websocket/jsonSubProto"
-	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket/websocket"
-	"github.com/henrylee2cn/erpc/v6/socket"
-	"github.com/henrylee2cn/erpc/v6/utils"
+	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
+	ws "github.com/andeya/erpc/v7/mixer/websocket/websocket"
+	"github.com/andeya/erpc/v7/socket"
+	"github.com/andeya/erpc/v7/utils"
 )
 
 var defaultProto = jsonSubProto.NewJSONSubProtoFunc()

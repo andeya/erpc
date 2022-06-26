@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/henrylee2cn/erpc/v6/xfer/gzip"
-
-	"github.com/henrylee2cn/erpc/v6"
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/erpc/v7/xfer/gzip"
 )
 
 //go:generate go build $GOFILE

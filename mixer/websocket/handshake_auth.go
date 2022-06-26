@@ -14,9 +14,9 @@
 package websocket
 
 import (
-	"github.com/henrylee2cn/erpc/v6"
-	ws "github.com/henrylee2cn/erpc/v6/mixer/websocket/websocket"
 	"net/http"
+
+	ws "github.com/andeya/erpc/v7/mixer/websocket/websocket"
 )
 
 // NewHandshakeAuthPlugin creates a handshake auth plugin for server.

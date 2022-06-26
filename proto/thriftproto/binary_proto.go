@@ -5,10 +5,9 @@ import (
 	"sync"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
-	"github.com/henrylee2cn/erpc/v6"
-	"github.com/henrylee2cn/erpc/v6/codec"
-	"github.com/henrylee2cn/erpc/v6/utils"
-	"github.com/henrylee2cn/goutil"
+	"github.com/andeya/erpc/v7/codec"
+	"github.com/andeya/erpc/v7/utils"
+	"github.com/andeya/goutil"
 )
 
 const (
