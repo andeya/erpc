@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andeya/erpc/v7"
 	ws "github.com/andeya/erpc/v7/mixer/websocket"
 	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
 	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto"

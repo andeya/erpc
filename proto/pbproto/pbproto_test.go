@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/proto/pbproto"
 	"github.com/andeya/erpc/v7/xfer/gzip"
 )

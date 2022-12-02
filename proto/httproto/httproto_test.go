@@ -8,6 +8,7 @@ import (
 
 	"github.com/andeya/goutil/httpbody"
 
+	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/proto/httproto"
 )
 
