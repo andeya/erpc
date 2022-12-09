@@ -82,7 +82,7 @@ func ListenUDPAddr(network string, udpAddr *net.UDPAddr, tlsConf *tls.Config, co
 // The quic.Config may be nil, in that case the default values will be used.
 func Listen(conn net.PacketConn, tlsConf *tls.Config, config *quic.Config) (*Listener, error) {
 	if config == nil {
-		config = &quic.Config{KeepAlive: true}
+		config = &quic.Config{KeepAlivePeriod: time.Second * 15}
 	}
 	lis, err := quic.Listen(conn, tlsConf, config)
 	if err != nil {
@@ -135,7 +135,7 @@ func (l *Listener) Addr() net.Addr {
 //
 // Multiple goroutines may invoke methods on a Conn simultaneously.
 type Conn struct {
-	sess   quic.Session
+	sess   quic.Connection
 	stream quic.Stream
 }
 
