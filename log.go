@@ -45,24 +45,44 @@ type (
 		// Printf formats according to a format specifier and writes to standard output.
 		// It returns the number of bytes written and any write error encountered.
 		Printf(format string, a ...interface{})
+		// LazyPrintf get message from @getMsg and write to stdout when log level is met.
+		LazyPrintf(getMsg func() string)
 		// Fatalf is equivalent to Criticalf followed by a call to os.Exit(1).
 		Fatalf(format string, a ...interface{})
+		// LazyFatalf get message from @getMsg and write to stdout when log level is met.
+		LazyFatalf(getMsg func() string)
 		// Panicf is equivalent to Criticalf followed by a call to panic().
 		Panicf(format string, a ...interface{})
+		// LazyPanicf get message from @getMsg and write to stdout when log level is met.
+		LazyPanicf(getMsg func() string)
 		// Criticalf logs a message using CRITICAL as log level.
 		Criticalf(format string, a ...interface{})
+		// LazyCriticalf get message from @getMsg and write to stdout when log level is met.
+		LazyCriticalf(getMsg func() string)
 		// Errorf logs a message using ERROR as log level.
 		Errorf(format string, a ...interface{})
+		// LazyErrorf get message from @getMsg and write to stdout when log level is met.
+		LazyErrorf(getMsg func() string)
 		// Warnf logs a message using WARNING as log level.
 		Warnf(format string, a ...interface{})
+		// LazyWarnf get message from @getMsg and write to stdout when log level is met.
+		LazyWarnf(getMsg func() string)
 		// Noticef logs a message using NOTICE as log level.
 		Noticef(format string, a ...interface{})
+		// LazyNoticef get message from @getMsg and write to stdout when log level is met.
+		LazyNoticef(getMsg func() string)
 		// Infof logs a message using INFO as log level.
 		Infof(format string, a ...interface{})
+		// LazyInfof get message from @getMsg and write to stdout when log level is met.
+		LazyInfof(getMsg func() string)
 		// Debugf logs a message using DEBUG as log level.
 		Debugf(format string, a ...interface{})
+		// LazyDebugf get message from @getMsg and write to stdout when log level is met.
+		LazyDebugf(getMsg func() string)
 		// Tracef logs a message using TRACE as log level.
 		Tracef(format string, a ...interface{})
+		// LazyTracef get message from @getMsg and write to stdout when log level is met.
+		LazyTracef(getMsg func() string)
 	}
 )
 
@@ -239,6 +259,13 @@ func loggerOutput(loggerLevel LoggerLevel, format string, a ...interface{}) {
 	loggerOutputter.Output(3, goutil.StringToBytes(fmt.Sprintf(format, a...)), loggerLevel)
 }
 
+func lazyLoggerOutput(targetLevel LoggerLevel, getMsg func() string) {
+	if !EnableLoggerLevel(targetLevel) {
+		return
+	}
+	loggerOutputter.Output(3, goutil.StringToBytes(getMsg()), targetLevel)
+}
+
 // ************ global logger functions ************
 
 // Printf formats according to a format specifier and writes to standard output.
@@ -247,9 +274,21 @@ func Printf(format string, a ...interface{}) {
 	loggerOutput(PRINT, format, a...)
 }
 
+// LazyPrintf get message from @getMsg and write to stdout when log level is met.
+func LazyPrintf(getMsg func() string) {
+	lazyLoggerOutput(PRINT, getMsg)
+}
+
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
+	os.Exit(1)
+}
+
+// LazyFatalf get message from @getMsg and write to stdout when log level is met.
+func LazyFatalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 	loggerOutputter.Flush()
 	os.Exit(1)
 }
@@ -261,9 +300,21 @@ func Panicf(format string, a ...interface{}) {
 	panic(fmt.Sprintf(format, a...))
 }
 
+// LazyPanicf get message from @getMsg and write to stdout when log level is met.
+func LazyPanicf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
+	loggerOutputter.Flush()
+	panic(getMsg())
+}
+
 // Criticalf logs a message using CRITICAL as log level.
 func Criticalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+}
+
+// LazyCriticalf get message from @getMsg and write to stdout when log level is met.
+func LazyCriticalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 }
 
 // Errorf logs a message using ERROR as log level.
@@ -271,9 +322,19 @@ func Errorf(format string, a ...interface{}) {
 	loggerOutput(ERROR, format, a...)
 }
 
+// LazyErrorf get message from @getMsg and write to stdout when log level is met.
+func LazyErrorf(getMsg func() string) {
+	lazyLoggerOutput(ERROR, getMsg)
+}
+
 // Warnf logs a message using WARNING as log level.
 func Warnf(format string, a ...interface{}) {
 	loggerOutput(WARNING, format, a...)
+}
+
+// LazyWarnf get message from @getMsg and write to stdout when log level is met.
+func LazyWarnf(getMsg func() string) {
+	lazyLoggerOutput(WARNING, getMsg)
 }
 
 // Noticef logs a message using NOTICE as log level.
@@ -281,9 +342,19 @@ func Noticef(format string, a ...interface{}) {
 	loggerOutput(NOTICE, format, a...)
 }
 
+// LazyNoticef get message from @getMsg and write to stdout when log level is met.
+func LazyNoticef(getMsg func() string) {
+	lazyLoggerOutput(NOTICE, getMsg)
+}
+
 // Infof logs a message using INFO as log level.
 func Infof(format string, a ...interface{}) {
 	loggerOutput(INFO, format, a...)
+}
+
+// LazyInfof get message from @getMsg and write to stdout when log level is met.
+func LazyInfof(getMsg func() string) {
+	lazyLoggerOutput(INFO, getMsg)
 }
 
 // Debugf logs a message using DEBUG as log level.
@@ -291,9 +362,19 @@ func Debugf(format string, a ...interface{}) {
 	loggerOutput(DEBUG, format, a...)
 }
 
+// LazyDebugf get message from @getMsg and write to stdout when log level is met.
+func LazyDebugf(getMsg func() string) {
+	lazyLoggerOutput(DEBUG, getMsg)
+}
+
 // Tracef logs a message using TRACE as log level.
 func Tracef(format string, a ...interface{}) {
 	loggerOutput(TRACE, format, a...)
+}
+
+// LazyTracef get message from @getMsg and write to stdout when log level is met.
+func LazyTracef(getMsg func() string) {
+	lazyLoggerOutput(TRACE, getMsg)
 }
 
 // ************ globalLogger logger methods ************
@@ -316,9 +397,21 @@ func (globalLogger) Printf(format string, a ...interface{}) {
 	loggerOutput(PRINT, format, a...)
 }
 
+// LazyPrintf get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyPrintf(getMsg func() string) {
+	lazyLoggerOutput(PRINT, getMsg)
+}
+
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (globalLogger) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
+	os.Exit(1)
+}
+
+// LazyFatalf get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyFatalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 	loggerOutputter.Flush()
 	os.Exit(1)
 }
@@ -330,9 +423,21 @@ func (globalLogger) Panicf(format string, a ...interface{}) {
 	panic(fmt.Sprintf(format, a...))
 }
 
+// LazyPanicf get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyPanicf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
+	loggerOutputter.Flush()
+	panic(getMsg())
+}
+
 // Criticalf logs a message using CRITICAL as log level.
 func (globalLogger) Criticalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+}
+
+// LazyCriticalf get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyCriticalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 }
 
 // Errorf logs a message using ERROR as log level.
@@ -340,9 +445,19 @@ func (globalLogger) Errorf(format string, a ...interface{}) {
 	loggerOutput(ERROR, format, a...)
 }
 
+// LazyErrorf get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyErrorf(getMsg func() string) {
+	lazyLoggerOutput(ERROR, getMsg)
+}
+
 // Warnf logs a message using WARNING as log level.
 func (globalLogger) Warnf(format string, a ...interface{}) {
 	loggerOutput(WARNING, format, a...)
+}
+
+// LazyWarnf get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyWarnf(getMsg func() string) {
+	lazyLoggerOutput(WARNING, getMsg)
 }
 
 // Noticef logs a message using NOTICE as log level.
@@ -350,9 +465,19 @@ func (globalLogger) Noticef(format string, a ...interface{}) {
 	loggerOutput(NOTICE, format, a...)
 }
 
+// LazyNoticef get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyNoticef(getMsg func() string) {
+	lazyLoggerOutput(NOTICE, getMsg)
+}
+
 // Infof logs a message using INFO as log level.
 func (globalLogger) Infof(format string, a ...interface{}) {
 	loggerOutput(INFO, format, a...)
+}
+
+// LazyInfof get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyInfof(getMsg func() string) {
+	lazyLoggerOutput(INFO, getMsg)
 }
 
 // Debugf logs a message using DEBUG as log level.
@@ -360,9 +485,19 @@ func (globalLogger) Debugf(format string, a ...interface{}) {
 	loggerOutput(DEBUG, format, a...)
 }
 
+// LazyDebugf get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyDebugf(getMsg func() string) {
+	lazyLoggerOutput(DEBUG, getMsg)
+}
+
 // Tracef logs a message using TRACE as log level.
 func (globalLogger) Tracef(format string, a ...interface{}) {
 	loggerOutput(TRACE, format, a...)
+}
+
+// LazyTracef get message from @getMsg and write to stdout when log level is met.
+func (globalLogger) LazyTracef(getMsg func() string) {
+	lazyLoggerOutput(TRACE, getMsg)
 }
 
 // ************ *session logger methods ************
@@ -373,9 +508,21 @@ func (s *session) Printf(format string, a ...interface{}) {
 	loggerOutput(PRINT, format, a...)
 }
 
+// LazyPrintf get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyPrintf(getMsg func() string) {
+	lazyLoggerOutput(PRINT, getMsg)
+}
+
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (s *session) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
+	os.Exit(1)
+}
+
+// LazyFatalf get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyFatalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 	loggerOutputter.Flush()
 	os.Exit(1)
 }
@@ -387,9 +534,21 @@ func (s *session) Panicf(format string, a ...interface{}) {
 	panic(fmt.Sprintf(format, a...))
 }
 
+// LazyPanicf get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyPanicf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
+	loggerOutputter.Flush()
+	panic(getMsg())
+}
+
 // Criticalf logs a message using CRITICAL as log level.
 func (s *session) Criticalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+}
+
+// LazyCriticalf get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyCriticalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 }
 
 // Errorf logs a message using ERROR as log level.
@@ -397,9 +556,19 @@ func (s *session) Errorf(format string, a ...interface{}) {
 	loggerOutput(ERROR, format, a...)
 }
 
+// LazyErrorf get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyErrorf(getMsg func() string) {
+	lazyLoggerOutput(ERROR, getMsg)
+}
+
 // Warnf logs a message using WARNING as log level.
 func (s *session) Warnf(format string, a ...interface{}) {
 	loggerOutput(WARNING, format, a...)
+}
+
+// LazyWarnf get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyWarnf(getMsg func() string) {
+	lazyLoggerOutput(WARNING, getMsg)
 }
 
 // Noticef logs a message using NOTICE as log level.
@@ -407,9 +576,19 @@ func (s *session) Noticef(format string, a ...interface{}) {
 	loggerOutput(NOTICE, format, a...)
 }
 
+// LazyNoticef get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyNoticef(getMsg func() string) {
+	lazyLoggerOutput(NOTICE, getMsg)
+}
+
 // Infof logs a message using INFO as log level.
 func (s *session) Infof(format string, a ...interface{}) {
 	loggerOutput(INFO, format, a...)
+}
+
+// LazyInfof get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyInfof(getMsg func() string) {
+	lazyLoggerOutput(INFO, getMsg)
 }
 
 // Debugf logs a message using DEBUG as log level.
@@ -417,9 +596,19 @@ func (s *session) Debugf(format string, a ...interface{}) {
 	loggerOutput(DEBUG, format, a...)
 }
 
+// LazyDebugf get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyDebugf(getMsg func() string) {
+	lazyLoggerOutput(DEBUG, getMsg)
+}
+
 // Tracef logs a message using TRACE as log level.
 func (s *session) Tracef(format string, a ...interface{}) {
 	loggerOutput(TRACE, format, a...)
+}
+
+// LazyTracef get message from @getMsg and write to stdout when log level is met.
+func (s *session) LazyTracef(getMsg func() string) {
+	lazyLoggerOutput(TRACE, getMsg)
 }
 
 // ************ *handlerCtx Pure Logger Methods ************
@@ -430,9 +619,21 @@ func (c *handlerCtx) Printf(format string, a ...interface{}) {
 	loggerOutput(PRINT, format, a...)
 }
 
+// LazyPrintf get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyPrintf(getMsg func() string) {
+	lazyLoggerOutput(PRINT, getMsg)
+}
+
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (c *handlerCtx) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
+	os.Exit(1)
+}
+
+// LazyFatalf get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyFatalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 	loggerOutputter.Flush()
 	os.Exit(1)
 }
@@ -444,9 +645,21 @@ func (c *handlerCtx) Panicf(format string, a ...interface{}) {
 	panic(fmt.Sprintf(format, a...))
 }
 
+// LazyPanicf get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyPanicf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
+	loggerOutputter.Flush()
+	panic(getMsg())
+}
+
 // Criticalf logs a message using CRITICAL as log level.
 func (c *handlerCtx) Criticalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+}
+
+// LazyCriticalf get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyCriticalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 }
 
 // Errorf logs a message using ERROR as log level.
@@ -454,9 +667,19 @@ func (c *handlerCtx) Errorf(format string, a ...interface{}) {
 	loggerOutput(ERROR, format, a...)
 }
 
+// LazyErrorf get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyErrorf(getMsg func() string) {
+	lazyLoggerOutput(ERROR, getMsg)
+}
+
 // Warnf logs a message using WARNING as log level.
 func (c *handlerCtx) Warnf(format string, a ...interface{}) {
 	loggerOutput(WARNING, format, a...)
+}
+
+// LazyWarnf get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyWarnf(getMsg func() string) {
+	lazyLoggerOutput(WARNING, getMsg)
 }
 
 // Noticef logs a message using NOTICE as log level.
@@ -464,9 +687,19 @@ func (c *handlerCtx) Noticef(format string, a ...interface{}) {
 	loggerOutput(NOTICE, format, a...)
 }
 
+// LazyNoticef get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyNoticef(getMsg func() string) {
+	lazyLoggerOutput(NOTICE, getMsg)
+}
+
 // Infof logs a message using INFO as log level.
 func (c *handlerCtx) Infof(format string, a ...interface{}) {
 	loggerOutput(INFO, format, a...)
+}
+
+// LazyInfof get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyInfof(getMsg func() string) {
+	lazyLoggerOutput(INFO, getMsg)
 }
 
 // Debugf logs a message using DEBUG as log level.
@@ -474,9 +707,19 @@ func (c *handlerCtx) Debugf(format string, a ...interface{}) {
 	loggerOutput(DEBUG, format, a...)
 }
 
+// LazyDebugf get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyDebugf(getMsg func() string) {
+	lazyLoggerOutput(DEBUG, getMsg)
+}
+
 // Tracef logs a message using TRACE as log level.
 func (c *handlerCtx) Tracef(format string, a ...interface{}) {
 	loggerOutput(TRACE, format, a...)
+}
+
+// LazyTracef get message from @getMsg and write to stdout when log level is met.
+func (c *handlerCtx) LazyTracef(getMsg func() string) {
+	lazyLoggerOutput(TRACE, getMsg)
 }
 
 // ************ *callCmd Pure Logger Methods ************
@@ -487,9 +730,21 @@ func (c *callCmd) Printf(format string, a ...interface{}) {
 	loggerOutput(PRINT, format, a...)
 }
 
+// LazyPrintf get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyPrintf(getMsg func() string) {
+	lazyLoggerOutput(PRINT, getMsg)
+}
+
 // Fatalf is equivalent to l.Criticalf followed by a call to os.Exit(1).
 func (c *callCmd) Fatalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+	loggerOutputter.Flush()
+	os.Exit(1)
+}
+
+// LazyFatalf get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyFatalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 	loggerOutputter.Flush()
 	os.Exit(1)
 }
@@ -501,9 +756,21 @@ func (c *callCmd) Panicf(format string, a ...interface{}) {
 	panic(fmt.Sprintf(format, a...))
 }
 
+// LazyPanicf get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyPanicf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
+	loggerOutputter.Flush()
+	panic(getMsg())
+}
+
 // Criticalf logs a message using CRITICAL as log level.
 func (c *callCmd) Criticalf(format string, a ...interface{}) {
 	loggerOutput(CRITICAL, format, a...)
+}
+
+// LazyCriticalf get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyCriticalf(getMsg func() string) {
+	lazyLoggerOutput(CRITICAL, getMsg)
 }
 
 // Errorf logs a message using ERROR as log level.
@@ -511,9 +778,19 @@ func (c *callCmd) Errorf(format string, a ...interface{}) {
 	loggerOutput(ERROR, format, a...)
 }
 
+// LazyErrorf get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyErrorf(getMsg func() string) {
+	lazyLoggerOutput(ERROR, getMsg)
+}
+
 // Warnf logs a message using WARNING as log level.
 func (c *callCmd) Warnf(format string, a ...interface{}) {
 	loggerOutput(WARNING, format, a...)
+}
+
+// LazyWarnf get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyWarnf(getMsg func() string) {
+	lazyLoggerOutput(WARNING, getMsg)
 }
 
 // Noticef logs a message using NOTICE as log level.
@@ -521,9 +798,19 @@ func (c *callCmd) Noticef(format string, a ...interface{}) {
 	loggerOutput(NOTICE, format, a...)
 }
 
+// LazyNoticef get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyNoticef(getMsg func() string) {
+	lazyLoggerOutput(NOTICE, getMsg)
+}
+
 // Infof logs a message using INFO as log level.
 func (c *callCmd) Infof(format string, a ...interface{}) {
 	loggerOutput(INFO, format, a...)
+}
+
+// LazyInfof get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyInfof(getMsg func() string) {
+	lazyLoggerOutput(INFO, getMsg)
 }
 
 // Debugf logs a message using DEBUG as log level.
@@ -531,7 +818,17 @@ func (c *callCmd) Debugf(format string, a ...interface{}) {
 	loggerOutput(DEBUG, format, a...)
 }
 
+// LazyDebugf get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyDebugf(getMsg func() string) {
+	lazyLoggerOutput(DEBUG, getMsg)
+}
+
 // Tracef logs a message using TRACE as log level.
 func (c *callCmd) Tracef(format string, a ...interface{}) {
 	loggerOutput(TRACE, format, a...)
+}
+
+// LazyTracef get message from @getMsg and write to stdout when log level is met.
+func (c *callCmd) LazyTracef(getMsg func() string) {
+	lazyLoggerOutput(TRACE, getMsg)
 }

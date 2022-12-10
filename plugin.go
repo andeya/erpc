@@ -15,6 +15,7 @@
 package erpc
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/andeya/goutil"
@@ -374,9 +375,11 @@ func (p *pluginSingleContainer) postDial(sess PreSession, isRedial bool) (stat *
 		if _plugin, ok := plugin.(PostDialPlugin); ok {
 			pluginName = plugin.Name()
 			if stat = _plugin.PostDial(sess, isRedial); !stat.OK() {
-				Debugf("[PostDialPlugin:%s] network:%s, addr:%s, is_redial:%v, error:%s",
-					pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), isRedial, stat.String(),
-				)
+				LazyDebugf(func() string {
+					return fmt.Sprintf("[PostDialPlugin:%s] network:%s, addr:%s, is_redial:%v, error:%s",
+						pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), isRedial, stat.String(),
+					)
+				})
 				return stat
 			}
 		}
@@ -397,7 +400,9 @@ func (p *pluginSingleContainer) postAccept(sess PreSession) (stat *Status) {
 		if _plugin, ok := plugin.(PostAcceptPlugin); ok {
 			pluginName = plugin.Name()
 			if stat = _plugin.PostAccept(sess); !stat.OK() {
-				Debugf("[PostAcceptPlugin:%s] network:%s, addr:%s, error:%s", pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), stat.String())
+				LazyDebugf(func() string {
+					return fmt.Sprintf("[PostAcceptPlugin:%s] network:%s, addr:%s, error:%s", pluginName, sess.RemoteAddr().Network(), sess.RemoteAddr().String(), stat.String())
+				})
 				return stat
 			}
 		}
@@ -411,7 +416,9 @@ func (p *pluginSingleContainer) preWriteCall(ctx WriteCtx) *Status {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWriteCallPlugin); ok {
 			if stat = _plugin.PreWriteCall(ctx); !stat.OK() {
-				Debugf("[PreWriteCallPlugin:%s] %s", plugin.Name(), stat.String())
+				LazyDebugf(func() string {
+					return fmt.Sprintf("[PreWriteCallPlugin:%s] %s", plugin.Name(), stat.String())
+				})
 				return stat
 			}
 		}
@@ -465,7 +472,9 @@ func (p *pluginSingleContainer) preWritePush(ctx WriteCtx) *Status {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreWritePushPlugin); ok {
 			if stat = _plugin.PreWritePush(ctx); !stat.OK() {
-				Debugf("[PreWritePushPlugin:%s] %s", plugin.Name(), stat.String())
+				LazyDebugf(func() string {
+					return fmt.Sprintf("[PreWritePushPlugin:%s] %s", plugin.Name(), stat.String())
+				})
 				return stat
 			}
 		}
@@ -493,7 +502,9 @@ func (p *pluginSingleContainer) preReadHeader(ctx PreCtx) error {
 	for _, plugin := range p.plugins {
 		if _plugin, ok := plugin.(PreReadHeaderPlugin); ok {
 			if err = _plugin.PreReadHeader(ctx); err != nil {
-				Debugf("[PreReadHeaderPlugin:%s] disconnected when reading: %s", plugin.Name(), err.Error())
+				LazyDebugf(func() string {
+					return fmt.Sprintf("[PreReadHeaderPlugin:%s] disconnected when reading: %s", plugin.Name(), err.Error())
+				})
 				return err
 			}
 		}
@@ -645,27 +656,49 @@ func warnInvalidHandlerHooks(plugin []Plugin) {
 	for _, p := range plugin {
 		switch p.(type) {
 		case PreNewPeerPlugin:
-			Debugf("invalid PreNewPeerPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PreNewPeerPlugin in router: %s", p.Name())
+			})
 		case PostNewPeerPlugin:
-			Debugf("invalid PostNewPeerPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PostNewPeerPlugin in router: %s", p.Name())
+			})
 		case PostDialPlugin:
-			Debugf("invalid PostDialPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PostDialPlugin in router: %s", p.Name())
+			})
 		case PostAcceptPlugin:
-			Debugf("invalid PostAcceptPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PostAcceptPlugin in router: %s", p.Name())
+			})
 		case PreWriteCallPlugin:
-			Debugf("invalid PreWriteCallPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PreWriteCallPlugin in router: %s", p.Name())
+			})
 		case PostWriteCallPlugin:
-			Debugf("invalid PostWriteCallPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PostWriteCallPlugin in router: %s", p.Name())
+			})
 		case PreWritePushPlugin:
-			Debugf("invalid PreWritePushPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PreWritePushPlugin in router: %s", p.Name())
+			})
 		case PostWritePushPlugin:
-			Debugf("invalid PostWritePushPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PostWritePushPlugin in router: %s", p.Name())
+			})
 		case PreReadHeaderPlugin:
-			Debugf("invalid PreReadHeaderPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PreReadHeaderPlugin in router: %s", p.Name())
+			})
 		case PostReadCallHeaderPlugin:
-			Debugf("invalid PostReadCallHeaderPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PostReadCallHeaderPlugin in router: %s", p.Name())
+			})
 		case PostReadPushHeaderPlugin:
-			Debugf("invalid PostReadPushHeaderPlugin in router: %s", p.Name())
+			LazyDebugf(func() string {
+				return fmt.Sprintf("invalid PostReadPushHeaderPlugin in router: %s", p.Name())
+			})
 		}
 	}
 }
