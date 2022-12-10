@@ -196,15 +196,24 @@ func (p *PluginContainer) AppendRight(plugins ...Plugin) {
 	p.refreshTree()
 }
 
-// Remove removes a plugin by it's name.
+// Remove removes a plugin by its name.
 func (p *PluginContainer) Remove(pluginName string) error {
 	err := p.pluginSingleContainer.remove(pluginName)
 	if err != nil {
 		return err
 	}
-	p.left.remove(pluginName)
-	p.middle.remove(pluginName)
-	p.right.remove(pluginName)
+	err = p.left.remove(pluginName)
+	if err != nil {
+		return err
+	}
+	err = p.middle.remove(pluginName)
+	if err != nil {
+		return err
+	}
+	err = p.right.remove(pluginName)
+	if err != nil {
+		return err
+	}
 	p.refreshTree()
 	return nil
 }
@@ -258,7 +267,7 @@ func (p *pluginSingleContainer) appendRight(plugins ...Plugin) {
 	p.plugins = append(p.plugins, plugins...)
 }
 
-// GetByName returns a plugin instance by it's name.
+// GetByName returns a plugin instance by its name.
 func (p *pluginSingleContainer) GetByName(pluginName string) Plugin {
 	if p.plugins == nil {
 		return nil
@@ -276,7 +285,7 @@ func (p *pluginSingleContainer) GetAll() []Plugin {
 	return p.plugins
 }
 
-// remove removes a plugin by it's name.
+// remove removes a plugin by its name.
 func (p *pluginSingleContainer) remove(pluginName string) error {
 	if p.plugins == nil {
 		return errors.New("no plugins are registered yet")
