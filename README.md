@@ -4,7 +4,7 @@
 ![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.18-%23007d9c)
 [![GoDoc](https://godoc.org/github.com/andeya/erpc?status.svg)](https://pkg.go.dev/github.com/andeya/erpc/v7)
 ![Build Status](https://github.com/andeya/erpc/actions/workflows/go-ci.yml/badge.svg)
-[![Go report](https://goreportcard.com/badge/github.com/andeya/erpc)](https://goreportcard.com/report/github.com/andeya/erpc)
+[![Go report](https://goreportcard.com/badge/github.com/andeya/erpc/v7)](https://goreportcard.com/report/github.com/andeya/erpc/v7)
 [![License](https://img.shields.io/github/license/andeya/erpc)](./LICENSE)
 
 eRPC is an efficient, extensible and easy-to-use RPC framework.
