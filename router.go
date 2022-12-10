@@ -27,8 +27,7 @@ import (
 )
 
 var (
-	typeOfCallCtx = reflect.TypeOf((*CallCtx)(nil)).Elem()
-	typeOfPushCtx = reflect.TypeOf((*PushCtx)(nil)).Elem()
+	typeOfHandlerCtx = reflect.TypeOf(new(handlerCtx)).Elem()
 )
 
 // ServiceMethodMapper mapper service method from prefix, recvName and funcName.
@@ -498,62 +497,41 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
-		mtype := method.Type
-		mname := method.Name
-		// Method must be exported.
-		if method.PkgPath != "" {
+		// Skip private methods and methods inherited from composition.
+		if method.PkgPath != "" || goutil.IsCompositionMethod(method) {
 			continue
 		}
+		mtype := method.Type
+		mname := method.Name
 		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("call-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("call-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
 		}
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("call-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("call-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 		// Method needs two outs: reply, *Status.
 		if mtype.NumOut() != 2 {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("call-handler: %s.%s needs two out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 		// Reply type must be exported.
 		replyType := mtype.Out(0)
 		if !goutil.IsExportedOrBuiltinType(replyType) {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("call-handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
 		}
 
 		// The return type of the method must be *Status.
 		if returnType := mtype.Out(1); !isStatusType(returnType.String()) {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("call-handler: %s.%s second out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
 		}
 
@@ -749,55 +727,37 @@ func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, plugi
 
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
-		mtype := method.Type
-		mname := method.Name
-		// Method must be exported.
-		if method.PkgPath != "" {
+		// Skip private methods and methods inherited from composition.
+		if method.PkgPath != "" || goutil.IsCompositionMethod(method) {
 			continue
 		}
+		mtype := method.Type
+		mname := method.Name
 		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("push-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("push-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
 		}
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("push-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("push-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 
 		// Method needs one out: *Status.
 		if mtype.NumOut() != 1 {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("push-handler: %s.%s needs one out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 
 		// The return type of the method must be *Status.
 		if returnType := mtype.Out(0); !isStatusType(returnType.String()) {
-			if isBelongToCallCtx(mname) {
-				continue
-			}
 			return nil, errors.Errorf("push-handler: %s.%s out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
 		}
 
@@ -922,24 +882,6 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 		argElem:         argType.Elem(),
 		pluginContainer: pluginContainer,
 	}}, nil
-}
-
-func isBelongToCallCtx(name string) bool {
-	for m := 0; m < typeOfCallCtx.NumMethod(); m++ {
-		if name == typeOfCallCtx.Method(m).Name {
-			return true
-		}
-	}
-	return false
-}
-
-func isBelongToPushCtx(name string) bool {
-	for m := 0; m < typeOfPushCtx.NumMethod(); m++ {
-		if name == typeOfPushCtx.Method(m).Name {
-			return true
-		}
-	}
-	return false
 }
 
 func isStatusType(s string) bool {

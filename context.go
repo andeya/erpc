@@ -35,7 +35,7 @@ type (
 		Session() CtxSession
 		// IP returns the remote addr.
 		IP() string
-		// RealIP returns the the current real remote addr.
+		// RealIP returns the current real remote addr.
 		RealIP() string
 		// Swap returns custom data swap of context.
 		Swap() goutil.Map
@@ -48,7 +48,7 @@ type (
 	// WriteCtx context method set for writing message.
 	WriteCtx interface {
 		PreCtx
-		// Output returns writed message.
+		// Output returns wrote message.
 		Output() Message
 		// StatusOK returns the handle status is OK or not.
 		StatusOK() bool
@@ -800,8 +800,9 @@ func (c *callCmd) Done() <-chan struct{} {
 
 // Reply returns the call reply.
 // NOTE:
-//  Inside, <-Done() is automatically called and blocked,
-//  until the call is completed!
+//
+//	Inside, <-Done() is automatically called and blocked,
+//	until the call is completed!
 func (c *callCmd) Reply() (interface{}, *Status) {
 	<-c.Done()
 	return c.result, c.stat
@@ -809,8 +810,9 @@ func (c *callCmd) Reply() (interface{}, *Status) {
 
 // InputBodyCodec gets the body codec type of the input message.
 // NOTE:
-//  Inside, <-Done() is automatically called and blocked,
-//  until the call is completed!
+//
+//	Inside, <-Done() is automatically called and blocked,
+//	until the call is completed!
 func (c *callCmd) InputBodyCodec() byte {
 	<-c.Done()
 	return c.inputBodyCodec
@@ -818,8 +820,9 @@ func (c *callCmd) InputBodyCodec() byte {
 
 // InputMeta returns the header metadata of input message.
 // NOTE:
-//  Inside, <-Done() is automatically called and blocked,
-//  until the call is completed!
+//
+//	Inside, <-Done() is automatically called and blocked,
+//	until the call is completed!
 func (c *callCmd) InputMeta() *utils.Args {
 	<-c.Done()
 	return c.inputMeta
@@ -828,8 +831,9 @@ func (c *callCmd) InputMeta() *utils.Args {
 // CostTime returns the called cost time.
 // If PeerConfig.CountTime=false, always returns 0.
 // NOTE:
-//  Inside, <-Done() is automatically called and blocked,
-//  until the call is completed!
+//
+//	Inside, <-Done() is automatically called and blocked,
+//	until the call is completed!
 func (c *callCmd) CostTime() time.Duration {
 	<-c.Done()
 	return c.cost
