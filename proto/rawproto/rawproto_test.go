@@ -6,9 +6,17 @@ import (
 
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/xfer/gzip"
+	"github.com/andeya/goutil"
 )
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestRawProto(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+
 	gzip.Reg('g', "gizp-5", 5)
 
 	// server

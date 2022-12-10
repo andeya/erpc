@@ -1,5 +1,4 @@
-// Package tps statistics requests per second
-package erpcs
+package tps
 
 import (
 	"log"

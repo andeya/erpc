@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andeya/goutil"
 	"github.com/andeya/goutil/httpbody"
 
 	"github.com/andeya/erpc/v7"
@@ -27,7 +28,13 @@ func (h *Home) TestError(arg *map[string]string) (map[string]interface{}, *erpc.
 	return nil, erpc.NewStatus(1, "test error", "this is test:"+string(h.PeekMeta("peer_id")))
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestHTTProto(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	// Server
 	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))

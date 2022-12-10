@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/andeya/erpc/v7"
+	"github.com/andeya/goutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,13 @@ func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Statu
 	}, nil
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}"
+
 func TestPlugin(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	ol := New(LimitConfig{
 		MaxConn:     1,
 		QPSInterval: 100 * time.Millisecond,

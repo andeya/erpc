@@ -7,11 +7,15 @@ import (
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/xfer"
 	"github.com/andeya/erpc/v7/xfer/md5"
+	"github.com/andeya/goutil"
 )
 
-func TestSeparate(t *testing.T) {
+func init() {
 	// Register filter(custom)
 	md5.Reg('m', "md5")
+}
+
+func TestSeparate(t *testing.T) {
 	md5Check, _ := xfer.Get('m')
 	input := []byte("md5")
 	b, err := md5Check.OnPack(input)
@@ -32,9 +36,13 @@ func TestSeparate(t *testing.T) {
 	}
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestCombined(t *testing.T) {
-	// Register filter(custom)
-	md5.Reg('m', "md5")
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	// Server
 	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(Home))

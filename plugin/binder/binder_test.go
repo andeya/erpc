@@ -6,6 +6,7 @@ import (
 
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/plugin/binder"
+	"github.com/andeya/goutil"
 )
 
 type (
@@ -39,7 +40,13 @@ func (s *SwapPlugin) PostReadCallBody(ctx erpc.ReadCtx) *erpc.Status {
 	return nil
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestBinder(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	bplugin := binder.NewStructArgsBinder(nil)
 	srv := erpc.NewPeer(
 		erpc.PeerConfig{ListenPort: 9090},

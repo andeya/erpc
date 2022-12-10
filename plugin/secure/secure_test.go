@@ -7,7 +7,10 @@ import (
 
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/plugin/secure"
+	"github.com/andeya/goutil"
 )
+
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
 
 type Arg struct {
 	A int
@@ -47,6 +50,10 @@ func newSession(t *testing.T, port uint16) erpc.Session {
 }
 
 func TestSecurePlugin(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	sess := newSession(t, 9090)
 	// test secure
 	var result Result
@@ -67,6 +74,10 @@ func TestSecurePlugin(t *testing.T) {
 }
 
 func TestAcceptSecurePlugin(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	sess := newSession(t, 9091)
 	// test accept secure
 	var result Result

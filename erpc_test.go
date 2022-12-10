@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/andeya/erpc/v7"
+	"github.com/andeya/goutil"
 )
 
 func panic_call(erpc.CallCtx, *interface{}) (interface{}, *erpc.Status) {
@@ -15,7 +16,14 @@ func panic_push(erpc.PushCtx, *interface{}) *erpc.Status {
 	panic("panic_push")
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestPanic(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+
 	srv := erpc.NewPeer(erpc.PeerConfig{
 		CountTime:  true,
 		ListenPort: 9090,

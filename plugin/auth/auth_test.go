@@ -6,9 +6,17 @@ import (
 
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/plugin/auth"
+	"github.com/andeya/goutil"
 )
 
-func Test(t *testing.T) {
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
+func TestAuth(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+
 	// Server
 	srv := erpc.NewPeer(
 		erpc.PeerConfig{ListenPort: 9090, CountTime: true},

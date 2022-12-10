@@ -1,20 +1,22 @@
 package thriftproto
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/codec"
 	"github.com/andeya/erpc/v7/utils"
 	"github.com/andeya/goutil"
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
 // NewStructProtoFunc creates erpc.ProtoFunc of Thrift protocol.
 // NOTE:
-//  The body codec must be thrift, directly encoded as a thrift.TStruct;
-//  Support the Meta, but not support the BodyCodec and XferPipe.
+//
+//	The body codec must be thrift, directly encoded as a thrift.TStruct;
+//	Support the Meta, but not support the BodyCodec and XferPipe.
 func NewStructProtoFunc() erpc.ProtoFunc {
 	return func(rw erpc.IOWithReadBuffer) erpc.Proto {
 		p := &tStructProto{
@@ -77,7 +79,7 @@ func (t *tStructProto) structPack(m erpc.Message) error {
 	if !ok {
 		return fmt.Errorf("thrift codec: %T does not implement thrift.TStruct", m.Body())
 	}
-	if err = s.Write(t.tProtocol); err != nil {
+	if err = s.Write(context.TODO(), t.tProtocol); err != nil {
 		return err
 	}
 
@@ -85,7 +87,7 @@ func (t *tStructProto) structPack(m erpc.Message) error {
 	t.tProtocol.SetWriteHeader(HeaderStatus, m.Status(true).QueryString())
 	t.tProtocol.SetWriteHeader(HeaderMeta, goutil.BytesToString(m.Meta().QueryString()))
 
-	if err = t.tProtocol.WriteMessageEnd(); err != nil {
+	if err = t.tProtocol.WriteMessageEnd(context.TODO()); err != nil {
 		return err
 	}
 	if err = t.tProtocol.Flush(m.Context()); err != nil {
@@ -109,11 +111,11 @@ func (t *tStructProto) structUnpack(m erpc.Message) error {
 	if !ok {
 		return fmt.Errorf("thrift codec: %T does not implement thrift.TStruct", m.Body())
 	}
-	if err = s.Read(t.tProtocol); err != nil {
+	if err = s.Read(context.TODO(), t.tProtocol); err != nil {
 		return err
 	}
 
-	if err = t.tProtocol.ReadMessageEnd(); err != nil {
+	if err = t.tProtocol.ReadMessageEnd(context.TODO()); err != nil {
 		return err
 	}
 

@@ -19,10 +19,10 @@ import (
 	"context"
 	"fmt"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
-//  thrift codec name and id
+// thrift codec name and id
 const (
 	NAME_THRIFT = "thrift"
 	ID_THRIFT   = 't'
@@ -64,10 +64,10 @@ var (
 // ThriftMarshal returns the Thriftbuf encoding of v.
 func ThriftMarshal(v interface{}) ([]byte, error) {
 	trans := &tMemoryBuffer{bytes.NewBuffer(make([]byte, 0, 256))}
-	p := thrift.NewTBinaryProtocol(trans, false, false)
+	p := thrift.NewTBinaryProtocolConf(trans, nil)
 	switch s := v.(type) {
 	case thrift.TStruct:
-		err := s.Write(p)
+		err := s.Write(context.TODO(), p)
 		return trans.Buffer.Bytes(), err
 	case nil, *struct{}, struct{}:
 		err := ThriftEmptyStruct.Write(p)
@@ -82,8 +82,8 @@ func ThriftUnmarshal(data []byte, v interface{}) error {
 	switch s := v.(type) {
 	case thrift.TStruct:
 		trans := &tMemoryBuffer{bytes.NewBuffer(data)}
-		p := thrift.NewTBinaryProtocol(trans, false, false)
-		return s.Read(p)
+		p := thrift.NewTBinaryProtocolConf(trans, nil)
+		return s.Read(context.TODO(), p)
 	case nil, *struct{}, struct{}:
 		return nil
 	}

@@ -1,8 +1,11 @@
-package erpcs
+package tps
 
 import (
 	"testing"
 	"time"
+
+	"github.com/andeya/erpc/v7"
+	"github.com/andeya/goutil"
 )
 
 type Call struct {
@@ -21,7 +24,13 @@ func (*Push) Test(*struct{}) *erpc.Status {
 	return nil
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" ./...
+
 func TestTPS(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	erpc.SetLoggerLevel("OFF")
 	// Server
 	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090}, NewTPS(5))

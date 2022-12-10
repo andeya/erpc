@@ -4,11 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/codec"
 	"github.com/andeya/erpc/v7/utils"
 	"github.com/andeya/goutil"
+	"github.com/apache/thrift/lib/go/thrift"
 )
 
 const (
@@ -30,8 +30,9 @@ func init() {
 
 // NewBinaryProtoFunc creates erpc.ProtoFunc of Thrift protocol.
 // NOTE:
-//  Marshal the body into binary;
-//  Support the Meta, BodyCodec and XferPipe.
+//
+//	Marshal the body into binary;
+//	Support the Meta, BodyCodec and XferPipe.
 func NewBinaryProtoFunc() erpc.ProtoFunc {
 	return func(rw erpc.IOWithReadBuffer) erpc.Proto {
 		p := &tBinaryProto{
@@ -98,7 +99,7 @@ func (t *tBinaryProto) binaryPack(m erpc.Message) error {
 		return err
 	}
 
-	if err = t.tProtocol.WriteBinary(bodyBytes); err != nil {
+	if err = t.tProtocol.WriteBinary(context.TODO(), bodyBytes); err != nil {
 		return err
 	}
 
@@ -108,7 +109,7 @@ func (t *tBinaryProto) binaryPack(m erpc.Message) error {
 	t.tProtocol.SetWriteHeader(HeaderBodyCodec, string(m.BodyCodec()))
 	t.tProtocol.SetWriteHeader(HeaderXferPipe, goutil.BytesToString(m.XferPipe().IDs()))
 
-	if err = t.tProtocol.WriteMessageEnd(); err != nil {
+	if err = t.tProtocol.WriteMessageEnd(context.TODO()); err != nil {
 		return err
 	}
 	if err = t.tProtocol.Flush(m.Context()); err != nil {
@@ -128,11 +129,11 @@ func (t *tBinaryProto) binaryUnpack(m erpc.Message) error {
 		return err
 	}
 
-	bodyBytes, err := t.tProtocol.ReadBinary()
+	bodyBytes, err := t.tProtocol.ReadBinary(context.TODO())
 	if err != nil {
 		return err
 	}
-	if err = t.tProtocol.ReadMessageEnd(); err != nil {
+	if err = t.tProtocol.ReadMessageEnd(context.TODO()); err != nil {
 		return err
 	}
 
@@ -170,12 +171,12 @@ func writeMessageBegin(tProtocol thrift.TProtocol, m erpc.Message) error {
 	case erpc.TypePush:
 		typeID = thrift.ONEWAY
 	}
-	return tProtocol.WriteMessageBegin(m.ServiceMethod(), typeID, m.Seq())
+	return tProtocol.WriteMessageBegin(context.TODO(), m.ServiceMethod(), typeID, m.Seq())
 }
 
 // readMessageBegin read a message header.
 func readMessageBegin(tProtocol thrift.TProtocol, m erpc.Message) error {
-	rMethod, rTypeID, rSeqID, err := tProtocol.ReadMessageBegin()
+	rMethod, rTypeID, rSeqID, err := tProtocol.ReadMessageBegin(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -190,7 +191,7 @@ func readMessageBegin(tProtocol thrift.TProtocol, m erpc.Message) error {
 		m.SetMtype(erpc.TypePush)
 	case thrift.EXCEPTION:
 		error0 := thrift.NewTApplicationException(thrift.UNKNOWN_APPLICATION_EXCEPTION, "Unknown Exception")
-		err = error0.Read(tProtocol)
+		err = error0.Read(context.TODO(), tProtocol)
 		if err != nil {
 			return err
 		}

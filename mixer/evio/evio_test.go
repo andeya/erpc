@@ -7,9 +7,16 @@ import (
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/mixer/evio"
 	"github.com/andeya/erpc/v7/proto/jsonproto"
+	"github.com/andeya/goutil"
 )
 
-func Test(t *testing.T) {
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
+func TestEvio(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	// server
 	srv := evio.NewServer(1, erpc.PeerConfig{ListenPort: 9090})
 	// use TLS

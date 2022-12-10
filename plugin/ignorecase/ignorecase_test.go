@@ -6,6 +6,7 @@ import (
 
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/plugin/ignorecase"
+	"github.com/andeya/goutil"
 )
 
 type Home struct {
@@ -21,15 +22,21 @@ func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Statu
 	}, nil
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestIngoreCase(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	// Server
-	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090, Network: "quic"}, ignorecase.NewIgnoreCase())
+	srv := erpc.NewPeer(erpc.PeerConfig{ListenPort: 9090, Network: "tcp"}, ignorecase.NewIgnoreCase())
 	srv.RouteCall(new(Home))
 	go srv.ListenAndServe()
-	time.Sleep(1e9)
+	time.Sleep(2e9)
 
 	// Client
-	cli := erpc.NewPeer(erpc.PeerConfig{Network: "quic"}, ignorecase.NewIgnoreCase())
+	cli := erpc.NewPeer(erpc.PeerConfig{Network: "tcp"}, ignorecase.NewIgnoreCase())
 	cli.RoutePush(new(Push))
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {

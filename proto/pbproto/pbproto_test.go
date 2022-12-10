@@ -7,6 +7,7 @@ import (
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/proto/pbproto"
 	"github.com/andeya/erpc/v7/xfer/gzip"
+	"github.com/andeya/goutil"
 )
 
 type Home struct {
@@ -22,7 +23,13 @@ func (h *Home) Test(arg *map[string]string) (map[string]interface{}, *erpc.Statu
 	}, nil
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestPbProto(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	gzip.Reg('g', "gizp-5", 5)
 
 	// server

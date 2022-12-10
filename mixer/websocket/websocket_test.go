@@ -11,6 +11,7 @@ import (
 	"github.com/andeya/erpc/v7/mixer/websocket/jsonSubProto"
 	"github.com/andeya/erpc/v7/mixer/websocket/pbSubProto"
 	"github.com/andeya/erpc/v7/plugin/auth"
+	"github.com/andeya/goutil"
 )
 
 type Arg struct {
@@ -24,7 +25,14 @@ func (p *P) Divide(arg *Arg) (int, *erpc.Status) {
 	return arg.A / arg.B, nil
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestJSONWebsocket(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+
 	srv := ws.NewServer("/", erpc.PeerConfig{ListenPort: 9090})
 	srv.RouteCall(new(P))
 	go srv.ListenAndServe()
@@ -50,6 +58,11 @@ func TestJSONWebsocket(t *testing.T) {
 }
 
 func TestPbWebsocketTLS(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+
 	srv := ws.NewServer("/abc", erpc.PeerConfig{ListenPort: 9091})
 	srv.RouteCall(new(P))
 	srv.SetTLSConfig(erpc.GenerateTLSConfigForServer())
@@ -77,6 +90,11 @@ func TestPbWebsocketTLS(t *testing.T) {
 }
 
 func TestCustomizedWebsocket(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+
 	srv := erpc.NewPeer(erpc.PeerConfig{})
 	http.Handle("/ws", ws.NewPbServeHandler(srv, nil))
 	go http.ListenAndServe(":9092", nil)
@@ -102,6 +120,11 @@ func TestCustomizedWebsocket(t *testing.T) {
 }
 
 func TestJSONWebsocketAuth(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+
 	srv := ws.NewServer(
 		"/auth",
 		erpc.PeerConfig{ListenPort: 9093},
@@ -166,6 +189,11 @@ var authChecker = auth.NewCheckerPlugin(
 )
 
 func TestHandshakeWebsocketAuth(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
+	
 	srv := erpc.NewPeer(erpc.PeerConfig{}, handshakePlugin)
 	http.Handle("/token", ws.NewJSONServeHandler(srv, nil))
 	go http.ListenAndServe(":9094", nil)

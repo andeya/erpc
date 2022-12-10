@@ -6,6 +6,7 @@ import (
 
 	"github.com/andeya/erpc/v7"
 	"github.com/andeya/erpc/v7/mixer/multiclient"
+	"github.com/andeya/goutil"
 )
 
 type Arg struct {
@@ -19,7 +20,13 @@ func (p *P) Divide(arg *Arg) (int, *erpc.Status) {
 	return arg.A / arg.B, nil
 }
 
+//go:generate go test -v -c -o "${GOPACKAGE}" $GOFILE
+
 func TestMultiClient(t *testing.T) {
+	if goutil.IsGoTest() {
+		t.Log("skip test in go test")
+		return
+	}
 	srv := erpc.NewPeer(erpc.PeerConfig{
 		ListenPort: 9090,
 	})
