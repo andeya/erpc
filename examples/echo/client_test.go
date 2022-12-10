@@ -1,4 +1,4 @@
-package group
+package echo
 
 import (
 	"testing"
@@ -20,32 +20,21 @@ func TestClient(t *testing.T) {
 		erpc.PeerConfig{},
 	)
 	defer cli.Close()
-	group := cli.SubRoute("/cli")
-	group.RoutePush(new(push))
 
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
 		erpc.Fatalf("%v", stat)
 	}
 
-	var result int
-	stat = sess.Call("/srv/math/v2/add_2",
-		[]int{1, 2, 3, 4, 5},
+	var result string
+	stat = sess.Call(
+		"/echo/add_suffix",
+		"this is request",
 		&result,
-		erpc.WithSetMeta("push_status", "yes"),
 	).Status()
 
 	if !stat.OK() {
 		erpc.Fatalf("%v", stat)
 	}
-	erpc.Printf("result: %d", result)
-}
-
-type push struct {
-	erpc.PushCtx
-}
-
-func (p *push) ServerStatus(arg *string) *erpc.Status {
-	erpc.Printf("server status: %s", *arg)
-	return nil
+	erpc.Printf("result: %s", result)
 }

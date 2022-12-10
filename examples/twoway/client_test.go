@@ -1,4 +1,4 @@
-package simple
+package twoway
 
 import (
 	"testing"
@@ -23,6 +23,9 @@ func TestClient(t *testing.T) {
 
 	cli.RoutePush(new(Push))
 
+	cli.SubRoute("/cli").
+		RoutePush(new(Push))
+
 	sess, stat := cli.Dial(":9090")
 	if !stat.OK() {
 		erpc.Fatalf("%v", stat)
@@ -40,6 +43,12 @@ func TestClient(t *testing.T) {
 	erpc.Printf("result: %d", result)
 	erpc.Printf("Wait 10 seconds to receive the push...")
 	time.Sleep(time.Second * 10)
+
+	stat = sess.Call("/srv/math/v2/add_2",
+		[]int{10, 20, 30, 40, 50},
+		&result,
+		erpc.WithSetMeta("push_status", "yes"),
+	).Status()
 }
 
 // Push push handler
@@ -49,6 +58,6 @@ type Push struct {
 
 // Push handles '/push/status' message
 func (p *Push) Status(arg *string) *erpc.Status {
-	erpc.Printf("%s", *arg)
+	erpc.Printf("server status: %s", *arg)
 	return nil
 }

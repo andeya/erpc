@@ -16,6 +16,7 @@ package erpc
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -56,11 +57,11 @@ type (
 		// SubRoute adds handler group.
 		SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter
 		// RouteCall registers CALL handlers, and returns the paths.
-		RouteCall(ctrlStruct interface{}, plugin ...Plugin) []string
+		RouteCall(ctrlStructOrPoolFunc interface{}, plugin ...Plugin) []string
 		// RouteCallFunc registers CALL handler, and returns the path.
 		RouteCallFunc(callHandleFunc interface{}, plugin ...Plugin) string
 		// RoutePush registers PUSH handlers, and returns the paths.
-		RoutePush(ctrlStruct interface{}, plugin ...Plugin) []string
+		RoutePush(ctrlStructOrPoolFunc interface{}, plugin ...Plugin) []string
 		// RoutePushFunc registers PUSH handler, and returns the path.
 		RoutePushFunc(pushHandleFunc interface{}, plugin ...Plugin) string
 		// SetUnknownCall sets the default handler, which is called when no handler for CALL is found.
@@ -270,9 +271,10 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 
 // ServeConn serves the connection and returns a session.
 // NOTE:
-//  Not support automatically redials after disconnection;
-//  Not check TLS;
-//  Execute the PostAcceptPlugin plugins.
+//
+//	Not support automatically redials after disconnection;
+//	Not check TLS;
+//	Execute the PostAcceptPlugin plugins.
 func (p *peer) ServeConn(conn net.Conn, protoFunc ...ProtoFunc) (Session, *Status) {
 	network := conn.LocalAddr().Network()
 	if asQUIC(network) != "" {
@@ -389,7 +391,7 @@ func (p *peer) ListenAndServe(protoFunc ...ProtoFunc) error {
 func (p *peer) Close() (err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			err = errors.Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
+			err = fmt.Errorf("panic:%v\n%s", p, goutil.PanicTrace(2))
 		}
 	}()
 	close(p.closeCh)
@@ -458,8 +460,8 @@ func (p *peer) SubRoute(pathPrefix string, plugin ...Plugin) *SubRouter {
 }
 
 // RouteCall registers CALL handlers, and returns the paths.
-func (p *peer) RouteCall(callCtrlStruct interface{}, plugin ...Plugin) []string {
-	return p.router.RouteCall(callCtrlStruct, plugin...)
+func (p *peer) RouteCall(callCtrlStructOrPoolFunc interface{}, plugin ...Plugin) []string {
+	return p.router.RouteCall(callCtrlStructOrPoolFunc, plugin...)
 }
 
 // RouteCallFunc registers CALL handler, and returns the path.
@@ -468,8 +470,8 @@ func (p *peer) RouteCallFunc(callHandleFunc interface{}, plugin ...Plugin) strin
 }
 
 // RoutePush registers PUSH handlers, and returns the paths.
-func (p *peer) RoutePush(pushCtrlStruct interface{}, plugin ...Plugin) []string {
-	return p.router.RoutePush(pushCtrlStruct, plugin...)
+func (p *peer) RoutePush(pushCtrlStructOrPoolFunc interface{}, plugin ...Plugin) []string {
+	return p.router.RoutePush(pushCtrlStructOrPoolFunc, plugin...)
 }
 
 // RoutePushFunc registers PUSH handler, and returns the path.

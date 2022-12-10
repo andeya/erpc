@@ -15,6 +15,7 @@
 package erpc
 
 import (
+	"fmt"
 	"path"
 	"reflect"
 	"runtime"
@@ -23,11 +24,6 @@ import (
 	"unsafe"
 
 	"github.com/andeya/goutil"
-	"github.com/andeya/goutil/errors"
-)
-
-var (
-	typeOfHandlerCtx = reflect.TypeOf(new(handlerCtx)).Elem()
 )
 
 // ServiceMethodMapper mapper service method from prefix, recvName and funcName.
@@ -454,32 +450,59 @@ func (r *SubRouter) getPush(uriPath string) (*Handler, bool) {
 	return nil, false
 }
 
+type (
+	// CtrlStructPtr should be a struct pointer that contains handler methods.
+	CtrlStructPtr interface{}
+
+	// CtrlPoolFunc new a struct pointer for controller pool.
+	CtrlPoolFunc = func() CtrlStructPtr
+)
+
+func resolveCtrlStructOrPoolFunc(ctrlStructOrPoolFunc interface{}) (ctlPtrBuilder func() reflect.Value, err error) {
+	builder, isCtrlBuilder := ctrlStructOrPoolFunc.(CtrlPoolFunc)
+	if isCtrlBuilder {
+		ctlPtrBuilder = func() reflect.Value {
+			return reflect.ValueOf(builder())
+		}
+	} else {
+		ctrlValue := reflect.ValueOf(ctrlStructOrPoolFunc)
+		for ctrlValue.Kind() == reflect.Ptr {
+			ctrlValue = ctrlValue.Elem()
+		}
+		ctrlType := ctrlValue.Type()
+		ctlPtrBuilder = func() reflect.Value {
+			return reflect.New(ctrlType)
+		}
+	}
+	ctrlValue := ctlPtrBuilder()
+	if ctrlValue.Kind() != reflect.Ptr {
+		return nil, fmt.Errorf("ctrlStruct is not struct pointer: %s", ctrlValue.Type().Name())
+	}
+	ctrlValue = ctrlValue.Elem()
+	if ctrlValue.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("ctrlStruct is not struct pointer: %s", ctrlValue.Type().Name())
+	}
+	return ctlPtrBuilder, nil
+}
+
 // NOTE: callCtrlStruct needs to implement CallCtx interface.
-func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
-	var (
-		ctype    = reflect.TypeOf(callCtrlStruct)
-		handlers = make([]*Handler, 0, 1)
-	)
-
-	if ctype.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("call-handler: the type is not struct point: %s", ctype.String())
-	}
-
-	var ctypeElem = ctype.Elem()
-	if ctypeElem.Kind() != reflect.Struct {
-		return nil, errors.Errorf("call-handler: the type is not struct point: %s", ctype.String())
-	}
-
-	iType, ok := ctypeElem.FieldByName("CallCtx")
-	if !ok || !iType.Anonymous {
-		return nil, errors.Errorf("call-handler: the struct do not have anonymous field erpc.CallCtx: %s", ctype.String())
-	}
-
-	var callCtxOffset = iType.Offset
-
+func makeCallHandlersFromStruct(prefix string, callCtrlStructOrPoolFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
+	var handlers = make([]*Handler, 0, 1)
+
+	var ctlPtrBuilder, err = resolveCtrlStructOrPoolFunc(callCtrlStructOrPoolFunc)
+	if err != nil {
+		return nil, fmt.Errorf("call-handler: %w", err)
+	}
+	var ctype = ctlPtrBuilder().Type()
+	iType, ok := ctype.Elem().FieldByName("CallCtx")
+	if !ok || !iType.Anonymous {
+		return nil, fmt.Errorf("call-handler: the struct do not have anonymous field erpc.CallCtx: %s", ctype.String())
+	}
+
+	var callCtxOffset = iType.Offset
 
 	type CallCtrlValue struct {
 		ctrl   reflect.Value
@@ -487,10 +510,10 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 	}
 	var pool = &sync.Pool{
 		New: func() interface{} {
-			ctrl := reflect.New(ctypeElem)
+			ctrl := ctlPtrBuilder()
 			return &CallCtrlValue{
 				ctrl:   ctrl,
-				ctxPtr: (*CallCtx)(unsafe.Pointer(uintptr(unsafe.Pointer(ctrl.Pointer())) + callCtxOffset)),
+				ctxPtr: (*CallCtx)(unsafe.Pointer(ctrl.Pointer() + callCtxOffset)),
 			}
 		},
 	}
@@ -505,34 +528,34 @@ func makeCallHandlersFromStruct(prefix string, callCtrlStruct interface{}, plugi
 		mname := method.Name
 		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
-			return nil, errors.Errorf("call-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
+			return nil, fmt.Errorf("call-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
-			return nil, errors.Errorf("call-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
+			return nil, fmt.Errorf("call-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
 		}
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			return nil, errors.Errorf("call-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
+			return nil, fmt.Errorf("call-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
-			return nil, errors.Errorf("call-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
+			return nil, fmt.Errorf("call-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 		// Method needs two outs: reply, *Status.
 		if mtype.NumOut() != 2 {
-			return nil, errors.Errorf("call-handler: %s.%s needs two out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
+			return nil, fmt.Errorf("call-handler: %s.%s needs two out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 		// Reply type must be exported.
 		replyType := mtype.Out(0)
 		if !goutil.IsExportedOrBuiltinType(replyType) {
-			return nil, errors.Errorf("call-handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
+			return nil, fmt.Errorf("call-handler: %s.%s first reply type not exported: %s", ctype.String(), mname, replyType)
 		}
 
 		// The return type of the method must be *Status.
 		if returnType := mtype.Out(1); !isStatusType(returnType.String()) {
-			return nil, errors.Errorf("call-handler: %s.%s second out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
+			return nil, fmt.Errorf("call-handler: %s.%s second out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
 		}
 
 		var methodFunc = method.Func
@@ -572,37 +595,37 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 	)
 
 	if ctype.Kind() != reflect.Func {
-		return nil, errors.Errorf("call-handler: the type is not function: %s", typeString)
+		return nil, fmt.Errorf("call-handler: the type is not function: %s", typeString)
 	}
 
 	// needs two outs: reply, *Status.
 	if ctype.NumOut() != 2 {
-		return nil, errors.Errorf("call-handler: %s needs two out arguments, but have %d", typeString, ctype.NumOut())
+		return nil, fmt.Errorf("call-handler: %s needs two out arguments, but have %d", typeString, ctype.NumOut())
 	}
 
 	// Reply type must be exported.
 	replyType := ctype.Out(0)
 	if !goutil.IsExportedOrBuiltinType(replyType) {
-		return nil, errors.Errorf("call-handler: %s first reply type not exported: %s", typeString, replyType)
+		return nil, fmt.Errorf("call-handler: %s first reply type not exported: %s", typeString, replyType)
 	}
 
 	// The return type of the method must be *Status.
 	if returnType := ctype.Out(1); !isStatusType(returnType.String()) {
-		return nil, errors.Errorf("call-handler: %s second out argument %s is not *erpc.Status", typeString, returnType)
+		return nil, fmt.Errorf("call-handler: %s second out argument %s is not *erpc.Status", typeString, returnType)
 	}
 
 	// needs two ins: CallCtx, *<T>.
 	if ctype.NumIn() != 2 {
-		return nil, errors.Errorf("call-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
+		return nil, fmt.Errorf("call-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
 	}
 
 	// First arg need be exported or builtin, and need be a pointer.
 	argType := ctype.In(1)
 	if !goutil.IsExportedOrBuiltinType(argType) {
-		return nil, errors.Errorf("call-handler: %s arg type not exported: %s", typeString, argType)
+		return nil, fmt.Errorf("call-handler: %s arg type not exported: %s", typeString, argType)
 	}
 	if argType.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("call-handler: %s arg type need be a pointer: %s", typeString, argType)
+		return nil, fmt.Errorf("call-handler: %s arg type need be a pointer: %s", typeString, argType)
 	}
 
 	// first agr need be a CallCtx (struct pointer or CallCtx).
@@ -612,13 +635,13 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 
 	switch ctxType.Kind() {
 	default:
-		return nil, errors.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
+		return nil, fmt.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
 
 	case reflect.Interface:
 		iface := reflect.TypeOf((*CallCtx)(nil)).Elem()
 		if !ctxType.Implements(iface) ||
 			!iface.Implements(reflect.New(ctxType).Type().Elem()) {
-			return nil, errors.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, fmt.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
@@ -635,12 +658,12 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 	case reflect.Ptr:
 		var ctxTypeElem = ctxType.Elem()
 		if ctxTypeElem.Kind() != reflect.Struct {
-			return nil, errors.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, fmt.Errorf("call-handler: %s's first arg must be erpc.CallCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
 		iType, ok := ctxTypeElem.FieldByName("CallCtx")
 		if !ok || !iType.Anonymous {
-			return nil, errors.Errorf("call-handler: %s's first arg do not have anonymous field erpc.CallCtx: %s", typeString, ctxType)
+			return nil, fmt.Errorf("call-handler: %s's first arg do not have anonymous field erpc.CallCtx: %s", typeString, ctxType)
 		}
 
 		type CallCtrlValue struct {
@@ -686,24 +709,20 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 }
 
 // NOTE: pushCtrlStruct needs to implement PushCtx interface.
-func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
-	var (
-		ctype    = reflect.TypeOf(pushCtrlStruct)
-		handlers = make([]*Handler, 0, 1)
-	)
-
-	if ctype.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("push-handler: the type is not struct point: %s", ctype.String())
+func makePushHandlersFromStruct(prefix string, pushCtrlStructOrPoolFunc interface{}, pluginContainer *PluginContainer) ([]*Handler, error) {
+	if pluginContainer == nil {
+		pluginContainer = newPluginContainer()
 	}
+	var handlers = make([]*Handler, 0, 1)
 
-	var ctypeElem = ctype.Elem()
-	if ctypeElem.Kind() != reflect.Struct {
-		return nil, errors.Errorf("push-handler: the type is not struct point: %s", ctype.String())
+	var ctlPtrBuilder, err = resolveCtrlStructOrPoolFunc(pushCtrlStructOrPoolFunc)
+	if err != nil {
+		return nil, fmt.Errorf("push-handler: %w", err)
 	}
-
-	iType, ok := ctypeElem.FieldByName("PushCtx")
+	var ctype = ctlPtrBuilder().Type()
+	iType, ok := ctype.Elem().FieldByName("PushCtx")
 	if !ok || !iType.Anonymous {
-		return nil, errors.Errorf("push-handler: the struct do not have anonymous field erpc.PushCtx: %s", ctype.String())
+		return nil, fmt.Errorf("push-handler: the struct do not have anonymous field erpc.PushCtx: %s", ctype.String())
 	}
 
 	var pushCtxOffset = iType.Offset
@@ -717,14 +736,13 @@ func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, plugi
 	}
 	var pool = &sync.Pool{
 		New: func() interface{} {
-			ctrl := reflect.New(ctypeElem)
+			ctrl := ctlPtrBuilder()
 			return &PushCtrlValue{
 				ctrl:   ctrl,
-				ctxPtr: (*PushCtx)(unsafe.Pointer(uintptr(unsafe.Pointer(ctrl.Pointer())) + pushCtxOffset)),
+				ctxPtr: (*PushCtx)(unsafe.Pointer(ctrl.Pointer() + pushCtxOffset)),
 			}
 		},
 	}
-
 	for m := 0; m < ctype.NumMethod(); m++ {
 		method := ctype.Method(m)
 		// Skip private methods and methods inherited from composition.
@@ -735,30 +753,30 @@ func makePushHandlersFromStruct(prefix string, pushCtrlStruct interface{}, plugi
 		mname := method.Name
 		// Method needs two ins: receiver, *<T>.
 		if mtype.NumIn() != 2 {
-			return nil, errors.Errorf("push-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
+			return nil, fmt.Errorf("push-handler: %s.%s needs one in argument, but have %d", ctype.String(), mname, mtype.NumIn())
 		}
 		// Receiver need be a struct pointer.
 		structType := mtype.In(0)
 		if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
-			return nil, errors.Errorf("push-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
+			return nil, fmt.Errorf("push-handler: %s.%s receiver need be a struct pointer: %s", ctype.String(), mname, structType)
 		}
 		// First arg need be exported or builtin, and need be a pointer.
 		argType := mtype.In(1)
 		if !goutil.IsExportedOrBuiltinType(argType) {
-			return nil, errors.Errorf("push-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
+			return nil, fmt.Errorf("push-handler: %s.%s arg type not exported: %s", ctype.String(), mname, argType)
 		}
 		if argType.Kind() != reflect.Ptr {
-			return nil, errors.Errorf("push-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
+			return nil, fmt.Errorf("push-handler: %s.%s arg type need be a pointer: %s", ctype.String(), mname, argType)
 		}
 
 		// Method needs one out: *Status.
 		if mtype.NumOut() != 1 {
-			return nil, errors.Errorf("push-handler: %s.%s needs one out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
+			return nil, fmt.Errorf("push-handler: %s.%s needs one out arguments, but have %d", ctype.String(), mname, mtype.NumOut())
 		}
 
 		// The return type of the method must be *Status.
 		if returnType := mtype.Out(0); !isStatusType(returnType.String()) {
-			return nil, errors.Errorf("push-handler: %s.%s out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
+			return nil, fmt.Errorf("push-handler: %s.%s out argument %s is not *erpc.Status", ctype.String(), mname, returnType)
 		}
 
 		var methodFunc = method.Func
@@ -790,31 +808,31 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 	)
 
 	if ctype.Kind() != reflect.Func {
-		return nil, errors.Errorf("push-handler: the type is not function: %s", typeString)
+		return nil, fmt.Errorf("push-handler: the type is not function: %s", typeString)
 	}
 
 	// needs one out: *Status.
 	if ctype.NumOut() != 1 {
-		return nil, errors.Errorf("push-handler: %s needs one out arguments, but have %d", typeString, ctype.NumOut())
+		return nil, fmt.Errorf("push-handler: %s needs one out arguments, but have %d", typeString, ctype.NumOut())
 	}
 
 	// The return type of the method must be *Status.
 	if returnType := ctype.Out(0); !isStatusType(returnType.String()) {
-		return nil, errors.Errorf("push-handler: %s out argument %s is not *erpc.Status", typeString, returnType)
+		return nil, fmt.Errorf("push-handler: %s out argument %s is not *erpc.Status", typeString, returnType)
 	}
 
 	// needs two ins: PushCtx, *<T>.
 	if ctype.NumIn() != 2 {
-		return nil, errors.Errorf("push-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
+		return nil, fmt.Errorf("push-handler: %s needs two in argument, but have %d", typeString, ctype.NumIn())
 	}
 
 	// First arg need be exported or builtin, and need be a pointer.
 	argType := ctype.In(1)
 	if !goutil.IsExportedOrBuiltinType(argType) {
-		return nil, errors.Errorf("push-handler: %s arg type not exported: %s", typeString, argType)
+		return nil, fmt.Errorf("push-handler: %s arg type not exported: %s", typeString, argType)
 	}
 	if argType.Kind() != reflect.Ptr {
-		return nil, errors.Errorf("push-handler: %s arg type need be a pointer: %s", typeString, argType)
+		return nil, fmt.Errorf("push-handler: %s arg type need be a pointer: %s", typeString, argType)
 	}
 
 	// first agr need be a PushCtx (struct pointer or PushCtx).
@@ -824,13 +842,13 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 
 	switch ctxType.Kind() {
 	default:
-		return nil, errors.Errorf("push-handler: %s's first arg must be erpc.PushCtx type or struct pointer: %s", typeString, ctxType)
+		return nil, fmt.Errorf("push-handler: %s's first arg must be erpc.PushCtx type or struct pointer: %s", typeString, ctxType)
 
 	case reflect.Interface:
 		iface := reflect.TypeOf((*PushCtx)(nil)).Elem()
 		if !ctxType.Implements(iface) ||
 			!iface.Implements(reflect.New(ctxType).Type().Elem()) {
-			return nil, errors.Errorf("push-handler: %s's first arg need implement erpc.PushCtx: %s", typeString, ctxType)
+			return nil, fmt.Errorf("push-handler: %s's first arg need implement erpc.PushCtx: %s", typeString, ctxType)
 		}
 
 		handleFunc = func(ctx *handlerCtx, argValue reflect.Value) {
@@ -841,12 +859,12 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 	case reflect.Ptr:
 		var ctxTypeElem = ctxType.Elem()
 		if ctxTypeElem.Kind() != reflect.Struct {
-			return nil, errors.Errorf("push-handler: %s's first arg must be erpc.PushCtx type or struct pointer: %s", typeString, ctxType)
+			return nil, fmt.Errorf("push-handler: %s's first arg must be erpc.PushCtx type or struct pointer: %s", typeString, ctxType)
 		}
 
 		iType, ok := ctxTypeElem.FieldByName("PushCtx")
 		if !ok || !iType.Anonymous {
-			return nil, errors.Errorf("push-handler: %s's first arg do not have anonymous field erpc.PushCtx: %s", typeString, ctxType)
+			return nil, fmt.Errorf("push-handler: %s's first arg do not have anonymous field erpc.PushCtx: %s", typeString, ctxType)
 		}
 
 		type PushCtrlValue struct {
