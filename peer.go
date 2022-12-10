@@ -207,11 +207,15 @@ func (p *peer) CountSession() int {
 
 // Dial connects with the peer of the destination address.
 func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
+	stat := p.pluginContainer.preDial(p.dialer.localAddr, addr)
+	if !stat.OK() {
+		return nil, stat
+	}
 	var sess = newSession(p, nil, protoFunc)
 	_, err := p.dialer.dialWithRetry(addr, "", func(conn net.Conn) error {
 		sess.socket.Reset(conn, protoFunc...)
 		sess.socket.SetID(sess.LocalAddr().String())
-		if stat := p.pluginContainer.postDial(sess, false); !stat.OK() {
+		if stat = p.pluginContainer.postDial(sess, false); !stat.OK() {
 			conn.Close()
 			return stat.Cause()
 		}
@@ -227,23 +231,26 @@ func (p *peer) Dial(addr string, protoFunc ...ProtoFunc) (Session, *Status) {
 			oldID := sess.ID()
 			oldIP := sess.LocalAddr().String()
 			oldConn := sess.getConn()
-
-			_, err := p.dialer.dialWithRetry(addr, oldID, func(conn net.Conn) error {
-				sess.socket.Reset(conn, protoFunc...)
-				if oldIP == oldID {
-					sess.socket.SetID(sess.LocalAddr().String())
-				} else {
-					sess.socket.SetID(oldID)
-				}
-				sess.changeStatus(statusPreparing)
-				if stat := p.pluginContainer.postDial(sess, true); !stat.OK() {
-					conn.Close()
-					sess.changeStatus(statusRedialing)
-					return stat.Cause()
-				}
-				return nil
-			})
-
+			var err error
+			if stat := p.pluginContainer.preDial(p.dialer.localAddr, addr); stat.OK() {
+				_, err = p.dialer.dialWithRetry(addr, oldID, func(conn net.Conn) error {
+					sess.socket.Reset(conn, protoFunc...)
+					if oldIP == oldID {
+						sess.socket.SetID(sess.LocalAddr().String())
+					} else {
+						sess.socket.SetID(oldID)
+					}
+					sess.changeStatus(statusPreparing)
+					if stat := p.pluginContainer.postDial(sess, true); !stat.OK() {
+						conn.Close()
+						sess.changeStatus(statusRedialing)
+						return stat.Cause()
+					}
+					return nil
+				})
+			} else {
+				err = stat.Cause()
+			}
 			if err != nil {
 				sess.closeLocked()
 				sess.tryChangeStatus(statusRedialFailed, statusRedialing)

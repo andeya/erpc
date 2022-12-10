@@ -8,6 +8,7 @@ var (
 	_ PostNewPeerPlugin         = (*PluginImpl)(nil)
 	_ PostRegPlugin             = (*PluginImpl)(nil)
 	_ PostListenPlugin          = (*PluginImpl)(nil)
+	_ PreDialPlugin             = (*PluginImpl)(nil)
 	_ PostDialPlugin            = (*PluginImpl)(nil)
 	_ PostAcceptPlugin          = (*PluginImpl)(nil)
 	_ PreWriteCallPlugin        = (*PluginImpl)(nil)
@@ -41,6 +42,8 @@ type PluginImpl struct {
 	OnPostReg func(*Handler) error
 	// OnPostListen is called after a listener is created.
 	OnPostListen func(net.Addr) error
+	// OnPreDial is called before a dial is created.
+	OnPreDial func(localAddr net.Addr, remoteAddr string) *Status
 	// OnPostDial is called after a dial is created.
 	OnPostDial func(sess PreSession, isRedial bool) *Status
 	// OnPostAccept is called after a session is accepted.
@@ -116,6 +119,14 @@ func (p *PluginImpl) PostListen(addr net.Addr) error {
 		return nil
 	}
 	return p.OnPostListen(addr)
+}
+
+// PreDial is called before a dial is created.
+func (p *PluginImpl) PreDial(localAddr net.Addr, remoteAddr string) *Status {
+	if p.OnPreDial == nil {
+		return nil
+	}
+	return p.OnPreDial(localAddr, remoteAddr)
 }
 
 // PostDial is called after a dial is created.

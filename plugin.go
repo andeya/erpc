@@ -49,6 +49,11 @@ type (
 		Plugin
 		PostListen(net.Addr) error
 	}
+	// PreDialPlugin is executed before dialing.
+	PreDialPlugin interface {
+		Plugin
+		PreDial(localAddr net.Addr, remoteAddr string) *Status
+	}
 	// PostDialPlugin is executed after dialing.
 	PostDialPlugin interface {
 		Plugin
@@ -362,7 +367,32 @@ func (p *pluginSingleContainer) postListen(addr net.Addr) {
 	return
 }
 
-// PostDial executes the defined plugins after dialing.
+// preDial executes the defined plugins before dialing.
+func (p *pluginSingleContainer) preDial(localAddr net.Addr, remoteAddr string) (stat *Status) {
+	var pluginName string
+	defer func() {
+		if p := recover(); p != nil {
+			Errorf("[PreDialPlugin:%s] network:%s, localAddr%s ,remoteAddr:%s, panic:%v\n%s", pluginName, localAddr.Network(), localAddr.String(), remoteAddr, p, goutil.PanicTrace(2))
+			stat = statDialFailed.Copy(p)
+		}
+	}()
+	for _, plugin := range p.plugins {
+		if _plugin, ok := plugin.(PreDialPlugin); ok {
+			pluginName = plugin.Name()
+			if stat = _plugin.PreDial(localAddr, remoteAddr); !stat.OK() {
+				LazyDebugf(func() string {
+					return fmt.Sprintf("[PreDialPlugin:%s] network:%s, localAddr%s ,remoteAddr:%s, error:%s",
+						pluginName, localAddr.Network(), localAddr.String(), remoteAddr, stat.String(),
+					)
+				})
+				return stat
+			}
+		}
+	}
+	return nil
+}
+
+// postDial executes the defined plugins after dialing.
 func (p *pluginSingleContainer) postDial(sess PreSession, isRedial bool) (stat *Status) {
 	var pluginName string
 	defer func() {
