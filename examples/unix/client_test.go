@@ -38,7 +38,7 @@ func TestClient(t *testing.T) {
 	)
 	defer cli.Close()
 
-	sess, stat := cli.Dial("0.0.0.0:9090")
+	sess, stat := cli.Dial("./0.0.0.0:9090")
 	if !stat.OK() {
 		erpc.Fatalf("%v", stat)
 	}
