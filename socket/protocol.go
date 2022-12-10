@@ -111,6 +111,7 @@ func (r *rawProto) Version() (byte, string) {
 
 // Pack writes the Message into the connection.
 // NOTE: Make sure to write only once or there will be package contamination!
+// nolint:ineffassign
 func (r *rawProto) Pack(m Message) error {
 	bb := utils.AcquireByteBuffer()
 	defer utils.ReleaseByteBuffer(bb)

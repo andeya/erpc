@@ -6,7 +6,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -82,8 +82,9 @@ func GetContentType(codecID byte, defContentType string) string {
 
 // NewHTTProtoFunc is creation function of HTTP style socket protocol.
 // NOTE:
-//  Only support xfer filter: gzip
-//  Must use HTTP service method mapper
+//
+//	Only support xfer filter: gzip
+//	Must use HTTP service method mapper
 func NewHTTProtoFunc(printMessage ...bool) erpc.ProtoFunc {
 	erpc.SetServiceMethodMapper(erpc.HTTPServiceMethodMapper)
 	var printable bool
@@ -240,6 +241,7 @@ func (h *httproto) packResponse(m erpc.Message, header http.Header, bb *utils.By
 var respPrefix = []byte("HTTP/")
 
 // Unpack reads bytes from the connection to the Message.
+// nolint:ineffassign
 func (h *httproto) Unpack(m erpc.Message) error {
 	h.rMu.Lock()
 	defer h.rMu.Unlock()

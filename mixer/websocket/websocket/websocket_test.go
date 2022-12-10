@@ -378,6 +378,7 @@ func TestDialConfigWithDialer(t *testing.T) {
 	}
 }
 
+// nolint:ineffassign
 func TestSmallBuffer(t *testing.T) {
 	// http://code.google.com/p/go/issues/detail?id=1145
 	// Read should be able to handle reading a fragment of a frame.
