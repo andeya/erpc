@@ -59,3 +59,5 @@ examples/ab/frame_client_ab
 /plugin/overloader/overloader
 /plugin/secure/secure_test
 /erpc_test
+/cover.out
+/cover.html

@@ -1,8 +1,11 @@
 # eRPC
 
-[![GitHub release](https://img.shields.io/github/release/andeya/erpc.svg?style=flat-square)](https://github.com/andeya/erpc/releases) [![report card](https://goreportcard.com/badge/github.com/andeya/erpc?style=flat-square)](http://goreportcard.com/report/andeya/erpc) [![github issues](https://img.shields.io/github/issues/andeya/erpc.svg?style=flat-square)](https://github.com/andeya/erpc/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/andeya/erpc.svg?style=flat-square)](https://github.com/andeya/erpc/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](http://godoc.org/github.com/andeya/erpc) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/andeya/erpc/tree/master/examples)
-<!-- # eRPC [![GitHub release](https://img.shields.io/github/release/andeya/erpc.svg?style=flat-square)](https://github.com/andeya/erpc/releases) [![report card](https://goreportcard.com/badge/github.com/andeya/erpc?style=flat-square)](http://goreportcard.com/report/andeya/erpc) [![github issues](https://img.shields.io/github/issues/andeya/erpc.svg?style=flat-square)](https://github.com/andeya/erpc/issues?q=is%3Aopen+is%3Aissue) [![github closed issues](https://img.shields.io/github/issues-closed-raw/andeya/erpc.svg?style=flat-square)](https://github.com/andeya/erpc/issues?q=is%3Aissue+is%3Aclosed) [![GoDoc](https://img.shields.io/badge/go.dev-reference-blue.svg?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/andeya/erpc?tab=doc) [![view examples](https://img.shields.io/badge/learn%20by-examples-00BCD4.svg?style=flat-square)](https://github.com/andeya/erpc/tree/master/examples) -->
-<!-- [![view Go网络编程群](https://img.shields.io/badge/官方QQ群-Go网络编程(42730308)-27a5ea.svg?style=flat-square)](http://jq.qq.com/?_wv=1027&k=fzi4p1) -->
+[![tag](https://img.shields.io/github/tag/andeya/erpc.svg)](https://github.com/andeya/erpc/releases)
+![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.19-%23007d9c)
+[![GoDoc](https://godoc.org/github.com/andeya/erpc?status.svg)](https://pkg.go.dev/github.com/andeya/erpc)
+![Build Status](https://github.com/andeya/erpc/actions/workflows/go-ci.yml/badge.svg)
+[![Go report](https://goreportcard.com/badge/github.com/andeya/erpc)](https://goreportcard.com/report/github.com/andeya/erpc)
+[![License](https://img.shields.io/github/license/andeya/erpc)](./LICENSE)
 
 eRPC is an efficient, extensible and easy-to-use RPC framework.
 

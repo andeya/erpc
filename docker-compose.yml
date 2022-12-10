@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  dev:
+    build: .
+    volumes:
+      - ./:/go/src/github.com/andeya/erpc
+    working_dir: /go/src/github.com/andeya/erpc
+    command: bash -c 'make tools ; make watch-test'
