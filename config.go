@@ -28,8 +28,9 @@ import (
 
 // PeerConfig peer config
 // NOTE:
-//  yaml tag is used for github.com/andeya/cfgo
-//  ini tag is used for github.com/andeya/ini
+//
+//	yaml tag is used for github.com/andeya/cfgo
+//	ini tag is used for github.com/andeya/ini
 type PeerConfig struct {
 	Network           string        `yaml:"network"              ini:"network"              comment:"Network; tcp, tcp4, tcp6, unix, unixpacket, kcp or quic"`
 	LocalIP           string        `yaml:"local_ip"             ini:"local_ip"             comment:"Local IP"`
@@ -170,60 +171,71 @@ func SetDefaultBodyCodec(codecID byte) error {
 }
 
 // DefaultProtoFunc gets the default builder of socket communication protocol
-//  func DefaultProtoFunc() erpc.ProtoFunc
+//
+//	func DefaultProtoFunc() erpc.ProtoFunc
 var DefaultProtoFunc = socket.DefaultProtoFunc
 
 // SetDefaultProtoFunc sets the default builder of socket communication protocol
-//  func SetDefaultProtoFunc(protoFunc erpc.ProtoFunc)
+//
+//	func SetDefaultProtoFunc(protoFunc erpc.ProtoFunc)
 var SetDefaultProtoFunc = socket.SetDefaultProtoFunc
 
 // GetReadLimit gets the message size upper limit of reading.
-//  GetReadLimit() uint32
+//
+//	GetReadLimit() uint32
 var GetReadLimit = socket.MessageSizeLimit
 
 // SetReadLimit sets max message size.
 // If maxSize<=0, set it to 1GB.
-//  func SetReadLimit(maxMessageSize uint32)
+//
+//	func SetReadLimit(maxMessageSize uint32)
 var SetReadLimit = socket.SetMessageSizeLimit
 
 // SetSocketKeepAlive sets whether the operating system should send
 // keepalive messages on the connection.
 // NOTE: If have not called the function, the system defaults are used.
-//  func SetSocketKeepAlive(keepalive bool)
+//
+//	func SetSocketKeepAlive(keepalive bool)
 var SetSocketKeepAlive = socket.SetKeepAlive
 
 // SetSocketKeepAlivePeriod sets period between keep alives.
 // NOTE: if d<0, don't change the value.
-//  func SetSocketKeepAlivePeriod(d time.Duration)
+//
+//	func SetSocketKeepAlivePeriod(d time.Duration)
 var SetSocketKeepAlivePeriod = socket.SetKeepAlivePeriod
 
 // SocketReadBuffer returns the size of the operating system's
 // receive buffer associated with the connection.
 // NOTE: if using the system default value, bytes=-1 and isDefault=true.
-//  func SocketReadBuffer() (bytes int, isDefault bool)
+//
+//	func SocketReadBuffer() (bytes int, isDefault bool)
 var SocketReadBuffer = socket.ReadBuffer
 
 // SetSocketReadBuffer sets the size of the operating system's
 // receive buffer associated with the connection.
 // NOTE: if bytes<0, don't change the value.
-//  func SetSocketReadBuffer(bytes int)
+//
+//	func SetSocketReadBuffer(bytes int)
 var SetSocketReadBuffer = socket.SetReadBuffer
 
 // SocketWriteBuffer returns the size of the operating system's
 // transmit buffer associated with the connection.
 // NOTE: if using the system default value, bytes=-1 and isDefault=true.
-//  func SocketWriteBuffer() (bytes int, isDefault bool)
+//
+//	func SocketWriteBuffer() (bytes int, isDefault bool)
 var SocketWriteBuffer = socket.WriteBuffer
 
 // SetSocketWriteBuffer sets the size of the operating system's
 // transmit buffer associated with the connection.
 // NOTE: if bytes<0, don't change the value.
-//  func SetSocketWriteBuffer(bytes int)
+//
+//	func SetSocketWriteBuffer(bytes int)
 var SetSocketWriteBuffer = socket.SetWriteBuffer
 
 // SetSocketNoDelay controls whether the operating system should delay
 // packet transmission in hopes of sending fewer packets (Nagle's
 // algorithm).  The default is true (no delay), meaning that data is
 // sent as soon as possible after a Write.
-//  func SetSocketNoDelay(noDelay bool)
+//
+//	func SetSocketNoDelay(noDelay bool)
 var SetSocketNoDelay = socket.SetNoDelay

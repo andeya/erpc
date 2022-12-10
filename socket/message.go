@@ -158,8 +158,9 @@ var messagePool = sync.Pool{
 
 // GetMessage gets a *message form message pool.
 // NOTE:
-//  newBodyFunc is only for reading form connection;
-//  settings are only for writing to connection.
+//
+//	newBodyFunc is only for reading form connection;
+//	settings are only for writing to connection.
 func GetMessage(settings ...MessageSetting) Message {
 	m := messagePool.Get().(*message)
 	m.doSetting(settings...)
@@ -174,8 +175,9 @@ func PutMessage(m Message) {
 
 // NewMessage creates a new *message.
 // NOTE:
-//  NewBody is only for reading form connection;
-//  settings are only for writing to connection.
+//
+//	NewBody is only for reading form connection;
+//	settings are only for writing to connection.
 func NewMessage(settings ...MessageSetting) Message {
 	var m = &message{
 		meta:     new(utils.Args),
@@ -212,7 +214,8 @@ func (*message) messageIdentity() *message { return nil }
 
 // Reset resets and returns itself.
 // NOTE:
-//  settings are only for writing to connection.
+//
+//	settings are only for writing to connection.
 func (m *message) Reset(settings ...MessageSetting) Message {
 	m.body = nil
 	m.status = nil
@@ -284,8 +287,9 @@ func (m *message) StatusOK() bool {
 
 // Status returns the message status with code, msg, cause or stack.
 // NOTE:
-//  If it is nil and autoInit = true, assign a new object;
-//  Should use StatusOK to judge whether it is ok.
+//
+//	If it is nil and autoInit = true, assign a new object;
+//	Should use StatusOK to judge whether it is ok.
 func (m *message) Status(autoInit ...bool) *Status {
 	if m.status == nil && len(autoInit) > 0 && autoInit[0] {
 		m.status = new(Status)
@@ -326,7 +330,8 @@ func (m *message) SetBody(body interface{}) {
 }
 
 // SetNewBody resets the function of geting body.
-//  NOTE: newBodyFunc is only for reading form connection;
+//
+//	NOTE: newBodyFunc is only for reading form connection;
 func (m *message) SetNewBody(newBodyFunc NewBodyFunc) {
 	m.newBodyFunc = newBodyFunc
 }
@@ -355,9 +360,10 @@ func (m *message) MarshalBody() ([]byte, error) {
 
 // UnmarshalBody unmarshals the encoded data to the body.
 // NOTE:
-//  seq, mtype, uri must be setted already;
-//  if body=nil, try to use newBodyFunc to create a new one;
-//  when the body is a stream of bytes, no unmarshalling is done.
+//
+//	seq, mtype, uri must be setted already;
+//	if body=nil, try to use newBodyFunc to create a new one;
+//	when the body is a stream of bytes, no unmarshalling is done.
 func (m *message) UnmarshalBody(bodyBytes []byte) error {
 	if m.body == nil && m.newBodyFunc != nil {
 		m.body = m.newBodyFunc(m)
@@ -518,7 +524,8 @@ func WithBody(body interface{}) MessageSetting {
 }
 
 // WithNewBody resets the function of getting body.
-//  NOTE: newBodyFunc is only for reading form connection.
+//
+//	NOTE: newBodyFunc is only for reading form connection.
 func WithNewBody(newBodyFunc NewBodyFunc) MessageSetting {
 	return func(m Message) {
 		m.SetNewBody(newBodyFunc)

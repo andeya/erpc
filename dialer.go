@@ -85,7 +85,8 @@ func (d *Dialer) Dial(addr string) (net.Conn, error) {
 
 // dialWithRetry dials the connection, and try again if it fails.
 // NOTE:
-//  sessID is not empty only when the disconnection is redialing
+//
+//	sessID is not empty only when the disconnection is redialing
 func (d *Dialer) dialWithRetry(addr, sessID string, fn func(conn net.Conn) error) (net.Conn, error) {
 	conn, err := d.dialOne(addr)
 	if err == nil {

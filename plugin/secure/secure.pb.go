@@ -3,13 +3,15 @@
 // DO NOT EDIT!
 
 /*
-	Package secure is a generated protocol buffer package.
+Package secure is a generated protocol buffer package.
 
-	It is generated from these files:
-		secure.proto
+It is generated from these files:
 
-	It has these top-level messages:
-		Encrypt
+	secure.proto
+
+It has these top-level messages:
+
+	Encrypt
 */
 package secure
 

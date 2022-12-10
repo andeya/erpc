@@ -28,8 +28,9 @@ import (
 
 // NewRawProtoFunc is creation function of fast socket protocol.
 // NOTE:
-//  it is the default protocol.
-//  id:6, name:"raw"
+//
+//	it is the default protocol.
+//	id:6, name:"raw"
 func NewRawProtoFunc() erpc.ProtoFunc {
 	return socket.RawProtoFunc
 }

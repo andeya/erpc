@@ -424,9 +424,10 @@ func (s *session) SetContextAge(duration time.Duration) {
 // PreSend temporarily sends message when the session is just builded,
 // do not execute other plugins.
 // NOTE:
-//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
-//  Does not support automatic redial after disconnection;
-//  Recommend to reuse unused Message: PutMessage(input).
+//
+//	Cannot be called during the Non-PostDial and Non-PostAccept phase;
+//	Does not support automatic redial after disconnection;
+//	Recommend to reuse unused Message: PutMessage(input).
 func (s *session) PreSend(mtype byte, serviceMethod string, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status) {
 	if !s.checkStatus(statusPreparing) {
 		return statUnpreparedError
@@ -499,9 +500,10 @@ var statUnpreparedError = statInvalidOpError.Copy("Cannot be called during the N
 // PreReceive temporarily receives message when the session is just builded,
 // do not execute other plugins.
 // NOTE:
-//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
-//  Does not support automatic redial after disconnection;
-//  Recommend to reuse unused Message: PutMessage(input).
+//
+//	Cannot be called during the Non-PostDial and Non-PostAccept phase;
+//	Does not support automatic redial after disconnection;
+//	Recommend to reuse unused Message: PutMessage(input).
 func (s *session) PreReceive(newArgs NewBodyFunc, ctx ...context.Context) (input Message) {
 	if len(ctx) > 0 {
 		input = socket.GetMessage(WithContext(ctx[0]))
@@ -535,10 +537,11 @@ func (s *session) PreReceive(newArgs NewBodyFunc, ctx ...context.Context) (input
 // PreCall temporarily sends TypeCall message and receives message,
 // when the session is just builded, do not execute other plugins.
 // NOTE:
-//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
-//  The reply parameter is the body receiver;
-//  The external setting seq is invalid, the internal will be forced to set;
-//  Does not support automatic redial after disconnection.
+//
+//	Cannot be called during the Non-PostDial and Non-PostAccept phase;
+//	The reply parameter is the body receiver;
+//	The external setting seq is invalid, the internal will be forced to set;
+//	Does not support automatic redial after disconnection.
 func (s *session) PreCall(serviceMethod string, args, reply interface{}, callSetting ...MessageSetting) (opStat *Status) {
 	if !s.checkStatus(statusPreparing) {
 		return statUnpreparedError
@@ -561,9 +564,10 @@ func (s *session) PreCall(serviceMethod string, args, reply interface{}, callSet
 // PreReply temporarily sends TypeReply message when the session is just builded,
 // do not execute other plugins.
 // NOTE:
-//  Cannot be called during the Non-PostDial and Non-PostAccept phase;
-//  The external setting seq is invalid, the internal will be forced to set;
-//  Does not support automatic redial after disconnection.
+//
+//	Cannot be called during the Non-PostDial and Non-PostAccept phase;
+//	The external setting seq is invalid, the internal will be forced to set;
+//	Does not support automatic redial after disconnection.
 func (s *session) PreReply(req Message, body interface{}, stat *Status, setting ...MessageSetting) (opStat *Status) {
 	if !s.checkStatus(statusPreparing) {
 		return statUnpreparedError
@@ -583,8 +587,9 @@ func (s *session) PreReply(req Message, body interface{}, stat *Status, setting 
 
 // RawPush sends a TypePush message without executing other plugins.
 // NOTE:
-//  The external setting seq is invalid, the internal will be forced to set;
-//  Does not support automatic redial after disconnection.
+//
+//	The external setting seq is invalid, the internal will be forced to set;
+//	Does not support automatic redial after disconnection.
 func (s *session) RawPush(serviceMethod string, args interface{}, setting ...MessageSetting) (opStat *Status) {
 	var output Message
 	defer func() {

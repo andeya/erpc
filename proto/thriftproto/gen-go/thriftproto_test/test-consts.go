@@ -7,8 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 	thrift "github.com/apache/thrift/lib/go/thrift"
+	"time"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -19,7 +19,5 @@ var _ = context.Background
 var _ = time.Now
 var _ = bytes.Equal
 
-
 func init() {
 }
-

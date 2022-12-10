@@ -12,7 +12,7 @@ Higher throughput client connection pool when transferring large messages (such 
 - Real-time monitoring of connection status
 
 ### Usage
-	
+
 `import "github.com/andeya/erpc/v7/mixer/multiclient"`
 
 #### Test

@@ -25,8 +25,9 @@ func InheritedListen(network, laddr string, tlsConf *tls.Config, dataShards, par
 
 // SetInherited adds the files and envs to be inherited by the new process.
 // Notes:
-//  Only for reboot!
-//  Windows system are not supported!
+//
+//	Only for reboot!
+//	Windows system are not supported!
 func SetInherited() error {
 	return globalInheritKCP.SetInherited()
 }
@@ -168,8 +169,9 @@ func isSameAddr(a1, a2 net.Addr) bool {
 
 // SetInherited adds the files and envs to be inherited by the new process.
 // Notes:
-//  Only for reboot!
-//  Windows system are not supported!
+//
+//	Only for reboot!
+//	Windows system are not supported!
 func (n *inheritKCP) SetInherited() error {
 	listeners, err := n.activeListeners()
 	if err != nil {

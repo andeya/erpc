@@ -6,14 +6,13 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 package socket
 
 import (
@@ -180,7 +179,8 @@ func (s *socket) Raw() net.Conn {
 // RawLocked returns the raw net.Conn,
 // can be called in ProtoFunc.
 // NOTE:
-//  Make sure the external is locked before calling
+//
+//	Make sure the external is locked before calling
 func (s *socket) RawLocked() net.Conn {
 	return s.Conn
 }
@@ -212,8 +212,9 @@ func (s *socket) ControlFD(f func(fd uintptr)) error {
 // WriteMessage can be made to time out and return an Error with Timeout() == true
 // after a fixed time limit; see SetDeadline and SetWriteDeadline.
 // NOTE:
-//  For the byte stream type of body, write directly, do not do any processing;
-//  Concurrent calls are not safe.
+//
+//	For the byte stream type of body, write directly, do not do any processing;
+//	Concurrent calls are not safe.
 func (s *socket) WriteMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
@@ -227,8 +228,9 @@ func (s *socket) WriteMessage(message Message) error {
 
 // ReadMessage reads header and body from the connection.
 // NOTE:
-//  For the byte stream type of body, read directly, do not do any processing;
-//  Concurrent calls are not safe.
+//
+//	For the byte stream type of body, read directly, do not do any processing;
+//	Concurrent calls are not safe.
 func (s *socket) ReadMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
@@ -238,7 +240,8 @@ func (s *socket) ReadMessage(message Message) error {
 
 // Swap returns custom data swap of the socket.
 // NOTE:
-//  If newSwap is not empty, reset the swap and return it.
+//
+//	If newSwap is not empty, reset the swap and return it.
 func (s *socket) Swap(newSwap ...goutil.Map) goutil.Map {
 	s.swapMutex.Lock()
 	if len(newSwap) > 0 {

@@ -699,7 +699,7 @@ func makeCallHandlersFromFunc(prefix string, callHandleFunc interface{}, pluginC
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
-	return []*Handler{&Handler{
+	return []*Handler{{
 		name:            globalServiceMethodMapper(prefix, handlerFuncName(cValue)),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),
@@ -894,7 +894,7 @@ func makePushHandlersFromFunc(prefix string, pushHandleFunc interface{}, pluginC
 	if pluginContainer == nil {
 		pluginContainer = newPluginContainer()
 	}
-	return []*Handler{&Handler{
+	return []*Handler{{
 		name:            globalServiceMethodMapper(prefix, handlerFuncName(cValue)),
 		handleFunc:      handleFunc,
 		argElem:         argType.Elem(),

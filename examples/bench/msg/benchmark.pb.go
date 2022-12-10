@@ -3,11 +3,14 @@
 // DO NOT EDIT!
 
 /*
-	Package msg is a generated protocol buffer package.
-	It is generated from these files:
-		benchmark.proto
-	It has these top-level messages:
-		BenchmarkMessage
+Package msg is a generated protocol buffer package.
+It is generated from these files:
+
+	benchmark.proto
+
+It has these top-level messages:
+
+	BenchmarkMessage
 */
 package msg
 

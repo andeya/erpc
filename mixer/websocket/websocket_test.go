@@ -193,7 +193,7 @@ func TestHandshakeWebsocketAuth(t *testing.T) {
 		t.Log("skip test in go test")
 		return
 	}
-	
+
 	srv := erpc.NewPeer(erpc.PeerConfig{}, handshakePlugin)
 	http.Handle("/token", ws.NewJSONServeHandler(srv, nil))
 	go http.ListenAndServe(":9094", nil)

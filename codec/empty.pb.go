@@ -6,9 +6,11 @@
 Package codec is a generated protocol buffer package.
 
 It is generated from these files:
+
 	empty.proto
 
 It has these top-level messages:
+
 	PbEmpty
 */
 package codec

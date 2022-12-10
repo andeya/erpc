@@ -53,7 +53,8 @@ var (
 
 // NewStatusByCodeText creates a message status with code, msg, cause or stack.
 // NOTE:
-//  The msg comes from the CodeText(code) value.
+//
+//	The msg comes from the CodeText(code) value.
 func NewStatusByCodeText(code int32, cause interface{}, tagStack bool) *Status {
 	stat := NewStatus(code, CodeText(code), cause)
 	if tagStack {
@@ -64,10 +65,11 @@ func NewStatusByCodeText(code int32, cause interface{}, tagStack bool) *Status {
 
 // Internal Framework Status code.
 // NOTE: Recommended custom code is greater than 1000.
-//  unknown error code: -1.
-//  sender peer error code range: [100,199].
-//  message handling error code range: [400,499].
-//  receiver peer error code range: [500,599].
+//
+//	unknown error code: -1.
+//	sender peer error code range: [100,199].
+//	message handling error code range: [400,499].
+//	receiver peer error code range: [500,599].
 const (
 	CodeUnknownError        int32 = -1
 	CodeOK                  int32 = 0      // nil error (ok)

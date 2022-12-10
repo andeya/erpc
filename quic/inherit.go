@@ -26,8 +26,9 @@ func InheritedListen(network, laddr string, tlsConf *tls.Config, config *quic.Co
 
 // SetInherited adds the files and envs to be inherited by the new process.
 // Notes:
-//  Only for reboot!
-//  Windows system are not supported!
+//
+//	Only for reboot!
+//	Windows system are not supported!
 func SetInherited() error {
 	return globalInheritQUIC.SetInherited()
 }
@@ -169,8 +170,9 @@ func isSameAddr(a1, a2 net.Addr) bool {
 
 // SetInherited adds the files and envs to be inherited by the new process.
 // Notes:
-//  Only for reboot!
-//  Windows system are not supported!
+//
+//	Only for reboot!
+//	Windows system are not supported!
 func (n *inheritQUIC) SetInherited() error {
 	listeners, err := n.activeListeners()
 	if err != nil {

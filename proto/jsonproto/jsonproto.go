@@ -1,5 +1,6 @@
 // Package jsonproto is implemented JSON socket communication protocol.
-//  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
+//
+//	Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
 //
 // Copyright 2018 HenryLee. All Rights Reserved.
 //
@@ -7,7 +8,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,8 +32,9 @@ import (
 )
 
 // NewJSONProtoFunc is creation function of JSON socket protocol.
-//  Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
-//  Message data demo: `830{"seq":%q,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
+//
+//	Message data format: {length bytes}{xfer_pipe length byte}{xfer_pipe bytes}{JSON bytes}
+//	Message data demo: `830{"seq":%q,"mtype":%d,"serviceMethod":%q,"meta":%q,"bodyCodec":%d,"body":"%s"}`
 func NewJSONProtoFunc() erpc.ProtoFunc {
 	return func(rw erpc.IOWithReadBuffer) erpc.Proto {
 		return &jsonproto{

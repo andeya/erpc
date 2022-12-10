@@ -20,7 +20,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-//  protobuf codec name and id
+// protobuf codec name and id
 const (
 	NAME_PROTOBUF = "protobuf"
 	ID_PROTOBUF   = 'p'
