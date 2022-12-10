@@ -33,8 +33,9 @@ var (
 
 // ServiceMethodMapper mapper service method from prefix, recvName and funcName.
 // NOTE:
-//  @prefix is optional;
-//  @name is required.
+//
+//	@prefix is optional;
+//	@name is required.
 type ServiceMethodMapper func(prefix, name string) (serviceMethod string)
 
 // SetServiceMethodMapper customizes your own service method mapper.
@@ -42,35 +43,35 @@ func SetServiceMethodMapper(mapper ServiceMethodMapper) {
 	globalServiceMethodMapper = mapper
 }
 
-// HTTPServiceMethodMapper like most RPC services service method mapper.
+// HTTPServiceMethodMapper like the service method mapper for most RPC servers.
 // Such as: user/get
 // It is the default mapper.
 // The mapping rule of struct(func) name to service methods:
-//  `AaBb` -> `/aa_bb`
-//  `ABcXYz` -> `/abc_xyz`
-//  `Aa__Bb` -> `/aa_bb`
-//  `aa__bb` -> `/aa_bb`
-//  `ABC__XYZ` -> `/abc_xyz`
-//  `Aa_Bb` -> `/aa/bb`
-//  `aa_bb` -> `/aa/bb`
-//  `ABC_XYZ` -> `/abc/xyz`
 //
+//	`AaBb` -> `/aa_bb`
+//	`ABcXYz` -> `/abc_xyz`
+//	`Aa__Bb` -> `/aa_bb`
+//	`aa__bb` -> `/aa_bb`
+//	`ABC__XYZ` -> `/abc_xyz`
+//	`Aa_Bb` -> `/aa/bb`
+//	`aa_bb` -> `/aa/bb`
+//	`ABC_XYZ` -> `/abc/xyz`
 func HTTPServiceMethodMapper(prefix, name string) string {
 	return path.Join("/", prefix, toServiceMethods(name, '/', true))
 }
 
-// RPCServiceMethodMapper like most RPC services service method mapper.
+// RPCServiceMethodMapper like the service method mapper for most RPC servers.
 // Such as: User.Get
 // The mapping rule of struct(func) name to service methods:
-//  `AaBb` -> `AaBb`
-//  `ABcXYz` -> `ABcXYz`
-//  `Aa__Bb` -> `Aa_Bb`
-//  `aa__bb` -> `aa_bb`
-//  `ABC__XYZ` -> `ABC_XYZ`
-//  `Aa_Bb` -> `Aa.Bb`
-//  `aa_bb` -> `aa.bb`
-//  `ABC_XYZ` -> `ABC.XYZ`
 //
+//	`AaBb` -> `AaBb`
+//	`ABcXYz` -> `ABcXYz`
+//	`Aa__Bb` -> `Aa_Bb`
+//	`aa__bb` -> `aa_bb`
+//	`ABC__XYZ` -> `ABC_XYZ`
+//	`Aa_Bb` -> `Aa.Bb`
+//	`aa_bb` -> `aa.bb`
+//	`ABC_XYZ` -> `ABC.XYZ`
 func RPCServiceMethodMapper(prefix, name string) string {
 	p := prefix + "." + toServiceMethods(name, '.', false)
 	return strings.Trim(p, ".")
