@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/andeya/goutil/graceful"
-	quic "github.com/lucas-clemente/quic-go"
+	quic "github.com/quic-go/quic-go"
 )
 
 // InheritedListen announces on the local network address laddr. The network net is "quic".
