@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	quic "github.com/lucas-clemente/quic-go"
+	"github.com/quic-go/quic-go"
 )
 
 // DialAddrContext establishes a new QUIC connection to a server.
@@ -28,7 +28,7 @@ func DialAddrContext(ctx context.Context, network string, laddr *net.UDPAddr, ra
 	if err != nil {
 		return nil, err
 	}
-	sess, err := quic.DialContext(ctx, udpConn, udpAddr, raddr, tlsConf, config)
+	sess, err := quic.Dial(ctx, udpConn, udpAddr, tlsConf, config)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func DialAddrContext(ctx context.Context, network string, laddr *net.UDPAddr, ra
 //
 // Multiple goroutines may invoke methods on a Listener simultaneously.
 type Listener struct {
-	lis  quic.Listener
+	lis  *quic.Listener
 	conn net.PacketConn
 }
 
