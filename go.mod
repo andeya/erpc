@@ -1,6 +1,6 @@
 module github.com/andeya/erpc/v7
 
-go 1.18
+go 1.21
 
 require (
 	github.com/andeya/cfgo v0.0.0-20220626152948-7980c5d761c8
@@ -9,7 +9,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.3
 	github.com/montanaflynn/stats v0.5.0
-	github.com/quic-go/quic-go v0.36.2
+	github.com/quic-go/quic-go v0.39.2
 	github.com/stretchr/testify v1.7.5
 	github.com/tidwall/evio v1.0.8
 	github.com/tidwall/gjson v1.14.1
@@ -31,7 +31,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qtls-go1-19 v0.3.2 // indirect
-	github.com/quic-go/qtls-go1-20 v0.2.2 // indirect
+	github.com/quic-go/qtls-go1-20 v0.3.4 // indirect
 	github.com/templexxx/cpu v0.0.9 // indirect
 	github.com/templexxx/xorsimd v0.4.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -39,7 +39,7 @@ require (
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
-	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/tools v0.9.1 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
