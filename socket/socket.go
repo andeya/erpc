@@ -219,6 +219,9 @@ func (s *socket) WriteMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
 	s.mu.RUnlock()
+	if protocol == nil {
+		return ErrProactivelyCloseSocket
+	}
 	err := protocol.Pack(message)
 	if err != nil && s.isActiveClosed() {
 		err = ErrProactivelyCloseSocket
@@ -235,6 +238,9 @@ func (s *socket) ReadMessage(message Message) error {
 	s.mu.RLock()
 	protocol := s.protocol
 	s.mu.RUnlock()
+	if protocol == nil {
+		return ErrProactivelyCloseSocket
+	}
 	return protocol.Unpack(message)
 }
 
