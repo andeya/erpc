@@ -199,8 +199,11 @@ func (r *rawProto) writeBody(bb *utils.ByteBuffer, m Message) error {
 // Unpack reads bytes from the connection to the Message.
 // NOTE: Concurrent unsafe!
 func (r *rawProto) Unpack(m Message) error {
-	bb := utils.AcquireByteBuffer()
-	defer utils.ReleaseByteBuffer(bb)
+	//bb := utils.AcquireByteBuffer()
+	//defer utils.ReleaseByteBuffer(bb)
+	bb := &utils.ByteBuffer{
+		B: make([]byte, 0),
+	}
 
 	// read message
 	err := r.readMessage(bb, m)
